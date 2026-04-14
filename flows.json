@@ -809,26 +809,6 @@
         "collapse": false
     },
     {
-        "id": "grp_dxcc_controls",
-        "type": "ui_group",
-        "name": "🎛️ Controls",
-        "tab": "tab_ui_dxcc",
-        "order": 4,
-        "disp": false,
-        "width": "0",
-        "collapse": false
-    },
-    {
-        "id": "509aee3b66ba24b4",
-        "type": "ui_group",
-        "name": "📡 DX Alerts",
-        "tab": "tab_ui_dxcc",
-        "order": 2,
-        "disp": false,
-        "width": "0",
-        "collapse": false
-    },
-    {
         "id": "f0932848.b39158",
         "type": "function",
         "z": "66ca1554.e4c85c",
@@ -7887,8 +7867,8 @@
         "onceDelay": 2,
         "payload": "bootstrap",
         "payloadType": "str",
-        "x": 140,
-        "y": 220,
+        "x": 120,
+        "y": 260,
         "wires": [
             [
                 "1a13cd6d9aabaa54"
@@ -7915,8 +7895,8 @@
                 "module": "os"
             }
         ],
-        "x": 490,
-        "y": 220,
+        "x": 470,
+        "y": 260,
         "wires": [
             [
                 "bb17fc08553256e0"
@@ -7928,14 +7908,14 @@
         "type": "function",
         "z": "d110d176c0aad308",
         "name": "Format Stats for UI",
-        "func": "var s = msg.payload;\nmsg.payload = {\n    entities:    s.entities,\n    bandSlots:   s.bandSlots,\n    confirmed:   s.confirmed,\n    unconfirmed: s.unconfirmed,\n    updated:     new Date().toLocaleTimeString()\n};\nmsg.topic = 'dxcc_stats';\nreturn msg;",
+        "func": "var s = msg.payload;\nmsg.payload = {entities:s.entities,bandSlots:s.bandSlots,confirmed:s.confirmed,unconfirmed:s.unconfirmed,updated:new Date().toLocaleTimeString()};\nmsg.topic = 'dxcc_stats';\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
         "x": 770,
-        "y": 220,
+        "y": 260,
         "wires": [
             [
                 "38a6451a95a57685"
@@ -8118,16 +8098,18 @@
         "order": 1,
         "width": "24",
         "height": "22",
-        "format": "<style>\n.dx-wrap{display:grid;grid-template-columns:220px 1fr;gap:8px;height:100%;}\n.dx-side{display:flex;flex-direction:column;gap:6px;overflow-y:auto;padding-right:2px;}\n.dx-main{overflow:hidden;display:flex;flex-direction:column;}\n.dx-card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:8px 10px;font-family:monospace;font-size:11px;color:#c9d1d9;}\n.st-row{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid #21262d;}\n.st-k{color:#8b949e;font-size:10px;}\n.st-v{color:#58a6ff;font-weight:bold;}\n.st-upd{color:#3fb950;font-size:9px;margin-top:4px;}\n.dx-sec{font-size:9px;color:#555;letter-spacing:1px;margin:6px 0 3px 0;}\n.dx-btns{display:flex;flex-wrap:wrap;gap:3px;}\n.dx-btn{padding:2px 7px;border-radius:8px;cursor:pointer;user-select:none;font-size:10px;\n        font-family:monospace;white-space:nowrap;border:1px solid #30363d;\n        background:#0d1117;color:#444;display:inline-block;line-height:1.5;}\n.dx-btn.on     {border-color:#3fb950;background:#0d1f0d;color:#3fb950;}\n.dx-btn.off    {border-color:#30363d;background:#0d1117;color:#444;}\n.dx-btn.on-red {border-color:#f85149;background:#1f0d0d;color:#f85149;}\n.dx-btn.on-blu {border-color:#58a6ff;background:#0d0d1f;color:#58a6ff;}\n.dx-btn.on-amb {border-color:#e3b341;background:#1a1400;color:#e3b341;}\n.dx-act{padding:2px 7px;border-radius:4px;cursor:pointer;font-size:10px;\n        font-family:monospace;background:#0d1a2a;color:#58a6ff;\n        border:1px solid #1f3a5a;display:inline-block;line-height:1.5;}\n.dx-actions{display:grid;grid-template-columns:1fr 1fr;gap:4px;}\n.dx-action{padding:4px 6px;border-radius:4px;cursor:pointer;font-size:10px;\n           font-family:monospace;border:1px solid;text-align:center;line-height:1.4;}\n.dx-ttl{display:flex;align-items:center;gap:6px;margin-top:2px;}\n.dx-ttl input{flex:1;accent-color:#3fb950;}\n.dx-ttl-v{color:#3fb950;font-size:10px;min-width:32px;text-align:right;}\n.bl-list{display:flex;flex-wrap:wrap;gap:3px;margin:4px 0 2px 0;min-height:16px;}\n.bl-tag{background:#1f0000;border:1px solid #f4464d;padding:1px 6px;\n        border-radius:8px;color:#f88;font-size:10px;cursor:pointer;}\n.bl-row{display:flex;gap:4px;margin-bottom:5px;}\n.bl-in{background:#0d1117;border:1px solid #30363d;color:#fff;padding:3px 6px;\n       border-radius:4px;font-family:monospace;font-size:10px;flex:1;min-width:0;}\n.bl-add{background:#1f0000;color:#f44;border:1px solid #f446;padding:3px 8px;\n        border-radius:4px;font-size:10px;cursor:pointer;font-family:monospace;white-space:nowrap;}\n.dxt-wrap{flex:1;overflow-y:auto;background:#0d1117;border:1px solid #30363d;border-radius:4px;}\n.dxt{width:100%;border-collapse:collapse;font-family:monospace;font-size:11px;}\n.dxt th{background:#161b22;color:#58a6ff;padding:5px 8px;text-align:left;\n        position:sticky;top:0;border-bottom:1px solid #30363d;font-size:10px;letter-spacing:.5px;}\n.dxt td{padding:4px 8px;border-bottom:1px solid #21262d;vertical-align:middle;}\n.dxt tr:hover td{background:#ffffff06;}\n.badge{display:inline-block;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:bold;}\n.conf-y{color:#3fb950;}.conf-n{color:#e3b341;}\n</style>\n<div class=\"dx-wrap\">\n  <div class=\"dx-side\">\n    <div class=\"dx-card\">\n      <div class=\"dx-sec\">── WORKED STATS ─────────────</div>\n      <div class=\"st-row\"><span class=\"st-k\">Entities</span><span class=\"st-v\" id=\"st-ent\">—</span></div>\n      <div class=\"st-row\"><span class=\"st-k\">Band slots</span><span class=\"st-v\" id=\"st-slots\">—</span></div>\n      <div class=\"st-row\"><span class=\"st-k\">Confirmed ✓</span><span class=\"st-v\" id=\"st-conf\">—</span></div>\n      <div class=\"st-row\"><span class=\"st-k\">Unconfirmed ✗</span><span class=\"st-v\" id=\"st-unconf\">—</span></div>\n      <div class=\"st-upd\" id=\"st-upd\"></div>\n    </div>\n    <div class=\"dx-card\" style=\"padding:6px 8px;\">\n      <div class=\"dx-actions\">\n        <div class=\"dx-action\" style=\"background:#0d2818;color:#3fb950;border-color:#238636;\" id=\"dx-refresh\">🔄 Refresh</div>\n        <div class=\"dx-action\" style=\"background:#1f0d0d;color:#f85149;border-color:#3d1a19;\" id=\"dx-clear\">🗑️ Clear</div>\n      </div>\n    </div>\n    <div class=\"dx-card\">\n      <div class=\"dx-sec\">── BANDS ─────────────────────</div>\n      <div class=\"dx-btns\">\n        <span class=\"dx-btn\" data-band=\"b160\">160</span><span class=\"dx-btn\" data-band=\"b80\">80</span>\n        <span class=\"dx-btn\" data-band=\"b60\">60</span><span class=\"dx-btn\" data-band=\"b40\">40</span>\n        <span class=\"dx-btn\" data-band=\"b30\">30</span><span class=\"dx-btn\" data-band=\"b20\">20</span>\n        <span class=\"dx-btn\" data-band=\"b17\">17</span><span class=\"dx-btn\" data-band=\"b15\">15</span>\n        <span class=\"dx-btn\" data-band=\"b12\">12</span><span class=\"dx-btn\" data-band=\"b10\">10</span>\n        <span class=\"dx-btn\" data-band=\"b6\">6</span><span class=\"dx-btn\" data-band=\"b2\">2</span>\n        <span class=\"dx-act\" id=\"dx-all\">All</span>\n        <span class=\"dx-act\" id=\"dx-hf\">HF</span>\n        <span class=\"dx-act\" id=\"dx-vhf\">VHF</span>\n      </div>\n      <div class=\"dx-sec\" style=\"margin-top:8px;\">── ALERT TYPE ─────────────</div>\n      <div class=\"dx-btns\">\n        <span class=\"dx-btn\" data-type=\"dxcc\">🔴 DXCC</span>\n        <span class=\"dx-btn\" data-type=\"band\">🔵 BAND</span>\n        <span class=\"dx-btn\" data-type=\"mode\">🟡 MODE</span>\n      </div>\n      <div class=\"dx-sec\" style=\"margin-top:8px;\">── MODE ───────────────────</div>\n      <div class=\"dx-btns\">\n        <span class=\"dx-btn\" data-mode=\"cw\">✦ CW</span>\n        <span class=\"dx-btn\" data-mode=\"phone\">🎙 Phone</span>\n        <span class=\"dx-btn\" data-mode=\"data\">📊 Data</span>\n      </div>\n      <div class=\"dx-sec\" style=\"margin-top:8px;\">── SPOT LIFETIME ──────────</div>\n      <div class=\"dx-ttl\">\n        <input type=\"range\" id=\"dx-ttl\" min=\"5\" max=\"60\" step=\"5\" value=\"20\">\n        <span class=\"dx-ttl-v\" id=\"dx-ttl-v\">20 min</span>\n      </div>\n    </div>\n    <div class=\"dx-card\">\n      <div class=\"dx-sec\">── BLOCK CALLSIGN ───────────</div>\n      <div class=\"bl-row\" ng-init=\"nc='';\">\n        <input class=\"bl-in\" type=\"text\" ng-model=\"nc\" placeholder=\"Callsign...\">\n        <button class=\"bl-add\" ng-click=\"nc.length>0 && send({payload:nc.toUpperCase(),topic:'blacklist_add'}); nc='';\">+ Block</button>\n      </div>\n      <div class=\"dx-sec\">── BLOCKED (<span id=\"bl-cnt\">0</span>) ──────────</div>\n      <div class=\"bl-list\" id=\"bl-list\"><span style=\"color:#555\">None</span></div>\n    </div>\n  </div>\n  <div class=\"dx-main\">\n    <div class=\"dxt-wrap\">\n      <table class=\"dxt\">\n        <thead><tr>\n          <th>Time</th><th>Type</th><th>Call</th><th>Entity</th>\n          <th>Band</th><th>Mode</th><th>Freq</th><th>Slot</th><th>Spotter</th>\n        </tr></thead>\n        <tbody id=\"dx-tbody\"></tbody>\n      </table>\n    </div>\n  </div>\n</div>\n<script>\n(function(){\n  var STORE='vu2cpl_filters';\n  var DB={b160:false,b80:true,b60:false,b40:true,b30:true,b20:true,b17:true,b15:true,b12:true,b10:true,b6:false,b2:false};\n  var DT={dxcc:true,band:true,mode:true},DM={cw:true,phone:true,data:true};\n  var st;\n  try{var sv=localStorage.getItem(STORE);st=sv?JSON.parse(sv):{b:Object.assign({},DB),t:Object.assign({},DT),m:Object.assign({},DM),ttl:20};}\n  catch(e){st={b:Object.assign({},DB),t:Object.assign({},DT),m:Object.assign({},DM),ttl:20};}\n  if(!st.m)st.m=Object.assign({},DM);\n  if(!st.ttl)st.ttl=20;\n  function save(){try{localStorage.setItem(STORE,JSON.stringify(st));}catch(e){}}\n  function push(){if(typeof send==='function')send({payload:{b:st.b,t:st.t,m:st.m,ttl:st.ttl},topic:'filter_update'});}\n  function rf(){\n    document.querySelectorAll('[data-band]').forEach(function(el){el.className='dx-btn '+(st.b[el.dataset.band]?'on':'off');});\n    var tc={dxcc:'on-red',band:'on-blu',mode:'on-amb'};\n    document.querySelectorAll('[data-type]').forEach(function(el){el.className='dx-btn '+(st.t[el.dataset.type]?tc[el.dataset.type]:'off');});\n    document.querySelectorAll('[data-mode]').forEach(function(el){el.className='dx-btn '+(st.m[el.dataset.mode]?'on':'off');});\n    var r=document.getElementById('dx-ttl');if(r)r.value=st.ttl;\n    var v=document.getElementById('dx-ttl-v');if(v)v.textContent=st.ttl+' min';\n  }\n  document.querySelectorAll('[data-band]').forEach(function(el){el.addEventListener('click',function(){st.b[el.dataset.band]=!st.b[el.dataset.band];rf();save();push();});});\n  document.querySelectorAll('[data-type]').forEach(function(el){el.addEventListener('click',function(){st.t[el.dataset.type]=!st.t[el.dataset.type];rf();save();push();});});\n  document.querySelectorAll('[data-mode]').forEach(function(el){el.addEventListener('click',function(){st.m[el.dataset.mode]=!st.m[el.dataset.mode];rf();save();push();});});\n  document.getElementById('dx-all').addEventListener('click',function(){Object.keys(st.b).forEach(function(k){st.b[k]=true;});rf();save();push();});\n  document.getElementById('dx-hf').addEventListener('click',function(){Object.keys(st.b).forEach(function(k){st.b[k]=false;});['b160','b80','b60','b40','b30','b20','b17','b15','b12','b10'].forEach(function(k){st.b[k]=true;});rf();save();push();});\n  document.getElementById('dx-vhf').addEventListener('click',function(){Object.keys(st.b).forEach(function(k){st.b[k]=false;});st.b.b6=true;st.b.b2=true;rf();save();push();});\n  document.getElementById('dx-ttl').addEventListener('input',function(){st.ttl=parseInt(this.value);document.getElementById('dx-ttl-v').textContent=st.ttl+' min';save();push();});\n  document.getElementById('dx-refresh').addEventListener('click',function(){if(typeof send==='function')send({payload:'refresh',topic:'refresh_clublog'});});\n  document.getElementById('dx-clear').addEventListener('click',function(){if(typeof send==='function')send({payload:'clear',topic:'clear_alerts'});});\n  rf();\n  setTimeout(push,500);\n  scope.$watch('msg',function(msg){\n    if(!msg||!msg.topic) return;\n    if(msg.topic==='dxcc_stats'&&msg.payload){\n      var p=msg.payload;\n      function set(id,v){var e=document.getElementById(id);if(e&&v!==undefined)e.textContent=v;}\n      set('st-ent',p.entities);set('st-slots',p.bandSlots);\n      set('st-conf',p.confirmed);set('st-unconf',p.unconfirmed);\n      set('st-upd',p.updated?'Updated: '+p.updated:'');\n    }\n    if(msg.topic==='dx_alert'&&Array.isArray(msg.payload)){\n      var tb=document.getElementById('dx-tbody');if(!tb)return;\n      tb.innerHTML='';\n      msg.payload.forEach(function(row){\n        var conf=row.conf==='confirmed ✓'?'<span class=\"conf-y\">✓</span>':row.conf==='unconfirmed ✗'?'<span class=\"conf-n\">✗</span>':'<span style=\"color:#555\">—</span>';\n        var tr=document.createElement('tr');\n        tr.innerHTML='<td style=\"color:#555\">'+row.time+'</td><td><span class=\"badge\" style=\"background:'+row.color+'22;color:'+row.color+';border:1px solid '+row.color+'66\">'+row.type+'</span></td><td style=\"color:#fff;font-weight:bold;font-size:12px\">'+row.call+'</td><td style=\"color:#ddd\">'+row.entity+'</td><td style=\"color:#adf\">'+row.band+'</td><td style=\"color:#fda\">'+row.mode+'</td><td style=\"color:#8af\">'+row.freq+'</td><td>'+conf+'</td><td style=\"color:#666\">'+row.spotter+'</td>';\n        tb.appendChild(tr);\n      });\n    }\n    if(msg.topic==='blacklist'&&Array.isArray(msg.payload)){\n      var bl=document.getElementById('bl-list');var cnt=document.getElementById('bl-cnt');\n      if(!bl)return;\n      bl.innerHTML='';if(cnt)cnt.textContent=msg.payload.length;\n      if(!msg.payload.length){bl.innerHTML='<span style=\"color:#555\">None</span>';return;}\n      msg.payload.forEach(function(c){\n        var s=document.createElement('span');s.className='bl-tag';s.textContent=c;\n        s.addEventListener('click',function(){if(typeof send==='function')send({payload:c,topic:'blacklist_remove'});});\n        bl.appendChild(s);\n      });\n    }\n  });\n})();\n</script>",
+        "format": "<style>\n  .dx-wrap {\n    display: grid;\n    grid-template-columns: 220px 1fr;\n    gap: 8px;\n    height: 100%;\n  }\n\n  .dx-side {\n    display: flex;\n    flex-direction: column;\n    gap: 6px;\n    overflow-y: auto;\n    padding-right: 2px;\n  }\n\n  .dx-main {\n    overflow: hidden;\n    display: flex;\n    flex-direction: column;\n  }\n\n  .dx-card {\n    background: #161b22;\n    border: 1px solid #30363d;\n    border-radius: 6px;\n    padding: 8px 10px;\n    font-family: monospace;\n    font-size: 11px;\n    color: #c9d1d9;\n  }\n\n  .st-row {\n    display: flex;\n    justify-content: space-between;\n    padding: 2px 0;\n    border-bottom: 1px solid #21262d;\n  }\n\n  .st-k {\n    color: #8b949e;\n    font-size: 10px;\n  }\n\n  .st-v {\n    color: #58a6ff;\n    font-weight: bold;\n  }\n\n  .st-upd {\n    color: #3fb950;\n    font-size: 9px;\n    margin-top: 4px;\n  }\n\n  .dx-sec {\n    font-size: 9px;\n    color: #555;\n    letter-spacing: 1px;\n    margin: 6px 0 3px 0;\n  }\n\n  .dx-btns {\n    display: flex;\n    flex-wrap: wrap;\n    gap: 3px;\n  }\n\n  .dx-btn {\n    padding: 2px 7px;\n    border-radius: 8px;\n    cursor: pointer;\n    user-select: none;\n    font-size: 10px;\n    font-family: monospace;\n    white-space: nowrap;\n    border: 1px solid #30363d;\n    background: #0d1117;\n    color: #444;\n    display: inline-block;\n    line-height: 1.5;\n    transition: opacity 0.1s, transform 0.1s;\n  }\n\n  .dx-btn:active {\n    opacity: 0.5;\n    transform: scale(0.95);\n  }\n\n  .dx-btn.on {\n    border-color: #3fb950;\n    background: #0d1f0d;\n    color: #3fb950;\n  }\n\n  .dx-btn.off {\n    border-color: #30363d;\n    background: #0d1117;\n    color: #444;\n  }\n\n  .dx-btn.on-red {\n    border-color: #f85149;\n    background: #1f0d0d;\n    color: #f85149;\n  }\n\n  .dx-btn.on-blu {\n    border-color: #58a6ff;\n    background: #0d0d1f;\n    color: #58a6ff;\n  }\n\n  .dx-btn.on-amb {\n    border-color: #e3b341;\n    background: #1a1400;\n    color: #e3b341;\n  }\n\n  .dx-act {\n    padding: 4px 8px;\n    border-radius: 4px;\n    cursor: pointer;\n    font-size: 10px;\n    font-family: monospace;\n    border: 1px solid;\n    text-align: center;\n    line-height: 1.4;\n    transition: opacity 0.15s, transform 0.1s;\n    display: block;\n  }\n\n  .dx-act:active {\n    opacity: 0.4;\n    transform: scale(0.97);\n  }\n\n  .dx-actions {\n    display: grid;\n    grid-template-columns: 1fr 1fr;\n    gap: 4px;\n  }\n\n  .dx-ttl {\n    display: flex;\n    align-items: center;\n    gap: 6px;\n    margin-top: 2px;\n  }\n\n  .dx-ttl input[type=range] {\n    flex: 1;\n    accent-color: #3fb950;\n    cursor: pointer;\n  }\n\n  .dx-ttl-v {\n    color: #3fb950;\n    font-size: 10px;\n    min-width: 32px;\n    text-align: right;\n  }\n\n  .bl-list {\n    display: flex;\n    flex-wrap: wrap;\n    gap: 3px;\n    margin: 4px 0 2px 0;\n    min-height: 16px;\n  }\n\n  .bl-tag {\n    background: #1f0000;\n    border: 1px solid #f4464d;\n    padding: 1px 6px;\n    border-radius: 8px;\n    color: #f88;\n    font-size: 10px;\n    cursor: pointer;\n    transition: opacity 0.1s;\n  }\n\n  .bl-tag:active {\n    opacity: 0.5;\n  }\n\n  .bl-row {\n    display: flex;\n    gap: 4px;\n    margin-bottom: 5px;\n  }\n\n  .bl-in {\n    background: #0d1117;\n    border: 1px solid #30363d;\n    color: #fff;\n    padding: 3px 6px;\n    border-radius: 4px;\n    font-family: monospace;\n    font-size: 10px;\n    flex: 1;\n    min-width: 0;\n  }\n\n  .bl-add {\n    background: #1f0000;\n    color: #f44;\n    border: 1px solid #f446;\n    padding: 3px 8px;\n    border-radius: 4px;\n    font-size: 10px;\n    cursor: pointer;\n    font-family: monospace;\n    white-space: nowrap;\n    transition: opacity 0.1s, transform 0.1s;\n  }\n\n  .bl-add:active {\n    opacity: 0.5;\n    transform: scale(0.95);\n  }\n\n  .dxt-wrap {\n    flex: 1;\n    overflow-y: auto;\n    background: #0d1117;\n    border: 1px solid #30363d;\n    border-radius: 4px;\n  }\n\n  .dxt {\n    width: 100%;\n    border-collapse: collapse;\n    font-family: monospace;\n    font-size: 11px;\n  }\n\n  .dxt th {\n    background: #161b22;\n    color: #58a6ff;\n    padding: 5px 8px;\n    text-align: left;\n    position: sticky;\n    top: 0;\n    border-bottom: 1px solid #30363d;\n    font-size: 10px;\n    letter-spacing: .5px;\n  }\n\n  .dxt td {\n    padding: 4px 8px;\n    border-bottom: 1px solid #21262d;\n    vertical-align: middle;\n  }\n\n  .dxt tr:hover td {\n    background: #ffffff06;\n  }\n\n  .badge {\n    display: inline-block;\n    padding: 1px 6px;\n    border-radius: 8px;\n    font-size: 9px;\n    font-weight: bold;\n  }\n\n  .conf-y {\n    color: #3fb950;\n  }\n\n  .conf-n {\n    color: #e3b341;\n  }\n</style>\n\n<div class=\"dx-wrap\">\n  <div class=\"dx-side\">\n\n    <!-- Stats -->\n    <div class=\"dx-card\">\n      <div class=\"dx-sec\">── WORKED STATS ─────────────</div>\n      <div class=\"st-row\"><span class=\"st-k\">Entities</span><span class=\"st-v\" id=\"st-ent\">—</span></div>\n      <div class=\"st-row\"><span class=\"st-k\">Band slots</span><span class=\"st-v\" id=\"st-slots\">—</span></div>\n      <div class=\"st-row\"><span class=\"st-k\">Confirmed ✓</span><span class=\"st-v\" id=\"st-conf\">—</span></div>\n      <div class=\"st-row\"><span class=\"st-k\">Unconfirmed ✗</span><span class=\"st-v\" id=\"st-unconf\">—</span></div>\n      <div class=\"st-upd\" id=\"st-upd\"></div>\n    </div>\n\n    <!-- Refresh / Clear -->\n    <div class=\"dx-card\" style=\"padding:6px 8px;\">\n      <div class=\"dx-actions\">\n        <div class=\"dx-act\" style=\"background:#0d2818;color:#3fb950;border-color:#238636;\" id=\"dx-refresh\">🔄 Refresh\n        </div>\n        <div class=\"dx-act\" style=\"background:#1f0d0d;color:#f85149;border-color:#3d1a19;\" id=\"dx-clear\">🗑️ Clear</div>\n      </div>\n    </div>\n\n    <!-- Filters -->\n    <div class=\"dx-card\">\n      <div class=\"dx-sec\">── BANDS ─────────────────────</div>\n      <div class=\"dx-btns\" id=\"dx-band-btns\">\n        <span class=\"dx-btn\" data-band=\"b160\">160</span>\n        <span class=\"dx-btn\" data-band=\"b80\">80</span>\n        <span class=\"dx-btn\" data-band=\"b60\">60</span>\n        <span class=\"dx-btn\" data-band=\"b40\">40</span>\n        <span class=\"dx-btn\" data-band=\"b30\">30</span>\n        <span class=\"dx-btn\" data-band=\"b20\">20</span>\n        <span class=\"dx-btn\" data-band=\"b17\">17</span>\n        <span class=\"dx-btn\" data-band=\"b15\">15</span>\n        <span class=\"dx-btn\" data-band=\"b12\">12</span>\n        <span class=\"dx-btn\" data-band=\"b10\">10</span>\n        <span class=\"dx-btn\" data-band=\"b6\">6</span>\n        <span class=\"dx-btn\" data-band=\"b2\">2</span>\n        <span class=\"dx-btn\" style=\"border-color:#1f3a5a;color:#58a6ff;background:#0d1a2a;\" id=\"dx-all\">All</span>\n        <span class=\"dx-btn\" style=\"border-color:#1f3a5a;color:#58a6ff;background:#0d1a2a;\" id=\"dx-hf\">HF</span>\n        <span class=\"dx-btn\" style=\"border-color:#1f3a5a;color:#58a6ff;background:#0d1a2a;\" id=\"dx-vhf\">VHF</span>\n      </div>\n      <div class=\"dx-sec\" style=\"margin-top:8px;\">── ALERT TYPE ─────────────</div>\n      <div class=\"dx-btns\">\n        <span class=\"dx-btn\" data-type=\"dxcc\">🔴 DXCC</span>\n        <span class=\"dx-btn\" data-type=\"band\">🔵 BAND</span>\n        <span class=\"dx-btn\" data-type=\"mode\">🟡 MODE</span>\n      </div>\n      <div class=\"dx-sec\" style=\"margin-top:8px;\">── MODE ───────────────────</div>\n      <div class=\"dx-btns\">\n        <span class=\"dx-btn\" data-mode=\"cw\">✦ CW</span>\n        <span class=\"dx-btn\" data-mode=\"phone\">🎙 Phone</span>\n        <span class=\"dx-btn\" data-mode=\"data\">📊 Data</span>\n      </div>\n      <div class=\"dx-sec\" style=\"margin-top:8px;\">── SPOT LIFETIME ──────────</div>\n      <div class=\"dx-ttl\">\n        <input type=\"range\" id=\"dx-ttl\" min=\"5\" max=\"60\" step=\"5\" value=\"20\"\n               oninput=\"window._dxTTL(this.value)\">\n        <span class=\"dx-ttl-v\" id=\"dx-ttl-v\">20 min</span>\n      </div>\n    </div>\n\n    <!-- Blacklist -->\n    <div class=\"dx-card\">\n      <div class=\"dx-sec\">── BLOCK CALLSIGN ───────────</div>\n      <div class=\"bl-row\" ng-init=\"nc='';\">\n        <input class=\"bl-in\" type=\"text\" ng-model=\"nc\" placeholder=\"Callsign...\">\n        <button class=\"bl-add\"\n          ng-click=\"send({payload:nc.toUpperCase(),topic:'blacklist_add'}); nc='';\">+ Block</button>\n      </div>\n      <div class=\"dx-sec\">── BLOCKED (<span id=\"bl-cnt\">0</span>) ──────────</div>\n      <div class=\"bl-list\" id=\"bl-list\"><span style=\"color:#555\">None</span></div>\n    </div>\n\n  </div>\n\n  <!-- RIGHT: Alert Table -->\n  <div class=\"dx-main\">\n    <div class=\"dxt-wrap\">\n      <table class=\"dxt\">\n        <thead>\n          <tr>\n            <th>Time</th>\n            <th>Type</th>\n            <th>Call</th>\n            <th>Entity</th>\n            <th>Band</th>\n            <th>Mode</th>\n            <th>Freq</th>\n            <th>Slot</th>\n            <th>Spotter</th>\n          </tr>\n        </thead>\n        <tbody id=\"dx-tbody\"></tbody>\n      </table>\n    </div>\n  </div>\n</div>\n\n<script>\n  (function(){\n  var STORE = 'vu2cpl_filters';\n  var ENDPOINT = '/dxcc/filters';\n\n  // Default state\n  var def = {\n    b:{b160:false,b80:true,b60:false,b40:true,b30:true,b20:true,\n       b17:true,b15:true,b12:true,b10:true,b6:false,b2:false},\n    t:{dxcc:true,band:true,mode:true},\n    m:{cw:true,phone:true,data:true},\n    ttl:20\n  };\n\n  // Load from localStorage\n  var st;\n  try {\n    var sv = localStorage.getItem(STORE);\n    st = sv ? JSON.parse(sv) : JSON.parse(JSON.stringify(def));\n    if(!st.m)   st.m   = JSON.parse(JSON.stringify(def.m));\n    if(!st.ttl) st.ttl = def.ttl;\n    if(!st.b)   st.b   = JSON.parse(JSON.stringify(def.b));\n    if(!st.t)   st.t   = JSON.parse(JSON.stringify(def.t));\n  } catch(e) { st = JSON.parse(JSON.stringify(def)); }\n\n  // Save to localStorage\n  function save(){\n    try{ localStorage.setItem(STORE, JSON.stringify(st)); }catch(e){}\n  }\n\n  // Send filter state to Node-RED via HTTP POST\n  function push(){\n    fetch(ENDPOINT, {\n      method: 'POST',\n      headers: {'Content-Type':'application/json'},\n      body: JSON.stringify({b:st.b, t:st.t, m:st.m, ttl:st.ttl})\n    }).catch(function(e){ console.warn('filter push:', e); });\n  }\n\n  // Render all button states\n  function render(){\n    document.querySelectorAll('[data-band]').forEach(function(el){\n      el.className = 'dx-btn ' + (st.b[el.dataset.band] ? 'on' : 'off');\n    });\n    var tc = {dxcc:'on-red', band:'on-blu', mode:'on-amb'};\n    document.querySelectorAll('[data-type]').forEach(function(el){\n      el.className = 'dx-btn ' + (st.t[el.dataset.type] ? tc[el.dataset.type] : 'off');\n    });\n    document.querySelectorAll('[data-mode]').forEach(function(el){\n      el.className = 'dx-btn ' + (st.m[el.dataset.mode] ? 'on' : 'off');\n    });\n    var r = document.getElementById('dx-ttl');\n    var v = document.getElementById('dx-ttl-v');\n    if(r) r.value = st.ttl;\n    if(v) v.textContent = st.ttl + ' min';\n  }\n\n  // Band buttons\n  document.querySelectorAll('[data-band]').forEach(function(el){\n    el.addEventListener('click', function(){\n      st.b[el.dataset.band] = !st.b[el.dataset.band];\n      render(); save(); push();\n    });\n  });\n\n  // Alert type buttons\n  document.querySelectorAll('[data-type]').forEach(function(el){\n    el.addEventListener('click', function(){\n      st.t[el.dataset.type] = !st.t[el.dataset.type];\n      render(); save(); push();\n    });\n  });\n\n  // Mode buttons\n  document.querySelectorAll('[data-mode]').forEach(function(el){\n    el.addEventListener('click', function(){\n      st.m[el.dataset.mode] = !st.m[el.dataset.mode];\n      render(); save(); push();\n    });\n  });\n\n  // All / HF / VHF presets\n  document.getElementById('dx-all').addEventListener('click', function(){\n    Object.keys(st.b).forEach(function(k){ st.b[k]=true; });\n    render(); save(); push();\n  });\n  document.getElementById('dx-hf').addEventListener('click', function(){\n    Object.keys(st.b).forEach(function(k){ st.b[k]=false; });\n    ['b160','b80','b60','b40','b30','b20','b17','b15','b12','b10'].forEach(function(k){ st.b[k]=true; });\n    render(); save(); push();\n  });\n  document.getElementById('dx-vhf').addEventListener('click', function(){\n    Object.keys(st.b).forEach(function(k){ st.b[k]=false; });\n    st.b.b6=true; st.b.b2=true;\n    render(); save(); push();\n  });\n\n  // TTL slider — oninput calls window._dxTTL\n  window._dxTTL = function(val){\n    st.ttl = parseInt(val) || 20;\n    var v = document.getElementById('dx-ttl-v');\n    if(v) v.textContent = st.ttl + ' min';\n    save(); push();\n  };\n\n  // Refresh button\n  document.getElementById('dx-refresh').addEventListener('click', function(){\n    var el = this; el.style.opacity='0.4';\n    setTimeout(function(){ el.style.opacity='1'; }, 200);\n    fetch('/dxcc/refresh', {method:'POST'}).catch(function(e){ console.warn(e); });\n  });\n\n  // Clear button\n  document.getElementById('dx-clear').addEventListener('click', function(){\n    var el = this; el.style.opacity='0.4';\n    setTimeout(function(){ el.style.opacity='1'; }, 200);\n    fetch('/dxcc/clear', {method:'POST'}).catch(function(e){ console.warn(e); });\n  });\n\n  // Blacklist tag remove — uses ng-click via scope (already works)\n  window._dxBlRemove = function(call){\n  fetch('/dxcc/blacklist-remove', {\n  method: 'POST',\n  headers: {'Content-Type':'application/json'},\n  body: JSON.stringify({call: call})\n  }).catch(function(e){ console.warn(e); });\n  };\n\n  // Initial render from saved state\n  render();\n\n  // Push saved state to Node-RED on load (after 800ms for startup)\n  setTimeout(push, 800);\n\n  // $watch for incoming messages from Node-RED\n  scope.$watch('msg', function(msg){\n    if(!msg || !msg.topic) return;\n\n    // Worked stats\n    if(msg.topic === 'dxcc_stats' && msg.payload){\n      var p = msg.payload;\n      function set(id,v){ var e=document.getElementById(id); if(e&&v!==undefined) e.textContent=v; }\n      set('st-ent',    p.entities);\n      set('st-slots',  p.bandSlots);\n      set('st-conf',   p.confirmed);\n      set('st-unconf', p.unconfirmed);\n      set('st-upd',    p.updated ? 'Updated: '+p.updated : '');\n    }\n\n    // Alert table\n    if(msg.topic === 'dx_alert' && Array.isArray(msg.payload)){\n      var tb = document.getElementById('dx-tbody'); if(!tb) return;\n      tb.innerHTML = '';\n      msg.payload.forEach(function(row){\n        var conf = row.conf==='confirmed ✓'   ? '<span class=\"conf-y\">✓</span>'\n                 : row.conf==='unconfirmed ✗' ? '<span class=\"conf-n\">✗</span>'\n                 : '<span style=\"color:#555\">—</span>';\n        var tr = document.createElement('tr');\n        tr.innerHTML =\n          '<td style=\"color:#555\">'                                          +row.time+   '</td>'+\n          '<td><span class=\"badge\" style=\"background:'+row.color+'22;color:'+row.color+\n            ';border:1px solid '+row.color+'66\">'+row.type+'</span></td>'+\n          '<td style=\"color:#fff;font-weight:bold;font-size:12px\">'         +row.call+   '</td>'+\n          '<td style=\"color:#ddd\">'                                          +row.entity+ '</td>'+\n          '<td style=\"color:#adf\">'                                          +row.band+   '</td>'+\n          '<td style=\"color:#fda\">'                                          +row.mode+   '</td>'+\n          '<td style=\"color:#8af\">'                                          +row.freq+   '</td>'+\n          '<td>'                                                             +conf+        '</td>'+\n          '<td style=\"color:#666\">'                                          +row.spotter+'</td>';\n        tb.appendChild(tr);\n      });\n    }\n\n    // Blacklist\n    if(msg.topic === 'blacklist' && Array.isArray(msg.payload)){\n      var bl  = document.getElementById('bl-list');\n      var cnt = document.getElementById('bl-cnt');\n      if(!bl) return;\n      bl.innerHTML = '';\n      if(cnt) cnt.textContent = msg.payload.length;\n      if(!msg.payload.length){\n        bl.innerHTML = '<span style=\"color:#555\">None</span>';\n        return;\n      }\n      msg.payload.forEach(function(c){\n        var s = document.createElement('span');\n        s.className = 'bl-tag';\n        s.textContent = c;\n        s.title = 'Click to remove';\n        s.setAttribute('onclick', \"window._dxBlRemove('\"+c+\"')\");\n        bl.appendChild(s);\n      });\n    }\n  });\n})();\n</script>",
         "storeOutMessages": true,
         "fwdInMessages": true,
         "resendOnRefresh": true,
         "templateScope": "local",
         "className": "",
-        "x": 990,
+        "x": 870,
         "y": 640,
         "wires": [
-            []
+            [
+                "caa799bd4a340929"
+            ]
         ]
     },
     {
@@ -8225,14 +8207,14 @@
         "type": "function",
         "z": "d110d176c0aad308",
         "name": "Clear Alert List",
-        "func": "flow.set('alertList',[]);\nmsg.payload=[];\nreturn msg;",
+        "func": "if(msg.topic !== 'clear_alerts' && msg.topic !== 'clear') return null;\nflow.set('alertList',[]);\nmsg.payload=[];\nmsg.topic='dx_alert';\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 660,
-        "y": 760,
+        "x": 880,
+        "y": 880,
         "wires": [
             [
                 "38a6451a95a57685"
@@ -8253,7 +8235,7 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 690,
-        "y": 80,
+        "y": 40,
         "wires": []
     },
     {
@@ -8418,54 +8400,6 @@
         "wires": [
             [
                 "b981643f37259f89"
-            ]
-        ]
-    },
-    {
-        "id": "4addb8fa4275a9be",
-        "type": "function",
-        "z": "d110d176c0aad308",
-        "name": "Save Alert Filters",
-        "func": "if (msg.topic !== 'filter_update') return null;\nvar p = msg.payload;\nvar bandMap = {b160:'160M',b80:'80M',b60:'60M',b40:'40M',b30:'30M',\n               b20:'20M',b17:'17M',b15:'15M',b12:'12M',b10:'10M',b6:'6M',b2:'2M'};\nvar allowedBands = {};\nif (p.b) Object.keys(p.b).forEach(function(k){ if(p.b[k] && bandMap[k]) allowedBands[bandMap[k]]=true; });\nflow.set('filterBands',   allowedBands, 'file');\nflow.set('filterNewDxcc', p.t ? !!p.t.dxcc : true, 'file');\nflow.set('filterNewBand', p.t ? !!p.t.band : true, 'file');\nflow.set('filterNewMode', p.t ? !!p.t.mode : true, 'file');\nflow.set('filterModeCW',    p.m ? !!p.m.cw    : true, 'file');\nflow.set('filterModePhone', p.m ? !!p.m.phone  : true, 'file');\nflow.set('filterModeData',  p.m ? !!p.m.data   : true, 'file');\nif (p.ttl) flow.set('spotTTL', p.ttl, 'file');\nnode.status({fill:'blue',shape:'dot',\n    text:'B:'+Object.keys(allowedBands).length+' TTL:'+(p.ttl||20)+'m'});\nreturn null;",
-        "outputs": 1,
-        "noerr": 0,
-        "initialize": "// Load persisted filters or apply defaults\nvar saved = flow.get('filterBands', 'file');\nvar bandMap = {b160:'160M',b80:'80M',b60:'60M',b40:'40M',b30:'30M',\n               b20:'20M',b17:'17M',b15:'15M',b12:'12M',b10:'10M',b6:'6M',b2:'2M'};\nif (saved && Object.keys(saved).length > 0) {\n    flow.set('filterBands',   saved);\n    flow.set('filterNewDxcc', flow.get('filterNewDxcc','file') !== false);\n    flow.set('filterNewBand', flow.get('filterNewBand','file') !== false);\n    flow.set('filterNewMode', flow.get('filterNewMode','file') !== false);\n} else {\n    var defBands = {};\n    ['b80','b40','b30','b20','b17','b15','b12','b10'].forEach(function(k){\n        defBands[bandMap[k]] = true;\n    });\n    flow.set('filterBands',   defBands, 'file');\n    flow.set('filterNewDxcc', true, 'file');\n    flow.set('filterNewBand', true, 'file');\n    flow.set('filterNewMode', true, 'file');\n}",
-        "finalize": "",
-        "libs": [],
-        "x": 530,
-        "y": 680,
-        "wires": [
-            [
-                "38a6451a95a57685"
-            ]
-        ]
-    },
-    {
-        "id": "54a2c98cf9f36918",
-        "type": "inject",
-        "z": "d110d176c0aad308",
-        "name": "Init filter defaults",
-        "props": [
-            {
-                "p": "payload"
-            },
-            {
-                "p": "topic",
-                "v": "filter_update",
-                "vt": "str"
-            }
-        ],
-        "repeat": "",
-        "crontab": "",
-        "once": true,
-        "onceDelay": 3,
-        "payload": "{\"b\":{\"b160\":false,\"b80\":true,\"b60\":false,\"b40\":true,\"b30\":true,\"b20\":true,\"b17\":true,\"b15\":true,\"b12\":true,\"b10\":true,\"b6\":false,\"b2\":false},\"t\":{\"dxcc\":true,\"band\":true,\"mode\":true}}",
-        "payloadType": "json",
-        "x": 270,
-        "y": 720,
-        "wires": [
-            [
-                "4addb8fa4275a9be"
             ]
         ]
     },
@@ -8757,7 +8691,7 @@
         "id": "e7ba349ad7fa426b",
         "type": "inject",
         "z": "d110d176c0aad308",
-        "name": "TEST JA1ABC 20M FT8",
+        "name": "TEST JA1ABC 60M FT8",
         "props": [
             {
                 "p": "spot.call",
@@ -8766,7 +8700,7 @@
             },
             {
                 "p": "spot.band",
-                "v": "20M",
+                "v": "60M",
                 "vt": "str"
             },
             {
@@ -8776,12 +8710,12 @@
             },
             {
                 "p": "spot.freqKHz",
-                "v": "14074",
+                "v": "5357",
                 "vt": "num"
             },
             {
                 "p": "spot.freqMHz",
-                "v": "14.074000",
+                "v": "5.357",
                 "vt": "str"
             },
             {
@@ -8798,8 +8732,8 @@
         "repeat": "",
         "crontab": "",
         "once": false,
-        "payload": "",
-        "payloadType": "date",
+        "onceDelay": "",
+        "topic": "",
         "x": 150,
         "y": 640,
         "wires": [
@@ -8845,7 +8779,7 @@
         "persist": false,
         "proxy": "",
         "authType": "",
-        "x": 430,
+        "x": 660,
         "y": 100,
         "wires": [
             [
@@ -8869,8 +8803,8 @@
                 "module": "zlib"
             }
         ],
-        "x": 680,
-        "y": 100,
+        "x": 930,
+        "y": 40,
         "wires": [
             [
                 "5f26764c3416b75e"
@@ -8882,14 +8816,14 @@
         "type": "function",
         "z": "d110d176c0aad308",
         "name": "Parse cty.xml -> Prefix Maps",
-        "func": "flow.set('dxccReady', false);\nvar xml = (msg.payload || '').toString();\nif (!xml || xml.length < 500) {\n    node.error('cty.xml too short: ' + xml.length + ' chars');\n    node.status({fill:'red', shape:'dot', text:'Bad data'});\n    return null;\n}\n\nfunction child(block, tag) {\n    var re = new RegExp('<' + tag + '>([^<]*)<\\/' + tag + '>');\n    var m = block.match(re);\n    return m ? m[1].trim() : '';\n}\n\nfunction isCurrent(block) {\n    var end = child(block, 'end');\n    if (!end || end === '') return true;\n    try { return new Date(end.replace(' ', 'T') + 'Z') >= new Date(); } catch(e) { return true; }\n}\n\nvar prefixMap   = {};  // prefix string -> ADIF number (string)\nvar entityNames = {};  // ADIF number   -> entity name\nvar exceptions  = {};  // callsign      -> ADIF number (string)\n\n// Parse <entities>\nvar entRe = /<entity\\b[^>]*>([\\s\\S]*?)<\\/entity>/g;\nvar em;\nwhile ((em = entRe.exec(xml)) !== null) {\n    var b = em[1];\n    var adif    = child(b, 'adif');\n    var name    = child(b, 'name');\n    var deleted = child(b, 'deleted').toUpperCase();\n    if (adif && name && deleted !== 'TRUE') {\n        entityNames[adif] = name;\n    }\n}\n\n// Parse <prefixes>\nvar pfxRe = /<prefix\\b[^>]*>([\\s\\S]*?)<\\/prefix>/g;\nvar pm;\nwhile ((pm = pfxRe.exec(xml)) !== null) {\n    var b = pm[1];\n    var call = child(b, 'call').toUpperCase();\n    var adif = child(b, 'adif');\n    if (!call || !adif) continue;\n    if (!isCurrent(b)) continue;\n    prefixMap[call] = adif;\n}\n\n// Parse <exceptions>\nvar excRe = /<exception\\b[^>]*>([\\s\\S]*?)<\\/exception>/g;\nvar xm;\nwhile ((xm = excRe.exec(xml)) !== null) {\n    var b = xm[1];\n    var call = child(b, 'call').toUpperCase();\n    var adif = child(b, 'adif');\n    if (!call || !adif) continue;\n    if (!isCurrent(b)) continue;\n    exceptions[call] = adif;\n}\n\nvar pfxCount = Object.keys(prefixMap).length;\nvar excCount = Object.keys(exceptions).length;\nvar entCount = Object.keys(entityNames).length;\n\nif (pfxCount < 100) {\n    node.error('Too few prefixes: ' + pfxCount);\n    node.status({fill:'red', shape:'dot', text:'Parse failed'});\n    return null;\n}\n\nflow.set('dxccPrefixMap',  prefixMap);\nflow.set('dxccExceptions', exceptions);\nflow.set('dxccSeedNames',  entityNames);\n\nnode.status({fill:'green', shape:'dot',\n    text: entCount + ' entities | ' + pfxCount + ' prefixes | ' + excCount + ' exceptions'});\nreturn null;",
+        "func": "var xml = (msg.payload || '').toString();\nif (!xml || xml.length < 500) {\n    node.error('cty.xml too short: ' + xml.length + ' chars');\n    node.status({fill:'red', shape:'dot', text:'Bad data'});\n    return null;\n}\n\nfunction child(block, tag) {\n    var re = new RegExp('<' + tag + '>([^<]*)<\\/' + tag + '>');\n    var m = block.match(re);\n    return m ? m[1].trim() : '';\n}\n\nfunction isCurrent(block) {\n    var end = child(block, 'end');\n    if (!end || end === '') return true;\n    try { return new Date(end.replace(' ', 'T') + 'Z') >= new Date(); } catch(e) { return true; }\n}\n\nvar prefixMap   = {};  // prefix string -> ADIF number (string)\nvar entityNames = {};  // ADIF number   -> entity name\nvar exceptions  = {};  // callsign      -> ADIF number (string)\n\n// Parse <entities>\nvar entRe = /<entity\\b[^>]*>([\\s\\S]*?)<\\/entity>/g;\nvar em;\nwhile ((em = entRe.exec(xml)) !== null) {\n    var b = em[1];\n    var adif    = child(b, 'adif');\n    var name    = child(b, 'name');\n    var deleted = child(b, 'deleted').toUpperCase();\n    if (adif && name && deleted !== 'TRUE') {\n        entityNames[adif] = name;\n    }\n}\n\n// Parse <prefixes>\nvar pfxRe = /<prefix\\b[^>]*>([\\s\\S]*?)<\\/prefix>/g;\nvar pm;\nwhile ((pm = pfxRe.exec(xml)) !== null) {\n    var b = pm[1];\n    var call = child(b, 'call').toUpperCase();\n    var adif = child(b, 'adif');\n    if (!call || !adif) continue;\n    if (!isCurrent(b)) continue;\n    prefixMap[call] = adif;\n}\n\n// Parse <exceptions>\nvar excRe = /<exception\\b[^>]*>([\\s\\S]*?)<\\/exception>/g;\nvar xm;\nwhile ((xm = excRe.exec(xml)) !== null) {\n    var b = xm[1];\n    var call = child(b, 'call').toUpperCase();\n    var adif = child(b, 'adif');\n    if (!call || !adif) continue;\n    if (!isCurrent(b)) continue;\n    exceptions[call] = adif;\n}\n\nvar pfxCount = Object.keys(prefixMap).length;\nvar excCount = Object.keys(exceptions).length;\nvar entCount = Object.keys(entityNames).length;\n\nif (pfxCount < 100) {\n    node.error('Too few prefixes: ' + pfxCount);\n    node.status({fill:'red', shape:'dot', text:'Parse failed'});\n    return null;\n}\n\nflow.set('dxccPrefixMap',  prefixMap);\nflow.set('dxccExceptions', exceptions);\nflow.set('dxccSeedNames',  entityNames);\n\nnode.status({fill:'green', shape:'dot',\n    text: entCount + ' entities | ' + pfxCount + ' prefixes | ' + excCount + ' exceptions'});\nreturn null;",
         "outputs": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 920,
-        "y": 100,
+        "x": 1020,
+        "y": 120,
         "wires": []
     },
     {
@@ -8908,7 +8842,7 @@
         "onceDelay": 12,
         "payload": "load",
         "payloadType": "str",
-        "x": 190,
+        "x": 170,
         "y": 200,
         "wires": [
             [
@@ -8921,13 +8855,13 @@
         "type": "function",
         "z": "d110d176c0aad308",
         "name": "Build Club Log API Request",
-        "func": "var apiKey   = flow.get('cfg_cl_apikey')   || '';\nvar email    = flow.get('cfg_cl_email')    || '';\nvar password = flow.get('cfg_cl_password') || '';\nvar call     = (flow.get('cfg_cl_callsign') || 'VU2CPL').toUpperCase();\n\nif (!apiKey || !email || !password) {\n    node.error('Credentials not set — check Credentials node');\n    node.status({fill:'red', shape:'dot', text:'No credentials'});\n    return null;\n}\n\n// Fetch mode=0 (all), mode=1 (CW), mode=2 (Phone), mode=3 (Data)\nmsg.mode0url = 'https://clublog.org/json_dxccchart.php?call=' + encodeURIComponent(call) +\n    '&api=' + encodeURIComponent(apiKey) + '&email=' + encodeURIComponent(email) +\n    '&password=' + encodeURIComponent(password) + '&mode=0';\nmsg.mode1url = msg.mode0url.replace('mode=0','mode=1');\nmsg.mode2url = msg.mode0url.replace('mode=0','mode=2');\nmsg.mode3url = msg.mode0url.replace('mode=0','mode=3');\nmsg.url = msg.mode0url;\nnode.status({fill:'blue', shape:'dot', text:'Fetching ' + call + '...'});\nreturn msg;",
+        "func": "if(msg.topic === 'filter_update') return null;\nif(msg.topic !== 'refresh_clublog' && msg.payload !== 'load' && msg.payload !== 'refresh') return null;\nvar apiKey   = flow.get('cfg_cl_apikey')   || '';\nvar email    = flow.get('cfg_cl_email')    || '';\nvar password = flow.get('cfg_cl_password') || '';\nvar call     = (flow.get('cfg_cl_callsign') || 'VU2CPL').toUpperCase();\n\nif (!apiKey || !email || !password) {\n    node.error('Credentials not set — check Credentials node');\n    node.status({fill:'red', shape:'dot', text:'No credentials'});\n    return null;\n}\n\n// Fetch mode=0 (all), mode=1 (CW), mode=2 (Phone), mode=3 (Data)\nmsg.mode0url = 'https://clublog.org/json_dxccchart.php?call=' + encodeURIComponent(call) +\n    '&api=' + encodeURIComponent(apiKey) + '&email=' + encodeURIComponent(email) +\n    '&password=' + encodeURIComponent(password) + '&mode=0';\nmsg.mode1url = msg.mode0url.replace('mode=0','mode=1');\nmsg.mode2url = msg.mode0url.replace('mode=0','mode=2');\nmsg.mode3url = msg.mode0url.replace('mode=0','mode=3');\nmsg.url = msg.mode0url;\nnode.status({fill:'blue', shape:'dot', text:'Fetching ' + call + '...'});\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 450,
+        "x": 440,
         "y": 200,
         "wires": [
             [
@@ -8955,7 +8889,7 @@
                 "module": "url"
             }
         ],
-        "x": 700,
+        "x": 710,
         "y": 200,
         "wires": [
             [
@@ -8974,7 +8908,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 300,
+        "x": 390,
         "y": 100,
         "wires": [
             [
@@ -9022,12 +8956,209 @@
         "onceDelay": 90,
         "payload": "retry",
         "payloadType": "str",
-        "x": 190,
-        "y": 240,
+        "x": 160,
+        "y": 320,
         "wires": [
             [
                 "6e60f619acad462e"
             ]
         ]
+    },
+    {
+        "id": "dxcc_http_filters_01",
+        "type": "http in",
+        "z": "d110d176c0aad308",
+        "name": "POST /dxcc/filters",
+        "url": "/dxcc/filters",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 1010,
+        "y": 220,
+        "wires": [
+            [
+                "dxcc_fn_filters_01"
+            ]
+        ]
+    },
+    {
+        "id": "dxcc_fn_filters_01",
+        "type": "function",
+        "z": "d110d176c0aad308",
+        "name": "Save Alert Filters HTTP",
+        "func": "const p = msg.payload;\nif(!p){ msg.payload='OK'; return msg; }\nvar bm = {b160:'160M',b80:'80M',b60:'60M',b40:'40M',b30:'30M',b20:'20M',\n           b17:'17M',b15:'15M',b12:'12M',b10:'10M',b6:'6M',b2:'2M'};\nvar allowed = {};\nif(p.b) Object.keys(p.b).forEach(function(k){ if(p.b[k] && bm[k]) allowed[bm[k]]=true; });\nflow.set('filterBands',   allowed,         'file');\nflow.set('filterNewDxcc', p.t ? !!p.t.dxcc  : true, 'file');\nflow.set('filterNewBand', p.t ? !!p.t.band   : true, 'file');\nflow.set('filterNewMode', p.t ? !!p.t.mode   : true, 'file');\nflow.set('filterModeCW',    p.m ? !!p.m.cw    : true, 'file');\nflow.set('filterModePhone', p.m ? !!p.m.phone : true, 'file');\nflow.set('filterModeData',  p.m ? !!p.m.data  : true, 'file');\nif(p.ttl) flow.set('spotTTL', parseInt(p.ttl), 'file');\nnode.status({fill:'blue',shape:'dot',\n  text:'B:'+Object.keys(allowed).length+' TTL:'+(p.ttl||20)+'m'});\nmsg.payload = 'OK';\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1250,
+        "y": 220,
+        "wires": [
+            [
+                "dxcc_res_filters_01"
+            ]
+        ]
+    },
+    {
+        "id": "dxcc_res_filters_01",
+        "type": "http response",
+        "z": "d110d176c0aad308",
+        "name": "",
+        "statusCode": "200",
+        "headers": {},
+        "x": 1470,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "dxcc_http_refresh_01",
+        "type": "http in",
+        "z": "d110d176c0aad308",
+        "name": "POST /dxcc/refresh",
+        "url": "/dxcc/refresh",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 1010,
+        "y": 280,
+        "wires": [
+            [
+                "dxcc_fn_refresh_01"
+            ]
+        ]
+    },
+    {
+        "id": "dxcc_fn_refresh_01",
+        "type": "function",
+        "z": "d110d176c0aad308",
+        "name": "HTTP Refresh → Build Club Log",
+        "func": "msg.topic   = 'refresh_clublog';\nmsg.payload = 'refresh';\nnode.send([msg, {payload:'OK', res:msg.res}]);\nreturn null;",
+        "outputs": 2,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1250,
+        "y": 280,
+        "wires": [
+            [
+                "6e60f619acad462e"
+            ],
+            [
+                "dxcc_res_refresh_01"
+            ]
+        ]
+    },
+    {
+        "id": "dxcc_res_refresh_01",
+        "type": "http response",
+        "z": "d110d176c0aad308",
+        "name": "",
+        "statusCode": "200",
+        "headers": {},
+        "x": 1510,
+        "y": 310,
+        "wires": []
+    },
+    {
+        "id": "dxcc_http_clear_01",
+        "type": "http in",
+        "z": "d110d176c0aad308",
+        "name": "POST /dxcc/clear",
+        "url": "/dxcc/clear",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 1010,
+        "y": 340,
+        "wires": [
+            [
+                "dxcc_fn_clear_01"
+            ]
+        ]
+    },
+    {
+        "id": "dxcc_fn_clear_01",
+        "type": "function",
+        "z": "d110d176c0aad308",
+        "name": "HTTP Clear → Clear Alert List",
+        "func": "node.send([{payload:'clear',topic:'clear_alerts'}, {payload:'OK',res:msg.res}]);\nreturn null;",
+        "outputs": 2,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1250,
+        "y": 340,
+        "wires": [
+            [
+                "06e09f7c1cf8c86a"
+            ],
+            [
+                "dxcc_res_clear_01"
+            ]
+        ]
+    },
+    {
+        "id": "dxcc_res_clear_01",
+        "type": "http response",
+        "z": "d110d176c0aad308",
+        "name": "",
+        "statusCode": "200",
+        "headers": {},
+        "x": 1510,
+        "y": 370,
+        "wires": []
+    },
+    {
+        "id": "dxcc_http_bl_remove",
+        "type": "http in",
+        "z": "d110d176c0aad308",
+        "name": "POST /dxcc/blacklist-remove",
+        "url": "/dxcc/blacklist-remove",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 1040,
+        "y": 160,
+        "wires": [
+            [
+                "dxcc_fn_bl_remove"
+            ]
+        ]
+    },
+    {
+        "id": "dxcc_fn_bl_remove",
+        "type": "function",
+        "z": "d110d176c0aad308",
+        "name": "HTTP Blacklist Remove",
+        "func": "var call = (msg.payload.call || msg.payload || '').toString().toUpperCase().trim();\nif(!call){ msg.payload='OK'; return msg; }\nnode.status({fill:'blue',shape:'dot',text:'Remove: '+call});\nnode.send([{payload:call, topic:'blacklist_remove'}, {payload:'OK', res:msg.res}]);\nreturn null;",
+        "outputs": 2,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1280,
+        "y": 160,
+        "wires": [
+            [
+                "caa799bd4a340929"
+            ],
+            [
+                "dxcc_res_bl_remove"
+            ]
+        ]
+    },
+    {
+        "id": "dxcc_res_bl_remove",
+        "type": "http response",
+        "z": "d110d176c0aad308",
+        "name": "",
+        "statusCode": "200",
+        "headers": {},
+        "x": 1520,
+        "y": 160,
+        "wires": []
     }
 ]
