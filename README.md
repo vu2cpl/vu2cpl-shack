@@ -111,3 +111,66 @@ All Devices Merged tab. Rotator auto-off timer: 5 min (powerstrip1/POWER2), coun
 - **Awards:** 9x BDXCC
 - **DXpeditions:** VU7T, VU7MS (Lakshadweep), AT5P (Rameshwaram)
 - **Grid:** MK83TE | Licensed since 1993
+
+---
+
+## Setup — Node-RED File Context Store
+
+Required for filter persistence across Pi reboots. By default `contextStorage` is commented out in `settings.js` — without it `flow.set(..., 'file')` calls silently fail and filters only persist via localStorage (browser-side).
+
+**Run once on the Pi:**
+
+```bash
+bash ~/enable_file_context.sh
+node-red-stop && node-red-start
+```
+
+**What it does:**
+- Edits `~/.node-red/settings.js` to enable `localfilesystem` context store
+- Creates `~/.node-red/context/` directory
+- Backs up settings.js before editing
+- Idempotent — safe to re-run
+
+**Verify it worked:**
+```bash
+ls ~/.node-red/context/
+# Should show flow context files after Node-RED restarts and filters are saved
+```
+
+**Manual settings.js change** (if script fails):
+Find the commented `contextStorage` block and replace with:
+```javascript
+contextStorage: {
+    default: {
+        module: "localfilesystem"
+    }
+},
+```
+
+---
+
+## Club Log Data — Persistence & Daily Refresh
+
+### How worked data is stored
+`Fetch All Modes + Parse` saves to three places on every successful fetch:
+- **Flow context (RAM)** — used at runtime for alert lookups
+- **File context store** — survives Pi reboot, restored instantly by Bootstrap on startup
+- **`nr_dxcc_seed.json`** — written to both `~/nr_dxcc_seed.json` and `~/.node-red/projects/vu2cpl-shack/nr_dxcc_seed.json`
+
+### Startup recovery sequence
+On reboot, Bootstrap checks file store first:
+- File store has data → restore instantly, no internet needed
+- File store empty → load from `nr_dxcc_seed.json`
+- Both empty → wait for Club Log fetch at 12s
+
+### Daily refresh
+An inject node fires at **02:00 daily** (crontab `0 2 * * *`) → `Build Club Log API Request`.
+This keeps worked data fresh and acts as recovery if startup fetch failed.
+
+### Failure handling
+| Scenario | Recovery |
+|----------|----------|
+| Club Log unreachable at startup | Retry at 90s |
+| Both startup fetches fail | Bootstrap uses file store / seed file |
+| Pi reboot | Bootstrap restores from file store instantly |
+| Data goes stale | Daily 02:00 refresh re-fetches and updates all stores |
