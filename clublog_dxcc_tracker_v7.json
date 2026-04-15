@@ -1,15 +1,15 @@
 [
   {
-    "id": "98ff80b2b2c1ab52",
+    "id": "d110d176c0aad308",
     "type": "tab",
     "label": "DXCC Tracker",
     "disabled": false,
     "info": "VU2CPL Club Log DXCC Tracker with DX Cluster alerting"
   },
   {
-    "id": "a017c071e25ca280",
+    "id": "a7d9bd0a663b8133",
     "type": "inject",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "Bootstrap on startup",
     "props": [
       {
@@ -22,18 +22,18 @@
     "onceDelay": 2,
     "payload": "bootstrap",
     "payloadType": "str",
-    "x": 140,
-    "y": 220,
+    "x": 120,
+    "y": 260,
     "wires": [
       [
-        "5b38f332633330e3"
+        "1a13cd6d9aabaa54"
       ]
     ]
   },
   {
-    "id": "5b38f332633330e3",
+    "id": "1a13cd6d9aabaa54",
     "type": "function",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "Bootstrap Worked Table (manual seed)",
     "func": "var existing = flow.get('workedTable');\nif (existing && Object.keys(existing).length > 100) {\n    node.status({fill:'grey', shape:'dot', text:'Already loaded - skipping'});\n    return null;\n}\nvar locations = [\n    os.homedir() + '/.node-red/projects/vu2cpl-shack/nr_dxcc_seed.json',\n    '/data/nr_dxcc_seed.json',\n    os.homedir() + '/.node-red/nr_dxcc_seed.json'\n];\nvar seed = null; var usedPath = null; var errors = [];\nfor (var i = 0; i < locations.length; i++) {\n    try {\n        if (fs.existsSync(locations[i])) {\n            var data = fs.readFileSync(locations[i], 'utf8');\n            seed = JSON.parse(data);\n            usedPath = locations[i];\n            break;\n        } else { errors.push(locations[i] + ' not found'); }\n    } catch(e) { errors.push(locations[i] + ': ' + e.message); }\n}\nif (!seed) {\n    node.error('nr_dxcc_seed.json not found. Tried: ' + errors.join(' | '));\n    node.status({fill:'red', shape:'dot', text:'File not found - see debug'});\n    return null;\n}\nflow.set('workedTable', seed.workedTable);\nflow.set('entityWorked', seed.entityWorked);\nflow.set('workedStats', seed.stats);\nnode.status({fill:'green', shape:'dot', text: seed.stats.entities + ' entities, ' + seed.stats.bandSlots + ' slots from ' + usedPath});\nmsg.payload = seed.stats;\nreturn msg;",
     "outputs": 1,
@@ -50,56 +50,37 @@
         "module": "os"
       }
     ],
-    "x": 490,
-    "y": 220,
+    "x": 470,
+    "y": 260,
     "wires": [
       [
-        "46b0025362b6b236"
+        "bb17fc08553256e0"
       ]
     ]
   },
   {
-    "id": "46b0025362b6b236",
+    "id": "bb17fc08553256e0",
     "type": "function",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "Format Stats for UI",
-    "func": "var s = msg.payload;\nmsg.payload = '<div style=\"font-family:monospace;font-size:13px;line-height:1.8;\"><span style=\"color:#0ff\">Entities:</span> <b style=\"color:#fff\">' + s.entities + '</b><br><span style=\"color:#0ff\">Band slots:</span> <b style=\"color:#fff\">' + s.bandSlots + '</b><br><span style=\"color:#0f8\">Confirmed \\u2713:</span> <b style=\"color:#0f8\">' + s.confirmed + '</b><br><span style=\"color:#fa0\">Unconfirmed \\u2717:</span> <b style=\"color:#fa0\">' + s.unconfirmed + '</b><br><span style=\"color:#555\">Updated:</span><span style=\"color:#777\">' + new Date().toLocaleTimeString() + '</span></div>';\nreturn msg;",
+    "func": "var s = msg.payload;\nmsg.payload = {entities:s.entities,bandSlots:s.bandSlots,confirmed:s.confirmed,unconfirmed:s.unconfirmed,updated:new Date().toLocaleTimeString()};\nmsg.topic = 'dxcc_stats';\nreturn msg;",
     "outputs": 1,
     "noerr": 0,
     "initialize": "",
     "finalize": "",
     "libs": [],
     "x": 770,
-    "y": 220,
+    "y": 260,
     "wires": [
       [
-        "a2775d129f8e897a"
+        "38a6451a95a57685"
       ]
     ]
   },
   {
-    "id": "a2775d129f8e897a",
-    "type": "ui_template",
-    "z": "98ff80b2b2c1ab52",
-    "group": "grp_dxcc_stats",
-    "name": "Stats Display",
-    "order": 1,
-    "width": "12",
-    "height": "5",
-    "format": "<div ng-bind-html=\"msg.payload\" style=\"padding:8px\"></div>",
-    "storeOutMessages": true,
-    "resendOnRefresh": true,
-    "templateScope": "local",
-    "x": 990,
-    "y": 220,
-    "wires": [
-      []
-    ]
-  },
-  {
-    "id": "76b58cd651ea2faa",
+    "id": "07675b406ea346ed",
     "type": "tcp in",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "N2WQ-2 cluster.n2wq.com:8300",
     "server": "client",
     "host": "cluster.n2wq.com",
@@ -114,14 +95,14 @@
     "y": 420,
     "wires": [
       [
-        "475aace899ddd3ca"
+        "d301158172785aba"
       ]
     ]
   },
   {
-    "id": "a8e4ab79cd2a7c9c",
+    "id": "f3fe140580c43c05",
     "type": "tcp in",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "vu2oy 103.153.92.118:7550",
     "server": "client",
     "host": "103.153.92.118",
@@ -136,14 +117,14 @@
     "y": 480,
     "wires": [
       [
-        "475aace899ddd3ca"
+        "d301158172785aba"
       ]
     ]
   },
   {
-    "id": "b42fc685c43b91db",
+    "id": "cf2f9b095d6f1624",
     "type": "tcp in",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "vu2cpl.ddns.net:7550",
     "server": "client",
     "host": "vu2cpl.ddns.net",
@@ -158,14 +139,14 @@
     "y": 540,
     "wires": [
       [
-        "475aace899ddd3ca"
+        "d301158172785aba"
       ]
     ]
   },
   {
-    "id": "31adca9ef4f42b12",
+    "id": "c2623a2089c18b8b",
     "type": "tcp in",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "ve7cc.net:23",
     "server": "client",
     "host": "ve7cc.net",
@@ -180,14 +161,14 @@
     "y": 600,
     "wires": [
       [
-        "475aace899ddd3ca"
+        "d301158172785aba"
       ]
     ]
   },
   {
-    "id": "5e229e0a9e574bf2",
+    "id": "2a20b140b97c35b0",
     "type": "tcp out",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "Reply to Cluster (login)",
     "host": "",
     "port": "",
@@ -200,9 +181,9 @@
     "wires": []
   },
   {
-    "id": "475aace899ddd3ca",
+    "id": "d301158172785aba",
     "type": "function",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "Login + Parse + Dedup",
     "func": "var line = (msg.payload || '').trim();\nvar src  = msg.topic || 'unknown';\n\nif (line.toLowerCase().includes('login:') || line.toLowerCase().includes('please login')) {\n    node.status({ fill:'blue', shape:'dot', text: src + ' \u2192 login sent' });\n    return [{ payload: 'VU2CPL\\r\\n', _session: msg._session }, null];\n}\n\nif (!line.startsWith('DX de')) {\n    node.status({ fill:'grey', shape:'ring', text: '['+src+'] '+line.substring(0,50) });\n    return [null, null];\n}\n\nvar re = /^DX de\\s+([\\w\\d\\/\\-#]+):\\s+([\\d.]+)\\s+([\\w\\d\\/\\-#]+)\\s*(.*?)\\s*(\\d{4}Z?)?\\s*$/i;\nvar m  = line.match(re);\nif (!m) {\n    node.status({ fill:'yellow', shape:'dot', text:'no match: '+line.substring(0,45) });\n    return [null, null];\n}\n\nvar spotter = m[1].toUpperCase();\nvar freqKHz = parseFloat(m[2]);\nvar dxCall  = m[3].toUpperCase();\nvar comment = (m[4] || '').trim();\nvar freqMHz = (freqKHz / 1000).toFixed(6);\n\n// Callsign pattern validation \u2014 drop garbage like DE, RR73, QSY etc\nvar callRe = /^(?:[A-Z0-9]{1,4}\\/)?(?:[A-Z]{1,2}[0-9]{1,2}|[2-9][A-Z]{1,2}[0-9])[A-Z]{1,4}(?:\\/[A-Z0-9]{1,4})?$/;\nif (!callRe.test(dxCall)) {\n    node.status({fill:'yellow', shape:'ring', text:'invalid call: ' + dxCall});\n    return [null, null];\n}\n\nvar dedup    = flow.get('dedup') || {};\nvar now      = Date.now();\nvar dedupKey = dxCall + '_' + Math.round(freqKHz);\nif (dedup[dedupKey] && (now - dedup[dedupKey]) < 60000) {\n    node.status({ fill:'grey', shape:'ring', text:'dup: '+dxCall });\n    return [null, null];\n}\ndedup[dedupKey] = now;\nObject.keys(dedup).forEach(function(k) { if (now - dedup[k] > 120000) delete dedup[k]; });\nflow.set('dedup', dedup);\n\nfunction getMode(khz, cmt) {\n    var c = cmt.toUpperCase();\n    if (c.match(/\\bFT8\\b/))  return 'FT8';\n    if (c.match(/\\bFT4\\b/))  return 'FT4';\n    if (c.match(/\\bRTTY\\b/)) return 'RTTY';\n    if (c.match(/\\bPSK\\b/))  return 'PSK31';\n    if (c.match(/\\bCW\\b/))   return 'CW';\n    if (c.match(/\\bSSB\\b/))  return (khz < 10000) ? 'LSB' : 'USB';\n    if (c.match(/\\bUSB\\b/))  return 'USB';\n    if (c.match(/\\bLSB\\b/))  return 'LSB';\n    if (c.match(/\\bAM\\b/))   return 'AM';\n    if (c.match(/\\bFM\\b/))   return 'FM';\n    var ft8 = [1840,3573,7074,10136,14074,18100,21074,24915,28074,50313];\n    for (var f=0;f<ft8.length;f++) { if (Math.abs(khz-ft8[f])<=3) return 'FT8'; }\n    var cw = [[1800,1840],[3500,3600],[7000,7040],[10100,10150],[14000,14070],[18068,18110],[21000,21070],[24890,24920],[28000,28070]];\n    for (var i=0;i<cw.length;i++) { if (khz>=cw[i][0]&&khz<=cw[i][1]) return 'CW'; }\n    return (khz < 10000) ? 'LSB' : 'USB';\n}\nvar mode = getMode(freqKHz, comment);\n\nfunction getBand(f) {\n    if (f>=1800&&f<=2000)   return '160M';\n    if (f>=3500&&f<=4000)   return '80M';\n    if (f>=5330&&f<=5410)   return '60M';\n    if (f>=7000&&f<=7300)   return '40M';\n    if (f>=10100&&f<=10150) return '30M';\n    if (f>=14000&&f<=14350) return '20M';\n    if (f>=18068&&f<=18168) return '17M';\n    if (f>=21000&&f<=21450) return '15M';\n    if (f>=24890&&f<=24990) return '12M';\n    if (f>=28000&&f<=29700) return '10M';\n    if (f>=50000&&f<=54000) return '6M';\n    if (f>=144000&&f<=148000) return '2M';\n    return '';\n}\nvar band = getBand(freqKHz);\nif (!band) return [null, null];\n\nvar seq = (flow.get('spotSeq') || 7000) + 1;\nflow.set('spotSeq', seq);\nvar ts = Math.floor(Date.now() / 1000);\nvar cmd = 'C' + seq + '|spot add rx_freq=' + freqMHz + ' callsign=' + dxCall + ' mode=' + mode + ' comment=' + (comment || 'DX') + ' spotter_callsign=' + spotter + ' timestamp=' + ts + ' color=#FF00FCCC priority=2 lifetime_seconds=1200 source=DX-Spot\\n';\n\nnode.status({ fill:'green', shape:'dot', text: '['+src+'] '+dxCall+' '+freqMHz+' '+mode });\n\nmsg.spot = { call:dxCall, freqKHz:freqKHz, freqMHz:freqMHz, band:band, mode:mode, spotter:spotter, comment:comment, src:src, flexCmd:cmd };\nmsg.payload = msg.spot;\nreturn [null, msg];",
     "outputs": 2,
@@ -214,17 +195,17 @@
     "y": 500,
     "wires": [
       [
-        "5e229e0a9e574bf2"
+        "2a20b140b97c35b0"
       ],
       [
-        "d3c7725602197773"
+        "b981643f37259f89"
       ]
     ]
   },
   {
-    "id": "d3c7725602197773",
+    "id": "b981643f37259f89",
     "type": "function",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "DXCC Prefix Lookup + Alert Classify",
     "func": "if (!flow.get('dxccReady')) {\n    node.status({fill:'grey', shape:'dot', text:'Paused \u2014 reference data loading...'});\n    return null;\n}\n\nvar prefixMap  = flow.get('dxccPrefixMap')  || {};\nvar exceptions = flow.get('dxccExceptions') || {};\nvar seedNames  = flow.get('dxccSeedNames')  || {};\n\nif (Object.keys(prefixMap).length === 0) {\n    node.status({fill:'yellow', shape:'dot', text:'Waiting for cty.xml...'});\n    return null;\n}\n\n// Resolve DXCC ADIF number from callsign\n// Handles portable calls: VK2/G7VJR, G7VJR/P, 9M2/VK2 etc.\nfunction resolveDXCC(call) {\n    call = call.toUpperCase();\n    // Exact callsign exception first\n    if (exceptions[call]) return exceptions[call];\n    var parts = call.split('/');\n    var bestDxcc = null, bestLen = 0;\n    parts.forEach(function(part) {\n        if (part.length <= 2) return; // skip /P /M /MM suffixes\n        for (var len = Math.min(5, part.length); len >= 1; len--) {\n            var pfx = part.substring(0, len);\n            if (prefixMap[pfx]) {\n                if (len > bestLen) { bestLen = len; bestDxcc = prefixMap[pfx]; }\n                break;\n            }\n        }\n    });\n    return bestDxcc || parts[0].substring(0, 4);\n}\n\nvar spot = msg.spot;\nif (!spot) return null;\n\n// Blacklist check\nvar blacklist = flow.get('dxccBlacklist') || [];\nif (blacklist.indexOf(spot.call) !== -1) {\n    node.status({fill:'grey', shape:'ring', text: spot.call + ' blacklisted'});\n    return null;\n}\n\nvar band = (spot.band || '').toString().toUpperCase().trim();\nif (!band) return null;\n\nvar entityWorked = flow.get('entityWorked') || {};\nif (Object.keys(entityWorked).length === 0) {\n    node.status({fill:'yellow', shape:'dot', text:'Waiting for Club Log data...'});\n    return null;\n}\n\nvar seedKey = resolveDXCC(spot.call);  // ADIF number as string e.g. \"324\"\nspot.dxcc   = seedKey;\nspot.entity = seedNames[seedKey] || seedKey;\n\n// Drop if ADIF not a known entity \u2014 bogus prefix e.g. QN, QP, J1\nif (!seedNames[seedKey]) {\n    node.status({fill:'grey', shape:'ring', text: spot.call + ' unknown DXCC: ' + seedKey});\n    return null;\n}\n\nvar ew  = entityWorked[seedKey];\nvar bw  = ew ? ew[band] : null;\n\nvar entityExists = !!ew && Object.keys(ew).length > 0;\nvar bandWorked   = !!(bw && (bw.confirmed || bw.unconfirmed));\n\nfunction getModeCat(m) {\n    if (!m) return null;\n    var u = m.toUpperCase();\n    if (u==='CW') return 'cw';\n    if (u==='FT8'||u==='FT4'||u==='RTTY'||u==='PSK31'||u==='DATA'||u==='JS8') return 'data';\n    if (u==='USB'||u==='LSB'||u==='SSB'||u==='AM'||u==='FM'||u==='PHONE') return 'phone';\n    return null;\n}\nvar modeCat = getModeCat(spot.mode);\nvar modeWorked = flow.get('dxccModeWorked') || {};\nvar modeEntry  = modeWorked[seedKey];\nvar modeAlreadyWorked = !!(modeEntry && modeCat && modeEntry[modeCat]);\n\nvar alertType, alertColor, alertLabel;\nif (!entityExists) {\n    alertType = 'NEW_DXCC'; alertColor = 'red';   alertLabel = 'NEW DXCC';\n} else if (modeCat && !modeAlreadyWorked) {\n    alertType = 'NEW_MODE'; alertColor = 'amber'; alertLabel = 'NEW MODE';\n} else if (!bandWorked) {\n    alertType = 'NEW_BAND'; alertColor = 'blue';  alertLabel = 'NEW BAND';\n} else {\n    node.status({fill:'grey', shape:'ring', text: spot.call + ' worked (' + spot.entity + ' ' + band + ')'});\n    return null;\n}\n\nvar confStatus = '\\u2014';\nif (bw) confStatus = bw.confirmed ? 'confirmed \\u2713' : 'unconfirmed \\u2717';\n\n// Mode filter\nvar modeCatForFilter = getModeCat(spot.mode);\nif (modeCatForFilter === 'cw'    && flow.get('filterModeCW')    === false) return null;\nif (modeCatForFilter === 'phone' && flow.get('filterModePhone') === false) return null;\nif (modeCatForFilter === 'data'  && flow.get('filterModeData')  === false) return null;\n\n// Band filter\nvar filterBands   = flow.get('filterBands');\nvar filterNewDxcc = flow.get('filterNewDxcc');\nvar filterNewBand = flow.get('filterNewBand');\nvar filterNewMode = flow.get('filterNewMode');\n\nif (filterBands && Object.keys(filterBands).length > 0 && !filterBands[band]) {\n    node.status({fill:'grey', shape:'ring', text: spot.call + ' filtered (' + band + ')'});\n    return null;\n}\nif (alertType === 'NEW_DXCC' && filterNewDxcc === false) return null;\nif (alertType === 'NEW_BAND' && filterNewBand === false) return null;\nif (alertType === 'NEW_MODE' && filterNewMode === false) return null;\n\nnode.status({fill: alertColor==='blue'?'blue':alertColor==='amber'?'yellow':'red',\n    shape:'dot', text: alertLabel + ': ' + spot.call + ' ' + spot.entity + ' ' + band});\n\nmsg.alert = {\n    type: alertType, color: alertColor, label: alertLabel,\n    call: spot.call, entity: spot.entity, dxcc: seedKey,\n    band: band, mode: spot.mode, freqKHz: spot.freqKHz, freqMHz: spot.freqMHz,\n    spotter: spot.spotter, comment: spot.comment, confStatus: confStatus,\n    time: new Date().toLocaleTimeString()\n};\nmsg.payload = msg.alert;\nreturn msg;",
     "outputs": 1,
@@ -236,20 +217,20 @@
     "y": 500,
     "wires": [
       [
-        "7d2dbec6fe8b87d0",
-        "d220fa4245901654",
-        "26b1b1450a48dc62",
-        "7647e8e8f11f378d",
-        "78e7c6a2f7a9a87a"
+        "2286f0a512733e92",
+        "232b502c3ee8478c",
+        "aea6d6f85a001e71",
+        "2e0f3fcc5d7743d4",
+        "d5eca40d3503035d"
       ]
     ]
   },
   {
-    "id": "7d2dbec6fe8b87d0",
+    "id": "2286f0a512733e92",
     "type": "function",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "Format Alert for Dashboard Table",
-    "func": "var a = msg.alert;\nvar colorMap = {'red':'#ff3333','blue':'#3399ff','amber':'#ffaa00'};\nvar bg = colorMap[a.color] || '#888';\nvar row = { time:a.time, type:a.label, call:a.call, entity:a.entity,\n            band:a.band, mode:a.mode, freq:a.freqMHz+' MHz',\n            spotter:a.spotter, conf:a.confStatus, color:bg,\n            ts:Date.now(), alertType:a.type };\nvar ttlMs  = (flow.get('spotTTL') || 20) * 60 * 1000;\nvar alerts = flow.get('alertList') || [];\nvar now    = Date.now();\n\n// Remove expired rows\nalerts = alerts.filter(function(r) { return (now - (r.ts || 0)) < ttlMs; });\nalerts.unshift(row);\nif (alerts.length > 200) alerts = alerts.slice(0, 200);\nflow.set('alertList', alerts);\n\n// Apply current filter before sending to table\nvar filterBands   = flow.get('filterBands');\nvar filterNewDxcc = flow.get('filterNewDxcc');\nvar filterNewBand = flow.get('filterNewBand');\nvar filterNewMode = flow.get('filterNewMode');\n\nvar visible = alerts.filter(function(r) {\n    if (filterBands && Object.keys(filterBands).length > 0 && !filterBands[r.band]) return false;\n    if (r.alertType === 'NEW_DXCC' && filterNewDxcc === false) return false;\n    if (r.alertType === 'NEW_BAND' && filterNewBand === false) return false;\n    if (r.alertType === 'NEW_MODE' && filterNewMode === false) return false;\n    return true;\n});\n\nmsg.payload = visible;\nreturn msg;",
+    "func": "var a = msg.alert;\nvar colorMap = {'red':'#ff3333','blue':'#3399ff','amber':'#ffaa00'};\nvar bg = colorMap[a.color] || '#888';\nvar row = { time:a.time, type:a.label, call:a.call, entity:a.entity,\n            band:a.band, mode:a.mode, freq:a.freqMHz+' MHz',\n            spotter:a.spotter, conf:a.confStatus, color:bg,\n            ts:Date.now(), alertType:a.type };\nvar ttlMs  = (flow.get('spotTTL') || 20) * 60 * 1000;\nvar alerts = flow.get('alertList') || [];\nvar now    = Date.now();\n\n// Remove expired rows\nalerts = alerts.filter(function(r) { return (now - (r.ts || 0)) < ttlMs; });\nalerts.unshift(row);\nif (alerts.length > 200) alerts = alerts.slice(0, 200);\nflow.set('alertList', alerts);\n\n// Apply current filter before sending to table\nvar filterBands   = flow.get('filterBands');\nvar filterNewDxcc = flow.get('filterNewDxcc');\nvar filterNewBand = flow.get('filterNewBand');\nvar filterNewMode = flow.get('filterNewMode');\n\nvar visible = alerts.filter(function(r) {\n    if (filterBands && Object.keys(filterBands).length > 0 && !filterBands[r.band]) return false;\n    if (r.alertType === 'NEW_DXCC' && filterNewDxcc === false) return false;\n    if (r.alertType === 'NEW_BAND' && filterNewBand === false) return false;\n    if (r.alertType === 'NEW_MODE' && filterNewMode === false) return false;\n    return true;\n});\n\nmsg.payload = visible;\nmsg.topic = 'dx_alert';\nmsg.topic='dx_alert';\nreturn msg;",
     "outputs": 1,
     "noerr": 0,
     "initialize": "",
@@ -259,33 +240,37 @@
     "y": 580,
     "wires": [
       [
-        "e39d6ec202a572c4"
+        "38a6451a95a57685"
       ]
     ]
   },
   {
-    "id": "e39d6ec202a572c4",
+    "id": "38a6451a95a57685",
     "type": "ui_template",
-    "z": "98ff80b2b2c1ab52",
-    "group": "509aee3b66ba24b4",
-    "name": "DXCC Alert Table",
+    "z": "d110d176c0aad308",
+    "group": "grp_dxcc_stats",
+    "name": "DXCC Dashboard",
     "order": 1,
     "width": "24",
-    "height": "12",
-    "format": "<style>\n.dxt { width:100%;border-collapse:collapse;font-family:'Courier New',monospace;font-size:11px; }\n.dxt th { background:#1a1a2e;color:#00ffff;padding:5px 8px;text-align:left;position:sticky;top:0;border-bottom:1px solid #00ffff44;letter-spacing:.5px; }\n.dxt td { padding:4px 8px;border-bottom:1px solid #ffffff11;vertical-align:middle; }\n.dxt tr:hover td { background:#ffffff08; }\n.conf-y { color:#00cc66;font-weight:bold; }\n.conf-n { color:#ff8800; }\n.badge { display:inline-block;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:bold;letter-spacing:.5px; }\n.call-cell { font-weight:bold;font-size:13px; }\n.dxwrap { max-height:320px;overflow-y:auto;background:#0d0d1a;border:1px solid #00ffff22;border-radius:4px; }\n.bl-btn { background:#2a0000;color:#f44;border:1px solid #f446;padding:1px 6px;border-radius:4px;font-size:10px;cursor:pointer;font-family:monospace; }\n</style>\n<div class=\"dxwrap\" ng-init=\"blCall='';\">\n<table class=\"dxt\">\n  <thead><tr><th>Time</th><th>Type</th><th>Call</th><th>Entity</th><th>Band</th><th>Mode</th><th>Freq</th><th>Existing slot</th><th>Spotter</th></tr></thead>\n  <tbody>\n    <tr ng-repeat=\"row in msg.payload\">\n      <td style=\"color:#666\">{{row.time}}</td>\n      <td><span class=\"badge\" ng-style=\"{'background':row.color+'33','color':row.color,'border':'1px solid '+row.color+'88'}\">{{row.type}}</span></td>\n      <td class=\"call-cell\" style=\"color:#ffffff;font-weight:bold\">{{row.call}}</td>\n      <td style=\"color:#dddddd\">{{row.entity}}</td>\n      <td style=\"color:#adf\">{{row.band}}</td>\n      <td style=\"color:#fda\">{{row.mode}}</td>\n      <td style=\"color:#8af\">{{row.freq}}</td>\n      <td>\n        <span ng-if=\"row.conf==='confirmed \u2713'\" class=\"conf-y\">\u2713 confirmed</span>\n        <span ng-if=\"row.conf==='unconfirmed \u2717'\" class=\"conf-n\">\u2717 unconfirmed</span>\n        <span ng-if=\"row.conf==='\u2014'\" style=\"color:#555\">\u2014</span>\n      </td>\n      <td style=\"color:#777\">{{row.spotter}}</td>\n    </tr>\n  </tbody>\n</table>\n</div>",
+    "height": "22",
+    "format": "<style>\n  .dx-wrap {\n    display: grid;\n    grid-template-columns: 220px 1fr;\n    gap: 8px;\n    height: 100%;\n  }\n\n  .dx-side {\n    display: flex;\n    flex-direction: column;\n    gap: 6px;\n    overflow-y: auto;\n    padding-right: 2px;\n  }\n\n  .dx-main {\n    overflow: hidden;\n    display: flex;\n    flex-direction: column;\n  }\n\n  .dx-card {\n    background: #161b22;\n    border: 1px solid #30363d;\n    border-radius: 6px;\n    padding: 8px 10px;\n    font-family: monospace;\n    font-size: 11px;\n    color: #c9d1d9;\n  }\n\n  .st-row {\n    display: flex;\n    justify-content: space-between;\n    padding: 2px 0;\n    border-bottom: 1px solid #21262d;\n  }\n\n  .st-k {\n    color: #8b949e;\n    font-size: 10px;\n  }\n\n  .st-v {\n    color: #58a6ff;\n    font-weight: bold;\n  }\n\n  .st-upd {\n    color: #3fb950;\n    font-size: 9px;\n    margin-top: 4px;\n  }\n\n  .dx-sec {\n    font-size: 9px;\n    color: #555;\n    letter-spacing: 1px;\n    margin: 6px 0 3px 0;\n  }\n\n  .dx-btns {\n    display: flex;\n    flex-wrap: wrap;\n    gap: 3px;\n  }\n\n  .dx-btn {\n    padding: 2px 7px;\n    border-radius: 8px;\n    cursor: pointer;\n    user-select: none;\n    font-size: 10px;\n    font-family: monospace;\n    white-space: nowrap;\n    border: 1px solid #30363d;\n    background: #0d1117;\n    color: #444;\n    display: inline-block;\n    line-height: 1.5;\n    transition: opacity 0.1s, transform 0.1s;\n  }\n\n  .dx-btn:active {\n    opacity: 0.5;\n    transform: scale(0.95);\n  }\n\n  .dx-btn.on {\n    border-color: #3fb950;\n    background: #0d1f0d;\n    color: #3fb950;\n  }\n\n  .dx-btn.off {\n    border-color: #30363d;\n    background: #0d1117;\n    color: #444;\n  }\n\n  .dx-btn.on-red {\n    border-color: #f85149;\n    background: #1f0d0d;\n    color: #f85149;\n  }\n\n  .dx-btn.on-blu {\n    border-color: #58a6ff;\n    background: #0d0d1f;\n    color: #58a6ff;\n  }\n\n  .dx-btn.on-amb {\n    border-color: #e3b341;\n    background: #1a1400;\n    color: #e3b341;\n  }\n\n  .dx-act {\n    padding: 4px 8px;\n    border-radius: 4px;\n    cursor: pointer;\n    font-size: 10px;\n    font-family: monospace;\n    border: 1px solid;\n    text-align: center;\n    line-height: 1.4;\n    transition: opacity 0.15s, transform 0.1s;\n    display: block;\n  }\n\n  .dx-act:active {\n    opacity: 0.4;\n    transform: scale(0.97);\n  }\n\n  .dx-actions {\n    display: grid;\n    grid-template-columns: 1fr 1fr;\n    gap: 4px;\n  }\n\n  .dx-ttl {\n    display: flex;\n    align-items: center;\n    gap: 6px;\n    margin-top: 2px;\n  }\n\n  .dx-ttl input[type=range] {\n    flex: 1;\n    accent-color: #3fb950;\n    cursor: pointer;\n  }\n\n  .dx-ttl-v {\n    color: #3fb950;\n    font-size: 10px;\n    min-width: 32px;\n    text-align: right;\n  }\n\n  .bl-list {\n    display: flex;\n    flex-wrap: wrap;\n    gap: 3px;\n    margin: 4px 0 2px 0;\n    min-height: 16px;\n  }\n\n  .bl-tag {\n    background: #1f0000;\n    border: 1px solid #f4464d;\n    padding: 1px 6px;\n    border-radius: 8px;\n    color: #f88;\n    font-size: 10px;\n    cursor: pointer;\n    transition: opacity 0.1s;\n  }\n\n  .bl-tag:active {\n    opacity: 0.5;\n  }\n\n  .bl-row {\n    display: flex;\n    gap: 4px;\n    margin-bottom: 5px;\n  }\n\n  .bl-in {\n    background: #0d1117;\n    border: 1px solid #30363d;\n    color: #fff;\n    padding: 3px 6px;\n    border-radius: 4px;\n    font-family: monospace;\n    font-size: 10px;\n    flex: 1;\n    min-width: 0;\n  }\n\n  .bl-add {\n    background: #1f0000;\n    color: #f44;\n    border: 1px solid #f446;\n    padding: 3px 8px;\n    border-radius: 4px;\n    font-size: 10px;\n    cursor: pointer;\n    font-family: monospace;\n    white-space: nowrap;\n    transition: opacity 0.1s, transform 0.1s;\n  }\n\n  .bl-add:active {\n    opacity: 0.5;\n    transform: scale(0.95);\n  }\n\n  .dxt-wrap {\n    flex: 1;\n    overflow-y: auto;\n    background: #0d1117;\n    border: 1px solid #30363d;\n    border-radius: 4px;\n  }\n\n  .dxt {\n    width: 100%;\n    border-collapse: collapse;\n    font-family: monospace;\n    font-size: 11px;\n  }\n\n  .dxt th {\n    background: #161b22;\n    color: #58a6ff;\n    padding: 5px 8px;\n    text-align: left;\n    position: sticky;\n    top: 0;\n    border-bottom: 1px solid #30363d;\n    font-size: 10px;\n    letter-spacing: .5px;\n  }\n\n  .dxt td {\n    padding: 4px 8px;\n    border-bottom: 1px solid #21262d;\n    vertical-align: middle;\n  }\n\n  .dxt tr:hover td {\n    background: #ffffff06;\n  }\n\n  .badge {\n    display: inline-block;\n    padding: 1px 6px;\n    border-radius: 8px;\n    font-size: 9px;\n    font-weight: bold;\n  }\n\n  .conf-y {\n    color: #3fb950;\n  }\n\n  .conf-n {\n    color: #e3b341;\n  }\n</style>\n\n<div class=\"dx-wrap\">\n  <div class=\"dx-side\">\n\n    <!-- Stats -->\n    <div class=\"dx-card\">\n      <div class=\"dx-sec\">\u2500\u2500 WORKED STATS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500</div>\n      <div class=\"st-row\"><span class=\"st-k\">Entities</span><span class=\"st-v\" id=\"st-ent\">\u2014</span></div>\n      <div class=\"st-row\"><span class=\"st-k\">Band slots</span><span class=\"st-v\" id=\"st-slots\">\u2014</span></div>\n      <div class=\"st-row\"><span class=\"st-k\">Confirmed \u2713</span><span class=\"st-v\" id=\"st-conf\">\u2014</span></div>\n      <div class=\"st-row\"><span class=\"st-k\">Unconfirmed \u2717</span><span class=\"st-v\" id=\"st-unconf\">\u2014</span></div>\n      <div class=\"st-upd\" id=\"st-upd\"></div>\n    </div>\n\n    <!-- Refresh / Clear -->\n    <div class=\"dx-card\" style=\"padding:6px 8px;\">\n      <div class=\"dx-actions\">\n        <div class=\"dx-act\" style=\"background:#0d2818;color:#3fb950;border-color:#238636;\" id=\"dx-refresh\">\ud83d\udd04 Refresh\n        </div>\n        <div class=\"dx-act\" style=\"background:#1f0d0d;color:#f85149;border-color:#3d1a19;\" id=\"dx-clear\">\ud83d\uddd1\ufe0f Clear</div>\n      </div>\n    </div>\n\n    <!-- Filters -->\n    <div class=\"dx-card\">\n      <div class=\"dx-sec\">\u2500\u2500 BANDS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500</div>\n      <div class=\"dx-btns\" id=\"dx-band-btns\">\n        <span class=\"dx-btn\" data-band=\"b160\">160</span>\n        <span class=\"dx-btn\" data-band=\"b80\">80</span>\n        <span class=\"dx-btn\" data-band=\"b60\">60</span>\n        <span class=\"dx-btn\" data-band=\"b40\">40</span>\n        <span class=\"dx-btn\" data-band=\"b30\">30</span>\n        <span class=\"dx-btn\" data-band=\"b20\">20</span>\n        <span class=\"dx-btn\" data-band=\"b17\">17</span>\n        <span class=\"dx-btn\" data-band=\"b15\">15</span>\n        <span class=\"dx-btn\" data-band=\"b12\">12</span>\n        <span class=\"dx-btn\" data-band=\"b10\">10</span>\n        <span class=\"dx-btn\" data-band=\"b6\">6</span>\n        <span class=\"dx-btn\" data-band=\"b2\">2</span>\n        <span class=\"dx-btn\" style=\"border-color:#1f3a5a;color:#58a6ff;background:#0d1a2a;\" id=\"dx-all\">All</span>\n        <span class=\"dx-btn\" style=\"border-color:#1f3a5a;color:#58a6ff;background:#0d1a2a;\" id=\"dx-hf\">HF</span>\n        <span class=\"dx-btn\" style=\"border-color:#1f3a5a;color:#58a6ff;background:#0d1a2a;\" id=\"dx-vhf\">VHF</span>\n      </div>\n      <div class=\"dx-sec\" style=\"margin-top:8px;\">\u2500\u2500 ALERT TYPE \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500</div>\n      <div class=\"dx-btns\">\n        <span class=\"dx-btn\" data-type=\"dxcc\">\ud83d\udd34 DXCC</span>\n        <span class=\"dx-btn\" data-type=\"band\">\ud83d\udd35 BAND</span>\n        <span class=\"dx-btn\" data-type=\"mode\">\ud83d\udfe1 MODE</span>\n      </div>\n      <div class=\"dx-sec\" style=\"margin-top:8px;\">\u2500\u2500 MODE \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500</div>\n      <div class=\"dx-btns\">\n        <span class=\"dx-btn\" data-mode=\"cw\">\u2726 CW</span>\n        <span class=\"dx-btn\" data-mode=\"phone\">\ud83c\udf99 Phone</span>\n        <span class=\"dx-btn\" data-mode=\"data\">\ud83d\udcca Data</span>\n      </div>\n      <div class=\"dx-sec\" style=\"margin-top:8px;\">\u2500\u2500 SPOT LIFETIME \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500</div>\n      <div class=\"dx-ttl\">\n        <input type=\"range\" id=\"dx-ttl\" min=\"5\" max=\"60\" step=\"5\" value=\"20\"\n               oninput=\"window._dxTTL(this.value)\">\n        <span class=\"dx-ttl-v\" id=\"dx-ttl-v\">20 min</span>\n      </div>\n    </div>\n\n    <!-- Blacklist -->\n    <div class=\"dx-card\">\n      <div class=\"dx-sec\">\u2500\u2500 BLOCK CALLSIGN \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500</div>\n      <div class=\"bl-row\" ng-init=\"nc='';\">\n        <input class=\"bl-in\" type=\"text\" ng-model=\"nc\" placeholder=\"Callsign...\">\n        <button class=\"bl-add\"\n          ng-click=\"send({payload:nc.toUpperCase(),topic:'blacklist_add'}); nc='';\">+ Block</button>\n      </div>\n      <div class=\"dx-sec\">\u2500\u2500 BLOCKED (<span id=\"bl-cnt\">0</span>) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500</div>\n      <div class=\"bl-list\" id=\"bl-list\"><span style=\"color:#555\">None</span></div>\n    </div>\n\n  </div>\n\n  <!-- RIGHT: Alert Table -->\n  <div class=\"dx-main\">\n    <div class=\"dxt-wrap\">\n      <table class=\"dxt\">\n        <thead>\n          <tr>\n            <th>Time</th>\n            <th>Type</th>\n            <th>Call</th>\n            <th>Entity</th>\n            <th>Band</th>\n            <th>Mode</th>\n            <th>Freq</th>\n            <th>Slot</th>\n            <th>Spotter</th>\n          </tr>\n        </thead>\n        <tbody id=\"dx-tbody\"></tbody>\n      </table>\n    </div>\n  </div>\n</div>\n\n<script>\n  (function(){\n  var STORE = 'vu2cpl_filters';\n  var ENDPOINT = '/dxcc/filters';\n\n  // Default state\n  var def = {\n    b:{b160:false,b80:true,b60:false,b40:true,b30:true,b20:true,\n       b17:true,b15:true,b12:true,b10:true,b6:false,b2:false},\n    t:{dxcc:true,band:true,mode:true},\n    m:{cw:true,phone:true,data:true},\n    ttl:20\n  };\n\n  // Load from localStorage\n  var st;\n  try {\n    var sv = localStorage.getItem(STORE);\n    st = sv ? JSON.parse(sv) : JSON.parse(JSON.stringify(def));\n    if(!st.m)   st.m   = JSON.parse(JSON.stringify(def.m));\n    if(!st.ttl) st.ttl = def.ttl;\n    if(!st.b)   st.b   = JSON.parse(JSON.stringify(def.b));\n    if(!st.t)   st.t   = JSON.parse(JSON.stringify(def.t));\n  } catch(e) { st = JSON.parse(JSON.stringify(def)); }\n\n  // Save to localStorage\n  function save(){\n    try{ localStorage.setItem(STORE, JSON.stringify(st)); }catch(e){}\n  }\n\n  // Send filter state to Node-RED via HTTP POST\n  function push(){\n    fetch(ENDPOINT, {\n      method: 'POST',\n      headers: {'Content-Type':'application/json'},\n      body: JSON.stringify({b:st.b, t:st.t, m:st.m, ttl:st.ttl})\n    }).catch(function(e){ console.warn('filter push:', e); });\n  }\n\n  // Render all button states\n  function render(){\n    document.querySelectorAll('[data-band]').forEach(function(el){\n      el.className = 'dx-btn ' + (st.b[el.dataset.band] ? 'on' : 'off');\n    });\n    var tc = {dxcc:'on-red', band:'on-blu', mode:'on-amb'};\n    document.querySelectorAll('[data-type]').forEach(function(el){\n      el.className = 'dx-btn ' + (st.t[el.dataset.type] ? tc[el.dataset.type] : 'off');\n    });\n    document.querySelectorAll('[data-mode]').forEach(function(el){\n      el.className = 'dx-btn ' + (st.m[el.dataset.mode] ? 'on' : 'off');\n    });\n    var r = document.getElementById('dx-ttl');\n    var v = document.getElementById('dx-ttl-v');\n    if(r) r.value = st.ttl;\n    if(v) v.textContent = st.ttl + ' min';\n  }\n\n  // Band buttons\n  document.querySelectorAll('[data-band]').forEach(function(el){\n    el.addEventListener('click', function(){\n      st.b[el.dataset.band] = !st.b[el.dataset.band];\n      render(); save(); push();\n    });\n  });\n\n  // Alert type buttons\n  document.querySelectorAll('[data-type]').forEach(function(el){\n    el.addEventListener('click', function(){\n      st.t[el.dataset.type] = !st.t[el.dataset.type];\n      render(); save(); push();\n    });\n  });\n\n  // Mode buttons\n  document.querySelectorAll('[data-mode]').forEach(function(el){\n    el.addEventListener('click', function(){\n      st.m[el.dataset.mode] = !st.m[el.dataset.mode];\n      render(); save(); push();\n    });\n  });\n\n  // All / HF / VHF presets\n  document.getElementById('dx-all').addEventListener('click', function(){\n    Object.keys(st.b).forEach(function(k){ st.b[k]=true; });\n    render(); save(); push();\n  });\n  document.getElementById('dx-hf').addEventListener('click', function(){\n    Object.keys(st.b).forEach(function(k){ st.b[k]=false; });\n    ['b160','b80','b60','b40','b30','b20','b17','b15','b12','b10'].forEach(function(k){ st.b[k]=true; });\n    render(); save(); push();\n  });\n  document.getElementById('dx-vhf').addEventListener('click', function(){\n    Object.keys(st.b).forEach(function(k){ st.b[k]=false; });\n    st.b.b6=true; st.b.b2=true;\n    render(); save(); push();\n  });\n\n  // TTL slider \u2014 oninput calls window._dxTTL\n  window._dxTTL = function(val){\n    st.ttl = parseInt(val) || 20;\n    var v = document.getElementById('dx-ttl-v');\n    if(v) v.textContent = st.ttl + ' min';\n    save(); push();\n  };\n\n  // Refresh button\n  document.getElementById('dx-refresh').addEventListener('click', function(){\n    var el = this; el.style.opacity='0.4';\n    setTimeout(function(){ el.style.opacity='1'; }, 200);\n    fetch('/dxcc/refresh', {method:'POST'}).catch(function(e){ console.warn(e); });\n  });\n\n  // Clear button\n  document.getElementById('dx-clear').addEventListener('click', function(){\n    var el = this; el.style.opacity='0.4';\n    setTimeout(function(){ el.style.opacity='1'; }, 200);\n    fetch('/dxcc/clear', {method:'POST'}).catch(function(e){ console.warn(e); });\n  });\n\n  // Blacklist tag remove \u2014 uses ng-click via scope (already works)\n  window._dxBlRemove = function(call){\n  fetch('/dxcc/blacklist-remove', {\n  method: 'POST',\n  headers: {'Content-Type':'application/json'},\n  body: JSON.stringify({call: call})\n  }).catch(function(e){ console.warn(e); });\n  };\n\n  // Initial render from saved state\n  render();\n\n  // Push saved state to Node-RED on load (after 800ms for startup)\n  setTimeout(push, 800);\n\n  // $watch for incoming messages from Node-RED\n  scope.$watch('msg', function(msg){\n    if(!msg || !msg.topic) return;\n\n    // Worked stats\n    if(msg.topic === 'dxcc_stats' && msg.payload){\n      var p = msg.payload;\n      function set(id,v){ var e=document.getElementById(id); if(e&&v!==undefined) e.textContent=v; }\n      set('st-ent',    p.entities);\n      set('st-slots',  p.bandSlots);\n      set('st-conf',   p.confirmed);\n      set('st-unconf', p.unconfirmed);\n      set('st-upd',    p.updated ? 'Updated: '+p.updated : '');\n    }\n\n    // Alert table\n    if(msg.topic === 'dx_alert' && Array.isArray(msg.payload)){\n      var tb = document.getElementById('dx-tbody'); if(!tb) return;\n      tb.innerHTML = '';\n      msg.payload.forEach(function(row){\n        var conf = row.conf==='confirmed \u2713'   ? '<span class=\"conf-y\">\u2713</span>'\n                 : row.conf==='unconfirmed \u2717' ? '<span class=\"conf-n\">\u2717</span>'\n                 : '<span style=\"color:#555\">\u2014</span>';\n        var tr = document.createElement('tr');\n        tr.innerHTML =\n          '<td style=\"color:#555\">'                                          +row.time+   '</td>'+\n          '<td><span class=\"badge\" style=\"background:'+row.color+'22;color:'+row.color+\n            ';border:1px solid '+row.color+'66\">'+row.type+'</span></td>'+\n          '<td style=\"color:#fff;font-weight:bold;font-size:12px\">'         +row.call+   '</td>'+\n          '<td style=\"color:#ddd\">'                                          +row.entity+ '</td>'+\n          '<td style=\"color:#adf\">'                                          +row.band+   '</td>'+\n          '<td style=\"color:#fda\">'                                          +row.mode+   '</td>'+\n          '<td style=\"color:#8af\">'                                          +row.freq+   '</td>'+\n          '<td>'                                                             +conf+        '</td>'+\n          '<td style=\"color:#666\">'                                          +row.spotter+'</td>';\n        tb.appendChild(tr);\n      });\n    }\n\n    // Blacklist\n    if(msg.topic === 'blacklist' && Array.isArray(msg.payload)){\n      var bl  = document.getElementById('bl-list');\n      var cnt = document.getElementById('bl-cnt');\n      if(!bl) return;\n      bl.innerHTML = '';\n      if(cnt) cnt.textContent = msg.payload.length;\n      if(!msg.payload.length){\n        bl.innerHTML = '<span style=\"color:#555\">None</span>';\n        return;\n      }\n      msg.payload.forEach(function(c){\n        var s = document.createElement('span');\n        s.className = 'bl-tag';\n        s.textContent = c;\n        s.title = 'Click to remove';\n        s.setAttribute('onclick', \"window._dxBlRemove('\"+c+\"')\");\n        bl.appendChild(s);\n      });\n    }\n  });\n})();\n</script>",
     "storeOutMessages": true,
+    "fwdInMessages": true,
     "resendOnRefresh": true,
     "templateScope": "local",
-    "x": 990,
+    "className": "",
+    "x": 870,
     "y": 640,
     "wires": [
-      []
+      [
+        "caa799bd4a340929"
+      ]
     ]
   },
   {
-    "id": "d220fa4245901654",
+    "id": "232b502c3ee8478c",
     "type": "function",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "Format MQTT Alert",
     "func": "var a = msg.alert;\nvar base = flow.get('cfg_alertTopic','file') || 'shack/dxcc/alert';\nmsg.topic   = base + '/' + a.type;\nmsg.payload = JSON.stringify({type:a.type,call:a.call,entity:a.entity,dxcc:a.dxcc,band:a.band,mode:a.mode,freqKHz:a.freqKHz,freqMHz:a.freqMHz,color:a.color,confStatus:a.confStatus,spotter:a.spotter,time:a.time});\nreturn msg;",
     "outputs": 1,
@@ -297,14 +282,14 @@
     "y": 540,
     "wires": [
       [
-        "4b54f4c9f0e8f5b1"
+        "12883658b5a09725"
       ]
     ]
   },
   {
-    "id": "26b1b1450a48dc62",
+    "id": "aea6d6f85a001e71",
     "type": "function",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "Format FlexRadio Spot Command",
     "func": "var a = msg.alert;\nif (!a) return null;\n\n// Colour by alert type: NEW_DXCC=red, NEW_MODE=amber, NEW_BAND=blue\nvar colorMap = {\n    'NEW_DXCC': '0xFFFF3333',   // red\n    'NEW_MODE': '0xFFFFAA00',   // amber\n    'NEW_BAND': '0xFF3399FF'    // blue\n};\nvar color = colorMap[a.type] || '0xFF00FCCC';\n\nvar seq = (flow.get('spotSeq') || 7000) + 1;\nflow.set('spotSeq', seq);\nvar ts = Math.floor(Date.now() / 1000);\nvar ttl = (flow.get('spotTTL') || 20) * 60;\n\nvar cmd = 'C' + seq + '|spot add' +\n    ' rx_freq='          + a.freqMHz +\n    ' callsign='         + a.call +\n    ' mode='             + a.mode +\n    ' comment='          + (a.label + '-' + a.entity).replace(/\\s+/g,'_').substring(0,20) +\n    ' spotter_callsign=' + (a.spotter || 'VU2CPL') +\n    ' timestamp='        + ts +\n    ' color='            + color +\n    ' priority=2' +\n    ' lifetime_seconds=' + ttl +\n    ' source=DXCC-Alert\\n';\n\nmsg.payload = cmd;\nnode.status({fill: a.color==='red'?'red':a.color==='amber'?'yellow':'blue',\n    shape:'dot', text: a.type + ': ' + a.call + ' \u2192 Flex'});\nreturn msg;",
     "outputs": 1,
@@ -316,14 +301,14 @@
     "y": 460,
     "wires": [
       [
-        "287c34c3be1f9431"
+        "d78de5c800ccf040"
       ]
     ]
   },
   {
-    "id": "287c34c3be1f9431",
+    "id": "d78de5c800ccf040",
     "type": "tcp out",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "FlexRadio 192.168.1.148:4992",
     "host": "192.168.1.148",
     "port": "4992",
@@ -336,9 +321,9 @@
     "wires": []
   },
   {
-    "id": "7647e8e8f11f378d",
+    "id": "2e0f3fcc5d7743d4",
     "type": "function",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "Format Browser Toast",
     "func": "var a = msg.alert;\nvar icons = {NEW_DXCC:'\ud83d\udd34',NEW_BAND:'\ud83d\udd35',NEW_MODE:'\ud83d\udfe1'};\nmsg.payload = (icons[a.type]||'\ud83d\udcfb')+' '+a.label+': '+a.call+' ('+a.entity+') '+a.band+' '+a.mode+' @ '+a.freqMHz+' MHz';\nmsg.topic = a.type;\nreturn msg;",
     "outputs": 1,
@@ -350,14 +335,14 @@
     "y": 620,
     "wires": [
       [
-        "738f8503f189d6bd"
+        "fb15686eec2abcdc"
       ]
     ]
   },
   {
-    "id": "738f8503f189d6bd",
+    "id": "fb15686eec2abcdc",
     "type": "ui_toast",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "position": "top right",
     "displayTime": "10",
     "highlight": "",
@@ -373,56 +358,28 @@
     "wires": []
   },
   {
-    "id": "a008abadd0cf76b1",
-    "type": "ui_button",
-    "z": "98ff80b2b2c1ab52",
-    "name": "Clear Alerts",
-    "group": "grp_dxcc_controls",
-    "order": 2,
-    "width": "6",
-    "height": "1",
-    "passthru": false,
-    "label": "\ud83d\uddd1\ufe0f Clear Alerts",
-    "tooltip": "Clear alert table",
-    "color": "#ffffff",
-    "bgcolor": "#440000",
-    "className": "",
-    "icon": "",
-    "payload": "clear",
-    "payloadType": "str",
-    "topic": "clear",
-    "topicType": "str",
-    "x": 450,
-    "y": 760,
-    "wires": [
-      [
-        "d02484ef770eb557"
-      ]
-    ]
-  },
-  {
-    "id": "d02484ef770eb557",
+    "id": "06e09f7c1cf8c86a",
     "type": "function",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "Clear Alert List",
-    "func": "flow.set('alertList',[]);\nmsg.payload=[];\nreturn msg;",
+    "func": "if(msg.topic !== 'clear_alerts' && msg.topic !== 'clear') return null;\nflow.set('alertList',[]);\nmsg.payload=[];\nmsg.topic='dx_alert';\nreturn msg;",
     "outputs": 1,
     "noerr": 0,
     "initialize": "",
     "finalize": "",
     "libs": [],
-    "x": 660,
-    "y": 760,
+    "x": 880,
+    "y": 880,
     "wires": [
       [
-        "e39d6ec202a572c4"
+        "38a6451a95a57685"
       ]
     ]
   },
   {
-    "id": "cd46a62edf5c8d09",
+    "id": "8fe63e652f1feba7",
     "type": "debug",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "Debug Alerts",
     "active": true,
     "tosidebar": true,
@@ -433,13 +390,13 @@
     "statusVal": "",
     "statusType": "auto",
     "x": 690,
-    "y": 80,
+    "y": 40,
     "wires": []
   },
   {
-    "id": "eba6f6c30cfa964a",
+    "id": "e0a28c36e90c5075",
     "type": "inject",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "TEST P5ABC",
     "props": [
       {
@@ -487,14 +444,14 @@
     "y": 560,
     "wires": [
       [
-        "d3c7725602197773"
+        "b981643f37259f89"
       ]
     ]
   },
   {
-    "id": "e5b388c117ae38e8",
+    "id": "9707565d3417ff66",
     "type": "inject",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "TEST C6ABC 160M (new band)",
     "props": [
       {
@@ -542,14 +499,14 @@
     "y": 600,
     "wires": [
       [
-        "d3c7725602197773"
+        "b981643f37259f89"
       ]
     ]
   },
   {
-    "id": "93c11da9f65ab3e4",
+    "id": "2322e0456f9c2e6e",
     "type": "inject",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "TEST XE2ABC 20M SSB (new mode)",
     "props": [
       {
@@ -597,125 +554,14 @@
     "y": 640,
     "wires": [
       [
-        "d3c7725602197773"
+        "b981643f37259f89"
       ]
     ]
   },
   {
-    "id": "0000a65d2b3aa1c1",
-    "type": "ui_slider",
-    "z": "98ff80b2b2c1ab52",
-    "name": "Spot TTL",
-    "label": "Spot lifetime (mins)",
-    "tooltip": "How long alerts stay in the table and FlexRadio spot list",
-    "group": "grp_dxcc_controls",
-    "order": 5,
-    "width": "12",
-    "height": "1",
-    "passthru": true,
-    "outs": "all",
-    "topic": "ttl",
-    "topicType": "str",
-    "min": 1,
-    "max": 120,
-    "step": 1,
-    "className": "",
-    "x": 80,
-    "y": 780,
-    "wires": [
-      [
-        "e55b86b7d60eb9a2"
-      ]
-    ]
-  },
-  {
-    "id": "e55b86b7d60eb9a2",
-    "type": "function",
-    "z": "98ff80b2b2c1ab52",
-    "name": "Save TTL",
-    "func": "flow.set('spotTTL', parseInt(msg.payload) || 20);\nnode.status({fill:'blue', shape:'dot', text:'TTL: ' + msg.payload + ' mins'});\nreturn null;",
-    "outputs": 0,
-    "noerr": 0,
-    "initialize": "flow.set('spotTTL', 20);",
-    "finalize": "",
-    "libs": [],
-    "x": 220,
-    "y": 780,
-    "wires": []
-  },
-  {
-    "id": "f1987ea5e68da517",
-    "type": "ui_template",
-    "z": "98ff80b2b2c1ab52",
-    "group": "grp_dxcc_controls",
-    "name": "Alert Filters",
-    "order": 3,
-    "width": "12",
-    "height": "8",
-    "format": "<style>\n.fm { font-family: monospace; font-size: 11px; color: #ccc; padding: 4px; }\n.fm-section { color:#0ff; font-size:10px; letter-spacing:1px; margin: 6px 0 3px 0; }\n.fm-bands { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:4px; }\n.fm-band { display:flex; align-items:center; gap:3px; background:#111;\n           border:1px solid #333; padding:2px 8px; border-radius:10px;\n           cursor:pointer; white-space:nowrap; }\n.fm-band.on  { border-color:#0ff6; background:#0ff1; color:#0ff; }\n.fm-band.off { border-color:#333;  background:#111;  color:#555; }\n.fm-band input { cursor:pointer; accent-color:#0ff; }\n.fm-types { display:flex; gap:8px; flex-wrap:wrap; }\n.fm-type { display:flex; align-items:center; gap:4px; cursor:pointer; padding:3px 10px;\n           border-radius:10px; border:1px solid #333; }\n.fm-type.on { border-color:#0ff6; background:#0ff1; }\n.fm-btns { display:flex; gap:5px; margin-top:6px; flex-wrap:wrap; }\n.fm-btn { background:#002244; color:#0ff; border:1px solid #0ff4; padding:2px 10px;\n          border-radius:4px; font-size:10px; cursor:pointer; font-family:monospace; }\n</style>\n<div class=\"fm\" ng-init=\"\n  b={b160:false,b80:true,b60:false,b40:true,b30:true,b20:true,b17:true,b15:true,b12:true,b10:true,b6:false,b2:false};\n  t={dxcc:true,band:true,mode:true};\n\">\n  <div class=\"fm-section\">\u2500\u2500 BANDS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500</div>\n  <div class=\"fm-bands\">\n    <label class=\"fm-band\" ng-class=\"b.b160?'on':'off'\"><input type=\"checkbox\" ng-model=\"b.b160\" ng-change=\"send({payload:{b:b,t:t},topic:'filter_update'})\"> 160M</label>\n    <label class=\"fm-band\" ng-class=\"b.b80?'on':'off'\"><input type=\"checkbox\" ng-model=\"b.b80\" ng-change=\"send({payload:{b:b,t:t},topic:'filter_update'})\"> 80M</label>\n    <label class=\"fm-band\" ng-class=\"b.b60?'on':'off'\"><input type=\"checkbox\" ng-model=\"b.b60\" ng-change=\"send({payload:{b:b,t:t},topic:'filter_update'})\"> 60M</label>\n    <label class=\"fm-band\" ng-class=\"b.b40?'on':'off'\"><input type=\"checkbox\" ng-model=\"b.b40\" ng-change=\"send({payload:{b:b,t:t},topic:'filter_update'})\"> 40M</label>\n    <label class=\"fm-band\" ng-class=\"b.b30?'on':'off'\"><input type=\"checkbox\" ng-model=\"b.b30\" ng-change=\"send({payload:{b:b,t:t},topic:'filter_update'})\"> 30M</label>\n    <label class=\"fm-band\" ng-class=\"b.b20?'on':'off'\"><input type=\"checkbox\" ng-model=\"b.b20\" ng-change=\"send({payload:{b:b,t:t},topic:'filter_update'})\"> 20M</label>\n    <label class=\"fm-band\" ng-class=\"b.b17?'on':'off'\"><input type=\"checkbox\" ng-model=\"b.b17\" ng-change=\"send({payload:{b:b,t:t},topic:'filter_update'})\"> 17M</label>\n    <label class=\"fm-band\" ng-class=\"b.b15?'on':'off'\"><input type=\"checkbox\" ng-model=\"b.b15\" ng-change=\"send({payload:{b:b,t:t},topic:'filter_update'})\"> 15M</label>\n    <label class=\"fm-band\" ng-class=\"b.b12?'on':'off'\"><input type=\"checkbox\" ng-model=\"b.b12\" ng-change=\"send({payload:{b:b,t:t},topic:'filter_update'})\"> 12M</label>\n    <label class=\"fm-band\" ng-class=\"b.b10?'on':'off'\"><input type=\"checkbox\" ng-model=\"b.b10\" ng-change=\"send({payload:{b:b,t:t},topic:'filter_update'})\"> 10M</label>\n    <label class=\"fm-band\" ng-class=\"b.b6?'on':'off'\"><input type=\"checkbox\" ng-model=\"b.b6\" ng-change=\"send({payload:{b:b,t:t},topic:'filter_update'})\"> 6M</label>\n    <label class=\"fm-band\" ng-class=\"b.b2?'on':'off'\"><input type=\"checkbox\" ng-model=\"b.b2\" ng-change=\"send({payload:{b:b,t:t},topic:'filter_update'})\"> 2M</label>\n  </div>\n  <div class=\"fm-btns\">\n    <button class=\"fm-btn\" ng-click=\"b.b160=true;b.b80=true;b.b60=true;b.b40=true;b.b30=true;b.b20=true;b.b17=true;b.b15=true;b.b12=true;b.b10=true;b.b6=true;b.b2=true;send({payload:{b:b,t:t},topic:'filter_update'})\">All</button>\n    <button class=\"fm-btn\" ng-click=\"b.b160=false;b.b80=false;b.b60=false;b.b40=false;b.b30=false;b.b20=false;b.b17=false;b.b15=false;b.b12=false;b.b10=false;b.b6=true;b.b2=true;send({payload:{b:b,t:t},topic:'filter_update'})\">VHF</button>\n    <button class=\"fm-btn\" ng-click=\"b.b160=true;b.b80=true;b.b60=true;b.b40=true;b.b30=true;b.b20=true;b.b17=true;b.b15=true;b.b12=true;b.b10=true;b.b6=false;b.b2=false;send({payload:{b:b,t:t},topic:'filter_update'})\">HF</button>\n  </div>\n  <div class=\"fm-section\" style=\"margin-top:8px\">\u2500\u2500 ALERT TYPES \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500</div>\n  <div class=\"fm-types\">\n    <label class=\"fm-type\" ng-class=\"t.dxcc?'on':''\"><input type=\"checkbox\" ng-model=\"t.dxcc\" ng-change=\"send({payload:{b:b,t:t},topic:'filter_update'})\"> \ud83d\udd34 NEW DXCC</label>\n    <label class=\"fm-type\" ng-class=\"t.band?'on':''\"><input type=\"checkbox\" ng-model=\"t.band\" ng-change=\"send({payload:{b:b,t:t},topic:'filter_update'})\"> \ud83d\udd35 NEW BAND</label>\n    <label class=\"fm-type\" ng-class=\"t.mode?'on':''\"><input type=\"checkbox\" ng-model=\"t.mode\" ng-change=\"send({payload:{b:b,t:t},topic:'filter_update'})\"> \ud83d\udfe1 NEW MODE</label>\n  </div>\n</div>",
-    "storeOutMessages": true,
-    "resendOnRefresh": true,
-    "templateScope": "local",
-    "x": 270,
-    "y": 680,
-    "wires": [
-      [
-        "76a93ace426a5691"
-      ]
-    ]
-  },
-  {
-    "id": "76a93ace426a5691",
-    "type": "function",
-    "z": "98ff80b2b2c1ab52",
-    "name": "Save Alert Filters",
-    "func": "if (msg.topic !== 'filter_update') return null;\nvar b = msg.payload.b || {};\nvar t = msg.payload.t || {dxcc:true,band:true,mode:true};\nvar bandMap = {b160:'160M',b80:'80M',b60:'60M',b40:'40M',b30:'30M',\n               b20:'20M',b17:'17M',b15:'15M',b12:'12M',b10:'10M',b6:'6M',b2:'2M'};\nvar allowedBands = {};\nObject.keys(bandMap).forEach(function(k){ if(b[k]) allowedBands[bandMap[k]] = true; });\nflow.set('filterBands',   allowedBands);\nflow.set('filterNewDxcc', !!t.dxcc);\nflow.set('filterNewBand', !!t.band);\nflow.set('filterNewMode', !!t.mode);\nnode.status({fill:'blue', shape:'dot',\n    text: Object.keys(allowedBands).length + ' bands | ' +\n          (t.dxcc?'DXCC ':'') + (t.band?'BAND ':'') + (t.mode?'MODE':'')});\n\n// Re-send alertList with new filter applied immediately\nvar alerts = flow.get('alertList') || [];\nvar now   = Date.now();\nvar ttlMs = (flow.get('spotTTL') || 20) * 60 * 1000;\nalerts = alerts.filter(function(r) { return (now - (r.ts || 0)) < ttlMs; });\n\nvar visible = alerts.filter(function(r) {\n    if (Object.keys(allowedBands).length > 0 && !allowedBands[r.band]) return false;\n    if (r.alertType === 'NEW_DXCC' && !t.dxcc) return false;\n    if (r.alertType === 'NEW_BAND' && !t.band) return false;\n    if (r.alertType === 'NEW_MODE' && !t.mode) return false;\n    return true;\n});\nmsg.payload = visible;\nreturn msg;",
-    "outputs": 1,
-    "noerr": 0,
-    "initialize": "var bandMap = {b160:'160M',b80:'80M',b60:'60M',b40:'40M',b30:'30M',\n               b20:'20M',b17:'17M',b15:'15M',b12:'12M',b10:'10M',b6:'6M',b2:'2M'};\nvar defBands = {};\n// Default: 80M-10M only\n['b80','b40','b30','b20','b17','b15','b12','b10'].forEach(function(k){\n    defBands[bandMap[k]] = true;\n});\nflow.set('filterBands',   defBands);\nflow.set('filterNewDxcc', true);\nflow.set('filterNewBand', true);\nflow.set('filterNewMode', true);",
-    "finalize": "",
-    "libs": [],
-    "x": 530,
-    "y": 680,
-    "wires": [
-      [
-        "e39d6ec202a572c4"
-      ]
-    ]
-  },
-  {
-    "id": "5b235fc8378846bb",
-    "type": "inject",
-    "z": "98ff80b2b2c1ab52",
-    "name": "Init filter defaults",
-    "props": [
-      {
-        "p": "payload"
-      },
-      {
-        "p": "topic",
-        "v": "filter_update",
-        "vt": "str"
-      }
-    ],
-    "repeat": "",
-    "crontab": "",
-    "once": true,
-    "onceDelay": 3,
-    "payload": "{\"b\":{\"b160\":false,\"b80\":true,\"b60\":false,\"b40\":true,\"b30\":true,\"b20\":true,\"b17\":true,\"b15\":true,\"b12\":true,\"b10\":true,\"b6\":false,\"b2\":false},\"t\":{\"dxcc\":true,\"band\":true,\"mode\":true}}",
-    "payloadType": "json",
-    "x": 270,
-    "y": 720,
-    "wires": [
-      [
-        "76a93ace426a5691"
-      ]
-    ]
-  },
-  {
-    "id": "4b54f4c9f0e8f5b1",
+    "id": "12883658b5a09725",
     "type": "mqtt out",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "MQTT Alert Publish",
     "topic": "",
     "qos": "1",
@@ -731,11 +577,11 @@
     "wires": []
   },
   {
-    "id": "6481de92accd93fa",
+    "id": "bf47f506a324b481",
     "type": "function",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "Blacklist Manager",
-    "func": "// Blacklist Manager\n// msg.topic = 'blacklist_add'    \u2192 msg.payload = callsign to add\n// msg.topic = 'blacklist_remove' \u2192 msg.payload = callsign to remove\n// msg.topic = 'blacklist_load'   \u2192 load from file\n// msg.topic = 'blacklist_get'    \u2192 return current list\n\nvar path = os.homedir() + '/.node-red/projects/vu2cpl-shack/nr_dxcc_blacklist.json';\n\nfunction loadList() {\n    try {\n        if (fs.existsSync(path)) {\n            return JSON.parse(fs.readFileSync(path, 'utf8'));\n        }\n    } catch(e) { node.warn('Blacklist load error: ' + e.message); }\n    return [];\n}\n\nfunction saveList(list) {\n    try {\n        fs.writeFileSync(path, JSON.stringify(list, null, 2));\n        return true;\n    } catch(e) { node.warn('Blacklist save error: ' + e.message); return false; }\n}\n\nvar list = loadList();\nvar call = (msg.payload || '').toString().toUpperCase().trim();\n\nif (msg.topic === 'blacklist_add' && call) {\n    if (list.indexOf(call) === -1) {\n        list.push(call);\n        list.sort();\n        saveList(list);\n        node.status({fill:'red', shape:'dot', text:'Blacklisted: ' + call});\n        flow.set('dxccBlacklist', list);\n        node.warn('Blacklisted: ' + call);\n    }\n} else if (msg.topic === 'blacklist_remove' && call) {\n    list = list.filter(function(c) { return c !== call; });\n    saveList(list);\n    flow.set('dxccBlacklist', list);\n    node.status({fill:'green', shape:'dot', text:'Removed: ' + call});\n} else if (msg.topic === 'blacklist_load') {\n    flow.set('dxccBlacklist', list);\n    node.status({fill:'blue', shape:'dot', text: list.length + ' blacklisted'});\n}\n\nmsg.payload  = list;\nmsg.topic    = 'blacklist_update';\nreturn msg;",
+    "func": "// Blacklist Manager\n// msg.topic = 'blacklist_add'    \u2192 msg.payload = callsign to add\n// msg.topic = 'blacklist_remove' \u2192 msg.payload = callsign to remove\n// msg.topic = 'blacklist_load'   \u2192 load from file\n// msg.topic = 'blacklist_get'    \u2192 return current list\n\nvar path = os.homedir() + '/.node-red/projects/vu2cpl-shack/nr_dxcc_blacklist.json';\n\nfunction loadList() {\n    try {\n        if (fs.existsSync(path)) {\n            return JSON.parse(fs.readFileSync(path, 'utf8'));\n        }\n    } catch(e) { node.warn('Blacklist load error: ' + e.message); }\n    return [];\n}\n\nfunction saveList(list) {\n    try {\n        fs.writeFileSync(path, JSON.stringify(list, null, 2));\n        return true;\n    } catch(e) { node.warn('Blacklist save error: ' + e.message); return false; }\n}\n\nvar list = loadList();\nvar call = (msg.payload || '').toString().toUpperCase().trim();\n\nif (msg.topic === 'blacklist_add' && call) {\n    if (list.indexOf(call) === -1) {\n        list.push(call);\n        list.sort();\n        saveList(list);\n        node.status({fill:'red', shape:'dot', text:'Blacklisted: ' + call});\n        flow.set('dxccBlacklist', list);\n        node.warn('Blacklisted: ' + call);\n    }\n} else if (msg.topic === 'blacklist_remove' && call) {\n    list = list.filter(function(c) { return c !== call; });\n    saveList(list);\n    flow.set('dxccBlacklist', list);\n    node.status({fill:'green', shape:'dot', text:'Removed: ' + call});\n} else if (msg.topic === 'blacklist_load') {\n    flow.set('dxccBlacklist', list);\n    node.status({fill:'blue', shape:'dot', text: list.length + ' blacklisted'});\n}\n\nmsg.payload  = list;\nmsg.topic    = 'blacklist_update';\nmsg.topic = 'blacklist';\nmsg.topic='blacklist';\nreturn msg;",
     "outputs": 1,
     "noerr": 0,
     "initialize": "var path = os.homedir() + '/.node-red/projects/vu2cpl-shack/nr_dxcc_blacklist.json';\ntry {\n    if (fs.existsSync(path)) {\n        var list = JSON.parse(fs.readFileSync(path, 'utf8'));\n        flow.set('dxccBlacklist', list);\n        node.log('Blacklist loaded: ' + list.length + ' entries');\n    } else {\n        flow.set('dxccBlacklist', []);\n    }\n} catch(e) { flow.set('dxccBlacklist', []); }",
@@ -754,14 +600,14 @@
     "y": 840,
     "wires": [
       [
-        "9982909c09899fde"
+        "38a6451a95a57685"
       ]
     ]
   },
   {
-    "id": "84a164967bda06a1",
+    "id": "951206bd458c1739",
     "type": "inject",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "Load blacklist on startup",
     "props": [
       {
@@ -783,35 +629,14 @@
     "y": 840,
     "wires": [
       [
-        "6481de92accd93fa"
+        "bf47f506a324b481"
       ]
     ]
   },
   {
-    "id": "9982909c09899fde",
-    "type": "ui_template",
-    "z": "98ff80b2b2c1ab52",
-    "group": "grp_dxcc_controls",
-    "name": "Blacklist Display",
-    "order": 8,
-    "width": "12",
-    "height": "4",
-    "format": "<style>\n.bl { font-family:monospace; font-size:11px; color:#ccc; padding:4px; }\n.bl-s { color:#f44; font-size:10px; letter-spacing:1px; margin:2px 0 4px 0; }\n.bl-list { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px; min-height:20px; }\n.bl-tag { background:#2a0000; border:1px solid #f446; padding:1px 8px; border-radius:8px; color:#f88; font-size:11px; }\n.bl-row { display:flex; gap:5px; margin-top:4px; }\n.bl-in { background:#111; border:1px solid #f446; color:#fff; padding:3px 8px;\n         border-radius:4px; font-family:monospace; font-size:11px; flex:1; }\n.bl-btn { background:#2a0000; color:#f44; border:1px solid #f446; padding:2px 10px;\n          border-radius:4px; font-size:10px; cursor:pointer; font-family:monospace; }\n</style>\n<div class=\"bl\" ng-init=\"nc='';\">\n  <div class=\"bl-s\">\u2500\u2500 BLOCKED ({{msg.payload ? msg.payload.length : 0}}) \u2500\u2500\u2500</div>\n  <div class=\"bl-list\">\n    <span class=\"bl-tag\" ng-repeat=\"c in msg.payload track by $index\">{{c}}</span>\n    <span ng-if=\"!msg.payload || msg.payload.length===0\" style=\"color:#555\">None</span>\n  </div>\n  <div class=\"bl-row\">\n    <input class=\"bl-in\" type=\"text\" ng-model=\"nc\" placeholder=\"Callsign...\">\n    <button class=\"bl-btn\" ng-click=\"nc.length>0 && send({payload:nc.toUpperCase(),topic:'blacklist_add'}); nc='';\">+ Block</button>\n  </div>\n</div>",
-    "storeOutMessages": true,
-    "resendOnRefresh": true,
-    "templateScope": "local",
-    "x": 780,
-    "y": 840,
-    "wires": [
-      [
-        "e5a20a791f9df6c3"
-      ]
-    ]
-  },
-  {
-    "id": "e5a20a791f9df6c3",
+    "id": "caa799bd4a340929",
     "type": "function",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "Blacklist Filter",
     "func": "// Only pass blacklist_add and blacklist_remove topics\n// Drop everything else (especially the forwarded payload arrays)\nif (msg.topic === 'blacklist_add' || msg.topic === 'blacklist_remove') {\n    return msg;\n}\nreturn null;",
     "outputs": 1,
@@ -823,14 +648,14 @@
     "y": 920,
     "wires": [
       [
-        "6481de92accd93fa"
+        "bf47f506a324b481"
       ]
     ]
   },
   {
-    "id": "1187b6c5c7911e2e",
+    "id": "87c3d6155fb5170b",
     "type": "inject",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "TEST Blacklist R9ON",
     "props": [
       {
@@ -853,14 +678,14 @@
     "y": 900,
     "wires": [
       [
-        "6481de92accd93fa"
+        "bf47f506a324b481"
       ]
     ]
   },
   {
-    "id": "0beb923cf7e37f1d",
+    "id": "af3f444ee2cb14c1",
     "type": "inject",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "Load Credentials on startup",
     "props": [
       {
@@ -877,14 +702,14 @@
     "y": 40,
     "wires": [
       [
-        "49581ac5bc91b822"
+        "08dcd5378a79bb18"
       ]
     ]
   },
   {
-    "id": "49581ac5bc91b822",
+    "id": "08dcd5378a79bb18",
     "type": "function",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "\u2699\ufe0f Credentials (edit once)",
     "func": "// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n// DXCC TRACKER \u2014 CREDENTIALS\n// Edit this node ONCE after import. Never changes.\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\nvar cfg = {\n    // Club Log\n    cl_apikey: '7cc2e40298a9da3f173bd06118f6cb08cc3131f3',\n    cl_email    : 'vu2cpl@gmail.com',\n    cl_password: '894-Dl851-Pa817-Yb540-Mu491-Gr328-Ki',\n    cl_callsign : 'VU2CPL',\n\n    // Telegram\n    tg_token: '8694006406:AAEaEyJZlr7hN6sjjVjIbNilkcY_kJe19NQ',\n    tg_chat_id  : '784711092'\n};\n\n// Store all in flow context (memory + file if available)\nObject.keys(cfg).forEach(function(k) {\n    flow.set('cfg_' + k, cfg[k]);\n    try { flow.set('cfg_' + k, cfg[k], 'file'); } catch(e) {}\n});\n\nnode.status({fill:'green', shape:'dot',\n    text:'Config loaded: ' + cfg.cl_callsign + ' / tg:' + cfg.tg_chat_id});\nreturn null;",
     "outputs": 0,
@@ -898,86 +723,11 @@
     "wires": []
   },
   {
-    "id": "grp_dxcc_stats",
-    "type": "ui_group",
-    "name": "\ud83d\udcca Worked Stats",
-    "tab": "tab_ui_dxcc",
-    "order": 3,
-    "disp": true,
-    "width": "12",
-    "collapse": false
-  },
-  {
-    "id": "509aee3b66ba24b4",
-    "type": "ui_group",
-    "name": "\ud83d\udce1 DX Alerts",
-    "tab": "tab_ui_dxcc",
-    "order": 2,
-    "disp": true,
-    "width": "24",
-    "collapse": false
-  },
-  {
-    "id": "grp_dxcc_controls",
-    "type": "ui_group",
-    "name": "\ud83c\udf9b\ufe0f Controls",
-    "tab": "tab_ui_dxcc",
-    "order": 4,
-    "disp": true,
-    "width": "12",
-    "collapse": false
-  },
-  {
-    "id": "f4785be9863eab08",
-    "type": "mqtt-broker",
-    "name": "Tasmota MQTT Broker",
-    "broker": "192.168.1.169",
-    "port": "1883",
-    "clientid": "",
-    "autoConnect": true,
-    "usetls": false,
-    "protocolVersion": "4",
-    "keepalive": "60",
-    "cleansession": true,
-    "autoUnsubscribe": true,
-    "birthTopic": "",
-    "birthQos": "0",
-    "birthPayload": "",
-    "birthMsg": {},
-    "closeTopic": "",
-    "closeQos": "0",
-    "closePayload": "",
-    "closeMsg": {},
-    "willTopic": "",
-    "willQos": "0",
-    "willPayload": "",
-    "willMsg": {},
-    "userProps": "",
-    "sessionExpiry": ""
-  },
-  {
-    "id": "tab_ui_dxcc",
-    "type": "ui_tab",
-    "name": "DXCC Tracker",
-    "icon": "radio",
-    "order": 5,
-    "disabled": false,
-    "hidden": false
-  },
-  {
-    "id": "bec49a0770309189",
-    "type": "global-config",
-    "env": [],
-    "modules": {
-      "node-red-dashboard": "3.6.6"
-    }
-  },
-  {
-    "id": "78e7c6a2f7a9a87a",
+    "id": "d5eca40d3503035d",
     "type": "function",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "Format Telegram Alert",
-    "func": "var a = msg.alert;\nvar icons = {NEW_DXCC:'\ud83d\udd34', NEW_BAND:'\ud83d\udd35', NEW_MODE:'\ud83d\udfe1'};\nvar icon = icons[a.type] || '\ud83d\udcfb';\n\nvar text = icon + ' *' + a.label + '*\\n' +\n    '\ud83d\udcde `' + a.call + '` \u2014 ' + a.entity + '\\n' +\n    '\ud83d\udcfb ' + a.band + ' | ' + a.mode + ' | ' + a.freqMHz + ' MHz\\n' +\n    '\ud83d\udc41 Spotter: ' + a.spotter + '\\n' +\n    '\ud83d\udd50 ' + a.time;\n\nvar token  = flow.get('cfg_tg_token')   || '';\nvar chatId = flow.get('cfg_tg_chat_id') || '';\n\nmsg.url     = 'https://api.telegram.org/bot' + token + '/sendMessage';\nmsg.method  = 'POST';\nmsg.headers = {'Content-Type': 'application/json'};\nmsg.payload = JSON.stringify({\n    chat_id:    chatId,\n    text:       text,\n    parse_mode: 'Markdown'\n});\n\nnode.status({fill:'blue', shape:'dot', text: a.call + ' \u2192 Telegram'});\nreturn msg;",
+    "func": "var a = msg.alert;\n\n// Apply same filters as dashboard\nvar filterBands     = flow.get('filterBands')   || {};\nvar filterNewDxcc   = flow.get('filterNewDxcc');\nvar filterNewBand   = flow.get('filterNewBand');\nvar filterNewMode   = flow.get('filterNewMode');\nvar filterModeCW    = flow.get('filterModeCW');\nvar filterModePhone = flow.get('filterModePhone');\nvar filterModeData  = flow.get('filterModeData');\n\n// Band filter\nif (Object.keys(filterBands).length > 0 && !filterBands[a.band]) return null;\n\n// Alert type filter\nif (a.type === 'NEW_DXCC' && filterNewDxcc === false) return null;\nif (a.type === 'NEW_BAND' && filterNewBand === false) return null;\nif (a.type === 'NEW_MODE' && filterNewMode === false) return null;\n\n// Mode filter\nvar _modeMap = {CW:'cw',USB:'phone',LSB:'phone',SSB:'phone',AM:'phone',FM:'phone',\n                FT8:'data',FT4:'data',RTTY:'data',PSK31:'data',JS8:'data',Data:'data'};\nvar _modeCat = _modeMap[a.mode] || null;\nif (_modeCat === 'cw'    && filterModeCW    === false) return null;\nif (_modeCat === 'phone' && filterModePhone === false) return null;\nif (_modeCat === 'data'  && filterModeData  === false) return null;\n\nvar icons = {NEW_DXCC:'\ud83d\udd34', NEW_BAND:'\ud83d\udd35', NEW_MODE:'\ud83d\udfe1'};\nvar icon = icons[a.type] || '\ud83d\udcfb';\n\nvar text = icon + ' *' + a.label + '*\\n' +\n    '\ud83d\udcde `' + a.call + '` \u2014 ' + a.entity + '\\n' +\n    '\ud83d\udcfb ' + a.band + ' | ' + a.mode + ' | ' + a.freqMHz + ' MHz\\n' +\n    '\ud83d\udc41 Spotter: ' + a.spotter + '\\n' +\n    '\ud83d\udd50 ' + a.time;\n\nvar token  = flow.get('cfg_tg_token')   || '';\nvar chatId = flow.get('cfg_tg_chat_id') || '';\n\nmsg.url     = 'https://api.telegram.org/bot' + token + '/sendMessage';\nmsg.method  = 'POST';\nmsg.headers = {'Content-Type': 'application/json'};\nmsg.payload = JSON.stringify({\n    chat_id:    chatId,\n    text:       text,\n    parse_mode: 'Markdown'\n});\n\nnode.status({fill:'blue', shape:'dot', text: a.call + ' \u2192 Telegram'});\nreturn msg;",
     "outputs": 1,
     "noerr": 0,
     "initialize": "",
@@ -987,14 +737,14 @@
     "y": 700,
     "wires": [
       [
-        "11ccf1d44994d2d0"
+        "c99019cb78d6877c"
       ]
     ]
   },
   {
-    "id": "11ccf1d44994d2d0",
+    "id": "c99019cb78d6877c",
     "type": "http request",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "Send Telegram Message",
     "method": "POST",
     "ret": "txt",
@@ -1008,14 +758,14 @@
     "y": 700,
     "wires": [
       [
-        "5418d1d905d3dd1d"
+        "86198e2e086c9a5d"
       ]
     ]
   },
   {
-    "id": "5418d1d905d3dd1d",
+    "id": "86198e2e086c9a5d",
     "type": "function",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "Telegram Response",
     "func": "try {\n    var r = JSON.parse(msg.payload);\n    if (r.ok) {\n        node.status({fill:'green', shape:'dot', text:'Sent OK'});\n    } else {\n        node.status({fill:'red', shape:'dot', text:'Error: ' + r.description});\n        node.warn('Telegram error: ' + r.description);\n    }\n} catch(e) {\n    node.status({fill:'red', shape:'dot', text:'Parse error'});\n}\nreturn null;",
     "outputs": 0,
@@ -1028,9 +778,9 @@
     "wires": []
   },
   {
-    "id": "6f0503183e00c896",
+    "id": "1000e598fc8e322e",
     "type": "inject",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "\ud83d\udd14 Test Telegram",
     "props": [
       {
@@ -1088,14 +838,14 @@
     "y": 760,
     "wires": [
       [
-        "78e7c6a2f7a9a87a"
+        "d5eca40d3503035d"
       ]
     ]
   },
   {
-    "id": "inject_test_ja1abc",
+    "id": "e7ba349ad7fa426b",
     "type": "inject",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "TEST JA1ABC 20M FT8",
     "props": [
       {
@@ -1120,7 +870,7 @@
       },
       {
         "p": "spot.freqMHz",
-        "v": "14.074000",
+        "v": "14.074",
         "vt": "str"
       },
       {
@@ -1137,20 +887,20 @@
     "repeat": "",
     "crontab": "",
     "once": false,
-    "payload": "",
-    "payloadType": "date",
-    "x": 150,
-    "y": 640,
+    "onceDelay": "",
+    "topic": "",
+    "x": 280,
+    "y": 700,
     "wires": [
       [
-        "d3c7725602197773"
+        "b981643f37259f89"
       ]
     ]
   },
   {
-    "id": "inject_cty_startup",
+    "id": "3720b5e9691dfb9c",
     "type": "inject",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "Load cty.xml on startup",
     "props": [
       {
@@ -1167,14 +917,14 @@
     "y": 100,
     "wires": [
       [
-        "fn_build_cty_url"
+        "a21b8d5072488469"
       ]
     ]
   },
   {
-    "id": "http_cty_xml",
+    "id": "41f919c5f28c3f6a",
     "type": "http request",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "Download cty.xml from Club Log",
     "method": "use",
     "ret": "bin",
@@ -1184,18 +934,18 @@
     "persist": false,
     "proxy": "",
     "authType": "",
-    "x": 430,
+    "x": 660,
     "y": 100,
     "wires": [
       [
-        "fn_decompress_cty"
+        "0a70882b5ce3b14f"
       ]
     ]
   },
   {
-    "id": "fn_decompress_cty",
+    "id": "0a70882b5ce3b14f",
     "type": "function",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "Decompress GZIP",
     "func": "try {\n    var buf = Buffer.isBuffer(msg.payload) ? msg.payload : Buffer.from(msg.payload);\n    // Check if response is too short to be valid cty.xml\n    if (buf.length < 1000) {\n        node.error('cty.xml download failed \u2014 response too short (' + buf.length + ' bytes). Will retry.');\n        node.status({fill:'red', shape:'dot', text:'Download failed \u2014 retrying in 60s'});\n        return null;\n    }\n    try {\n        msg.payload = zlib.gunzipSync(buf).toString('utf8');\n        node.status({fill:'green', shape:'dot', text:'Decompressed: ' + msg.payload.length + ' chars'});\n    } catch(e) {\n        msg.payload = buf.toString('utf8');\n        node.status({fill:'green', shape:'dot', text:'Plain: ' + msg.payload.length + ' chars'});\n    }\n    return msg;\n} catch(e) {\n    node.error('Decompress failed: ' + e.message);\n    node.status({fill:'red', shape:'dot', text:'Decompress failed'});\n    return null;\n}",
     "outputs": 1,
@@ -1208,33 +958,33 @@
         "module": "zlib"
       }
     ],
-    "x": 680,
-    "y": 100,
+    "x": 930,
+    "y": 40,
     "wires": [
       [
-        "fn_parse_cty"
+        "5f26764c3416b75e"
       ]
     ]
   },
   {
-    "id": "fn_parse_cty",
+    "id": "5f26764c3416b75e",
     "type": "function",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "Parse cty.xml -> Prefix Maps",
-    "func": "flow.set('dxccReady', false);\nvar xml = (msg.payload || '').toString();\nif (!xml || xml.length < 500) {\n    node.error('cty.xml too short: ' + xml.length + ' chars');\n    node.status({fill:'red', shape:'dot', text:'Bad data'});\n    return null;\n}\n\nfunction child(block, tag) {\n    var re = new RegExp('<' + tag + '>([^<]*)<\\/' + tag + '>');\n    var m = block.match(re);\n    return m ? m[1].trim() : '';\n}\n\nfunction isCurrent(block) {\n    var end = child(block, 'end');\n    if (!end || end === '') return true;\n    try { return new Date(end.replace(' ', 'T') + 'Z') >= new Date(); } catch(e) { return true; }\n}\n\nvar prefixMap   = {};  // prefix string -> ADIF number (string)\nvar entityNames = {};  // ADIF number   -> entity name\nvar exceptions  = {};  // callsign      -> ADIF number (string)\n\n// Parse <entities>\nvar entRe = /<entity\\b[^>]*>([\\s\\S]*?)<\\/entity>/g;\nvar em;\nwhile ((em = entRe.exec(xml)) !== null) {\n    var b = em[1];\n    var adif    = child(b, 'adif');\n    var name    = child(b, 'name');\n    var deleted = child(b, 'deleted').toUpperCase();\n    if (adif && name && deleted !== 'TRUE') {\n        entityNames[adif] = name;\n    }\n}\n\n// Parse <prefixes>\nvar pfxRe = /<prefix\\b[^>]*>([\\s\\S]*?)<\\/prefix>/g;\nvar pm;\nwhile ((pm = pfxRe.exec(xml)) !== null) {\n    var b = pm[1];\n    var call = child(b, 'call').toUpperCase();\n    var adif = child(b, 'adif');\n    if (!call || !adif) continue;\n    if (!isCurrent(b)) continue;\n    prefixMap[call] = adif;\n}\n\n// Parse <exceptions>\nvar excRe = /<exception\\b[^>]*>([\\s\\S]*?)<\\/exception>/g;\nvar xm;\nwhile ((xm = excRe.exec(xml)) !== null) {\n    var b = xm[1];\n    var call = child(b, 'call').toUpperCase();\n    var adif = child(b, 'adif');\n    if (!call || !adif) continue;\n    if (!isCurrent(b)) continue;\n    exceptions[call] = adif;\n}\n\nvar pfxCount = Object.keys(prefixMap).length;\nvar excCount = Object.keys(exceptions).length;\nvar entCount = Object.keys(entityNames).length;\n\nif (pfxCount < 100) {\n    node.error('Too few prefixes: ' + pfxCount);\n    node.status({fill:'red', shape:'dot', text:'Parse failed'});\n    return null;\n}\n\nflow.set('dxccPrefixMap',  prefixMap);\nflow.set('dxccExceptions', exceptions);\nflow.set('dxccSeedNames',  entityNames);\n\nnode.status({fill:'green', shape:'dot',\n    text: entCount + ' entities | ' + pfxCount + ' prefixes | ' + excCount + ' exceptions'});\nreturn null;",
+    "func": "var xml = (msg.payload || '').toString();\nif (!xml || xml.length < 500) {\n    node.error('cty.xml too short: ' + xml.length + ' chars');\n    node.status({fill:'red', shape:'dot', text:'Bad data'});\n    return null;\n}\n\nfunction child(block, tag) {\n    var re = new RegExp('<' + tag + '>([^<]*)<\\/' + tag + '>');\n    var m = block.match(re);\n    return m ? m[1].trim() : '';\n}\n\nfunction isCurrent(block) {\n    var end = child(block, 'end');\n    if (!end || end === '') return true;\n    try { return new Date(end.replace(' ', 'T') + 'Z') >= new Date(); } catch(e) { return true; }\n}\n\nvar prefixMap   = {};  // prefix string -> ADIF number (string)\nvar entityNames = {};  // ADIF number   -> entity name\nvar exceptions  = {};  // callsign      -> ADIF number (string)\n\n// Parse <entities>\nvar entRe = /<entity\\b[^>]*>([\\s\\S]*?)<\\/entity>/g;\nvar em;\nwhile ((em = entRe.exec(xml)) !== null) {\n    var b = em[1];\n    var adif    = child(b, 'adif');\n    var name    = child(b, 'name');\n    var deleted = child(b, 'deleted').toUpperCase();\n    if (adif && name && deleted !== 'TRUE') {\n        entityNames[adif] = name;\n    }\n}\n\n// Parse <prefixes>\nvar pfxRe = /<prefix\\b[^>]*>([\\s\\S]*?)<\\/prefix>/g;\nvar pm;\nwhile ((pm = pfxRe.exec(xml)) !== null) {\n    var b = pm[1];\n    var call = child(b, 'call').toUpperCase();\n    var adif = child(b, 'adif');\n    if (!call || !adif) continue;\n    if (!isCurrent(b)) continue;\n    prefixMap[call] = adif;\n}\n\n// Parse <exceptions>\nvar excRe = /<exception\\b[^>]*>([\\s\\S]*?)<\\/exception>/g;\nvar xm;\nwhile ((xm = excRe.exec(xml)) !== null) {\n    var b = xm[1];\n    var call = child(b, 'call').toUpperCase();\n    var adif = child(b, 'adif');\n    if (!call || !adif) continue;\n    if (!isCurrent(b)) continue;\n    exceptions[call] = adif;\n}\n\nvar pfxCount = Object.keys(prefixMap).length;\nvar excCount = Object.keys(exceptions).length;\nvar entCount = Object.keys(entityNames).length;\n\nif (pfxCount < 100) {\n    node.error('Too few prefixes: ' + pfxCount);\n    node.status({fill:'red', shape:'dot', text:'Parse failed'});\n    return null;\n}\n\nflow.set('dxccPrefixMap',  prefixMap);\nflow.set('dxccExceptions', exceptions);\nflow.set('dxccSeedNames',  entityNames);\n\nnode.status({fill:'green', shape:'dot',\n    text: entCount + ' entities | ' + pfxCount + ' prefixes | ' + excCount + ' exceptions'});\nreturn null;",
     "outputs": 0,
     "noerr": 0,
     "initialize": "",
     "finalize": "",
     "libs": [],
-    "x": 920,
-    "y": 100,
+    "x": 1020,
+    "y": 120,
     "wires": []
   },
   {
-    "id": "inject_cl_startup",
+    "id": "4ebafea5ce2d9d7b",
     "type": "inject",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "Load Club Log on startup",
     "props": [
       {
@@ -1247,37 +997,37 @@
     "onceDelay": 12,
     "payload": "load",
     "payloadType": "str",
-    "x": 190,
+    "x": 170,
     "y": 200,
     "wires": [
       [
-        "fn_build_cl_url"
+        "6e60f619acad462e"
       ]
     ]
   },
   {
-    "id": "fn_build_cl_url",
+    "id": "6e60f619acad462e",
     "type": "function",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "Build Club Log API Request",
-    "func": "var apiKey   = flow.get('cfg_cl_apikey')   || '';\nvar email    = flow.get('cfg_cl_email')    || '';\nvar password = flow.get('cfg_cl_password') || '';\nvar call     = (flow.get('cfg_cl_callsign') || 'VU2CPL').toUpperCase();\n\nif (!apiKey || !email || !password) {\n    node.error('Credentials not set \u2014 check Credentials node');\n    node.status({fill:'red', shape:'dot', text:'No credentials'});\n    return null;\n}\n\n// Fetch mode=0 (all), mode=1 (CW), mode=2 (Phone), mode=3 (Data)\nmsg.mode0url = 'https://clublog.org/json_dxccchart.php?call=' + encodeURIComponent(call) +\n    '&api=' + encodeURIComponent(apiKey) + '&email=' + encodeURIComponent(email) +\n    '&password=' + encodeURIComponent(password) + '&mode=0';\nmsg.mode1url = msg.mode0url.replace('mode=0','mode=1');\nmsg.mode2url = msg.mode0url.replace('mode=0','mode=2');\nmsg.mode3url = msg.mode0url.replace('mode=0','mode=3');\nmsg.url = msg.mode0url;\nnode.status({fill:'blue', shape:'dot', text:'Fetching ' + call + '...'});\nreturn msg;",
+    "func": "if(msg.topic === 'filter_update') return null;\nif(msg.topic !== 'refresh_clublog' && msg.payload !== 'load' && msg.payload !== 'refresh') return null;\nvar apiKey   = flow.get('cfg_cl_apikey')   || '';\nvar email    = flow.get('cfg_cl_email')    || '';\nvar password = flow.get('cfg_cl_password') || '';\nvar call     = (flow.get('cfg_cl_callsign') || 'VU2CPL').toUpperCase();\n\nif (!apiKey || !email || !password) {\n    node.error('Credentials not set \u2014 check Credentials node');\n    node.status({fill:'red', shape:'dot', text:'No credentials'});\n    return null;\n}\n\n// Fetch mode=0 (all), mode=1 (CW), mode=2 (Phone), mode=3 (Data)\nmsg.mode0url = 'https://clublog.org/json_dxccchart.php?call=' + encodeURIComponent(call) +\n    '&api=' + encodeURIComponent(apiKey) + '&email=' + encodeURIComponent(email) +\n    '&password=' + encodeURIComponent(password) + '&mode=0';\nmsg.mode1url = msg.mode0url.replace('mode=0','mode=1');\nmsg.mode2url = msg.mode0url.replace('mode=0','mode=2');\nmsg.mode3url = msg.mode0url.replace('mode=0','mode=3');\nmsg.url = msg.mode0url;\nnode.status({fill:'blue', shape:'dot', text:'Fetching ' + call + '...'});\nreturn msg;",
     "outputs": 1,
     "noerr": 0,
     "initialize": "",
     "finalize": "",
     "libs": [],
-    "x": 450,
+    "x": 440,
     "y": 200,
     "wires": [
       [
-        "fn_fetch_all_modes"
+        "9fd52c02a8486dce"
       ]
     ]
   },
   {
-    "id": "fn_fetch_all_modes",
+    "id": "9fd52c02a8486dce",
     "type": "function",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "Fetch All Modes + Parse",
     "func": "var meterToBand = {\n    '160':'160M','80':'80M','60':'60M','40':'40M','30':'30M',\n    '20':'20M','17':'17M','15':'15M','12':'12M','10':'10M','6':'6M','2':'2M'\n};\n\nfunction fetchURL(target) {\n    return new Promise(function(resolve, reject) {\n        var u = urlmod.parse(target);\n        var options = { hostname:u.hostname, path:u.path, method:'GET',\n                        headers:{'User-Agent':'Mozilla/5.0'} };\n        var req = https.request(options, function(res) {\n            var data = '';\n            res.on('data', function(chunk){ data += chunk; });\n            res.on('end', function(){ resolve(data); });\n        });\n        req.on('error', reject);\n        req.end();\n    });\n}\n\nfunction parseMatrix(raw) {\n    raw = raw.trim();\n    if (!raw || raw.charAt(0) !== '{') throw new Error('Bad response: ' + raw.substring(0,100));\n    var matrix = JSON.parse(raw);\n    if (matrix.Error || matrix.error) throw new Error('CL error: ' + (matrix.Error||matrix.error));\n    var ew = {};\n    Object.keys(matrix).forEach(function(adif) {\n        var bands = matrix[adif];\n        if (typeof bands !== 'object') return;\n        ew[adif] = {};\n        Object.keys(bands).forEach(function(mk) {\n            var band = meterToBand[mk];\n            if (!band || bands[mk] < 1) return;\n            var conf = bands[mk] >= 2;\n            ew[adif][band] = ew[adif][band] || {confirmed:false,unconfirmed:false};\n            if (conf) ew[adif][band].confirmed = true;\n            else      ew[adif][band].unconfirmed = true;\n        });\n    });\n    return ew;\n}\n\nnode.status({fill:'blue', shape:'dot', text:'Fetching all modes...'});\n\nPromise.all([\n    fetchURL(msg.mode0url),\n    fetchURL(msg.mode1url),\n    fetchURL(msg.mode2url),\n    fetchURL(msg.mode3url)\n]).then(function(results) {\n    var ew0 = parseMatrix(results[0]);\n    var ew1 = parseMatrix(results[1]);\n    var ew2 = parseMatrix(results[2]);\n    var ew3 = parseMatrix(results[3]);\n\n    var workedTable = {};\n    Object.keys(ew0).forEach(function(adif) {\n        Object.keys(ew0[adif]).forEach(function(band) {\n            var key = adif + '|' + band;\n            workedTable[key] = {dxcc:adif, band:band,\n                confirmed:ew0[adif][band].confirmed,\n                unconfirmed:ew0[adif][band].unconfirmed};\n        });\n    });\n\n    var modeWorked = {};\n    var allAdifs = {};\n    [ew1,ew2,ew3].forEach(function(ew){ Object.keys(ew).forEach(function(a){ allAdifs[a]=1; }); });\n    Object.keys(allAdifs).forEach(function(adif) {\n        modeWorked[adif] = {\n            cw:    !!(ew1[adif] && Object.keys(ew1[adif]).length > 0),\n            phone: !!(ew2[adif] && Object.keys(ew2[adif]).length > 0),\n            data:  !!(ew3[adif] && Object.keys(ew3[adif]).length > 0)\n        };\n    });\n\n    var stats = {\n        entities:    Object.keys(ew0).length,\n        confirmed:   Object.keys(workedTable).filter(function(k){return workedTable[k].confirmed;}).length,\n        unconfirmed: Object.keys(workedTable).filter(function(k){return !workedTable[k].confirmed;}).length,\n        bandSlots:   Object.keys(workedTable).length\n    };\n\n    flow.set('workedTable',    workedTable);\n    flow.set('entityWorked',   ew0);\n    flow.set('dxccModeWorked', modeWorked);\n    flow.set('workedStats',    stats);\n\n    flow.set('dxccReady', true);\n    node.status({fill:'green', shape:'dot',\n        text: stats.entities + ' entities | ' + stats.confirmed + '\u2713 ' + stats.unconfirmed + '\u2717 | modes OK'});\n    node.send({payload: stats});\n}).catch(function(err) {\n    node.error('Club Log fetch failed: ' + err.message);\n    node.status({fill:'red', shape:'dot', text:'Club Log unreachable \u2014 using seed'});\n    // Fall back to seed data if already loaded by bootstrap\n    var existing = flow.get('workedTable');\n    if (existing && Object.keys(existing).length > 10) {\n        flow.set('dxccReady', true);\n        node.warn('Club Log unreachable \u2014 falling back to seed data, alerts enabled');\n        node.send({payload: flow.get('workedStats') || {entities:0,confirmed:0,unconfirmed:0,bandSlots:0}});\n    } else {\n        node.warn('Club Log unreachable and no seed data \u2014 alerts remain paused');\n    }\n});\nreturn;",
     "outputs": 1,
@@ -1294,46 +1044,18 @@
         "module": "url"
       }
     ],
-    "x": 700,
+    "x": 710,
     "y": 200,
     "wires": [
       [
-        "46b0025362b6b236"
+        "bb17fc08553256e0"
       ]
     ]
   },
   {
-    "id": "btn_refresh_cl",
-    "type": "ui_button",
-    "z": "98ff80b2b2c1ab52",
-    "name": "Refresh Club Log",
-    "group": "grp_dxcc_controls",
-    "order": 1,
-    "width": "6",
-    "height": "1",
-    "passthru": false,
-    "label": "\ud83d\udd04 Refresh Club Log",
-    "tooltip": "Re-fetch Club Log matrix now",
-    "color": "#00ffff",
-    "bgcolor": "#003366",
-    "className": "",
-    "icon": "",
-    "payload": "refresh",
-    "payloadType": "str",
-    "topic": "refresh",
-    "topicType": "str",
-    "x": 150,
-    "y": 240,
-    "wires": [
-      [
-        "fn_build_cl_url"
-      ]
-    ]
-  },
-  {
-    "id": "fn_build_cty_url",
+    "id": "a21b8d5072488469",
     "type": "function",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "Build cty.xml URL",
     "func": "var apiKey = flow.get('cfg_cl_apikey') || '7cc2e40298a9da3f173bd06118f6cb08cc3131f3';\nmsg.url    = 'https://cdn.clublog.org/cty.php?api=' + encodeURIComponent(apiKey);\nmsg.method = 'GET';\nmsg.headers = {'Accept-Encoding': 'gzip'};\nnode.status({fill:'blue', shape:'dot', text:'Downloading cty.xml...'});\nreturn msg;",
     "outputs": 1,
@@ -1341,55 +1063,18 @@
     "initialize": "",
     "finalize": "",
     "libs": [],
-    "x": 300,
+    "x": 390,
     "y": 100,
     "wires": [
       [
-        "http_cty_xml"
+        "41f919c5f28c3f6a"
       ]
     ]
   },
   {
-    "id": "ui_mode_filter",
-    "type": "ui_template",
-    "z": "98ff80b2b2c1ab52",
-    "group": "grp_dxcc_controls",
-    "name": "Mode Filter Buttons",
-    "order": 6,
-    "width": "12",
-    "height": "2",
-    "format": "<style>\n.mf-row{display:flex;gap:8px;padding:4px;}\n.mf-btn{flex:1;padding:6px 10px;border-radius:4px;font-size:11px;font-family:monospace;\n        cursor:pointer;text-align:center;border:1px solid;transition:all 0.15s;}\n.mf-btn.on-cw   {background:#0d1a2a;border-color:#58a6ff;color:#58a6ff;}\n.mf-btn.on-phone{background:#0d2818;border-color:#3fb950;color:#3fb950;}\n.mf-btn.on-data {background:#2d1800;border-color:#e3b341;color:#e3b341;}\n.mf-btn.off     {background:#111;border-color:#333;color:#555;}\n</style>\n<div class=\"mf-row\" ng-init=\"mf={cw:true,phone:true,data:true};\">\n  <button class=\"mf-btn\" ng-class=\"mf.cw ? 'on-cw' : 'off'\"\n    ng-click=\"mf.cw=!mf.cw; send({payload:mf,topic:'mode_filter'})\">\n    \u283f CW\n  </button>\n  <button class=\"mf-btn\" ng-class=\"mf.phone ? 'on-phone' : 'off'\"\n    ng-click=\"mf.phone=!mf.phone; send({payload:mf,topic:'mode_filter'})\">\n    \ud83d\udcde Phone\n  </button>\n  <button class=\"mf-btn\" ng-class=\"mf.data ? 'on-data' : 'off'\"\n    ng-click=\"mf.data=!mf.data; send({payload:mf,topic:'mode_filter'})\">\n    \ud83d\udce1 Data\n  </button>\n</div>",
-    "storeOutMessages": false,
-    "fwdInMessages": false,
-    "resendOnRefresh": true,
-    "templateScope": "local",
-    "x": 400,
-    "y": 860,
-    "wires": [
-      [
-        "fn_save_mode_filter"
-      ]
-    ]
-  },
-  {
-    "id": "fn_save_mode_filter",
-    "type": "function",
-    "z": "98ff80b2b2c1ab52",
-    "name": "Save Mode Filter",
-    "func": "if (msg.topic !== 'mode_filter') return null;\nvar mf = msg.payload;\nflow.set('filterModeCW',    !!mf.cw);\nflow.set('filterModePhone', !!mf.phone);\nflow.set('filterModeData',  !!mf.data);\nnode.status({fill:'blue', shape:'dot',\n    text: 'CW:'+(mf.cw?'\u2713':'\u2717')+' Ph:'+(mf.phone?'\u2713':'\u2717')+' Data:'+(mf.data?'\u2713':'\u2717')});\nreturn null;",
-    "outputs": 0,
-    "noerr": 0,
-    "initialize": "flow.set('filterModeCW',    true);\nflow.set('filterModePhone', true);\nflow.set('filterModeData',  true);",
-    "finalize": "",
-    "libs": [],
-    "x": 650,
-    "y": 860,
-    "wires": []
-  },
-  {
-    "id": "inject_retry_cty",
+    "id": "802a047f80245150",
     "type": "inject",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "Retry cty.xml (60s)",
     "props": [
       {
@@ -1406,14 +1091,14 @@
     "y": 140,
     "wires": [
       [
-        "fn_build_cty_url"
+        "a21b8d5072488469"
       ]
     ]
   },
   {
-    "id": "inject_retry_cl",
+    "id": "9c98f9e7a941e852",
     "type": "inject",
-    "z": "98ff80b2b2c1ab52",
+    "z": "d110d176c0aad308",
     "name": "Retry Club Log (90s)",
     "props": [
       {
@@ -1426,12 +1111,209 @@
     "onceDelay": 90,
     "payload": "retry",
     "payloadType": "str",
-    "x": 190,
-    "y": 240,
+    "x": 160,
+    "y": 320,
     "wires": [
       [
-        "fn_build_cl_url"
+        "6e60f619acad462e"
       ]
     ]
+  },
+  {
+    "id": "dxcc_http_filters_01",
+    "type": "http in",
+    "z": "d110d176c0aad308",
+    "name": "POST /dxcc/filters",
+    "url": "/dxcc/filters",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 1010,
+    "y": 220,
+    "wires": [
+      [
+        "dxcc_fn_filters_01"
+      ]
+    ]
+  },
+  {
+    "id": "dxcc_fn_filters_01",
+    "type": "function",
+    "z": "d110d176c0aad308",
+    "name": "Save Alert Filters HTTP",
+    "func": "const p = msg.payload;\nif(!p){ msg.payload='OK'; return msg; }\nvar bm = {b160:'160M',b80:'80M',b60:'60M',b40:'40M',b30:'30M',b20:'20M',\n           b17:'17M',b15:'15M',b12:'12M',b10:'10M',b6:'6M',b2:'2M'};\nvar allowed = {};\nif(p.b) Object.keys(p.b).forEach(function(k){ if(p.b[k] && bm[k]) allowed[bm[k]]=true; });\nflow.set('filterBands',   allowed,         'file');\nflow.set('filterNewDxcc', p.t ? !!p.t.dxcc  : true, 'file');\nflow.set('filterNewBand', p.t ? !!p.t.band   : true, 'file');\nflow.set('filterNewMode', p.t ? !!p.t.mode   : true, 'file');\nflow.set('filterModeCW',    p.m ? !!p.m.cw    : true, 'file');\nflow.set('filterModePhone', p.m ? !!p.m.phone : true, 'file');\nflow.set('filterModeData',  p.m ? !!p.m.data  : true, 'file');\nif(p.ttl) flow.set('spotTTL', parseInt(p.ttl), 'file');\nnode.status({fill:'blue',shape:'dot',\n  text:'B:'+Object.keys(allowed).length+' TTL:'+(p.ttl||20)+'m'});\nmsg.payload = 'OK';\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1250,
+    "y": 220,
+    "wires": [
+      [
+        "dxcc_res_filters_01"
+      ]
+    ]
+  },
+  {
+    "id": "dxcc_res_filters_01",
+    "type": "http response",
+    "z": "d110d176c0aad308",
+    "name": "",
+    "statusCode": "200",
+    "headers": {},
+    "x": 1470,
+    "y": 220,
+    "wires": []
+  },
+  {
+    "id": "dxcc_http_refresh_01",
+    "type": "http in",
+    "z": "d110d176c0aad308",
+    "name": "POST /dxcc/refresh",
+    "url": "/dxcc/refresh",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 1010,
+    "y": 280,
+    "wires": [
+      [
+        "dxcc_fn_refresh_01"
+      ]
+    ]
+  },
+  {
+    "id": "dxcc_fn_refresh_01",
+    "type": "function",
+    "z": "d110d176c0aad308",
+    "name": "HTTP Refresh \u2192 Build Club Log",
+    "func": "msg.topic   = 'refresh_clublog';\nmsg.payload = 'refresh';\nnode.send([msg, {payload:'OK', res:msg.res}]);\nreturn null;",
+    "outputs": 2,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1250,
+    "y": 280,
+    "wires": [
+      [
+        "6e60f619acad462e"
+      ],
+      [
+        "dxcc_res_refresh_01"
+      ]
+    ]
+  },
+  {
+    "id": "dxcc_res_refresh_01",
+    "type": "http response",
+    "z": "d110d176c0aad308",
+    "name": "",
+    "statusCode": "200",
+    "headers": {},
+    "x": 1510,
+    "y": 310,
+    "wires": []
+  },
+  {
+    "id": "dxcc_http_clear_01",
+    "type": "http in",
+    "z": "d110d176c0aad308",
+    "name": "POST /dxcc/clear",
+    "url": "/dxcc/clear",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 1010,
+    "y": 340,
+    "wires": [
+      [
+        "dxcc_fn_clear_01"
+      ]
+    ]
+  },
+  {
+    "id": "dxcc_fn_clear_01",
+    "type": "function",
+    "z": "d110d176c0aad308",
+    "name": "HTTP Clear \u2192 Clear Alert List",
+    "func": "node.send([{payload:'clear',topic:'clear_alerts'}, {payload:'OK',res:msg.res}]);\nreturn null;",
+    "outputs": 2,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1250,
+    "y": 340,
+    "wires": [
+      [
+        "06e09f7c1cf8c86a"
+      ],
+      [
+        "dxcc_res_clear_01"
+      ]
+    ]
+  },
+  {
+    "id": "dxcc_res_clear_01",
+    "type": "http response",
+    "z": "d110d176c0aad308",
+    "name": "",
+    "statusCode": "200",
+    "headers": {},
+    "x": 1510,
+    "y": 370,
+    "wires": []
+  },
+  {
+    "id": "dxcc_http_bl_remove",
+    "type": "http in",
+    "z": "d110d176c0aad308",
+    "name": "POST /dxcc/blacklist-remove",
+    "url": "/dxcc/blacklist-remove",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 1040,
+    "y": 160,
+    "wires": [
+      [
+        "dxcc_fn_bl_remove"
+      ]
+    ]
+  },
+  {
+    "id": "dxcc_fn_bl_remove",
+    "type": "function",
+    "z": "d110d176c0aad308",
+    "name": "HTTP Blacklist Remove",
+    "func": "var call = (msg.payload.call || msg.payload || '').toString().toUpperCase().trim();\nif(!call){ msg.payload='OK'; return msg; }\nnode.status({fill:'blue',shape:'dot',text:'Remove: '+call});\nnode.send([{payload:call, topic:'blacklist_remove'}, {payload:'OK', res:msg.res}]);\nreturn null;",
+    "outputs": 2,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1280,
+    "y": 160,
+    "wires": [
+      [
+        "caa799bd4a340929"
+      ],
+      [
+        "dxcc_res_bl_remove"
+      ]
+    ]
+  },
+  {
+    "id": "dxcc_res_bl_remove",
+    "type": "http response",
+    "z": "d110d176c0aad308",
+    "name": "",
+    "statusCode": "200",
+    "headers": {},
+    "x": 1520,
+    "y": 160,
+    "wires": []
   }
 ]
