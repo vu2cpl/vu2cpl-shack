@@ -8691,7 +8691,7 @@
         "id": "e7ba349ad7fa426b",
         "type": "inject",
         "z": "d110d176c0aad308",
-        "name": "TEST JA1ABC 60M FT8",
+        "name": "TEST JA1ABC 20M FT8",
         "props": [
             {
                 "p": "spot.call",
@@ -8700,7 +8700,7 @@
             },
             {
                 "p": "spot.band",
-                "v": "60M",
+                "v": "20M",
                 "vt": "str"
             },
             {
@@ -8710,12 +8710,12 @@
             },
             {
                 "p": "spot.freqKHz",
-                "v": "5357",
+                "v": "14074",
                 "vt": "num"
             },
             {
                 "p": "spot.freqMHz",
-                "v": "5.357",
+                "v": "14.074",
                 "vt": "str"
             },
             {
@@ -8734,8 +8734,8 @@
         "once": false,
         "onceDelay": "",
         "topic": "",
-        "x": 150,
-        "y": 640,
+        "x": 280,
+        "y": 700,
         "wires": [
             [
                 "b981643f37259f89"
