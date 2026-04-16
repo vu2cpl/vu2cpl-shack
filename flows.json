@@ -112,7 +112,7 @@
     {
         "id": "b76a5310767803b4",
         "type": "tab",
-        "label": "All Devices (Merged)",
+        "label": "All Power Strips",
         "disabled": false,
         "info": "Merged flow: powerstrip1/2/3 (5 plugs each), 4relayboard (4 plugs), 16Amasterswitch (1 plug).\nPower Control Panel handles all toggling. Energy monitor in vu2cpl_grp_energy."
     },
@@ -5599,8 +5599,8 @@
         "topic": "",
         "payload": "{\"time\": \"1710000000000000000\", \"lat\": 13.2257, \"lon\": 77.6642, \"alt\": 0, \"pol\": 1}",
         "payloadType": "json",
-        "x": 180,
-        "y": 258.76811594202894,
+        "x": 220,
+        "y": 300,
         "wires": [
             [
                 "26ddff0cbbfe5fc1"
@@ -5624,8 +5624,8 @@
         "topic": "",
         "payload": "{\"time\": \"1710000000000000000\", \"lat\": 13.41, \"lon\": 77.8538, \"alt\": 0, \"pol\": 0}",
         "payloadType": "json",
-        "x": 170,
-        "y": 286.4492753623188,
+        "x": 240,
+        "y": 340,
         "wires": [
             [
                 "26ddff0cbbfe5fc1"
@@ -5649,8 +5649,8 @@
         "topic": "",
         "payload": "{\"time\": \"1710000000000000000\", \"lat\": 14.2667, \"lon\": 77.625, \"alt\": 0, \"pol\": 1}",
         "payloadType": "json",
-        "x": 165,
-        "y": 314.1304347826087,
+        "x": 240,
+        "y": 380,
         "wires": [
             [
                 "26ddff0cbbfe5fc1"
@@ -5674,8 +5674,8 @@
         "topic": "",
         "payload": "{}",
         "payloadType": "json",
-        "x": 175,
-        "y": 341.81159420289856,
+        "x": 220,
+        "y": 420,
         "wires": [
             [
                 "dfad237cceca95b4"
@@ -5690,8 +5690,8 @@
         "func": "flow.set('antenna_off', false);\nmsg.topic     = 'cmnd/' + (flow.get('power_strip')||'powerstrip1') + '/' + (flow.get('power_ch')||'POWER5');\nmsg.payload   = 'ON';\nmsg.cmd       = 'RECONNECT';\nmsg.reason    = 'Forced reconnect via test button';\nmsg.timestamp = new Date().toLocaleString();\nnode.status({fill:'green',shape:'dot',text:'FORCED RECONNECT'});\nreturn msg;\n",
         "outputs": 1,
         "noerr": 0,
-        "x": 450,
-        "y": 369.49275362318843,
+        "x": 490,
+        "y": 300,
         "wires": [
             [
                 "b2e2ed6a2bba24af",
@@ -5709,8 +5709,8 @@
         "func": "// CASE 1: Object — test inject nodes\nif (typeof msg.payload === 'object' && !Buffer.isBuffer(msg.payload) && msg.payload !== null) {\n    const d = msg.payload;\n    if (d.lat === undefined || d.lon === undefined) return null;\n    const ts = new Date().toLocaleString();\n    flow.set('laststrike', Date.now());\n    msg.strike = { lat: parseFloat(d.lat), lon: parseFloat(d.lon), time: ts, pol: d.pol||0, region: d.region||0 };\n    node.status({ fill:'blue', shape:'dot', text:'TEST lat:'+msg.strike.lat.toFixed(3)+' lon:'+msg.strike.lon.toFixed(3) });\n    return msg;\n}\n\n// CASE 2 & 3: Buffer or String\nlet buf;\nif (typeof msg.payload === 'string') {\n    buf = Buffer.from(msg.payload, 'latin1');\n} else if (Buffer.isBuffer(msg.payload)) {\n    buf = msg.payload;\n} else {\n    return null;\n}\n\nfunction findKey(buf, key) {\n    const kb = Buffer.from(key, 'ascii');\n    for (let i = 0; i <= buf.length - kb.length; i++) {\n        let match = true;\n        for (let j = 0; j < kb.length; j++) {\n            if (buf[i+j] !== kb[j]) { match = false; break; }\n        }\n        if (match) return i + kb.length;\n    }\n    return -1;\n}\n\nfunction readCoord(buf, startPos) {\n    let minus = false, intStr = '', fracStr = '', hasDot = false, started = false;\n    for (let i = startPos; i < Math.min(startPos+30, buf.length); i++) {\n        const b = buf[i];\n        const isBinary = (b < 0x20 || b >= 0x80);\n        const isDigit  = (b >= 0x30 && b <= 0x39);\n        if (!started) {\n            if (b === 0x2D)    { minus = true; started = true; }\n            else if (isDigit)  { intStr += String.fromCharCode(b); started = true; }\n            else if (b === 0x2E) { hasDot = true; started = true; }\n            else if (isBinary) continue;\n        } else if (!hasDot) {\n            if (isDigit)       intStr += String.fromCharCode(b);\n            else if (b===0x2E) hasDot = true;\n            else if (isBinary) continue;\n            else break;\n        } else {\n            if (isDigit)                         fracStr += String.fromCharCode(b);\n            else if (isBinary && fracStr.length < 4) continue;\n            else break;\n        }\n    }\n    if (!intStr && !fracStr) return null;\n    const v = parseFloat((minus?'-':'')+(intStr||'0')+(hasDot?'.'+fracStr:''));\n    return isNaN(v) ? null : v;\n}\n\nlet latPos = findKey(buf, '\"lat\"'); if (latPos===-1) latPos = findKey(buf,'lat');\nlet lonPos = findKey(buf, '\"lon\"'); if (lonPos===-1) lonPos = findKey(buf,'lon');\nif (latPos===-1 || lonPos===-1) return null;\n\nconst lat = readCoord(buf, latPos);\nconst lon = readCoord(buf, lonPos);\nif (lat===null || lon===null) return null;\nif (lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;\n\nconst ts = new Date().toLocaleString();\nflow.set('laststrike', Date.now());\nmsg.strike = { lat, lon, time: ts, pol: 0, region: 0 };\nnode.status({ fill:'blue', shape:'dot', text:'lat:'+lat.toFixed(3)+' lon:'+lon.toFixed(3) });\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
-        "x": 430,
-        "y": 424.8550724637682,
+        "x": 470,
+        "y": 355.36231884057975,
         "wires": [
             [
                 "86dae31ff50fe297"
@@ -5725,8 +5725,8 @@
         "func": "const HOME_LAT = flow.get('home_lat');\nconst HOME_LON = flow.get('home_lon');\nif (HOME_LAT == null || HOME_LON == null) {\n    node.error('home_lat/home_lon not set — deploy Init Defaults first');\n    return null;\n}\nconst s   = msg.strike;\nconst R   = 6371;\nconst dLat = (s.lat - HOME_LAT) * Math.PI / 180;\nconst dLon = (s.lon - HOME_LON) * Math.PI / 180;\nconst a   = Math.sin(dLat/2) * Math.sin(dLat/2)\n          + Math.cos(HOME_LAT*Math.PI/180) * Math.cos(s.lat*Math.PI/180)\n          * Math.sin(dLon/2) * Math.sin(dLon/2);\nconst km  = Math.round(6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)) * 10) / 10;\nmsg.strike.distance_km = km;\n\nconst thr = flow.get('threshold_km') || 20;\nlet st = flow.get('stats') || {total:0,near:0,mid:0,far:0,closest:9999};\nst.total++;\nif (km <= thr)       st.near++;\nelse if (km <= 50)   st.mid++;\nelse                 st.far++;\nif (km < st.closest) st.closest = km;\nflow.set('stats', st);\n\nif (km <= 200) {\n    let rec = flow.get('recent') || [];\n    rec.unshift({km, time: s.time});\n    if (rec.length > 100) rec = rec.slice(0, 100);\n    flow.set('recent', rec);\n}\nnode.status({fill: km<=thr?'red':km<=50?'yellow':'green', shape:'dot', text: km+' km'});\nreturn msg;\n",
         "outputs": 1,
         "noerr": 0,
-        "x": 430,
-        "y": 480.2173913043479,
+        "x": 690,
+        "y": 360,
         "wires": [
             [
                 "b9d407d94ea9719c",
@@ -5742,8 +5742,8 @@
         "func": "const MAX_KM = flow.get('threshold_km') || 20;\nconst km = msg.strike.distance_km;\nmsg.shouldDisconnect = (km <= MAX_KM);\nmsg.thresholdKm = MAX_KM;\nnode.status({\n    fill:  msg.shouldDisconnect ? 'red' : (km <= 50 ? 'yellow' : 'green'),\n    shape: 'dot',\n    text:  msg.shouldDisconnect ? 'ALERT ' + km + 'km' : 'Safe ' + km + 'km'\n});\nreturn msg;\n",
         "outputs": 1,
         "noerr": 0,
-        "x": 430,
-        "y": 507.8985507246378,
+        "x": 210,
+        "y": 520,
         "wires": [
             [
                 "12c029b533385153"
@@ -5770,7 +5770,7 @@
         "checkall": "false",
         "outputs": 2,
         "x": 430,
-        "y": 590.9420289855074,
+        "y": 520,
         "wires": [
             [
                 "d62fb0c3c40f03b7"
@@ -5786,8 +5786,8 @@
         "func": "\nconst timerMsg = { payload: 'reset' };\nconst already  = flow.get('antenna_off') || false;\n\n// Always (re)set state and send OFF — Tasmota handles idempotent fine\nflow.set('antenna_off', true);\nflow.set('disconnect_time', msg.strike ? msg.strike.time : new Date().toLocaleString());\n\nnode.status({fill:'red', shape:'dot',\n    text: already ? 'Already OFF — timer reset' : 'DISCONNECTED'});\n\nconst strip = flow.get('power_strip') || 'powerstrip1';\nconst ch    = flow.get('power_ch')    || 'POWER5';\nconst km    = msg.strike ? msg.strike.distance_km : '?';\nconst src   = msg.strike ? (msg.strike.source || 'Blitzortung') : 'unknown';\n\nconst mqttMsg = {\n    topic:     'cmnd/' + strip + '/' + ch,\n    payload:   'OFF',\n    cmd:       'DISCONNECT',\n    reason:    src + ' strike ' + km + ' km',\n    distance:  km,\n    timestamp: msg.strike ? msg.strike.time : new Date().toLocaleString()\n};\nreturn [mqttMsg, timerMsg];\n",
         "outputs": 2,
         "noerr": 0,
-        "x": 240,
-        "y": 827.3913043478263,
+        "x": 350,
+        "y": 620,
         "wires": [
             [
                 "b2e2ed6a2bba24af",
@@ -5814,8 +5814,8 @@
         "correl": "",
         "expiry": "",
         "broker": "f4785be9863eab08",
-        "x": 800,
-        "y": 855.0724637681162,
+        "x": 1090,
+        "y": 700,
         "wires": []
     },
     {
@@ -5829,8 +5829,8 @@
         "initialize": "",
         "finalize": "// Clear timer on redeploy\nconst t = context.get('timer');\nif (t) clearTimeout(t);",
         "libs": [],
-        "x": 240,
-        "y": 1048.8405797101452,
+        "x": 330,
+        "y": 720,
         "wires": [
             [
                 "bfbe99e98a8c6ce8"
@@ -5845,8 +5845,8 @@
         "func": "\nconst ts  = new Date().toLocaleString();\nconst min = flow.get('reconnect_min') || 5;\n\nflow.set('antenna_off', false);\nflow.set('radio_off',   false);\n\nconst strip = flow.get('power_strip') || 'powerstrip1';\nconst ch    = flow.get('power_ch')    || 'POWER5';\n\nnode.status({fill:'green', shape:'dot', text:'RECONNECTED'});\n\nmsg.topic     = 'cmnd/' + strip + '/' + ch;\nmsg.payload   = 'ON';\nmsg.cmd       = 'RECONNECT';\nmsg.reason    = min + ' min clear — no nearby strikes';\nmsg.distance  = null;\nmsg.timestamp = ts;\nreturn msg;\n",
         "outputs": 1,
         "noerr": 0,
-        "x": 240,
-        "y": 1131.8840579710145,
+        "x": 390,
+        "y": 800,
         "wires": [
             [
                 "b2e2ed6a2bba24af",
@@ -5864,8 +5864,8 @@
         "func": "return msg;",
         "outputs": 1,
         "noerr": 0,
-        "x": 120,
-        "y": 1519.4202898550711,
+        "x": 780,
+        "y": 960,
         "wires": [
             [
                 "d1dca3df391cdfb8"
@@ -5880,8 +5880,8 @@
         "func": "\nif (msg.topic !== 'manual_override') return null;\nconst on = (msg.payload === true || msg.payload === 'true');\nflow.set('antenna_off', !on);\nmsg.topic     = 'cmnd/' + (flow.get('power_strip')||'powerstrip1') + '/' + (flow.get('power_ch')||'POWER5');\nmsg.payload   = on ? 'ON' : 'OFF';\nmsg.cmd       = on ? 'RECONNECT' : 'DISCONNECT';\nmsg.reason    = 'Manual override via dashboard';\nmsg.timestamp = new Date().toLocaleString();\nmsg.distance  = null;\nnode.status({fill:on?'green':'red', shape:'dot', text:on?'MANUAL ON':'MANUAL OFF'});\nreturn msg;\n",
         "outputs": 1,
         "noerr": 0,
-        "x": 940,
-        "y": 1242.6086956521735,
+        "x": 900,
+        "y": 780,
         "wires": [
             [
                 "b2e2ed6a2bba24af",
@@ -5902,8 +5902,8 @@
         "func": "\nconst v = parseInt(msg.payload);\nif (isNaN(v) || v < 1) return null;   // ignore bad values\nflow.set('threshold_km', v);\nnode.status({fill:'blue', shape:'dot', text:'Threshold: ' + v + ' km'});\nreturn msg;\n",
         "outputs": 1,
         "noerr": 0,
-        "x": 940,
-        "y": 1325.6521739130428,
+        "x": 1040,
+        "y": 860,
         "wires": [
             [
                 "d1dca3df391cdfb8"
@@ -5918,8 +5918,8 @@
         "func": "const ts   = msg.timestamp || new Date().toLocaleString();\nconst ok   = msg.cmd === 'RECONNECT';\nconst icon = ok ? '&#9679;' : '&#9632;';\nconst cls  = ok ? 'ev-ok' : 'ev-err';\nconst dist = msg.distance ? ' | ' + msg.distance + ' km' : '';\nconst line = '<div class=\"ev-row ' + cls + '\">' + icon + ' '\n           + ts + dist + ' — ' + msg.cmd + ': ' + (msg.reason||'') + '</div>';\nlet log = flow.get('event_log') || [];\nlog.unshift(line);\nif (log.length > 50) log = log.slice(0, 50);\nflow.set('event_log', log);\nmsg.payload = log.join('');\nreturn msg;\n",
         "outputs": 1,
         "noerr": 0,
-        "x": 680,
-        "y": 1574.7826086956507,
+        "x": 670,
+        "y": 410.5797101449259,
         "wires": [
             [
                 "4238d94eb39edbf1"
@@ -5942,8 +5942,8 @@
         "topic": "",
         "payload": "{\"type\":\"clear\"}",
         "payloadType": "json",
-        "x": 160,
-        "y": 1851.5942028985482,
+        "x": 210,
+        "y": 180,
         "wires": [
             [
                 "557083037f168b22"
@@ -5967,8 +5967,8 @@
         "topic": "",
         "payload": "{}",
         "payloadType": "json",
-        "x": 130,
-        "y": 1906.9565217391278,
+        "x": 1060,
+        "y": 1000,
         "wires": [
             [
                 "ec1fd4dece8c4dc0"
@@ -5987,8 +5987,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 390,
-        "y": 1934.6376811594175,
+        "x": 1320,
+        "y": 940,
         "wires": [
             [
                 "e2af4f2e46feba21",
@@ -6013,8 +6013,8 @@
         "onceDelay": 3,
         "payload": "{}",
         "payloadType": "json",
-        "x": 150,
-        "y": 1990,
+        "x": 130,
+        "y": 1060,
         "wires": [
             [
                 "61dca3d98a0e4c28"
@@ -6029,8 +6029,8 @@
         "func": "// Trigger stats aggregator\nreturn msg;\n",
         "outputs": 1,
         "noerr": 0,
-        "x": 400,
-        "y": 2000,
+        "x": 380,
+        "y": 1060,
         "wires": [
             [
                 "e2af4f2e46feba21",
@@ -6049,8 +6049,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 590,
-        "y": 965.7971014492757,
+        "x": 800,
+        "y": 580,
         "wires": [
             [
                 "9b4f3f603a7ab65f"
@@ -6071,8 +6071,8 @@
         "correl": "",
         "expiry": "",
         "broker": "f4785be9863eab08",
-        "x": 820,
-        "y": 993.4782608695656,
+        "x": 1080,
+        "y": 580,
         "wires": []
     },
     {
@@ -6086,8 +6086,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 300,
-        "y": 1879.275362318838,
+        "x": 1350,
+        "y": 820,
         "wires": [
             [
                 "220783760ccfed58"
@@ -6109,8 +6109,8 @@
         "resendOnRefresh": true,
         "templateScope": "local",
         "className": "",
-        "x": 650,
-        "y": 300,
+        "x": 1050,
+        "y": 180,
         "wires": [
             [
                 "22e5df9713499f53",
@@ -6130,8 +6130,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 400,
-        "y": 1547.101449275361,
+        "x": 1030,
+        "y": 920,
         "wires": [
             [
                 "557083037f168b22"
@@ -6149,8 +6149,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 400,
-        "y": 1685.5072463768097,
+        "x": 780,
+        "y": 300,
         "wires": [
             [
                 "557083037f168b22"
@@ -6168,8 +6168,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 400,
-        "y": 1796.2318840579687,
+        "x": 890,
+        "y": 400,
         "wires": [
             [
                 "557083037f168b22"
@@ -6187,8 +6187,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 400,
-        "y": 1823.9130434782585,
+        "x": 1620,
+        "y": 860,
         "wires": [
             [
                 "557083037f168b22"
@@ -6207,8 +6207,8 @@
         "nl": false,
         "rap": false,
         "inputs": 0,
-        "x": 120,
-        "y": 618.6231884057972,
+        "x": 140,
+        "y": 680,
         "wires": [
             [
                 "0a664ba977970e17"
@@ -6226,8 +6226,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 320,
-        "y": 653.8043478260871,
+        "x": 340,
+        "y": 680,
         "wires": [
             [
                 "ad80b86a672a9ec6"
@@ -6256,8 +6256,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 540,
-        "y": 688.985507246377,
+        "x": 570,
+        "y": 620,
         "wires": [
             [
                 "af1b4512527ffb45"
@@ -6284,8 +6284,8 @@
         "checkall": "false",
         "repair": false,
         "outputs": 2,
-        "x": 760,
-        "y": 716.6666666666669,
+        "x": 730,
+        "y": 460,
         "wires": [
             [
                 "d62fb0c3c40f03b7",
@@ -6310,8 +6310,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 980,
-        "y": 772.0289855072466,
+        "x": 990,
+        "y": 520,
         "wires": [
             [
                 "557083037f168b22"
@@ -6329,8 +6329,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 980,
-        "y": 535.5797101449276,
+        "x": 1010,
+        "y": 440,
         "wires": [
             [
                 "557083037f168b22"
@@ -6348,8 +6348,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 980,
-        "y": 744.3478260869567,
+        "x": 1000,
+        "y": 480,
         "wires": [
             [
                 "557083037f168b22"
@@ -6367,8 +6367,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 540,
-        "y": 799.7101449275365,
+        "x": 590,
+        "y": 680,
         "wires": [
             [
                 "557083037f168b22"
@@ -6402,8 +6402,8 @@
         "topic": "",
         "payload": "reset",
         "payloadType": "str",
-        "x": 130,
-        "y": 1076.521739130435,
+        "x": 170,
+        "y": 780,
         "wires": [
             [
                 "dabc283d78fa8081"
@@ -6422,8 +6422,8 @@
         "nl": false,
         "rap": false,
         "inputs": 0,
-        "x": 120,
-        "y": 1159.5652173913043,
+        "x": 110,
+        "y": 895.3623188405795,
         "wires": [
             [
                 "90961f5e8522618a"
@@ -6442,8 +6442,8 @@
         "nl": false,
         "rap": false,
         "inputs": 0,
-        "x": 120,
-        "y": 1214.9275362318838,
+        "x": 110,
+        "y": 950.724637681159,
         "wires": [
             [
                 "90961f5e8522618a"
@@ -6461,8 +6461,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 360,
-        "y": 1187.246376811594,
+        "x": 350,
+        "y": 923.0434782608693,
         "wires": [
             [
                 "557083037f168b22"
@@ -6475,8 +6475,8 @@
         "z": "75e2cac8ab96f556",
         "name": "📊 TASMOTA STATUS — reads real switch state from stat/ topics",
         "info": "Subscribes to stat/powerstrip1/POWER5 and stat/4relayboard/POWER1.\nUpdates status indicators on dashboard with actual Tasmota state.",
-        "x": 280,
-        "y": 1104.2028985507247,
+        "x": 430,
+        "y": 840,
         "wires": []
     },
     {
@@ -6496,8 +6496,8 @@
         "topic": "",
         "payload": "",
         "payloadType": "str",
-        "x": 160,
-        "y": 1270.2898550724633,
+        "x": 150,
+        "y": 1006.0869565217386,
         "wires": [
             [
                 "21a1ee867a7adc8e"
@@ -6515,8 +6515,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 380,
-        "y": 1297.971014492753,
+        "x": 420,
+        "y": 1000,
         "wires": [
             [
                 "b2e2ed6a2bba24af"
@@ -6535,8 +6535,8 @@
         "method": "post",
         "upload": false,
         "swaggerDoc": "",
-        "x": 140,
-        "y": 1353.3333333333326,
+        "x": 1270,
+        "y": 549.1304347826078,
         "wires": [
             [
                 "f2092c6e0d932c7b"
@@ -6552,8 +6552,8 @@
         "method": "post",
         "upload": false,
         "swaggerDoc": "",
-        "x": 140,
-        "y": 1436.3768115942019,
+        "x": 1250,
+        "y": 632.1739130434771,
         "wires": [
             [
                 "f5b66018bf5eedd9"
@@ -6571,8 +6571,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 380,
-        "y": 1381.0144927536223,
+        "x": 1540,
+        "y": 560,
         "wires": [
             [
                 "af7e4e6a31cd2d2c"
@@ -6593,8 +6593,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 380,
-        "y": 1464.0579710144916,
+        "x": 1490,
+        "y": 640,
         "wires": [
             [
                 "7d69c6524e3be13d"
@@ -6611,8 +6611,8 @@
         "name": "",
         "statusCode": "200",
         "headers": {},
-        "x": 580,
-        "y": 1408.695652173912,
+        "x": 1740,
+        "y": 560,
         "wires": []
     },
     {
@@ -6622,8 +6622,8 @@
         "name": "",
         "statusCode": "200",
         "headers": {},
-        "x": 580,
-        "y": 1491.7391304347814,
+        "x": 1700,
+        "y": 640,
         "wires": []
     },
     {
@@ -6632,8 +6632,8 @@
         "z": "75e2cac8ab96f556",
         "name": "⚡ LIGHTNING ANTENNA PROTECTOR  —  Edit ✏️ Init Defaults node to change settings",
         "info": "All settings (callsign, grid, threshold, reconnect time, Tasmota devices) are in the Init Defaults function node.\nEdit that node and Deploy to apply changes.",
-        "x": 300,
-        "y": 50,
+        "x": 330,
+        "y": 40,
         "wires": []
     },
     {
@@ -6647,8 +6647,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 720,
-        "y": 397.1739130434783,
+        "x": 1340,
+        "y": 180,
         "wires": [
             []
         ]
@@ -6661,8 +6661,8 @@
         "url": "/lightning/threshold",
         "method": "post",
         "upload": false,
-        "x": 140,
-        "y": 1602.4637681159404,
+        "x": 1450,
+        "y": 258.26086956521567,
         "wires": [
             [
                 "aad6ff3d033093d4"
@@ -6680,8 +6680,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 360,
-        "y": 1630.1449275362302,
+        "x": 1700,
+        "y": 260,
         "wires": [
             [
                 "287ebd88afece189"
@@ -6693,8 +6693,8 @@
         "type": "http response",
         "z": "75e2cac8ab96f556",
         "statusCode": "200",
-        "x": 560,
-        "y": 1657.82608695652,
+        "x": 1900,
+        "y": 260,
         "wires": []
     },
     {
@@ -6705,8 +6705,8 @@
         "url": "/lightning/reconnect",
         "method": "post",
         "upload": false,
-        "x": 140,
-        "y": 1713.1884057970994,
+        "x": 1450,
+        "y": 320,
         "wires": [
             [
                 "c47943365203d348"
@@ -6724,8 +6724,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 360,
-        "y": 1740.8695652173892,
+        "x": 1700,
+        "y": 320,
         "wires": [
             [
                 "fb8a6628d17f5487"
@@ -6737,8 +6737,8 @@
         "type": "http response",
         "z": "75e2cac8ab96f556",
         "statusCode": "200",
-        "x": 560,
-        "y": 1768.550724637679,
+        "x": 1900,
+        "y": 320,
         "wires": []
     },
     {
@@ -6747,8 +6747,8 @@
         "z": "75e2cac8ab96f556",
         "name": "🌩 OPEN-METEO — polls lightning_potential every 5 min (288 calls/day)",
         "info": "Replaces Blitzortung WebSocket.\nAPI: https://api.open-meteo.com/v1/forecast?hourly=lightning_potential\nUses home_lat/home_lon from Init Defaults.\n\nIndex mapping: distance_km = (1 - index/100) * 200\n  100 → 0 km (overhead), 50 → 100 km, 0 → 200 km\n\nMIN_INDEX (default 5): indices below this are silently ignored.",
-        "x": 320,
-        "y": 140,
+        "x": 1500,
+        "y": 40,
         "wires": []
     },
     {
@@ -6768,8 +6768,8 @@
         "topic": "",
         "payload": "",
         "payloadType": "date",
-        "x": 240,
-        "y": 175,
+        "x": 230,
+        "y": 240,
         "wires": [
             [
                 "3d61a4f561d40c70"
@@ -6787,8 +6787,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 550,
-        "y": 180,
+        "x": 510,
+        "y": 240,
         "wires": [
             [
                 "ec1215580bac24d0"
@@ -6811,8 +6811,8 @@
         "authType": "",
         "senderr": false,
         "headers": [],
-        "x": 790,
-        "y": 120,
+        "x": 770,
+        "y": 240,
         "wires": [
             [
                 "593f22a507b46335"
@@ -6830,8 +6830,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 920,
-        "y": 200,
+        "x": 1040,
+        "y": 240,
         "wires": [
             [
                 "26ddff0cbbfe5fc1"
@@ -6855,8 +6855,8 @@
         "topic": "",
         "payload": "",
         "payloadType": "date",
-        "x": 770,
-        "y": 80,
+        "x": 150,
+        "y": 100,
         "wires": [
             [
                 "wx_buildurl_01"
@@ -6871,8 +6871,8 @@
         "func": "const lat = flow.get('home_lat') || 13.1875;\nconst lon = flow.get('home_lon') || 77.625;\nmsg.url = 'https://api.open-meteo.com/v1/forecast'\n  + '?latitude='  + lat\n  + '&longitude=' + lon\n  + '&current=temperature_2m,apparent_temperature,relative_humidity_2m,'\n  + 'rain,weather_code,wind_speed_10m,wind_direction_10m,surface_pressure'\n  + '&hourly=temperature_2m,weather_code,precipitation_probability'\n  + '&wind_speed_unit=kmh&timezone=Asia%2FKolkata&forecast_days=1';\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
-        "x": 990,
-        "y": 80,
+        "x": 370,
+        "y": 100,
         "wires": [
             [
                 "wx_http_01"
@@ -6887,8 +6887,8 @@
         "method": "GET",
         "ret": "obj",
         "url": "",
-        "x": 1200,
-        "y": 80,
+        "x": 580,
+        "y": 100,
         "wires": [
             [
                 "c6d09b384716b54c"
@@ -6900,7 +6900,7 @@
         "type": "comment",
         "z": "75e2cac8ab96f556",
         "name": "🌤 WEATHER — current + today's hourly → Header widget on Shack tab",
-        "x": 970,
+        "x": 940,
         "y": 40,
         "wires": []
     },
@@ -6919,8 +6919,8 @@
         "resendOnRefresh": true,
         "templateScope": "local",
         "className": "",
-        "x": 1420,
-        "y": 180,
+        "x": 1080,
+        "y": 100,
         "wires": [
             []
         ]
@@ -6933,8 +6933,8 @@
         "func": "const WMO_TEXT={0:'Clear Sky',1:'Mainly Clear',2:'Partly Cloudy',3:'Overcast',45:'Foggy',48:'Icy Fog',51:'Light Drizzle',53:'Drizzle',55:'Dense Drizzle',61:'Slight Rain',63:'Moderate Rain',65:'Heavy Rain',71:'Slight Snow',73:'Moderate Snow',75:'Heavy Snow',77:'Snow Grains',80:'Slight Showers',81:'Moderate Showers',82:'Violent Showers',95:'Thunderstorm',96:'Thunderstorm+Hail',99:'Thunderstorm+Hail'};\nconst WMO_EMOJI={0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',71:'❄️',73:'❄️',75:'❄️',77:'❄️',80:'🌦️',81:'🌦️',82:'⛈️',95:'⛈️',96:'⛈️',99:'⛈️'};\nfunction windDir(d){return['N','NE','E','SE','S','SW','W','NW'][Math.round(d/45)%8];}\nconst d=msg.payload;\nif(!d||!d.current){node.error('Bad response');return null;}\nconst c=d.current,hr=d.hourly;\nconst now=new Date();\nconst nowISO=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0')+'T'+String(now.getHours()).padStart(2,'0')+':00';\nlet si=hr.time.indexOf(nowISO);\nif(si===-1){for(let i=hr.time.length-1;i>=0;i--){if(hr.time[i]<=nowISO){si=i;break;}}}\nif(si===-1)si=0;\nconst hourly=[];\nfor(let i=si;i<Math.min(si+13,hr.time.length);i++){\n  const t=new Date(hr.time[i]);\n  hourly.push({h:String(t.getHours()).padStart(2,'0')+':00',temp:Math.round(hr.temperature_2m[i]),emoji:WMO_EMOJI[hr.weather_code[i]]||'🌡️',pop:hr.precipitation_probability[i]||0});\n}\nconst wxData={\n  temp:Math.round(c.temperature_2m),\n  feels:Math.round(c.apparent_temperature),\n  hum:c.relative_humidity_2m,\n  rain:(c.rain||0).toFixed(1),\n  wind:Math.round(c.wind_speed_10m),\n  windDir:windDir(c.wind_direction_10m||0),\n  pressure:Math.round(c.surface_pressure),\n  cond:WMO_TEXT[c.weather_code]||'Unknown',\n  emoji:WMO_EMOJI[c.weather_code]||'🌡️',\n  hourly:hourly,\n  updated:now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})\n};\nflow.set('wxData', wxData);\nnode.status({fill:'green',shape:'dot',text:wxData.temp+'°C '+wxData.cond});\n// Output 1 → Header ui_template (plain payload)\n// Output 2 → Master Dashboard (typed payload)\nconst msg2 = {payload: {type:'weather', wx: wxData}};\nmsg.payload = wxData;\nreturn [msg, msg2];",
         "outputs": 2,
         "noerr": 0,
-        "x": 1170,
-        "y": 140,
+        "x": 810,
+        "y": 100,
         "wires": [
             [
                 "eee1a8b8552aa21f"
@@ -6953,8 +6953,8 @@
         "qos": "0",
         "retain": false,
         "broker": "f4785be9863eab08",
-        "x": 1360,
-        "y": 760,
+        "x": 1220,
+        "y": 620,
         "wires": []
     },
     {
@@ -6974,8 +6974,8 @@
         "topic": "",
         "payload": "",
         "payloadType": "str",
-        "x": 160,
-        "y": 280,
+        "x": 270,
+        "y": 140,
         "wires": [
             [
                 "e51bed45ceb412a3"
@@ -6998,8 +6998,8 @@
         "topic": "",
         "payload": "",
         "payloadType": "str",
-        "x": 160,
-        "y": 320,
+        "x": 270,
+        "y": 180,
         "wires": [
             [
                 "e51bed45ceb412a3"
@@ -7014,8 +7014,8 @@
         "func": "msg.topic='cmnd/powerstrip1/Power';msg.payload='';return msg;",
         "outputs": 1,
         "noerr": 0,
-        "x": 420,
-        "y": 300,
+        "x": 530,
+        "y": 160,
         "wires": [
             [
                 "fa472f4b461b6b2b"
@@ -7035,8 +7035,8 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 160,
-        "y": 380,
+        "x": 270,
+        "y": 240,
         "wires": [
             [
                 "2da63799a5937640",
@@ -7057,8 +7057,8 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 160,
-        "y": 420,
+        "x": 270,
+        "y": 280,
         "wires": [
             [
                 "2da63799a5937640"
@@ -7073,8 +7073,8 @@
         "func": "var topic=msg.topic,payload=msg.payload;\nif(typeof payload==='string'){try{payload=JSON.parse(payload);}catch(e){}}\nvar msgs=[];\nif(typeof payload==='object'&&payload!==null){\nfor(var i=1;i<=5;i++){var key='POWER'+i;if(payload[key]!==undefined){msgs.push({topic:'powerstrip1/plug'+i+'/state',payload:payload[key]==='ON'});}}\n}else if(typeof payload==='string'){var match=topic.match(/POWER(\\d+)$/);if(match){msgs.push({topic:'powerstrip1/plug'+match[1]+'/state',payload:payload==='ON'});}}\nreturn[msgs];",
         "outputs": 1,
         "noerr": 0,
-        "x": 420,
-        "y": 400,
+        "x": 530,
+        "y": 260,
         "wires": [
             []
         ]
@@ -7096,8 +7096,8 @@
         "topic": "",
         "payload": "",
         "payloadType": "str",
-        "x": 160,
-        "y": 500,
+        "x": 380,
+        "y": 400,
         "wires": [
             [
                 "626cd443fbea8185"
@@ -7120,8 +7120,8 @@
         "topic": "",
         "payload": "",
         "payloadType": "str",
-        "x": 160,
-        "y": 540,
+        "x": 380,
+        "y": 440,
         "wires": [
             [
                 "626cd443fbea8185"
@@ -7136,8 +7136,8 @@
         "func": "msg.topic='cmnd/powerstrip2/Power';msg.payload='';return msg;",
         "outputs": 1,
         "noerr": 0,
-        "x": 420,
-        "y": 520,
+        "x": 640,
+        "y": 420,
         "wires": [
             [
                 "fa472f4b461b6b2b"
@@ -7157,8 +7157,8 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 160,
-        "y": 600,
+        "x": 380,
+        "y": 500,
         "wires": [
             [
                 "01e5c656c5c3683d",
@@ -7179,8 +7179,8 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 160,
-        "y": 640,
+        "x": 380,
+        "y": 540,
         "wires": [
             [
                 "01e5c656c5c3683d"
@@ -7195,8 +7195,8 @@
         "func": "var topic=msg.topic,payload=msg.payload;\nif(typeof payload==='string'){try{payload=JSON.parse(payload);}catch(e){}}\nvar msgs=[];\nif(typeof payload==='object'&&payload!==null){\nfor(var i=1;i<=5;i++){var key='POWER'+i;if(payload[key]!==undefined){msgs.push({topic:'powerstrip2/plug'+i+'/state',payload:payload[key]==='ON'});}}\n}else if(typeof payload==='string'){var match=topic.match(/POWER(\\d+)$/);if(match){msgs.push({topic:'powerstrip2/plug'+match[1]+'/state',payload:payload==='ON'});}}\nreturn[msgs];",
         "outputs": 1,
         "noerr": 0,
-        "x": 420,
-        "y": 620,
+        "x": 640,
+        "y": 520,
         "wires": [
             []
         ]
@@ -7218,8 +7218,8 @@
         "topic": "",
         "payload": "",
         "payloadType": "str",
-        "x": 160,
-        "y": 720,
+        "x": 690,
+        "y": 600,
         "wires": [
             [
                 "57d6efab486723d2"
@@ -7242,8 +7242,8 @@
         "topic": "",
         "payload": "",
         "payloadType": "str",
-        "x": 160,
-        "y": 760,
+        "x": 690,
+        "y": 640,
         "wires": [
             [
                 "57d6efab486723d2"
@@ -7258,8 +7258,8 @@
         "func": "msg.topic='cmnd/powerstrip3/Power';msg.payload='';return msg;",
         "outputs": 1,
         "noerr": 0,
-        "x": 420,
-        "y": 740,
+        "x": 950,
+        "y": 620,
         "wires": [
             [
                 "fa472f4b461b6b2b"
@@ -7279,8 +7279,8 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 160,
-        "y": 820,
+        "x": 210,
+        "y": 680,
         "wires": [
             [
                 "bc92cc654dade1ea",
@@ -7301,8 +7301,8 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 160,
-        "y": 860,
+        "x": 210,
+        "y": 720,
         "wires": [
             [
                 "bc92cc654dade1ea"
@@ -7317,8 +7317,8 @@
         "func": "var topic=msg.topic,payload=msg.payload;\nif(typeof payload==='string'){try{payload=JSON.parse(payload);}catch(e){}}\nvar msgs=[];\nif(typeof payload==='object'&&payload!==null){\nfor(var i=1;i<=5;i++){var key='POWER'+i;if(payload[key]!==undefined){msgs.push({topic:'powerstrip3/plug'+i+'/state',payload:payload[key]==='ON'});}}\n}else if(typeof payload==='string'){var match=topic.match(/POWER(\\d+)$/);if(match){msgs.push({topic:'powerstrip3/plug'+match[1]+'/state',payload:payload==='ON'});}}\nreturn[msgs];",
         "outputs": 1,
         "noerr": 0,
-        "x": 420,
-        "y": 840,
+        "x": 470,
+        "y": 700,
         "wires": [
             []
         ]
@@ -7340,8 +7340,8 @@
         "topic": "",
         "payload": "",
         "payloadType": "str",
-        "x": 160,
-        "y": 940,
+        "x": 730,
+        "y": 720,
         "wires": [
             [
                 "5432aa2c704431a2"
@@ -7364,8 +7364,8 @@
         "topic": "",
         "payload": "",
         "payloadType": "str",
-        "x": 160,
-        "y": 980,
+        "x": 730,
+        "y": 760,
         "wires": [
             [
                 "5432aa2c704431a2"
@@ -7380,8 +7380,8 @@
         "func": "msg.topic='cmnd/4relayboard/Power';msg.payload='';return msg;",
         "outputs": 1,
         "noerr": 0,
-        "x": 420,
-        "y": 960,
+        "x": 990,
+        "y": 740,
         "wires": [
             [
                 "fa472f4b461b6b2b"
@@ -7401,8 +7401,8 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 160,
-        "y": 1040,
+        "x": 210,
+        "y": 840,
         "wires": [
             [
                 "2cfe74fe84a179cf",
@@ -7423,8 +7423,8 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 160,
-        "y": 1080,
+        "x": 210,
+        "y": 880,
         "wires": [
             [
                 "2cfe74fe84a179cf"
@@ -7439,8 +7439,8 @@
         "func": "var topic=msg.topic,payload=msg.payload;\nif(typeof payload==='string'){try{payload=JSON.parse(payload);}catch(e){}}\nvar msgs=[];\nif(typeof payload==='object'&&payload!==null){\nfor(var i=1;i<=4;i++){var key='POWER'+i;if(payload[key]!==undefined){msgs.push({topic:'4relayboard/plug'+i+'/state',payload:payload[key]==='ON'});}}\n}else if(typeof payload==='string'){var match=topic.match(/POWER(\\d+)$/);if(match){msgs.push({topic:'4relayboard/plug'+match[1]+'/state',payload:payload==='ON'});}}\nreturn[msgs];",
         "outputs": 1,
         "noerr": 0,
-        "x": 420,
-        "y": 1060,
+        "x": 470,
+        "y": 860,
         "wires": [
             []
         ]
@@ -7461,8 +7461,8 @@
         "onceDelay": 2,
         "payload": "",
         "payloadType": "str",
-        "x": 160,
-        "y": 1160,
+        "x": 840,
+        "y": 920,
         "wires": [
             [
                 "c57993447c6572d4"
@@ -7484,8 +7484,8 @@
         "once": false,
         "payload": "",
         "payloadType": "str",
-        "x": 160,
-        "y": 1200,
+        "x": 840,
+        "y": 960,
         "wires": [
             [
                 "c57993447c6572d4"
@@ -7500,8 +7500,8 @@
         "func": "msg.topic='cmnd/16Amasterswitch/Power';msg.payload='';return msg;",
         "outputs": 1,
         "noerr": 0,
-        "x": 400,
-        "y": 1180,
+        "x": 1080,
+        "y": 940,
         "wires": [
             [
                 "fa472f4b461b6b2b"
@@ -7521,8 +7521,8 @@
         "rap": true,
         "rh": 2,
         "inputs": 0,
-        "x": 160,
-        "y": 1280,
+        "x": 430,
+        "y": 960,
         "wires": [
             [
                 "250a8d57aaf992e0",
@@ -7543,8 +7543,8 @@
         "rap": true,
         "rh": 2,
         "inputs": 0,
-        "x": 160,
-        "y": 1320,
+        "x": 430,
+        "y": 1000,
         "wires": [
             [
                 "250a8d57aaf992e0"
@@ -7564,8 +7564,8 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 160,
-        "y": 1360,
+        "x": 430,
+        "y": 1040,
         "wires": [
             [
                 "250a8d57aaf992e0"
@@ -7585,8 +7585,8 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 160,
-        "y": 1400,
+        "x": 430,
+        "y": 1080,
         "wires": [
             [
                 "250a8d57aaf992e0"
@@ -7601,8 +7601,8 @@
         "func": "var topic=msg.topic,payload=msg.payload;\nif(typeof payload==='string'){try{payload=JSON.parse(payload);}catch(e){}}\nvar out=[];\nfunction extractEnergy(e){\nif(!e||typeof e!=='object')return;\nif(e.Voltage!==undefined)out.push({topic:'energy/voltage',payload:e.Voltage});\nif(e.Current!==undefined)out.push({topic:'energy/current',payload:e.Current});\nvar pwr=e.Power!==undefined?e.Power:e.ActivePower;\nif(pwr!==undefined)out.push({topic:'energy/power',payload:pwr});\nif(e.Today!==undefined)out.push({topic:'energy/today',payload:e.Today});\nif(e.Total!==undefined)out.push({topic:'energy/total',payload:e.Total});}\nvar CHIP_KEYS=['ENERGY','BL0937','CSE7766','HLW8012','PZEM004T','ADE7953'];\nif(typeof payload==='object'&&payload!==null){\nvar pwr=(payload.POWER!==undefined)?payload.POWER:(payload.POWER1!==undefined)?payload.POWER1:null;\nif(pwr!==null)out.push({topic:'switch/state',payload:pwr==='ON'?1:0});\nif(payload.StatusSNS){var sns=payload.StatusSNS;for(var k=0;k<CHIP_KEYS.length;k++){if(sns[CHIP_KEYS[k]]){extractEnergy(sns[CHIP_KEYS[k]]);break;}}if(!out.length)extractEnergy(sns);}\nvar foundChip=false;\nfor(var j=0;j<CHIP_KEYS.length;j++){if(payload[CHIP_KEYS[j]]){extractEnergy(payload[CHIP_KEYS[j]]);foundChip=true;break;}}\nif(!foundChip)extractEnergy(payload);\n}else if(typeof payload==='string'){if(/POWER\\d*$/.test(topic))out.push({topic:'switch/state',payload:payload==='ON'?1:0});}\nreturn[out];",
         "outputs": 1,
         "noerr": 0,
-        "x": 440,
-        "y": 1340,
+        "x": 710,
+        "y": 1020,
         "wires": [
             [
                 "e72813d4b7791246"
@@ -7625,8 +7625,8 @@
         "onceDelay": 10,
         "payload": "",
         "payloadType": "str",
-        "x": 160,
-        "y": 1480,
+        "x": 1060,
+        "y": 820,
         "wires": [
             [
                 "8c17ebafaf083b3e"
@@ -7641,8 +7641,8 @@
         "func": "msg.topic='cmnd/16Amasterswitch/Status';msg.payload='10';return msg;",
         "outputs": 1,
         "noerr": 0,
-        "x": 420,
-        "y": 1480,
+        "x": 1320,
+        "y": 820,
         "wires": [
             [
                 "fa472f4b461b6b2b"
@@ -7665,8 +7665,8 @@
         "onceDelay": 8,
         "payload": "",
         "payloadType": "str",
-        "x": 160,
-        "y": 1520,
+        "x": 1060,
+        "y": 860,
         "wires": [
             [
                 "492b2eee533626d9"
@@ -7681,8 +7681,8 @@
         "func": "msg.topic='cmnd/16Amasterswitch/TelePeriod';msg.payload='30';return msg;",
         "outputs": 1,
         "noerr": 0,
-        "x": 420,
-        "y": 1520,
+        "x": 1320,
+        "y": 860,
         "wires": [
             [
                 "fa472f4b461b6b2b"
@@ -7701,8 +7701,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1000,
-        "y": 420,
+        "x": 860,
+        "y": 280,
         "wires": [
             [
                 "780b75182df31634"
@@ -7724,8 +7724,8 @@
         "resendOnRefresh": true,
         "templateScope": "local",
         "className": "",
-        "x": 1260,
-        "y": 420,
+        "x": 1120,
+        "y": 280,
         "wires": [
             [
                 "a1fbb636a745e687"
@@ -7740,8 +7740,8 @@
         "func": "var topic=msg.topic;\nvar states=flow.get('power_states')||{};\nvar cur=states[topic];\nvar newState=(cur==='ON')?'OFF':'ON';\nstates[topic]=newState;\nflow.set('power_states',states);\nmsg.payload=newState;\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
-        "x": 1170,
-        "y": 540,
+        "x": 1030,
+        "y": 400,
         "wires": [
             [
                 "fa472f4b461b6b2b"
@@ -7756,8 +7756,8 @@
         "func": "var ctx=flow.get('energy_state')||{};\nvar t=msg.topic,p=msg.payload;\nif(t==='energy/voltage')ctx.voltage=p;\nelse if(t==='energy/current')ctx.current=p;\nelse if(t==='energy/power')ctx.power=p;\nelse if(t==='energy/today')ctx.today=p;\nelse if(t==='energy/total')ctx.total=p;\nelse return null;\nflow.set('energy_state',ctx);\nmsg.payload=ctx;\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
-        "x": 830,
-        "y": 1140,
+        "x": 1020,
+        "y": 1020,
         "wires": [
             [
                 "ab7e20beb9ee03f6"
@@ -7778,8 +7778,8 @@
         "fwdInMessages": false,
         "resendOnRefresh": true,
         "templateScope": "local",
-        "x": 1160,
-        "y": 1140,
+        "x": 1370,
+        "y": 1020,
         "wires": [
             []
         ]
@@ -7797,7 +7797,7 @@
         "rap": false,
         "inputs": 0,
         "x": 200,
-        "y": 460,
+        "y": 40,
         "wires": [
             [
                 "05f0ddeb566a90fc"
@@ -7816,8 +7816,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 580,
-        "y": 120,
+        "x": 520,
+        "y": 40,
         "wires": [
             [
                 "f8c3c072b381bd1c"
@@ -7845,8 +7845,8 @@
         "fwdInMessages": false,
         "resendOnRefresh": false,
         "templateScope": "global",
-        "x": 250,
-        "y": 120,
+        "x": 1070,
+        "y": 60,
         "wires": [
             []
         ]
