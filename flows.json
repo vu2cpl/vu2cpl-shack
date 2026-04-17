@@ -6953,8 +6953,8 @@
         "qos": "0",
         "retain": false,
         "broker": "f4785be9863eab08",
-        "x": 1220,
-        "y": 620,
+        "x": 1240,
+        "y": 120,
         "wires": []
     },
     {
@@ -7096,8 +7096,8 @@
         "topic": "",
         "payload": "",
         "payloadType": "str",
-        "x": 380,
-        "y": 400,
+        "x": 1320,
+        "y": 360,
         "wires": [
             [
                 "626cd443fbea8185"
@@ -7120,8 +7120,8 @@
         "topic": "",
         "payload": "",
         "payloadType": "str",
-        "x": 380,
-        "y": 440,
+        "x": 1320,
+        "y": 400,
         "wires": [
             [
                 "626cd443fbea8185"
@@ -7136,8 +7136,8 @@
         "func": "msg.topic='cmnd/powerstrip2/Power';msg.payload='';return msg;",
         "outputs": 1,
         "noerr": 0,
-        "x": 640,
-        "y": 420,
+        "x": 1580,
+        "y": 380,
         "wires": [
             [
                 "fa472f4b461b6b2b"
@@ -7157,8 +7157,8 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 380,
-        "y": 500,
+        "x": 570,
+        "y": 420,
         "wires": [
             [
                 "01e5c656c5c3683d",
@@ -7179,8 +7179,8 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 380,
-        "y": 540,
+        "x": 570,
+        "y": 460,
         "wires": [
             [
                 "01e5c656c5c3683d"
@@ -7195,8 +7195,8 @@
         "func": "var topic=msg.topic,payload=msg.payload;\nif(typeof payload==='string'){try{payload=JSON.parse(payload);}catch(e){}}\nvar msgs=[];\nif(typeof payload==='object'&&payload!==null){\nfor(var i=1;i<=5;i++){var key='POWER'+i;if(payload[key]!==undefined){msgs.push({topic:'powerstrip2/plug'+i+'/state',payload:payload[key]==='ON'});}}\n}else if(typeof payload==='string'){var match=topic.match(/POWER(\\d+)$/);if(match){msgs.push({topic:'powerstrip2/plug'+match[1]+'/state',payload:payload==='ON'});}}\nreturn[msgs];",
         "outputs": 1,
         "noerr": 0,
-        "x": 640,
-        "y": 520,
+        "x": 830,
+        "y": 440,
         "wires": [
             []
         ]
@@ -7218,8 +7218,8 @@
         "topic": "",
         "payload": "",
         "payloadType": "str",
-        "x": 690,
-        "y": 600,
+        "x": 900,
+        "y": 460,
         "wires": [
             [
                 "57d6efab486723d2"
@@ -7242,8 +7242,8 @@
         "topic": "",
         "payload": "",
         "payloadType": "str",
-        "x": 690,
-        "y": 640,
+        "x": 900,
+        "y": 500,
         "wires": [
             [
                 "57d6efab486723d2"
@@ -7258,8 +7258,8 @@
         "func": "msg.topic='cmnd/powerstrip3/Power';msg.payload='';return msg;",
         "outputs": 1,
         "noerr": 0,
-        "x": 950,
-        "y": 620,
+        "x": 1160,
+        "y": 480,
         "wires": [
             [
                 "fa472f4b461b6b2b"
@@ -7279,8 +7279,8 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 210,
-        "y": 680,
+        "x": 170,
+        "y": 320,
         "wires": [
             [
                 "bc92cc654dade1ea",
@@ -7301,8 +7301,8 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 210,
-        "y": 720,
+        "x": 170,
+        "y": 360,
         "wires": [
             [
                 "bc92cc654dade1ea"
@@ -7317,8 +7317,8 @@
         "func": "var topic=msg.topic,payload=msg.payload;\nif(typeof payload==='string'){try{payload=JSON.parse(payload);}catch(e){}}\nvar msgs=[];\nif(typeof payload==='object'&&payload!==null){\nfor(var i=1;i<=5;i++){var key='POWER'+i;if(payload[key]!==undefined){msgs.push({topic:'powerstrip3/plug'+i+'/state',payload:payload[key]==='ON'});}}\n}else if(typeof payload==='string'){var match=topic.match(/POWER(\\d+)$/);if(match){msgs.push({topic:'powerstrip3/plug'+match[1]+'/state',payload:payload==='ON'});}}\nreturn[msgs];",
         "outputs": 1,
         "noerr": 0,
-        "x": 470,
-        "y": 700,
+        "x": 430,
+        "y": 340,
         "wires": [
             []
         ]
@@ -7340,8 +7340,8 @@
         "topic": "",
         "payload": "",
         "payloadType": "str",
-        "x": 730,
-        "y": 720,
+        "x": 940,
+        "y": 580,
         "wires": [
             [
                 "5432aa2c704431a2"
@@ -7364,8 +7364,8 @@
         "topic": "",
         "payload": "",
         "payloadType": "str",
-        "x": 730,
-        "y": 760,
+        "x": 1020,
+        "y": 620,
         "wires": [
             [
                 "5432aa2c704431a2"
@@ -7380,8 +7380,8 @@
         "func": "msg.topic='cmnd/4relayboard/Power';msg.payload='';return msg;",
         "outputs": 1,
         "noerr": 0,
-        "x": 990,
-        "y": 740,
+        "x": 1200,
+        "y": 600,
         "wires": [
             [
                 "fa472f4b461b6b2b"
@@ -7401,8 +7401,8 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 210,
-        "y": 840,
+        "x": 170,
+        "y": 480,
         "wires": [
             [
                 "2cfe74fe84a179cf",
@@ -7423,8 +7423,8 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 210,
-        "y": 880,
+        "x": 170,
+        "y": 520,
         "wires": [
             [
                 "2cfe74fe84a179cf"
@@ -7439,8 +7439,8 @@
         "func": "var topic=msg.topic,payload=msg.payload;\nif(typeof payload==='string'){try{payload=JSON.parse(payload);}catch(e){}}\nvar msgs=[];\nif(typeof payload==='object'&&payload!==null){\nfor(var i=1;i<=4;i++){var key='POWER'+i;if(payload[key]!==undefined){msgs.push({topic:'4relayboard/plug'+i+'/state',payload:payload[key]==='ON'});}}\n}else if(typeof payload==='string'){var match=topic.match(/POWER(\\d+)$/);if(match){msgs.push({topic:'4relayboard/plug'+match[1]+'/state',payload:payload==='ON'});}}\nreturn[msgs];",
         "outputs": 1,
         "noerr": 0,
-        "x": 470,
-        "y": 860,
+        "x": 450,
+        "y": 480,
         "wires": [
             []
         ]
@@ -7461,8 +7461,8 @@
         "onceDelay": 2,
         "payload": "",
         "payloadType": "str",
-        "x": 840,
-        "y": 920,
+        "x": 880,
+        "y": 360,
         "wires": [
             [
                 "c57993447c6572d4"
@@ -7484,8 +7484,8 @@
         "once": false,
         "payload": "",
         "payloadType": "str",
-        "x": 840,
-        "y": 960,
+        "x": 880,
+        "y": 400,
         "wires": [
             [
                 "c57993447c6572d4"
@@ -7500,8 +7500,8 @@
         "func": "msg.topic='cmnd/16Amasterswitch/Power';msg.payload='';return msg;",
         "outputs": 1,
         "noerr": 0,
-        "x": 1080,
-        "y": 940,
+        "x": 1120,
+        "y": 380,
         "wires": [
             [
                 "fa472f4b461b6b2b"
@@ -7521,8 +7521,8 @@
         "rap": true,
         "rh": 2,
         "inputs": 0,
-        "x": 430,
-        "y": 960,
+        "x": 710,
+        "y": 640,
         "wires": [
             [
                 "250a8d57aaf992e0",
@@ -7543,8 +7543,8 @@
         "rap": true,
         "rh": 2,
         "inputs": 0,
-        "x": 430,
-        "y": 1000,
+        "x": 710,
+        "y": 680,
         "wires": [
             [
                 "250a8d57aaf992e0"
@@ -7564,8 +7564,8 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 430,
-        "y": 1040,
+        "x": 710,
+        "y": 720,
         "wires": [
             [
                 "250a8d57aaf992e0"
@@ -7585,8 +7585,8 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 430,
-        "y": 1080,
+        "x": 710,
+        "y": 760,
         "wires": [
             [
                 "250a8d57aaf992e0"
@@ -7601,8 +7601,8 @@
         "func": "var topic=msg.topic,payload=msg.payload;\nif(typeof payload==='string'){try{payload=JSON.parse(payload);}catch(e){}}\nvar out=[];\nfunction extractEnergy(e){\nif(!e||typeof e!=='object')return;\nif(e.Voltage!==undefined)out.push({topic:'energy/voltage',payload:e.Voltage});\nif(e.Current!==undefined)out.push({topic:'energy/current',payload:e.Current});\nvar pwr=e.Power!==undefined?e.Power:e.ActivePower;\nif(pwr!==undefined)out.push({topic:'energy/power',payload:pwr});\nif(e.Today!==undefined)out.push({topic:'energy/today',payload:e.Today});\nif(e.Total!==undefined)out.push({topic:'energy/total',payload:e.Total});}\nvar CHIP_KEYS=['ENERGY','BL0937','CSE7766','HLW8012','PZEM004T','ADE7953'];\nif(typeof payload==='object'&&payload!==null){\nvar pwr=(payload.POWER!==undefined)?payload.POWER:(payload.POWER1!==undefined)?payload.POWER1:null;\nif(pwr!==null)out.push({topic:'switch/state',payload:pwr==='ON'?1:0});\nif(payload.StatusSNS){var sns=payload.StatusSNS;for(var k=0;k<CHIP_KEYS.length;k++){if(sns[CHIP_KEYS[k]]){extractEnergy(sns[CHIP_KEYS[k]]);break;}}if(!out.length)extractEnergy(sns);}\nvar foundChip=false;\nfor(var j=0;j<CHIP_KEYS.length;j++){if(payload[CHIP_KEYS[j]]){extractEnergy(payload[CHIP_KEYS[j]]);foundChip=true;break;}}\nif(!foundChip)extractEnergy(payload);\n}else if(typeof payload==='string'){if(/POWER\\d*$/.test(topic))out.push({topic:'switch/state',payload:payload==='ON'?1:0});}\nreturn[out];",
         "outputs": 1,
         "noerr": 0,
-        "x": 710,
-        "y": 1020,
+        "x": 990,
+        "y": 700,
         "wires": [
             [
                 "e72813d4b7791246"
@@ -7625,8 +7625,8 @@
         "onceDelay": 10,
         "payload": "",
         "payloadType": "str",
-        "x": 1060,
-        "y": 820,
+        "x": 920,
+        "y": 200,
         "wires": [
             [
                 "8c17ebafaf083b3e"
@@ -7641,8 +7641,8 @@
         "func": "msg.topic='cmnd/16Amasterswitch/Status';msg.payload='10';return msg;",
         "outputs": 1,
         "noerr": 0,
-        "x": 1320,
-        "y": 820,
+        "x": 1180,
+        "y": 200,
         "wires": [
             [
                 "fa472f4b461b6b2b"
@@ -7665,8 +7665,8 @@
         "onceDelay": 8,
         "payload": "",
         "payloadType": "str",
-        "x": 1060,
-        "y": 860,
+        "x": 920,
+        "y": 240,
         "wires": [
             [
                 "492b2eee533626d9"
@@ -7681,8 +7681,8 @@
         "func": "msg.topic='cmnd/16Amasterswitch/TelePeriod';msg.payload='30';return msg;",
         "outputs": 1,
         "noerr": 0,
-        "x": 1320,
-        "y": 860,
+        "x": 1180,
+        "y": 240,
         "wires": [
             [
                 "fa472f4b461b6b2b"
@@ -7740,8 +7740,8 @@
         "func": "var topic=msg.topic;\nvar states=flow.get('power_states')||{};\nvar cur=states[topic];\nvar newState=(cur==='ON')?'OFF':'ON';\nstates[topic]=newState;\nflow.set('power_states',states);\nmsg.payload=newState;\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
-        "x": 1030,
-        "y": 400,
+        "x": 1390,
+        "y": 280,
         "wires": [
             [
                 "fa472f4b461b6b2b"
@@ -7756,8 +7756,8 @@
         "func": "var ctx=flow.get('energy_state')||{};\nvar t=msg.topic,p=msg.payload;\nif(t==='energy/voltage')ctx.voltage=p;\nelse if(t==='energy/current')ctx.current=p;\nelse if(t==='energy/power')ctx.power=p;\nelse if(t==='energy/today')ctx.today=p;\nelse if(t==='energy/total')ctx.total=p;\nelse return null;\nflow.set('energy_state',ctx);\nmsg.payload=ctx;\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
-        "x": 1020,
-        "y": 1020,
+        "x": 1230,
+        "y": 700,
         "wires": [
             [
                 "ab7e20beb9ee03f6"
@@ -7778,8 +7778,8 @@
         "fwdInMessages": false,
         "resendOnRefresh": true,
         "templateScope": "local",
-        "x": 1370,
-        "y": 1020,
+        "x": 1460,
+        "y": 700,
         "wires": [
             []
         ]
@@ -8102,7 +8102,7 @@
         "order": 1,
         "width": "24",
         "height": "22",
-        "format": "<style>\n  .dx-wrap {\n    display: grid;\n    grid-template-columns: 220px 1fr;\n    gap: 8px;\n    height: 100%;\n  }\n\n  .dx-side {\n    display: flex;\n    flex-direction: column;\n    gap: 6px;\n    overflow-y: auto;\n    padding-right: 2px;\n  }\n\n  .dx-main {\n    overflow: hidden;\n    display: flex;\n    flex-direction: column;\n  }\n\n  .dx-card {\n    background: #161b22;\n    border: 1px solid #30363d;\n    border-radius: 6px;\n    padding: 8px 10px;\n    font-family: monospace;\n    font-size: 11px;\n    color: #c9d1d9;\n  }\n\n  .st-row {\n    display: flex;\n    justify-content: space-between;\n    padding: 2px 0;\n    border-bottom: 1px solid #21262d;\n  }\n\n  .st-k {\n    color: #8b949e;\n    font-size: 10px;\n  }\n\n  .st-v {\n    color: #58a6ff;\n    font-weight: bold;\n  }\n\n  .st-upd {\n    color: #3fb950;\n    font-size: 9px;\n    margin-top: 4px;\n  }\n\n  .dx-sec {\n    font-size: 9px;\n    color: #555;\n    letter-spacing: 1px;\n    margin: 6px 0 3px 0;\n  }\n\n  .dx-btns {\n    display: flex;\n    flex-wrap: wrap;\n    gap: 3px;\n  }\n\n  .dx-btn {\n    padding: 2px 7px;\n    border-radius: 8px;\n    cursor: pointer;\n    user-select: none;\n    font-size: 10px;\n    font-family: monospace;\n    white-space: nowrap;\n    border: 1px solid #30363d;\n    background: #0d1117;\n    color: #444;\n    display: inline-block;\n    line-height: 1.5;\n    transition: opacity 0.1s, transform 0.1s;\n  }\n\n  .dx-btn:active {\n    opacity: 0.5;\n    transform: scale(0.95);\n  }\n\n  .dx-btn.on {\n    border-color: #3fb950;\n    background: #0d1f0d;\n    color: #3fb950;\n  }\n\n  .dx-btn.off {\n    border-color: #30363d;\n    background: #0d1117;\n    color: #444;\n  }\n\n  .dx-btn.on-red {\n    border-color: #f85149;\n    background: #1f0d0d;\n    color: #f85149;\n  }\n\n  .dx-btn.on-blu {\n    border-color: #58a6ff;\n    background: #0d0d1f;\n    color: #58a6ff;\n  }\n\n  .dx-btn.on-amb {\n    border-color: #e3b341;\n    background: #1a1400;\n    color: #e3b341;\n  }\n\n  .dx-act {\n    padding: 4px 8px;\n    border-radius: 4px;\n    cursor: pointer;\n    font-size: 10px;\n    font-family: monospace;\n    border: 1px solid;\n    text-align: center;\n    line-height: 1.4;\n    transition: opacity 0.15s, transform 0.1s;\n    display: block;\n  }\n\n  .dx-act:active {\n    opacity: 0.4;\n    transform: scale(0.97);\n  }\n\n  .dx-actions {\n    display: grid;\n    grid-template-columns: 1fr 1fr;\n    gap: 4px;\n  }\n\n  .dx-ttl {\n    display: flex;\n    align-items: center;\n    gap: 6px;\n    margin-top: 2px;\n  }\n\n  .dx-ttl input[type=range] {\n    flex: 1;\n    accent-color: #3fb950;\n    cursor: pointer;\n  }\n\n  .dx-ttl-v {\n    color: #3fb950;\n    font-size: 10px;\n    min-width: 32px;\n    text-align: right;\n  }\n\n  .bl-list {\n    display: flex;\n    flex-wrap: wrap;\n    gap: 3px;\n    margin: 4px 0 2px 0;\n    min-height: 16px;\n  }\n\n  .bl-tag {\n    background: #1f0000;\n    border: 1px solid #f4464d;\n    padding: 1px 6px;\n    border-radius: 8px;\n    color: #f88;\n    font-size: 10px;\n    cursor: pointer;\n    transition: opacity 0.1s;\n  }\n\n  .bl-tag:active {\n    opacity: 0.5;\n  }\n\n  .bl-row {\n    display: flex;\n    gap: 4px;\n    margin-bottom: 5px;\n  }\n\n  .bl-in {\n    background: #0d1117;\n    border: 1px solid #30363d;\n    color: #fff;\n    padding: 3px 6px;\n    border-radius: 4px;\n    font-family: monospace;\n    font-size: 10px;\n    flex: 1;\n    min-width: 0;\n  }\n\n  .bl-add {\n    background: #1f0000;\n    color: #f44;\n    border: 1px solid #f446;\n    padding: 3px 8px;\n    border-radius: 4px;\n    font-size: 10px;\n    cursor: pointer;\n    font-family: monospace;\n    white-space: nowrap;\n    transition: opacity 0.1s, transform 0.1s;\n  }\n\n  .bl-add:active {\n    opacity: 0.5;\n    transform: scale(0.95);\n  }\n\n  .dxt-wrap {\n    flex: 1;\n    overflow-y: auto;\n    background: #0d1117;\n    border: 1px solid #30363d;\n    border-radius: 4px;\n  }\n\n  .dxt {\n    width: 100%;\n    border-collapse: collapse;\n    font-family: monospace;\n    font-size: 11px;\n  }\n\n  .dxt th {\n    background: #161b22;\n    color: #58a6ff;\n    padding: 5px 8px;\n    text-align: left;\n    position: sticky;\n    top: 0;\n    border-bottom: 1px solid #30363d;\n    font-size: 10px;\n    letter-spacing: .5px;\n  }\n\n  .dxt td {\n    padding: 4px 8px;\n    border-bottom: 1px solid #21262d;\n    vertical-align: middle;\n  }\n\n  .dxt tr:hover td {\n    background: #ffffff06;\n  }\n\n  .badge {\n    display: inline-block;\n    padding: 1px 6px;\n    border-radius: 8px;\n    font-size: 9px;\n    font-weight: bold;\n  }\n\n  .conf-y {\n    color: #3fb950;\n  }\n\n  .conf-n {\n    color: #e3b341;\n  }\n</style>\n\n<div class=\"dx-wrap\">\n  <div class=\"dx-side\">\n\n    <!-- Stats -->\n    <div class=\"dx-card\">\n      <div class=\"dx-sec\">── WORKED STATS ─────────────</div>\n      <div class=\"st-row\"><span class=\"st-k\">Entities</span><span class=\"st-v\" id=\"st-ent\">—</span></div>\n      <div class=\"st-row\"><span class=\"st-k\">Band slots</span><span class=\"st-v\" id=\"st-slots\">—</span></div>\n      <div class=\"st-row\"><span class=\"st-k\">Confirmed ✓</span><span class=\"st-v\" id=\"st-conf\">—</span></div>\n      <div class=\"st-row\"><span class=\"st-k\">Unconfirmed ✗</span><span class=\"st-v\" id=\"st-unconf\">—</span></div>\n      <div class=\"st-upd\" id=\"st-upd\"></div>\n    </div>\n\n    <!-- Refresh / Clear -->\n    <div class=\"dx-card\" style=\"padding:6px 8px;\">\n      <div class=\"dx-actions\">\n        <div class=\"dx-act\" style=\"background:#0d2818;color:#3fb950;border-color:#238636;\" id=\"dx-refresh\">🔄 Refresh\n        </div>\n        <div class=\"dx-act\" style=\"background:#1f0d0d;color:#f85149;border-color:#3d1a19;\" id=\"dx-clear\">🗑️ Clear</div>\n      </div>\n    </div>\n\n    <!-- Filters -->\n    <div class=\"dx-card\">\n      <div class=\"dx-sec\">── BANDS ─────────────────────</div>\n      <div class=\"dx-btns\" id=\"dx-band-btns\">\n        <span class=\"dx-btn\" data-band=\"b160\">160</span>\n        <span class=\"dx-btn\" data-band=\"b80\">80</span>\n        <span class=\"dx-btn\" data-band=\"b40\">40</span>\n        <span class=\"dx-btn\" data-band=\"b30\">30</span>\n        <span class=\"dx-btn\" data-band=\"b20\">20</span>\n        <span class=\"dx-btn\" data-band=\"b17\">17</span>\n        <span class=\"dx-btn\" data-band=\"b15\">15</span>\n        <span class=\"dx-btn\" data-band=\"b12\">12</span>\n        <span class=\"dx-btn\" data-band=\"b10\">10</span>\n        <span class=\"dx-btn\" data-band=\"b6\">6</span>\n        <span class=\"dx-btn\" style=\"border-color:#1f3a5a;color:#58a6ff;background:#0d1a2a;\" id=\"dx-all\">All</span>\n        <span class=\"dx-btn\" style=\"border-color:#1f3a5a;color:#58a6ff;background:#0d1a2a;\" id=\"dx-hf\">HF</span>\n        <span class=\"dx-btn\" style=\"border-color:#1f3a5a;color:#58a6ff;background:#0d1a2a;\" id=\"dx-vhf\">VHF</span>\n      </div>\n      <div class=\"dx-sec\" style=\"margin-top:8px;\">── ALERT TYPE ─────────────</div>\n      <div class=\"dx-btns\">\n        <span class=\"dx-btn\" data-type=\"dxcc\">🔴 DXCC</span>\n        <span class=\"dx-btn\" data-type=\"band\">🔵 BAND</span>\n        <span class=\"dx-btn\" data-type=\"mode\">🟡 MODE</span>\n      </div>\n      <div class=\"dx-sec\" style=\"margin-top:8px;\">── MODE ───────────────────</div>\n      <div class=\"dx-btns\">\n        <span class=\"dx-btn\" data-mode=\"cw\">✦ CW</span>\n        <span class=\"dx-btn\" data-mode=\"phone\">🎙 Phone</span>\n        <span class=\"dx-btn\" data-mode=\"data\">📊 Data</span>\n      </div>\n      <div class=\"dx-sec\" style=\"margin-top:8px;\">── SPOT LIFETIME ──────────</div>\n      <div class=\"dx-ttl\">\n        <input type=\"range\" id=\"dx-ttl\" min=\"5\" max=\"60\" step=\"5\" value=\"20\"\n               oninput=\"window._dxTTL(this.value)\">\n        <span class=\"dx-ttl-v\" id=\"dx-ttl-v\">20 min</span>\n      </div>\n    </div>\n\n    <!-- Blacklist -->\n    <div class=\"dx-card\">\n      <div class=\"dx-sec\">── BLOCK CALLSIGN ───────────</div>\n      <div class=\"bl-row\" ng-init=\"nc='';\">\n        <input class=\"bl-in\" type=\"text\" ng-model=\"nc\" placeholder=\"Callsign...\">\n        <button class=\"bl-add\"\n          ng-click=\"send({payload:nc.toUpperCase(),topic:'blacklist_add'}); nc='';\">+ Block</button>\n      </div>\n      <div class=\"dx-sec\">── BLOCKED (<span id=\"bl-cnt\">0</span>) ──────────</div>\n      <div class=\"bl-list\" id=\"bl-list\"><span style=\"color:#555\">None</span></div>\n    </div>\n\n  </div>\n\n  <!-- RIGHT: Alert Table -->\n  <div class=\"dx-main\">\n    <div class=\"dxt-wrap\">\n      <table class=\"dxt\">\n        <thead>\n          <tr>\n            <th>Time</th>\n            <th>Type</th>\n            <th>Call</th>\n            <th>Entity</th>\n            <th>Band</th>\n            <th>Mode</th>\n            <th>Freq</th>\n            <th>Slot</th>\n            <th>Spotter</th>\n          </tr>\n        </thead>\n        <tbody id=\"dx-tbody\"></tbody>\n      </table>\n    </div>\n  </div>\n</div>\n\n<script>\n  (function(){\n  var STORE = 'vu2cpl_filters';\n  var ENDPOINT = '/dxcc/filters';\n\n  // Default state\n  var def = {\n    b:{b160:false,b80:true,b40:true,b30:true,b20:true,\n       b17:true,b15:true,b12:true,b10:true,b6:false},\n    t:{dxcc:true,band:true,mode:true},\n    m:{cw:true,phone:true,data:true},\n    ttl:20\n  };\n\n  // Load from localStorage\n  var st;\n  try {\n    var sv = localStorage.getItem(STORE);\n    st = sv ? JSON.parse(sv) : JSON.parse(JSON.stringify(def));\n    if(!st.m)   st.m   = JSON.parse(JSON.stringify(def.m));\n    if(!st.ttl) st.ttl = def.ttl;\n    if(!st.b)   st.b   = JSON.parse(JSON.stringify(def.b));\n    if(!st.t)   st.t   = JSON.parse(JSON.stringify(def.t));\n  } catch(e) { st = JSON.parse(JSON.stringify(def)); }\n\n  // Save to localStorage\n  function save(){\n    try{ localStorage.setItem(STORE, JSON.stringify(st)); }catch(e){}\n  }\n\n  // Send filter state to Node-RED via HTTP POST\n  function push(){\n    fetch(ENDPOINT, {\n      method: 'POST',\n      headers: {'Content-Type':'application/json'},\n      body: JSON.stringify({b:st.b, t:st.t, m:st.m, ttl:st.ttl})\n    }).catch(function(e){ console.warn('filter push:', e); });\n  }\n\n  // Render all button states\n  function render(){\n    document.querySelectorAll('[data-band]').forEach(function(el){\n      el.className = 'dx-btn ' + (st.b[el.dataset.band] ? 'on' : 'off');\n    });\n    var tc = {dxcc:'on-red', band:'on-blu', mode:'on-amb'};\n    document.querySelectorAll('[data-type]').forEach(function(el){\n      el.className = 'dx-btn ' + (st.t[el.dataset.type] ? tc[el.dataset.type] : 'off');\n    });\n    document.querySelectorAll('[data-mode]').forEach(function(el){\n      el.className = 'dx-btn ' + (st.m[el.dataset.mode] ? 'on' : 'off');\n    });\n    var r = document.getElementById('dx-ttl');\n    var v = document.getElementById('dx-ttl-v');\n    if(r) r.value = st.ttl;\n    if(v) v.textContent = st.ttl + ' min';\n  }\n\n  // Band buttons\n  document.querySelectorAll('[data-band]').forEach(function(el){\n    el.addEventListener('click', function(){\n      st.b[el.dataset.band] = !st.b[el.dataset.band];\n      render(); save(); push();\n    });\n  });\n\n  // Alert type buttons\n  document.querySelectorAll('[data-type]').forEach(function(el){\n    el.addEventListener('click', function(){\n      st.t[el.dataset.type] = !st.t[el.dataset.type];\n      render(); save(); push();\n    });\n  });\n\n  // Mode buttons\n  document.querySelectorAll('[data-mode]').forEach(function(el){\n    el.addEventListener('click', function(){\n      st.m[el.dataset.mode] = !st.m[el.dataset.mode];\n      render(); save(); push();\n    });\n  });\n\n  // All / HF / VHF presets\n  document.getElementById('dx-all').addEventListener('click', function(){\n    Object.keys(st.b).forEach(function(k){ st.b[k]=true; });\n    render(); save(); push();\n  });\n  document.getElementById('dx-hf').addEventListener('click', function(){\n    Object.keys(st.b).forEach(function(k){ st.b[k]=false; });\n    ['b160','b80','b60','b40','b30','b20','b17','b15','b12','b10'].forEach(function(k){ st.b[k]=true; });\n    render(); save(); push();\n  });\n  document.getElementById('dx-vhf').addEventListener('click', function(){\n    Object.keys(st.b).forEach(function(k){ st.b[k]=false; });\n    st.b.b6=true; st.b.b2=true;\n    render(); save(); push();\n  });\n\n  // TTL slider — oninput calls window._dxTTL\n  window._dxTTL = function(val){\n    st.ttl = parseInt(val) || 20;\n    var v = document.getElementById('dx-ttl-v');\n    if(v) v.textContent = st.ttl + ' min';\n    save(); push();\n  };\n\n  // Refresh button\n  document.getElementById('dx-refresh').addEventListener('click', function(){\n    var el = this; el.style.opacity='0.4';\n    setTimeout(function(){ el.style.opacity='1'; }, 200);\n    fetch('/dxcc/refresh', {method:'POST'}).catch(function(e){ console.warn(e); });\n  });\n\n  // Clear button\n  document.getElementById('dx-clear').addEventListener('click', function(){\n    var el = this; el.style.opacity='0.4';\n    setTimeout(function(){ el.style.opacity='1'; }, 200);\n    fetch('/dxcc/clear', {method:'POST'}).catch(function(e){ console.warn(e); });\n  });\n\n  // Blacklist tag remove — uses ng-click via scope (already works)\n  window._dxBlRemove = function(call){\n  fetch('/dxcc/blacklist-remove', {\n  method: 'POST',\n  headers: {'Content-Type':'application/json'},\n  body: JSON.stringify({call: call})\n  }).catch(function(e){ console.warn(e); });\n  };\n\n  // Initial render from saved state\n  render();\n\n  // Push saved state to Node-RED on load (after 800ms for startup)\n  setTimeout(push, 800);\n\n  // $watch for incoming messages from Node-RED\n  scope.$watch('msg', function(msg){\n    if(!msg || !msg.topic) return;\n\n    // Worked stats\n    if(msg.topic === 'dxcc_stats' && msg.payload){\n      var p = msg.payload;\n      function set(id,v){ var e=document.getElementById(id); if(e&&v!==undefined) e.textContent=v; }\n      set('st-ent',    p.entities);\n      set('st-slots',  p.bandSlots);\n      set('st-conf',   p.confirmed);\n      set('st-unconf', p.unconfirmed);\n      set('st-upd',    p.updated ? 'Updated: '+p.updated : '');\n    }\n\n    // Alert table\n    if(msg.topic === 'dx_alert' && Array.isArray(msg.payload)){\n      var tb = document.getElementById('dx-tbody'); if(!tb) return;\n      tb.innerHTML = '';\n      msg.payload.forEach(function(row){\n        var conf = row.conf==='confirmed ✓'   ? '<span class=\"conf-y\">✓</span>'\n                 : row.conf==='unconfirmed ✗' ? '<span class=\"conf-n\">✗</span>'\n                 : '<span style=\"color:#555\">—</span>';\n        var tr = document.createElement('tr');\n        tr.innerHTML =\n          '<td style=\"color:#555\">'                                          +row.time+   '</td>'+\n          '<td><span class=\"badge\" style=\"background:'+row.color+'22;color:'+row.color+\n            ';border:1px solid '+row.color+'66\">'+row.type+'</span></td>'+\n          '<td style=\"color:#fff;font-weight:bold;font-size:12px\">'         +row.call+   '</td>'+\n          '<td style=\"color:#ddd\">'                                          +row.entity+ '</td>'+\n          '<td style=\"color:#adf\">'                                          +row.band+   '</td>'+\n          '<td style=\"color:#fda\">'                                          +row.mode+   '</td>'+\n          '<td style=\"color:#8af\">'                                          +row.freq+   '</td>'+\n          '<td>'                                                             +conf+        '</td>'+\n          '<td style=\"color:#666\">'                                          +row.spotter+'</td>';\n        tb.appendChild(tr);\n      });\n    }\n\n    // Blacklist\n    if(msg.topic === 'blacklist' && Array.isArray(msg.payload)){\n      var bl  = document.getElementById('bl-list');\n      var cnt = document.getElementById('bl-cnt');\n      if(!bl) return;\n      bl.innerHTML = '';\n      if(cnt) cnt.textContent = msg.payload.length;\n      if(!msg.payload.length){\n        bl.innerHTML = '<span style=\"color:#555\">None</span>';\n        return;\n      }\n      msg.payload.forEach(function(c){\n        var s = document.createElement('span');\n        s.className = 'bl-tag';\n        s.textContent = c;\n        s.title = 'Click to remove';\n        s.setAttribute('onclick', \"window._dxBlRemove('\"+c+\"')\");\n        bl.appendChild(s);\n      });\n    }\n  });\n})();\n</script>",
+        "format": "<style>\n  .dx-wrap {\n    display: grid;\n    grid-template-columns: 220px 1fr;\n    gap: 8px;\n    height: 100%;\n  }\n\n  .dx-side {\n    display: flex;\n    flex-direction: column;\n    gap: 6px;\n    overflow-y: auto;\n    padding-right: 2px;\n  }\n\n  .dx-main {\n    overflow: hidden;\n    display: flex;\n    flex-direction: column;\n  }\n\n  .dx-card {\n    background: #161b22;\n    border: 1px solid #30363d;\n    border-radius: 6px;\n    padding: 8px 10px;\n    font-family: monospace;\n    font-size: 11px;\n    color: #c9d1d9;\n  }\n\n  .st-row {\n    display: flex;\n    justify-content: space-between;\n    padding: 2px 0;\n    border-bottom: 1px solid #21262d;\n  }\n\n  .st-k {\n    color: #8b949e;\n    font-size: 10px;\n  }\n\n  .st-v {\n    color: #58a6ff;\n    font-weight: bold;\n  }\n\n  .st-upd {\n    color: #3fb950;\n    font-size: 9px;\n    margin-top: 4px;\n  }\n\n  .dx-sec {\n    font-size: 9px;\n    color: #555;\n    letter-spacing: 1px;\n    margin: 6px 0 3px 0;\n  }\n\n  .dx-btns {\n    display: flex;\n    flex-wrap: wrap;\n    gap: 3px;\n  }\n\n  .dx-btn {\n    padding: 2px 7px;\n    border-radius: 8px;\n    cursor: pointer;\n    user-select: none;\n    font-size: 10px;\n    font-family: monospace;\n    white-space: nowrap;\n    border: 1px solid #30363d;\n    background: #0d1117;\n    color: #444;\n    display: inline-block;\n    line-height: 1.5;\n    transition: opacity 0.1s, transform 0.1s;\n  }\n\n  .dx-btn:active {\n    opacity: 0.5;\n    transform: scale(0.95);\n  }\n\n  .dx-btn.on {\n    border-color: #3fb950;\n    background: #0d1f0d;\n    color: #3fb950;\n  }\n\n  .dx-btn.off {\n    border-color: #30363d;\n    background: #0d1117;\n    color: #444;\n  }\n\n  .dx-btn.on-red {\n    border-color: #f85149;\n    background: #1f0d0d;\n    color: #f85149;\n  }\n\n  .dx-btn.on-blu {\n    border-color: #58a6ff;\n    background: #0d0d1f;\n    color: #58a6ff;\n  }\n\n  .dx-btn.on-amb {\n    border-color: #e3b341;\n    background: #1a1400;\n    color: #e3b341;\n  }\n\n  .dx-act {\n    padding: 4px 8px;\n    border-radius: 4px;\n    cursor: pointer;\n    font-size: 10px;\n    font-family: monospace;\n    border: 1px solid;\n    text-align: center;\n    line-height: 1.4;\n    transition: opacity 0.15s, transform 0.1s;\n    display: block;\n  }\n\n  .dx-act:active {\n    opacity: 0.4;\n    transform: scale(0.97);\n  }\n\n  .dx-actions {\n    display: grid;\n    grid-template-columns: 1fr 1fr;\n    gap: 4px;\n  }\n\n  .dx-ttl {\n    display: flex;\n    align-items: center;\n    gap: 6px;\n    margin-top: 2px;\n  }\n\n  .dx-ttl input[type=range] {\n    flex: 1;\n    accent-color: #3fb950;\n    cursor: pointer;\n  }\n\n  .dx-ttl-v {\n    color: #3fb950;\n    font-size: 10px;\n    min-width: 32px;\n    text-align: right;\n  }\n\n  .bl-list {\n    display: flex;\n    flex-wrap: wrap;\n    gap: 3px;\n    margin: 4px 0 2px 0;\n    min-height: 16px;\n  }\n\n  .bl-tag {\n    background: #1f0000;\n    border: 1px solid #f4464d;\n    padding: 1px 6px;\n    border-radius: 8px;\n    color: #f88;\n    font-size: 10px;\n    cursor: pointer;\n    transition: opacity 0.1s;\n  }\n\n  .bl-tag:active {\n    opacity: 0.5;\n  }\n\n  .bl-row {\n    display: flex;\n    gap: 4px;\n    margin-bottom: 5px;\n  }\n\n  .bl-in {\n    background: #0d1117;\n    border: 1px solid #30363d;\n    color: #fff;\n    padding: 3px 6px;\n    border-radius: 4px;\n    font-family: monospace;\n    font-size: 10px;\n    flex: 1;\n    min-width: 0;\n  }\n\n  .bl-add {\n    background: #1f0000;\n    color: #f44;\n    border: 1px solid #f446;\n    padding: 3px 8px;\n    border-radius: 4px;\n    font-size: 10px;\n    cursor: pointer;\n    font-family: monospace;\n    white-space: nowrap;\n    transition: opacity 0.1s, transform 0.1s;\n  }\n\n  .bl-add:active {\n    opacity: 0.5;\n    transform: scale(0.95);\n  }\n\n  .dxt-wrap {\n    flex: 1;\n    overflow-y: auto;\n    background: #0d1117;\n    border: 1px solid #30363d;\n    border-radius: 4px;\n  }\n\n  .dxt {\n    width: 100%;\n    border-collapse: collapse;\n    font-family: monospace;\n    font-size: 11px;\n  }\n\n  .dxt th {\n    background: #161b22;\n    color: #58a6ff;\n    padding: 5px 8px;\n    text-align: left;\n    position: sticky;\n    top: 0;\n    border-bottom: 1px solid #30363d;\n    font-size: 10px;\n    letter-spacing: .5px;\n  }\n\n  .dxt td {\n    padding: 4px 8px;\n    border-bottom: 1px solid #21262d;\n    vertical-align: middle;\n  }\n\n  .dxt tr:hover td {\n    background: #ffffff06;\n  }\n\n  .badge {\n    display: inline-block;\n    padding: 1px 6px;\n    border-radius: 8px;\n    font-size: 9px;\n    font-weight: bold;\n  }\n\n  .conf-y {\n    color: #3fb950;\n  }\n\n  .conf-n {\n    color: #e3b341;\n  }\n</style>\n\n<div class=\"dx-wrap\">\n  <div class=\"dx-side\">\n\n    <!-- Stats -->\n    <div class=\"dx-card\">\n      <div class=\"dx-sec\">── WORKED STATS ─────────────</div>\n      <div class=\"st-row\"><span class=\"st-k\">Entities</span><span class=\"st-v\" id=\"st-ent\">—</span></div>\n      <div class=\"st-row\"><span class=\"st-k\">Band slots</span><span class=\"st-v\" id=\"st-slots\">—</span></div>\n      <div class=\"st-row\"><span class=\"st-k\">Confirmed ✓</span><span class=\"st-v\" id=\"st-conf\">—</span></div>\n      <div class=\"st-row\"><span class=\"st-k\">Unconfirmed ✗</span><span class=\"st-v\" id=\"st-unconf\">—</span></div>\n      <div class=\"st-upd\" id=\"st-upd\"></div>\n    </div>\n\n    <!-- Refresh / Clear -->\n    <div class=\"dx-card\" style=\"padding:6px 8px;\">\n      <div class=\"dx-actions\">\n        <div class=\"dx-act\" style=\"background:#0d2818;color:#3fb950;border-color:#238636;\" id=\"dx-refresh\">🔄 Refresh\n        </div>\n        <div class=\"dx-act\" style=\"background:#1f0d0d;color:#f85149;border-color:#3d1a19;\" id=\"dx-clear\">🗑️ Clear</div>\n      </div>\n    </div>\n\n    <!-- Filters -->\n    <div class=\"dx-card\">\n      <div class=\"dx-sec\">── BANDS ─────────────────────</div>\n      <div class=\"dx-btns\" id=\"dx-band-btns\">\n        <span class=\"dx-btn\" data-band=\"b160\">160</span>\n        <span class=\"dx-btn\" data-band=\"b80\">80</span>\n        <span class=\"dx-btn\" data-band=\"b40\">40</span>\n        <span class=\"dx-btn\" data-band=\"b30\">30</span>\n        <span class=\"dx-btn\" data-band=\"b20\">20</span>\n        <span class=\"dx-btn\" data-band=\"b17\">17</span>\n        <span class=\"dx-btn\" data-band=\"b15\">15</span>\n        <span class=\"dx-btn\" data-band=\"b12\">12</span>\n        <span class=\"dx-btn\" data-band=\"b10\">10</span>\n        <span class=\"dx-btn\" data-band=\"b6\">6</span>\n        <span class=\"dx-btn\" style=\"border-color:#1f3a5a;color:#58a6ff;background:#0d1a2a;\" id=\"dx-all\">All</span>\n        <span class=\"dx-btn\" style=\"border-color:#1f3a5a;color:#58a6ff;background:#0d1a2a;\" id=\"dx-hf\">HF</span>\n        <span class=\"dx-btn\" style=\"border-color:#1f3a5a;color:#58a6ff;background:#0d1a2a;\" id=\"dx-vhf\">VHF</span>\n      </div>\n      <div class=\"dx-sec\" style=\"margin-top:8px;\">── ALERT TYPE ─────────────</div>\n      <div class=\"dx-btns\">\n        <span class=\"dx-btn\" data-type=\"dxcc\">🔴 DXCC</span>\n        <span class=\"dx-btn\" data-type=\"band\">🔵 BAND</span>\n        <span class=\"dx-btn\" data-type=\"mode\">🟡 MODE</span>\n      </div>\n      <div class=\"dx-sec\" style=\"margin-top:8px;\">── MODE ───────────────────</div>\n      <div class=\"dx-btns\">\n        <span class=\"dx-btn\" data-mode=\"cw\">✦ CW</span>\n        <span class=\"dx-btn\" data-mode=\"phone\">🎙 Phone</span>\n        <span class=\"dx-btn\" data-mode=\"data\">📊 Data</span>\n      </div>\n      <div class=\"dx-sec\" style=\"margin-top:8px;\">── SPOT LIFETIME ──────────</div>\n      <div class=\"dx-ttl\">\n        <input type=\"range\" id=\"dx-ttl\" min=\"5\" max=\"60\" step=\"5\" value=\"20\"\n               oninput=\"window._dxTTL(this.value)\">\n        <span class=\"dx-ttl-v\" id=\"dx-ttl-v\">20 min</span>\n      </div>\n    </div>\n\n    <!-- Blacklist -->\n    <div class=\"dx-card\">\n      <div class=\"dx-sec\">── BLOCK CALLSIGN ───────────</div>\n      <div class=\"bl-row\">\n        <input class=\"bl-in\" type=\"text\" id=\"bl-input\" placeholder=\"Callsign...\">\n        <button class=\"bl-add\" id=\"bl-add-btn\">+ Block</button>\n      </div>\n      <div class=\"dx-sec\">── BLOCKED (<span id=\"bl-cnt\">0</span>) ──────────</div>\n      <div class=\"bl-list\" id=\"bl-list\"><span style=\"color:#555\">None</span></div>\n    </div>\n\n  </div>\n\n  <!-- RIGHT: Alert Table -->\n  <div class=\"dx-main\">\n    <div class=\"dxt-wrap\">\n      <table class=\"dxt\">\n        <thead>\n          <tr>\n            <th>Time</th>\n            <th>Type</th>\n            <th>Call</th>\n            <th>Entity</th>\n            <th>Band</th>\n            <th>Mode</th>\n            <th>Freq</th>\n            <th>Slot</th>\n            <th>Spotter</th>\n          </tr>\n        </thead>\n        <tbody id=\"dx-tbody\"></tbody>\n      </table>\n    </div>\n  </div>\n</div>\n\n<script>\n  (function(){\n  var STORE    = 'vu2cpl_filters';\n  var EP_FILT  = '/dxcc/filters';\n  var EP_REFR  = '/dxcc/refresh';\n  var EP_CLR   = '/dxcc/clear';\n  var EP_STATS = '/dxcc/stats';\n  var EP_BLIST = '/dxcc/blacklist';\n  var EP_BADD  = '/dxcc/blacklist-add';\n  var EP_BREM  = '/dxcc/blacklist-remove';\n\n  // ── Filter state ──────────────────────────────────────────────────────\n  var def = {\n    b:{b160:false,b80:true,b40:true,b30:true,b20:true,\n       b17:true,b15:true,b12:true,b10:true,b6:false},\n    t:{dxcc:true,band:true,mode:true},\n    m:{cw:true,phone:true,data:true},\n    ttl:20\n  };\n  var st;\n  try {\n    var sv = localStorage.getItem(STORE);\n    st = sv ? JSON.parse(sv) : JSON.parse(JSON.stringify(def));\n    if(!st.m)   st.m   = JSON.parse(JSON.stringify(def.m));\n    if(!st.ttl) st.ttl = def.ttl;\n    if(!st.b)   st.b   = JSON.parse(JSON.stringify(def.b));\n    if(!st.t)   st.t   = JSON.parse(JSON.stringify(def.t));\n  } catch(e) { st = JSON.parse(JSON.stringify(def)); }\n\n  function save(){ try{ localStorage.setItem(STORE, JSON.stringify(st)); }catch(e){} }\n  function push(){\n    fetch(EP_FILT,{method:'POST',headers:{'Content-Type':'application/json'},\n      body:JSON.stringify({b:st.b,t:st.t,m:st.m,ttl:st.ttl})\n    }).catch(function(e){ console.warn('filter push:',e); });\n  }\n\n  // ── Button render ─────────────────────────────────────────────────────\n  function render(){\n    document.querySelectorAll('[data-band]').forEach(function(el){\n      el.className = 'dx-btn ' + (st.b[el.dataset.band] ? 'on' : 'off');\n    });\n    var tc = {dxcc:'on-red', band:'on-blu', mode:'on-amb'};\n    document.querySelectorAll('[data-type]').forEach(function(el){\n      el.className = 'dx-btn ' + (st.t[el.dataset.type] ? tc[el.dataset.type] : 'off');\n    });\n    document.querySelectorAll('[data-mode]').forEach(function(el){\n      el.className = 'dx-btn ' + (st.m[el.dataset.mode] ? 'on' : 'off');\n    });\n    var r = document.getElementById('dx-ttl');\n    var v = document.getElementById('dx-ttl-v');\n    if(r) r.value = st.ttl;\n    if(v) v.textContent = st.ttl + ' min';\n  }\n\n  // ── Stats display ─────────────────────────────────────────────────────\n  function renderStats(p){\n    function set(id,v){ var e=document.getElementById(id); if(e&&v!==undefined) e.textContent=v; }\n    set('st-ent',    p.entities);\n    set('st-slots',  p.bandSlots);\n    set('st-conf',   p.confirmed);\n    set('st-unconf', p.unconfirmed);\n    set('st-upd',    p.updated ? 'Updated: '+p.updated : '');\n  }\n\n  // ── Blacklist display ─────────────────────────────────────────────────\n  function renderBlacklist(list){\n    var bl  = document.getElementById('bl-list');\n    var cnt = document.getElementById('bl-cnt');\n    if(!bl) return;\n    bl.innerHTML = '';\n    if(cnt) cnt.textContent = list.length;\n    if(!list.length){\n      bl.innerHTML = '<span style=\"color:#555\">None</span>';\n      return;\n    }\n    list.forEach(function(c){\n      var s = document.createElement('span');\n      s.className = 'bl-tag';\n      s.textContent = c;\n      s.title = 'Click to remove';\n      s.setAttribute('onclick', \"window._dxBlRemove('\"+c+\"')\");\n      bl.appendChild(s);\n    });\n  }\n\n  // ── Fetch stats on init ───────────────────────────────────────────────\n  function loadStats(){\n    fetch(EP_STATS).then(function(r){ return r.json(); }).then(function(p){\n      if(p) renderStats(p);\n    }).catch(function(e){ console.warn('stats load:',e); });\n  }\n\n  // ── Fetch blacklist on init ───────────────────────────────────────────\n  function loadBlacklist(){\n    fetch(EP_BLIST).then(function(r){ return r.json(); }).then(function(list){\n      if(Array.isArray(list)) renderBlacklist(list);\n    }).catch(function(e){ console.warn('blacklist load:',e); });\n  }\n\n  // ── Band buttons ──────────────────────────────────────────────────────\n  document.querySelectorAll('[data-band]').forEach(function(el){\n    el.addEventListener('click', function(){\n      st.b[el.dataset.band] = !st.b[el.dataset.band];\n      render(); save(); push();\n    });\n  });\n  document.querySelectorAll('[data-type]').forEach(function(el){\n    el.addEventListener('click', function(){\n      st.t[el.dataset.type] = !st.t[el.dataset.type];\n      render(); save(); push();\n    });\n  });\n  document.querySelectorAll('[data-mode]').forEach(function(el){\n    el.addEventListener('click', function(){\n      st.m[el.dataset.mode] = !st.m[el.dataset.mode];\n      render(); save(); push();\n    });\n  });\n\n  // ── Preset buttons ────────────────────────────────────────────────────\n  document.getElementById('dx-all').addEventListener('click', function(){\n    Object.keys(st.b).forEach(function(k){ st.b[k]=true; });\n    render(); save(); push();\n  });\n  document.getElementById('dx-hf').addEventListener('click', function(){\n    Object.keys(st.b).forEach(function(k){ st.b[k]=false; });\n    ['b160','b80','b60','b40','b30','b20','b17','b15','b12','b10'].forEach(function(k){ st.b[k]=true; });\n    render(); save(); push();\n  });\n  document.getElementById('dx-vhf').addEventListener('click', function(){\n    Object.keys(st.b).forEach(function(k){ st.b[k]=false; });\n    st.b.b6=true; st.b.b2=true;\n    render(); save(); push();\n  });\n\n  // ── TTL slider ────────────────────────────────────────────────────────\n  window._dxTTL = function(val){\n    st.ttl = parseInt(val) || 20;\n    var v = document.getElementById('dx-ttl-v');\n    if(v) v.textContent = st.ttl + ' min';\n    save(); push();\n  };\n\n  // ── Refresh / Clear ───────────────────────────────────────────────────\n  document.getElementById('dx-refresh').addEventListener('click', function(){\n    var el = this; el.style.opacity='0.4';\n    setTimeout(function(){ el.style.opacity='1'; }, 200);\n    fetch(EP_REFR, {method:'POST'}).catch(function(e){ console.warn(e); });\n  });\n  document.getElementById('dx-clear').addEventListener('click', function(){\n    var el = this; el.style.opacity='0.4';\n    setTimeout(function(){ el.style.opacity='1'; }, 200);\n    fetch(EP_CLR, {method:'POST'}).catch(function(e){ console.warn(e); });\n  });\n\n  // ── Blacklist add (fetch-based, replaces ng-click send()) ─────────────\n  document.getElementById('bl-add-btn').addEventListener('click', function(){\n    var inp = document.getElementById('bl-input');\n    var call = (inp ? inp.value : '').toUpperCase().trim();\n    if(!call) return;\n    fetch(EP_BADD, {\n      method:'POST',\n      headers:{'Content-Type':'application/json'},\n      body: JSON.stringify({call: call})\n    }).then(function(r){ return r.json(); }).then(function(list){\n      if(Array.isArray(list)) renderBlacklist(list);\n      if(inp) inp.value = '';\n    }).catch(function(e){ console.warn('bl add:',e); });\n  });\n\n  // ── Blacklist remove ──────────────────────────────────────────────────\n  window._dxBlRemove = function(call){\n    fetch(EP_BREM, {\n      method:'POST',\n      headers:{'Content-Type':'application/json'},\n      body: JSON.stringify({call: call})\n    }).then(function(r){ return r.json(); }).then(function(list){\n      if(Array.isArray(list)) renderBlacklist(list);\n    }).catch(function(e){ console.warn('bl remove:',e); });\n  };\n\n  // ── $watch for live msgs from Node-RED ────────────────────────────────\n  scope.$watch('msg', function(msg){\n    if(!msg || !msg.topic) return;\n\n    if(msg.topic === 'dxcc_stats' && msg.payload){\n      renderStats(msg.payload);\n    }\n\n    if(msg.topic === 'dx_alert' && Array.isArray(msg.payload)){\n      var tb = document.getElementById('dx-tbody'); if(!tb) return;\n      tb.innerHTML = '';\n      msg.payload.forEach(function(row){\n        var conf = row.conf==='confirmed ✓'   ? '<span class=\"conf-y\">✓</span>'\n                 : row.conf==='unconfirmed ✗' ? '<span class=\"conf-n\">✗</span>'\n                 : '<span style=\"color:#555\">—</span>';\n        var tr = document.createElement('tr');\n        tr.innerHTML =\n          '<td style=\"color:#555\">'                                          +row.time+   '</td>'+\n          '<td><span class=\"badge\" style=\"background:'+row.color+'22;color:'+row.color+\n            ';border:1px solid '+row.color+'66\">'+row.type+'</span></td>'+\n          '<td style=\"color:#fff;font-weight:bold;font-size:12px\">'         +row.call+   '</td>'+\n          '<td style=\"color:#ddd\">'                                          +row.entity+ '</td>'+\n          '<td style=\"color:#adf\">'                                          +row.band+   '</td>'+\n          '<td style=\"color:#fda\">'                                          +row.mode+   '</td>'+\n          '<td style=\"color:#8af\">'                                          +row.freq+   '</td>'+\n          '<td>'                                                             +conf+       '</td>'+\n          '<td style=\"color:#666\">'                                          +row.spotter+'</td>';\n        tb.appendChild(tr);\n      });\n    }\n\n    if(msg.topic === 'blacklist' && Array.isArray(msg.payload)){\n      renderBlacklist(msg.payload);\n    }\n  });\n\n  // ── Init ──────────────────────────────────────────────────────────────\n  render();\n  push();           // push saved filter state to Node-RED\n  loadStats();      // fetch stats from flow context via HTTP GET\n  loadBlacklist();  // fetch blacklist from file via HTTP GET\n\n})();\n</script>",
         "storeOutMessages": true,
         "fwdInMessages": true,
         "resendOnRefresh": true,
@@ -8878,7 +8878,8 @@
         "y": 200,
         "wires": [
             [
-                "9fd52c02a8486dce"
+                "9fd52c02a8486dce",
+                "aa7434df62b95ebc"
             ]
         ]
     },
@@ -8886,6 +8887,7 @@
         "id": "9fd52c02a8486dce",
         "type": "function",
         "z": "d110d176c0aad308",
+        "d": true,
         "name": "Fetch All Modes + Parse",
         "func": "var meterToBand = {\n    '160':'160M','80':'80M','40':'40M','30':'30M',\n    '20':'20M','17':'17M','15':'15M','12':'12M','10':'10M','6':'6M'\n};\n\nfunction fetchURL(target) {\n    return new Promise(function(resolve, reject) {\n        var u = urlmod.parse(target);\n        var options = { hostname:u.hostname, path:u.path, method:'GET',\n                        headers:{'User-Agent':'Mozilla/5.0'} };\n        var req = https.request(options, function(res) {\n            var data = '';\n            res.on('data', function(chunk){ data += chunk; });\n            res.on('end', function(){ resolve(data); });\n        });\n        req.on('error', reject);\n        req.end();\n    });\n}\n\nfunction parseMatrix(raw) {\n    raw = raw.trim();\n    if (!raw || raw.charAt(0) !== '{') throw new Error('Bad response: ' + raw.substring(0,100));\n    var matrix = JSON.parse(raw);\n    if (matrix.Error || matrix.error) throw new Error('CL error: ' + (matrix.Error||matrix.error));\n    var ew = {};\n    Object.keys(matrix).forEach(function(adif) {\n        var bands = matrix[adif];\n        if (typeof bands !== 'object') return;\n        ew[adif] = {};\n        Object.keys(bands).forEach(function(mk) {\n            var band = meterToBand[mk];\n            if (!band || bands[mk] < 1) return;\n            var conf = bands[mk] >= 2;\n            ew[adif][band] = ew[adif][band] || {confirmed:false,unconfirmed:false};\n            if (conf) ew[adif][band].confirmed = true;\n            else      ew[adif][band].unconfirmed = true;\n        });\n    });\n    return ew;\n}\n\nnode.status({fill:'blue', shape:'dot', text:'Fetching all modes...'});\n\nPromise.all([\n    fetchURL(msg.mode0url),\n    fetchURL(msg.mode1url),\n    fetchURL(msg.mode2url),\n    fetchURL(msg.mode3url)\n]).then(function(results) {\n    var ew0 = parseMatrix(results[0]);\n    var ew1 = parseMatrix(results[1]);\n    var ew2 = parseMatrix(results[2]);\n    var ew3 = parseMatrix(results[3]);\n\n    var workedTable = {};\n    Object.keys(ew0).forEach(function(adif) {\n        Object.keys(ew0[adif]).forEach(function(band) {\n            var key = adif + '|' + band;\n            workedTable[key] = {dxcc:adif, band:band,\n                confirmed:ew0[adif][band].confirmed,\n                unconfirmed:ew0[adif][band].unconfirmed};\n        });\n    });\n\n    var modeWorked = {};\n    var allAdifs = {};\n    [ew1,ew2,ew3].forEach(function(ew){ Object.keys(ew).forEach(function(a){ allAdifs[a]=1; }); });\n    Object.keys(allAdifs).forEach(function(adif) {\n        modeWorked[adif] = {\n            cw:    !!(ew1[adif] && Object.keys(ew1[adif]).length > 0),\n            phone: !!(ew2[adif] && Object.keys(ew2[adif]).length > 0),\n            data:  !!(ew3[adif] && Object.keys(ew3[adif]).length > 0)\n        };\n    });\n\n    var stats = {\n        entities:    Object.keys(ew0).length,\n        confirmed:   Object.keys(workedTable).filter(function(k){return workedTable[k].confirmed;}).length,\n        unconfirmed: Object.keys(workedTable).filter(function(k){return !workedTable[k].confirmed;}).length,\n        bandSlots:   Object.keys(workedTable).length\n    };\n\n                \n    flow.set('workedTable',    workedTable);\n    flow.set('entityWorked',   ew0);\n    flow.set('dxccModeWorked', modeWorked);\n    flow.set('workedStats',    stats);\n\n    // Also save to file store — survives reboot without re-fetch\n    flow.set('workedTable',    workedTable, 'file');\n    flow.set('entityWorked',   ew0,         'file');\n    flow.set('dxccModeWorked', modeWorked,  'file');\n    flow.set('workedStats',    stats,       'file');\n\n    // Write nr_dxcc_seed.json to both locations\n    var seed = JSON.stringify({workedTable:workedTable, entityWorked:ew0, dxccModeWorked:modeWorked, stats:stats, updated:new Date().toISOString()});\n    var flowsDir = flow.get('cfg_flows_dir') || os.homedir() + '/.node-red';\n    var paths = [ flowsDir + '/nr_dxcc_seed.json' ];\n    paths.forEach(function(p){\n        try { fs.writeFileSync(p, seed); } catch(e) { node.warn('seed write failed: ' + p + ' ' + e.message); }\n    });\n    node.warn('Seed written to ' + paths.length + ' locations');\n\n    flow.set('dxccReady', true);\n    node.status({fill:'green', shape:'dot',\n        text: stats.entities + ' entities | ' + stats.confirmed + '✓ ' + stats.unconfirmed + '✗ | modes OK'});\n    node.send({payload: stats});\n}).catch(function(err) {\n    node.error('Club Log fetch failed: ' + err.message);\n    node.status({fill:'red', shape:'dot', text:'Club Log unreachable — using seed'});\n    // Fall back to seed data if already loaded by bootstrap\n    var existing = flow.get('workedTable');\n    if (existing && Object.keys(existing).length > 10) {\n        flow.set('dxccReady', true);\n        node.warn('Club Log unreachable — falling back to seed data, alerts enabled');\n        node.send({payload: flow.get('workedStats') || {entities:0,confirmed:0,unconfirmed:0,bandSlots:0}});\n    } else {\n        node.warn('Club Log unreachable and no seed data — alerts remain paused');\n    }\n});\nreturn;",
         "outputs": 1,
@@ -9208,6 +9210,191 @@
         "wires": [
             [
                 "6e60f619acad462e"
+            ]
+        ]
+    },
+    {
+        "id": "http-get-stats",
+        "type": "http in",
+        "z": "d110d176c0aad308",
+        "name": "GET /dxcc/stats",
+        "url": "/dxcc/stats",
+        "method": "get",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 1100,
+        "y": 900,
+        "wires": [
+            [
+                "fn-get-stats"
+            ]
+        ]
+    },
+    {
+        "id": "fn-get-stats",
+        "type": "function",
+        "z": "d110d176c0aad308",
+        "name": "Return Stats",
+        "func": "var s = flow.get('workedStats') || {};\nmsg.payload = s;\nmsg.statusCode = 200;\nmsg.headers = {'Content-Type':'application/json'};\nreturn msg;",
+        "outputs": 1,
+        "libs": [],
+        "x": 1300,
+        "y": 900,
+        "wires": [
+            [
+                "http-resp-stats"
+            ]
+        ]
+    },
+    {
+        "id": "http-resp-stats",
+        "type": "http response",
+        "z": "d110d176c0aad308",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 1480,
+        "y": 900,
+        "wires": []
+    },
+    {
+        "id": "http-get-blacklist",
+        "type": "http in",
+        "z": "d110d176c0aad308",
+        "name": "GET /dxcc/blacklist",
+        "url": "/dxcc/blacklist",
+        "method": "get",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 1100,
+        "y": 1000,
+        "wires": [
+            [
+                "fn-get-blacklist"
+            ]
+        ]
+    },
+    {
+        "id": "fn-get-blacklist",
+        "type": "function",
+        "z": "d110d176c0aad308",
+        "name": "Return Blacklist",
+        "func": "var flowsDir = flow.get('cfg_flows_dir') || os.homedir() + '/.node-red';\nvar path = flowsDir + '/nr_dxcc_blacklist.json';\nvar list = [];\ntry {\n    if (fs.existsSync(path)) {\n        list = JSON.parse(fs.readFileSync(path, 'utf8'));\n    }\n} catch(e) { node.warn('Blacklist read: ' + e.message); }\nmsg.payload = list;\nmsg.statusCode = 200;\nmsg.headers = {'Content-Type':'application/json'};\nreturn msg;",
+        "outputs": 1,
+        "libs": [
+            {
+                "var": "fs",
+                "module": "fs"
+            },
+            {
+                "var": "os",
+                "module": "os"
+            }
+        ],
+        "x": 1300,
+        "y": 1000,
+        "wires": [
+            [
+                "http-resp-blacklist"
+            ]
+        ]
+    },
+    {
+        "id": "http-resp-blacklist",
+        "type": "http response",
+        "z": "d110d176c0aad308",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 1480,
+        "y": 1000,
+        "wires": []
+    },
+    {
+        "id": "http-post-bl-add",
+        "type": "http in",
+        "z": "d110d176c0aad308",
+        "name": "POST /dxcc/blacklist-add",
+        "url": "/dxcc/blacklist-add",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 990,
+        "y": 1100,
+        "wires": [
+            [
+                "fn-bl-add"
+            ]
+        ]
+    },
+    {
+        "id": "fn-bl-add",
+        "type": "function",
+        "z": "d110d176c0aad308",
+        "name": "HTTP Blacklist Add",
+        "func": "var call = ((msg.payload && msg.payload.call) || '').toString().toUpperCase().trim();\nif (!call) {\n    node.send([null, {payload:'OK', res:msg.res}]);\n    return null;\n}\nnode.status({fill:'blue', shape:'dot', text:'Add: ' + call});\nnode.send([\n    {payload: call, topic: 'blacklist_add'},\n    {payload: 'OK', res: msg.res}\n]);\nreturn null;",
+        "outputs": 2,
+        "libs": [],
+        "x": 1270,
+        "y": 1100,
+        "wires": [
+            [
+                "bf47f506a324b481"
+            ],
+            [
+                "http-resp-bl-add"
+            ]
+        ]
+    },
+    {
+        "id": "http-resp-bl-add",
+        "type": "http response",
+        "z": "d110d176c0aad308",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 1480,
+        "y": 1120,
+        "wires": []
+    },
+    {
+        "id": "aa7434df62b95ebc",
+        "type": "function",
+        "z": "d110d176c0aad308",
+        "name": "Fetch All Modes + Parse lotw only",
+        "func": "var meterToBand = {\n    '160':'160M','80':'80M','40':'40M','30':'30M',\n    '20':'20M','17':'17M','15':'15M','12':'12M','10':'10M','6':'6M'\n};\n\nfunction fetchURL(target) {\n    return new Promise(function(resolve, reject) {\n        var u = urlmod.parse(target);\n        var options = { hostname:u.hostname, path:u.path, method:'GET',\n                        headers:{'User-Agent':'Mozilla/5.0'} };\n        var req = https.request(options, function(res) {\n            var data = '';\n            res.on('data', function(chunk){ data += chunk; });\n            res.on('end', function(){ resolve(data); });\n        });\n        req.on('error', reject);\n        req.end();\n    });\n}\n\nfunction parseMatrix(raw) {\n    raw = raw.trim();\n    if (!raw || raw.charAt(0) !== '{') throw new Error('Bad response: ' + raw.substring(0,100));\n    var matrix = JSON.parse(raw);\n    if (matrix.Error || matrix.error) throw new Error('CL error: ' + (matrix.Error||matrix.error));\n    var ew = {};\n    Object.keys(matrix).forEach(function(adif) {\n        var bands = matrix[adif];\n        if (typeof bands !== 'object') return;\n        ew[adif] = {};\n        Object.keys(bands).forEach(function(mk) {\n            var band = meterToBand[mk];\n            if (!band || bands[mk] < 1) return;\n            var conf = bands[mk] === 2;\n            ew[adif][band] = ew[adif][band] || {confirmed:true,unconfirmed:true};\n            if (conf) ew[adif][band].confirmed = false;\n            else      ew[adif][band].unconfirmed = false;\n        });\n    });\n    return ew;\n}\n\nnode.status({fill:'blue', shape:'dot', text:'Fetching all modes...'});\n\nPromise.all([\n    fetchURL(msg.mode0url),\n    fetchURL(msg.mode1url),\n    fetchURL(msg.mode2url),\n    fetchURL(msg.mode3url)\n]).then(function(results) {\n    var ew0 = parseMatrix(results[0]);\n    var ew1 = parseMatrix(results[1]);\n    var ew2 = parseMatrix(results[2]);\n    var ew3 = parseMatrix(results[3]);\n\n    var workedTable = {};\n    Object.keys(ew0).forEach(function(adif) {\n        Object.keys(ew0[adif]).forEach(function(band) {\n            var key = adif + '|' + band;\n            workedTable[key] = {dxcc:adif, band:band,\n                confirmed:ew0[adif][band].confirmed,\n                unconfirmed:ew0[adif][band].unconfirmed};\n        });\n    });\n\n    var modeWorked = {};\n    var allAdifs = {};\n    [ew1,ew2,ew3].forEach(function(ew){ Object.keys(ew).forEach(function(a){ allAdifs[a]=1; }); });\n    Object.keys(allAdifs).forEach(function(adif) {\n        modeWorked[adif] = {\n            cw:    !!(ew1[adif] && Object.keys(ew1[adif]).length > 0),\n            phone: !!(ew2[adif] && Object.keys(ew2[adif]).length > 0),\n            data:  !!(ew3[adif] && Object.keys(ew3[adif]).length > 0)\n        };\n    });\n\n    var stats = {\n        entities:    Object.keys(ew0).length,\n        confirmed:   Object.keys(workedTable).filter(function(k){return workedTable[k].confirmed;}).length,\n        unconfirmed: Object.keys(workedTable).filter(function(k){return !workedTable[k].confirmed;}).length,\n        bandSlots:   Object.keys(workedTable).length\n    };\n\n                \n    flow.set('workedTable',    workedTable);\n    flow.set('entityWorked',   ew0);\n    flow.set('dxccModeWorked', modeWorked);\n    flow.set('workedStats',    stats);\n\n    // Also save to file store — survives reboot without re-fetch\n    flow.set('workedTable',    workedTable, 'file');\n    flow.set('entityWorked',   ew0,         'file');\n    flow.set('dxccModeWorked', modeWorked,  'file');\n    flow.set('workedStats',    stats,       'file');\n\n    // Write nr_dxcc_seed.json to both locations\n    var seed = JSON.stringify({workedTable:workedTable, entityWorked:ew0, dxccModeWorked:modeWorked, stats:stats, updated:new Date().toISOString()});\n    var flowsDir = flow.get('cfg_flows_dir') || os.homedir() + '/.node-red';\n    var paths = [ flowsDir + '/nr_dxcc_seed.json' ];\n    paths.forEach(function(p){\n        try { fs.writeFileSync(p, seed); } catch(e) { node.warn('seed write failed: ' + p + ' ' + e.message); }\n    });\n    node.warn('Seed written to ' + paths.length + ' locations');\n\n    flow.set('dxccReady', true);\n    node.status({fill:'green', shape:'dot',\n        text: stats.entities + ' entities | ' + stats.confirmed + '✓ ' + stats.unconfirmed + '✗ | modes OK'});\n    node.send({payload: stats});\n}).catch(function(err) {\n    node.error('Club Log fetch failed: ' + err.message);\n    node.status({fill:'red', shape:'dot', text:'Club Log unreachable — using seed'});\n    // Fall back to seed data if already loaded by bootstrap\n    var existing = flow.get('workedTable');\n    if (existing && Object.keys(existing).length > 10) {\n        flow.set('dxccReady', true);\n        node.warn('Club Log unreachable — falling back to seed data, alerts enabled');\n        node.send({payload: flow.get('workedStats') || {entities:0,confirmed:0,unconfirmed:0,bandSlots:0}});\n    } else {\n        node.warn('Club Log unreachable and no seed data — alerts remain paused');\n    }\n});\nreturn;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [
+            {
+                "var": "https",
+                "module": "https"
+            },
+            {
+                "var": "urlmod",
+                "module": "url"
+            },
+            {
+                "var": "fs",
+                "module": "fs"
+            },
+            {
+                "var": "os",
+                "module": "os"
+            },
+            {
+                "var": "path",
+                "module": "path"
+            }
+        ],
+        "x": 700,
+        "y": 340,
+        "wires": [
+            [
+                "bb17fc08553256e0"
             ]
         ]
     }
