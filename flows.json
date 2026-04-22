@@ -120,7 +120,7 @@
         "id": "d110d176c0aad308",
         "type": "tab",
         "label": "DXCC Tracker",
-        "disabled": false,
+        "disabled": true,
         "info": "VU2CPL Club Log DXCC Tracker with DX Cluster alerting"
     },
     {
@@ -1340,8 +1340,8 @@
         "y": 200,
         "wires": [
             [
-                "aa63259578a294d8",
-                "539830e5a3d2957f"
+                "539830e5a3d2957f",
+                "da684a57ad37790a"
             ]
         ]
     },
@@ -1378,6 +1378,40 @@
         "y": 520,
         "wires": [
             []
+        ]
+    },
+    {
+        "id": "da684a57ad37790a",
+        "type": "function",
+        "z": "648eb83c2566c7b6",
+        "name": "Disable Serial Port Setup",
+        "func": "msg.payload = {\"enabled\": false}\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 850,
+        "y": 100,
+        "wires": [
+            [
+                "d9bea7b407767749"
+            ]
+        ]
+    },
+    {
+        "id": "d9bea7b407767749",
+        "type": "serial control",
+        "z": "648eb83c2566c7b6",
+        "name": "Disable Serial Port",
+        "serial": "e681ab55d194e58a",
+        "x": 1110,
+        "y": 100,
+        "wires": [
+            [
+                "aa63259578a294d8"
+            ]
         ]
     },
     {
@@ -3877,6 +3911,7 @@
         "name": "Skimmer Config (VU2CPL + VU2OY)",
         "func": "flow.set('sk1_call','VU2CPL');\nflow.set('sk1_host','vu2cpl.ddns.net');\nflow.set('sk1_port',7550);\nflow.set('sk2_call','VU2OY');\nflow.set('sk2_host','vu2oy.ddns.net');\nflow.set('sk2_port',7550);\nreturn msg;",
         "outputs": 1,
+        "timeout": "",
         "noerr": 0,
         "initialize": "",
         "finalize": "",
@@ -4239,7 +4274,7 @@
         "d": true,
         "name": "vu2oy",
         "server": "client",
-        "host": "103.153.92.118",
+        "host": "vu2oy.ddns.net",
         "port": "7550",
         "datatype": "utf8",
         "newline": "",
@@ -4266,7 +4301,7 @@
         "port": "23",
         "datatype": "utf8",
         "newline": "",
-        "topic": "cluster3",
+        "topic": "cluster4",
         "trim": true,
         "base64": false,
         "tls": "",
@@ -7954,9 +7989,9 @@
         "id": "f3fe140580c43c05",
         "type": "tcp in",
         "z": "d110d176c0aad308",
-        "name": "vu2oy 103.153.92.118:7550",
+        "name": "vu2oy vu2oy.ddns.net",
         "server": "client",
-        "host": "103.153.92.118",
+        "host": "vu2oy.ddns.net",
         "port": "7550",
         "datatype": "utf8",
         "newline": "",
@@ -7964,7 +7999,7 @@
         "trim": true,
         "base64": false,
         "tls": "",
-        "x": 220,
+        "x": 200,
         "y": 480,
         "wires": [
             [
@@ -8051,7 +8086,8 @@
                 "232b502c3ee8478c",
                 "aea6d6f85a001e71",
                 "2e0f3fcc5d7743d4",
-                "d5eca40d3503035d"
+                "d5eca40d3503035d",
+                "94b77826079bad57"
             ]
         ]
     },
@@ -8566,6 +8602,7 @@
         "id": "d5eca40d3503035d",
         "type": "function",
         "z": "d110d176c0aad308",
+        "d": true,
         "name": "Format Telegram Alert",
         "func": "var a = msg.alert;\n\n// Apply same filters as dashboard\nvar filterBands     = flow.get('filterBands')   || {};\nvar filterNewDxcc   = flow.get('filterNewDxcc');\nvar filterNewBand   = flow.get('filterNewBand');\nvar filterNewMode   = flow.get('filterNewMode');\nvar filterModeCW    = flow.get('filterModeCW');\nvar filterModePhone = flow.get('filterModePhone');\nvar filterModeData  = flow.get('filterModeData');\n\n// Band filter\nif (Object.keys(filterBands).length > 0 && !filterBands[a.band]) return null;\n\n// Alert type filter\nif (a.type === 'NEW_DXCC' && filterNewDxcc === false) return null;\nif (a.type === 'NEW_BAND' && filterNewBand === false) return null;\nif (a.type === 'NEW_MODE' && filterNewMode === false) return null;\n\n// Mode filter\nvar _modeMap = {CW:'cw',USB:'phone',LSB:'phone',SSB:'phone',AM:'phone',FM:'phone',\n                FT8:'data',FT4:'data',RTTY:'data',PSK31:'data',JS8:'data',Data:'data'};\nvar _modeCat = _modeMap[a.mode] || null;\nif (_modeCat === 'cw'    && filterModeCW    === false) return null;\nif (_modeCat === 'phone' && filterModePhone === false) return null;\nif (_modeCat === 'data'  && filterModeData  === false) return null;\n\nvar icons = {NEW_DXCC:'🔴', NEW_BAND:'🔵', NEW_MODE:'🟡'};\nvar icon = icons[a.type] || '📻';\n\nvar text = icon + ' *' + a.label + '*\\n' +\n    '📞 `' + a.call + '` — ' + a.entity + '\\n' +\n    '📻 ' + a.band + ' | ' + a.mode + ' | ' + a.freqMHz + ' MHz\\n' +\n    '👁 Spotter: ' + a.spotter + '\\n' +\n    '🕐 ' + a.time;\n\nvar token  = flow.get('cfg_tg_token')   || '';\nvar chatId = flow.get('cfg_tg_chat_id') || '';\n\nmsg.url     = 'https://api.telegram.org/bot' + token + '/sendMessage';\nmsg.method  = 'POST';\nmsg.headers = {'Content-Type': 'application/json'};\nmsg.payload = JSON.stringify({\n    chat_id:    chatId,\n    text:       text,\n    parse_mode: 'Markdown'\n});\n\nnode.status({fill:'blue', shape:'dot', text: a.call + ' → Telegram'});\nreturn msg;",
         "outputs": 1,
@@ -8573,8 +8610,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1260,
-        "y": 700,
+        "x": 1240,
+        "y": 800,
         "wires": [
             [
                 "c99019cb78d6877c"
@@ -8678,7 +8715,8 @@
         "y": 760,
         "wires": [
             [
-                "d5eca40d3503035d"
+                "d5eca40d3503035d",
+                "94b77826079bad57"
             ]
         ]
     },
@@ -8686,31 +8724,31 @@
         "id": "e7ba349ad7fa426b",
         "type": "inject",
         "z": "d110d176c0aad308",
-        "name": "TEST JA1ABC 20M FT8",
+        "name": "TEST P5ABC 160M SSB",
         "props": [
             {
                 "p": "spot.call",
-                "v": "JA1ABC",
+                "v": "P5ABC",
                 "vt": "str"
             },
             {
                 "p": "spot.band",
-                "v": "20M",
+                "v": "160M",
                 "vt": "str"
             },
             {
                 "p": "spot.mode",
-                "v": "FT8",
+                "v": "SSB",
                 "vt": "str"
             },
             {
                 "p": "spot.freqKHz",
-                "v": "14074",
+                "v": "1860",
                 "vt": "num"
             },
             {
                 "p": "spot.freqMHz",
-                "v": "14.074",
+                "v": "1.860",
                 "vt": "str"
             },
             {
@@ -8729,7 +8767,7 @@
         "once": false,
         "onceDelay": "",
         "topic": "",
-        "x": 280,
+        "x": 290,
         "y": 700,
         "wires": [
             [
@@ -9453,6 +9491,26 @@
             ],
             [
                 "38a6451a95a57685"
+            ]
+        ]
+    },
+    {
+        "id": "94b77826079bad57",
+        "type": "function",
+        "z": "d110d176c0aad308",
+        "name": "Format Telegram Alert Dedup 10 minute",
+        "func": "var a = msg.alert;\n\n// ── 10-minute dedup: same call + type + band ──────────────────────────────\nvar dedupKey = 'tgDedup_' + a.call + '_' + a.type + '_' + a.band;\nvar lastSent = flow.get(dedupKey) || 0;\nif (Date.now() - lastSent < 600000) {\n    node.status({fill:'grey', shape:'ring', text: a.call + ' suppressed (10m)'});\n    return null;\n}\nflow.set(dedupKey, Date.now());\n\n// Apply same filters as dashboard\nvar filterBands     = flow.get('filterBands')   || {};\nvar filterNewDxcc   = flow.get('filterNewDxcc');\nvar filterNewBand   = flow.get('filterNewBand');\nvar filterNewMode   = flow.get('filterNewMode');\nvar filterModeCW    = flow.get('filterModeCW');\nvar filterModePhone = flow.get('filterModePhone');\nvar filterModeData  = flow.get('filterModeData');\n\n// Band filter\nif (Object.keys(filterBands).length > 0 && !filterBands[a.band]) return null;\n\n// Alert type filter\nif (a.type === 'NEW_DXCC' && filterNewDxcc === false) return null;\nif (a.type === 'NEW_BAND' && filterNewBand === false) return null;\nif (a.type === 'NEW_MODE' && filterNewMode === false) return null;\nif (a.type === 'NEED_QSL' && flow.get('filterNeedQsl') === false) return null;\n\n// Mode filter\nvar _modeMap = {CW:'cw',USB:'phone',LSB:'phone',SSB:'phone',AM:'phone',FM:'phone',\n                FT8:'data',FT4:'data',RTTY:'data',PSK31:'data',JS8:'data',Data:'data'};\nvar _modeCat = _modeMap[a.mode] || null;\nif (_modeCat === 'cw'    && filterModeCW    === false) return null;\nif (_modeCat === 'phone' && filterModePhone === false) return null;\nif (_modeCat === 'data'  && filterModeData  === false) return null;\n\nvar icons = {NEW_DXCC:'🔴', NEW_BAND:'🔵', NEW_MODE:'🟡', NEED_QSL:'🟣'};\nvar icon = icons[a.type] || '📻';\n\nvar text = icon + ' *' + a.label + '*\\n' +\n    '📞 `' + a.call + '` — ' + a.entity + '\\n' +\n    '📻 ' + a.band + ' | ' + a.mode + ' | ' + a.freqMHz + ' MHz\\n' +\n    '👁 Spotter: ' + a.spotter + '\\n' +\n    '🕐 ' + a.time;\n\nvar token  = flow.get('cfg_tg_token')   || '';\nvar chatId = flow.get('cfg_tg_chat_id') || '';\n\nmsg.url     = 'https://api.telegram.org/bot' + token + '/sendMessage';\nmsg.method  = 'POST';\nmsg.headers = {'Content-Type': 'application/json'};\nmsg.payload = JSON.stringify({\n    chat_id:    chatId,\n    text:       text,\n    parse_mode: 'Markdown'\n});\n\nnode.status({fill:'blue', shape:'dot', text: a.call + ' → Telegram'});\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1200,
+        "y": 720,
+        "wires": [
+            [
+                "c99019cb78d6877c"
             ]
         ]
     }
