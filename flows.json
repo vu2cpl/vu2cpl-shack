@@ -6186,8 +6186,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 780,
-        "y": 300,
+        "x": 820,
+        "y": 320,
         "wires": [
             [
                 "557083037f168b22"
@@ -6818,8 +6818,9 @@
         "type": "function",
         "z": "75e2cac8ab96f556",
         "name": "Build Open-Meteo URL",
-        "func": "const lat = flow.get('home_lat');\nconst lon = flow.get('home_lon');\nif (lat == null || lon == null) {\n    node.error('home_lat/home_lon not set — deploy Init Defaults first');\n    node.status({fill:'red', shape:'dot', text:'No lat/lon — run Init Defaults'});\n    return null;\n}\nmsg.url = 'https://api.open-meteo.com/v1/forecast'\n        + '?latitude='  + lat\n        + '&longitude=' + lon\n        + '&hourly=lightning_potential'\n        + '&forecast_days=1'\n        + '&timezone=auto';\nnode.status({fill:'blue', shape:'ring', text:'lat:' + lat + ' lon:' + lon});\nreturn msg;\n",
+        "func": "const lat = flow.get('home_lat');\nconst lon = flow.get('home_lon');\nif (lat == null || lon == null) {\n    node.error('home_lat/home_lon not set — deploy Init Defaults first');\n    node.status({ fill: 'red', shape: 'dot', text: 'No lat/lon' });\n    return null;\n}\nmsg.url = 'https://api.open-meteo.com/v1/forecast'\n    + '?latitude=' + lat\n    + '&longitude=' + lon\n    + '&current=weather_code'\n    + '&hourly=cape,weather_code,precipitation_probability'\n    + '&forecast_days=1'\n    + '&timezone=auto';\nnode.status({ fill: 'blue', shape: 'ring', text: 'lat:' + lat + ' lon:' + lon });\nreturn msg;",
         "outputs": 1,
+        "timeout": "",
         "noerr": 0,
         "initialize": "",
         "finalize": "",
@@ -6861,8 +6862,9 @@
         "type": "function",
         "z": "75e2cac8ab96f556",
         "name": "Parse Open-Meteo → Strike",
-        "func": "// Open-Meteo lightning_potential: 0-100 index, updates once per hour.\n// Converts index to synthetic distance so rest of flow is unchanged.\n//\n// Mapping:  distance_km = (1 - index/100) * 200\n//   index 100 ->   0 km  (overhead)\n//   index  50 -> 100 km\n//   index   0 -> 200 km  (no threat)\n//\n// Indices below MIN_INDEX are silently dropped.\nconst MIN_INDEX = 5;\n\nconst d = msg.payload;\nif (!d || !d.hourly || !Array.isArray(d.hourly.lightning_potential)) {\n    node.error('Open-Meteo: unexpected response: ' + JSON.stringify(d).substring(0,200));\n    node.status({fill:'red', shape:'dot', text:'Bad response'});\n    return null;\n}\n\nconst times   = d.hourly.time;\nconst indices = d.hourly.lightning_potential;\n\nconst now     = new Date();\nconst nowHour = now.getFullYear() + '-'\n    + String(now.getMonth() + 1).padStart(2, '0') + '-'\n    + String(now.getDate()).padStart(2, '0') + 'T'\n    + String(now.getHours()).padStart(2, '0') + ':00';\n\nlet idx = times.indexOf(nowHour);\nif (idx === -1) {\n    for (let i = times.length - 1; i >= 0; i--) {\n        if (times[i] <= nowHour) { idx = i; break; }\n    }\n}\nif (idx === -1) {\n    node.warn('Open-Meteo: no matching time slot for ' + nowHour);\n    node.status({fill:'grey', shape:'ring', text:'No slot found'});\n    return null;\n}\n\nconst index = indices[idx];\n\nif (index === null || index === undefined || index < MIN_INDEX) {\n    node.status({fill:'green', shape:'dot', text:'Clear — index ' + index + ' @ ' + times[idx]});\n    return null;\n}\n\nconst km = Math.round((1 - index / 100) * 200 * 10) / 10;\n\nnode.status({\n    fill:  index >= 50 ? 'red' : index >= 20 ? 'yellow' : 'green',\n    shape: 'dot',\n    text:  'index:' + index + ' -> ' + km + ' km @ ' + times[idx]\n});\n\nconst lat = flow.get('home_lat');\nconst lon = flow.get('home_lon');\n\nmsg.payload = {\n    lat:      lat,\n    lon:      lon,\n    pol:      0,\n    region:   0,\n    source:   'Open-Meteo',\n    om_index: index,\n    om_time:  times[idx]\n};\nreturn msg;\n",
-        "outputs": 1,
+        "func": "// Open-Meteo CAPE-based parser (replaces lightning_potential — null in India).\n// CAPE in J/kg from ECMWF/ICON-Global. weather_code is WMO; 95/96/99 = thunderstorm.\n//\n// Output 1: strike-like payload {lat,lon,km,...} — only when storm-relevant\n//           Wires to: Parse Strike (existing)\n// Output 2: dashboard log payload — ALWAYS emitted, so dashboard never says \"Waiting for data\"\n//           Wires to: Master Dashboard (557083037f168b22)  ← NEW WIRE TO ADD\n\nconst d = msg.payload;\nif (!d || !d.hourly || !Array.isArray(d.hourly.cape)) {\n    node.error('Open-Meteo: bad response: ' + JSON.stringify(d).substring(0, 200));\n    node.status({ fill: 'red', shape: 'dot', text: 'Bad response' });\n    return null;\n}\n\nconst times = d.hourly.time;\nconst capes = d.hourly.cape;\nconst wcs = d.hourly.weather_code || [];\nconst pps = d.hourly.precipitation_probability || [];\nconst cur_wc = (d.current && d.current.weather_code) || null;\n\nconst now = new Date();\nconst nowHour = now.getFullYear() + '-'\n    + String(now.getMonth() + 1).padStart(2, '0') + '-'\n    + String(now.getDate()).padStart(2, '0') + 'T'\n    + String(now.getHours()).padStart(2, '0') + ':00';\n\nlet idx = times.indexOf(nowHour);\nif (idx === -1) {\n    for (let i = times.length - 1; i >= 0; i--) {\n        if (times[i] <= nowHour) { idx = i; break; }\n    }\n}\nif (idx === -1) {\n    node.status({ fill: 'grey', shape: 'ring', text: 'No slot found' });\n    return null;\n}\n\nconst cape = capes[idx];\nconst wc = wcs[idx];\nconst pp = pps[idx];\n\n// Decide synthetic distance (km). null = calm, no strike emitted.\nlet km = null;\nlet why;\nconst ts_now = (cur_wc !== null && [95, 96, 99].includes(cur_wc));\nconst ts_hr = [95, 96, 99].includes(wc);\nconst shower = [80, 81, 82].includes(wc);\n\nif (ts_now) { km = 0; why = 'TS NOW (wc=' + cur_wc + ')'; }\nelse if (ts_hr) { km = 0; why = 'TS hour (wc=' + wc + ')'; }\nelse if (shower && cape >= 1000) { km = 20; why = 'Shower+CAPE ' + cape; }\nelse if (cape >= 2500) { km = 10; why = 'Severe CAPE ' + cape; }\nelse if (cape >= 1500) { km = 40; why = 'Strong CAPE ' + cape; }\nelse if (cape >= 800) { km = 100; why = 'Moderate CAPE ' + cape; }\nelse { why = 'Calm CAPE ' + cape; }\n\nconst lat = flow.get('home_lat');\nconst lon = flow.get('home_lon');\n\n// Always emit dashboard log (output 2)\nconst logMsg = {\n    payload: {\n        type: 'log',\n        html: 'Open-Meteo: ' + why\n            + (km !== null ? ' → ' + km + ' km' : ' (no action)')\n            + ' @ ' + times[idx]\n    }\n};\n\n// Set node status\nnode.status({\n    fill: km === null ? 'green' : km <= 30 ? 'red' : km <= 80 ? 'yellow' : 'blue',\n    shape: 'dot',\n    text: why + (km !== null ? ' → ' + km + 'km' : '')\n});\n\nif (km === null) {\n    return [null, logMsg];   // calm — only update dashboard\n}\n\n// Storm-relevant — emit strike payload to existing Parse Strike chain\nconst strikeMsg = {\n    payload: {\n        lat: lat,\n        lon: lon,\n        pol: 0,\n        region: 0,\n        source: 'Open-Meteo',\n        om_cape: cape,\n        om_wc: wc,\n        om_curwc: cur_wc,\n        om_time: times[idx]\n    }\n};\nreturn [strikeMsg, logMsg];",
+        "outputs": 2,
+        "timeout": "",
         "noerr": 0,
         "initialize": "",
         "finalize": "",
@@ -6872,6 +6874,9 @@
         "wires": [
             [
                 "26ddff0cbbfe5fc1"
+            ],
+            [
+                "557083037f168b22"
             ]
         ]
     },
