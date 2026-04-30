@@ -24,10 +24,11 @@ TOPIC_STATUS  = "lightning/as3935/status"
 HB_INTERVAL   = 30          # seconds
 MQTT_KEEPALIVE = 60
 
-I2C_BUS       = 1
-AS3935_ADDR   = 0x03
-IRQ_PIN       = 17
-NOISE_FLOOR   = 4           # 0..7, lower = more sensitive
+I2C_BUS          = 1
+AS3935_ADDR      = 0x03
+IRQ_PIN          = 17
+NOISE_FLOOR      = 4           # 0..7, lower = more sensitive
+ANTENNA_LOCATION = "indoor"    # "indoor" (AFE_GB=0x12) or "outdoor" (AFE_GB=0x0E)
 
 # AS3935 registers
 REG_CFG0     = 0x00
@@ -66,10 +67,20 @@ def set_noise_floor(level):
     val = (val & 0x8F) | ((level & 0x07) << 4)
     bus.write_byte_data(AS3935_ADDR, REG_CFG1, val)
 
-def set_outdoor_mode():
-    val = read_reg(REG_CFG0)
-    val = (val & 0xC1) | 0x0C
+def set_antenna_mode(location):
+    """
+    AS3935 AFE_GB (analog front-end gain) lives in REG_CFG0 bits [5:1].
+    Datasheet values:
+        indoor   AFE_GB = 0x12  →  REG_CFG0 |= 0x24
+        outdoor  AFE_GB = 0x0E  →  REG_CFG0 |= 0x1C
+    Higher gain (indoor) compensates for wall/structure attenuation when the
+    ferrite antenna is placed indoors. Use 'outdoor' only when the antenna
+    is mounted outside, otherwise nearby RF will flood the chip with disturbers.
+    """
+    val = read_reg(REG_CFG0) & 0xC1                 # preserve reserved bits + PWD
+    val |= 0x24 if location == "indoor" else 0x1C   # AFE_GB << 1
     bus.write_byte_data(AS3935_ADDR, REG_CFG0, val)
+    print(f"[init] AFE_GB set for {location} antenna (CFG0=0x{val:02X})")
 
 def now_iso():
     return time.strftime("%Y-%m-%dT%H:%M:%S")
@@ -106,7 +117,8 @@ def mqtt_connect_with_retry():
             delay = min(delay * 2, 60)
 
 def publish_status(state, extra=None):
-    p = {"event": state, "ts": now_iso(), "noise_floor": NOISE_FLOOR}
+    p = {"event": state, "ts": now_iso(),
+         "noise_floor": NOISE_FLOOR, "antenna": ANTENNA_LOCATION}
     if extra:
         p.update(extra)
     client.publish(TOPIC_STATUS, json.dumps(p), qos=1, retain=True)
@@ -192,9 +204,9 @@ GPIO.setup(IRQ_PIN, GPIO.IN)
 GPIO.add_event_detect(IRQ_PIN, GPIO.RISING, callback=irq_handler)
 
 # Sensor config
-set_outdoor_mode()
+set_antenna_mode(ANTENNA_LOCATION)
 set_noise_floor(NOISE_FLOOR)
-print(f"AS3935 ready — interrupt mode on GPIO{IRQ_PIN}, noise_floor={NOISE_FLOOR}, outdoor")
+print(f"AS3935 ready — interrupt mode on GPIO{IRQ_PIN}, noise_floor={NOISE_FLOOR}, antenna={ANTENNA_LOCATION}")
 
 # ── Main loop: heartbeat ────────────────────────────
 last_hb = 0
