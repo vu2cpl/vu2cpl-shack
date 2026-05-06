@@ -361,6 +361,137 @@ were held only in dashboard-local JS variables (`var strikes=[]` and the
 
 ---
 
+## 2026-05-06
+
+### AS3935 — IRQ pin was GPIO17 in software, GPIO4 in hardware
+
+**Script:** `as3935_mqtt.py`
+**Helper:** `as3935_tune.py` (new)
+
+Symptom after the May 1 revival: heartbeat counters stayed at
+`{lightning:0, disturber:0, noise:0, irq:0}` indefinitely. MQTT, I²C,
+and `status: "ready"` all worked, but no IRQ events ever fired.
+
+#### Root cause
+
+The original script declared `IRQ_PIN = 17`, but the AS3935 board's
+INT line was physically wired to **GPIO4** (Pi physical pin 7). Since
+the chip's I²C path was healthy, every diagnostic short of an
+end-to-end IRQ test passed. The mismatch had been there since first
+deploy; it was hidden because the chip-self-test only exercised I²C.
+
+#### How it was found
+
+A two-step diagnostic:
+
+1. **Pull-test on GPIO17** — with the as3935 service stopped, sampled
+   GPIO17 with `PUD_DOWN` / `PUD_OFF` / `PUD_UP`. Pin tracked the pull
+   setting → genuine floating input → not connected to anything.
+2. **SRCO scan** — set `DISP_SRCO=1` in chip register `0x08[6]` to
+   route the chip's internal RC oscillator onto whatever pin its INT
+   line is bonded to. Polled every accessible Pi GPIO (4, 5, 6, ...,
+   27) for transitions over 200 ms. **GPIO4 showed 12,162 transitions;
+   every other pin showed 0.** Conclusive.
+
+`IRQ_PIN = 4` change applied. Heartbeat counters started incrementing
+on the next NF=0 test (see below).
+
+---
+
+### AS3935 — LC tank tuning to 500 kHz
+
+**Helper:** `as3935_tune.py` (new)
+
+The AS3935 has 16 internal tuning capacitor settings (0–15, ~8 pF
+per step) at register `0x08[3:0]`. The script wasn't using any of
+them — it relied on whatever stray capacitance the antenna+wiring
+happened to give. For accurate sferic detection, the tank should
+resonate at 500 kHz ± 3.5 %.
+
+#### `as3935_tune.py`
+
+New helper that:
+
+1. Configures `LCO_FDIV = 3` (÷128 divider — slow enough for Python
+   event-detection to count edges reliably; ÷16 at ~31 kHz overruns
+   the user-space callback)
+2. Sweeps `TUN_CAP` 0..15, samples 2 s of edges per setting,
+   calculates frequency = `edges × 128 / 2 s`
+3. Reports the table + recommends the cap value closest to 500 kHz
+4. Flags out-of-spec results (>±3.5 %) with diagnostic hints
+
+Must be run with `as3935.service` stopped (otherwise the daemon
+holds GPIO4) and the antenna in its **final mounting position** —
+moving the antenna afterwards changes stray capacitance and
+invalidates the tuning.
+
+#### Result for current installation
+
+| TUN_CAP | pF | Hz | err % |
+|--------:|---:|---:|------:|
+| 0 | 0 | 516,480 | +3.30 |
+| 9 | 72 | 501,504 | +0.30 |
+| **10** | **80** | **499,904** | **−0.02** |
+| 11 | 88 | 498,560 | −0.29 |
+| 15 | 120 | 493,056 | −1.39 |
+
+All 16 cap settings happened to be within spec (typical of a clean
+antenna circuit); `TUN_CAP=10` lands at −0.02 % err. Baked into the
+script as `TUN_CAP = 10`.
+
+---
+
+### AS3935 — Add `CALIB_RCO`, INT flush, retained-status enrichment
+
+**Script:** `as3935_mqtt.py`
+
+Three additions to the chip-init sequence in the daemon, all chasing
+the same goal of making "is the chip happy?" answerable from MQTT
+without journal grep:
+
+1. **`CALIB_RCO` at every startup** — the AS3935 has internal TRCO
+   and SRCO oscillators that benefit from a one-time post-power-on
+   calibration. The original script never called it; some chips
+   work without, but timing-sensitive code paths can misbehave.
+   Added: write `0x96` to register `0x3D`, wait 5 ms, verify
+   `CALIB_DONE` (bit 7) set and `CALIB_NOK` (bit 6) clear in both
+   `0x3A` (TRCO) and `0x3B` (SRCO). Result logged + published.
+2. **Pending-INT flush after configuration writes** — register
+   writes during init can transiently spike the IRQ line. Reading
+   `0x03` (INT) clears it. Without this flush, the first real event
+   sometimes arrived as a no-op rising edge that the `add_event_detect`
+   callback then ignored because INT bits read 0.
+3. **Retained `lightning/as3935/status` payload now includes**
+   `tun_cap`, `irq_pin`, `calib_trco`, `calib_srco`. Status is
+   re-published *after* calibration completes so the retained
+   message reflects the actual result (the `on_connect` callback
+   fires before init finishes).
+
+#### Final init log
+
+```
+[init] AS3935 CFG0=0x24 (i2c bus 1 addr 0x03)
+[mqtt] connected to 192.168.1.169:1883
+[init] AFE_GB set for indoor antenna (CFG0=0x24)
+[init] TUN_CAP set to 10 (80 pF)
+[init] CALIB_RCO  TRCO=OK (0xA3)  SRCO=OK (0xA5)
+[init] Cleared pending INT: 0x0
+AS3935 ready — interrupt mode on GPIO4, noise_floor=4, antenna=indoor, tun_cap=10
+```
+
+#### Field verification
+
+During the May 1 storm window (NF=0 momentarily), the chip caught
+**209 noise events** in roughly 30 s, then went silent as the storm
+moved off — the expected behaviour for an indoor narrow-band
+500 kHz antenna. Subsequent tests with NF=2/NF=4 in clear conditions
+remained at 0 events: not a bug, just no nearby sferics for the
+selectively-tuned tank to resonate with. Until the antenna is moved
+outdoors, AS3935 is a confirmation-only secondary; Open-Meteo CAPE
+is the primary detection layer.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:
