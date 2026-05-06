@@ -492,6 +492,70 @@ is the primary detection layer.
 
 ---
 
+### Lightning Antenna Protector — AS3935 dashboard liveness panel
+
+**Tab:** Lightning Antenna Protector (`75e2cac8ab96f556`)
+**Nodes added:** AS3935 Status (mqtt in), AS3935 Heartbeat (mqtt in),
+Format AS3935 State (function), Replay AS3935 State (function)
+**Node modified:** Master Dashboard (`557083037f168b22`) — three handler
+inserts inside `scope.$watch('msg', …)`
+
+Symptom: even with the AS3935 daemon healthy and publishing
+`lightning/as3935/status` (retained, on connect) and
+`lightning/as3935/hb` (retained, every 30 s), the dashboard's AS3935
+panel header was permanently stuck at the static placeholder
+"Waiting…" because nothing in Node-RED forwarded those topics into
+Master Dashboard, and the panel only updated on event-driven
+`as3935_status` messages (which only fire when the chip detects
+something — never indoors with a 500 kHz selective antenna).
+
+#### Fix — surface daemon liveness in the panel header
+
+1. **Two new `mqtt in` nodes** subscribe to
+   `lightning/as3935/status` and `lightning/as3935/hb`, datatype JSON,
+   feeding a single `Format AS3935 State` function node.
+2. **`Format AS3935 State`** caches each payload in flow context
+   (`as3935_status`, `as3935_hb`) for refresh-replay and forwards
+   typed payloads `{type: 'as3935_ready', …}` and
+   `{type: 'as3935_hb', …}` to Master Dashboard.
+3. **`Replay AS3935 State`** (new, fed by the existing 30 s
+   `Refresh Stats` ticker) re-emits cached `flow.as3935_status`
+   and `flow.as3935_hb` so a refreshed dashboard tab repopulates
+   within 30 s — same pattern as the strike-replay fix from May 1.
+4. **Master Dashboard** gained two new message handlers and a
+   guard line on the existing `as3935_status` handler:
+   - `as3935_ready` → sets the status LED green/amber/red based on
+     calibration (TRCO + SRCO) and `event` field, writes
+     `✓ READY · NF=4 · TUN=10` (or `⚠ CALIB?` / `OFFLINE`) to the
+     header right-side text, and caches the last ready snapshot
+     in `window._as3935Ready` for the heartbeat handler to render.
+   - `as3935_hb` → updates the header text every 30 s with current
+     uptime + IRQ count: `✓ READY · NF=4 · up 14m · irq=0`.
+   - The existing `as3935_status` handler (disturber/noise) now
+     sets `window._as3935EvtActive = true` for 60 s so a fresh event
+     display isn't immediately overwritten by the next heartbeat;
+     after the timeout it auto-reverts to ready/hb display.
+
+#### Resulting panel states
+
+| Daemon state | Header text | LED |
+|--------------|-------------|-----|
+| Up, calib OK, idle | `✓ READY · NF=4 · up 14m · irq=0` | 🟢 green |
+| Up, calib failed | `⚠ CALIB? · NF=4 · TUN=10` | 🟡 amber |
+| Offline (LWT) | `OFFLINE` | 🔴 red |
+| Disturber/noise event (60 s display) | `⚠ Disturber 23:18:01` | 🟡 amber |
+| Lightning strike | `⚡ N km (energy=…)` | red/amber/green by km |
+| Page refresh while idle | re-populates within 30 s | 🟢 green |
+
+#### Layout cleanup
+
+While editing the dashboard template, the `<!-- Event Log -->` block
+was moved to sit immediately above `<!-- Map -->`. The log is more
+useful adjacent to the operator's eye-line for the lightning panel
+than buried at the bottom.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:
