@@ -240,6 +240,11 @@ if not (_trco_ok and _srco_ok):
 _int_clear = read_reg(REG_INT) & 0x0F
 print(f"[init] Cleared pending INT: 0x{_int_clear:X}")
 
+# Re-publish status now that calibration result is populated. The on_connect
+# callback fired earlier with calib_* still None — overwrite the retained
+# message so MQTT Explorer shows the actual result.
+publish_status("ready")
+
 print(f"AS3935 ready — interrupt mode on GPIO{IRQ_PIN}, noise_floor={NOISE_FLOOR}, "
       f"antenna={ANTENNA_LOCATION}, tun_cap={TUN_CAP}")
 
