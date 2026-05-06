@@ -118,10 +118,14 @@ def mqtt_connect_with_retry():
             time.sleep(delay)
             delay = min(delay * 2, 60)
 
+_calib_result = {"trco": None, "srco": None}
+
 def publish_status(state, extra=None):
     p = {"event": state, "ts": now_iso(),
          "noise_floor": NOISE_FLOOR, "antenna": ANTENNA_LOCATION,
-         "tun_cap": TUN_CAP, "irq_pin": IRQ_PIN}
+         "tun_cap": TUN_CAP, "irq_pin": IRQ_PIN,
+         "calib_trco": _calib_result["trco"],
+         "calib_srco": _calib_result["srco"]}
     if extra:
         p.update(extra)
     client.publish(TOPIC_STATUS, json.dumps(p), qos=1, retain=True)
@@ -214,6 +218,27 @@ set_noise_floor(NOISE_FLOOR)
 _v = read_reg(0x08) & 0xF0
 bus.write_byte_data(AS3935_ADDR, 0x08, _v | (TUN_CAP & 0x0F))
 print(f"[init] TUN_CAP set to {TUN_CAP} ({TUN_CAP * 8} pF)")
+
+# Internal RC oscillator calibration. Datasheet: send CALIB_RCO (0x96 → 0x3D),
+# wait ≥2ms, verify CALIB_DONE (bit 7) is set and CALIB_NOK (bit 6) is clear
+# in both 0x3A (TRCO) and 0x3B (SRCO).
+bus.write_byte_data(AS3935_ADDR, 0x3D, 0x96)
+time.sleep(0.005)
+_trco = read_reg(0x3A)
+_srco = read_reg(0x3B)
+_trco_ok = bool(_trco & 0x80) and not bool(_trco & 0x40)
+_srco_ok = bool(_srco & 0x80) and not bool(_srco & 0x40)
+_calib_result["trco"] = "OK" if _trco_ok else "FAIL"
+_calib_result["srco"] = "OK" if _srco_ok else "FAIL"
+print(f"[init] CALIB_RCO  TRCO={_calib_result['trco']} (0x{_trco:02X})  "
+      f"SRCO={_calib_result['srco']} (0x{_srco:02X})")
+if not (_trco_ok and _srco_ok):
+    print("[init] WARNING: RC oscillator calibration failed — chip timing may be off")
+
+# Clear any pending interrupt left from the configuration writes (some writes
+# can transiently spike the IRQ line; reading 0x03 acknowledges it).
+_int_clear = read_reg(REG_INT) & 0x0F
+print(f"[init] Cleared pending INT: 0x{_int_clear:X}")
 
 print(f"AS3935 ready — interrupt mode on GPIO{IRQ_PIN}, noise_floor={NOISE_FLOOR}, "
       f"antenna={ANTENNA_LOCATION}, tun_cap={TUN_CAP}")
