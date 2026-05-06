@@ -30,7 +30,7 @@ from RPi import GPIO
 
 I2C_BUS     = 1
 AS3935_ADDR = 0x03
-IRQ_PIN     = 17
+IRQ_PIN     = 4    # BCM GPIO (physical pin 7) — verified by SRCO scan May 2026
 
 REG_INT_LCO = 0x03   # bits [7:6] = LCO_FDIV
 REG_TUN_CAP = 0x08   # bit 7 = DISP_LCO, bits [3:0] = TUN_CAP

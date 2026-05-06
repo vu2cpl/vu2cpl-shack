@@ -26,7 +26,7 @@ MQTT_KEEPALIVE = 60
 
 I2C_BUS          = 1
 AS3935_ADDR      = 0x03
-IRQ_PIN          = 17
+IRQ_PIN          = 4           # BCM GPIO (physical pin 7) — verified by SRCO scan May 2026
 NOISE_FLOOR      = 4           # 0..7, lower = more sensitive
 ANTENNA_LOCATION = "indoor"    # "indoor" (AFE_GB=0x12) or "outdoor" (AFE_GB=0x0E)
 
