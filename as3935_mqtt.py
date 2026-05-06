@@ -29,6 +29,8 @@ AS3935_ADDR      = 0x03
 IRQ_PIN          = 4           # BCM GPIO (physical pin 7) — verified by SRCO scan May 2026
 NOISE_FLOOR      = 4           # 0..7, lower = more sensitive
 ANTENNA_LOCATION = "indoor"    # "indoor" (AFE_GB=0x12) or "outdoor" (AFE_GB=0x0E)
+TUN_CAP          = 10          # 0..15 (~8 pF/step). Tuned May 2026: 499.9 kHz, -0.02% err.
+                               # Re-run as3935_tune.py if antenna is moved or rewired.
 
 # AS3935 registers
 REG_CFG0     = 0x00
@@ -118,7 +120,8 @@ def mqtt_connect_with_retry():
 
 def publish_status(state, extra=None):
     p = {"event": state, "ts": now_iso(),
-         "noise_floor": NOISE_FLOOR, "antenna": ANTENNA_LOCATION}
+         "noise_floor": NOISE_FLOOR, "antenna": ANTENNA_LOCATION,
+         "tun_cap": TUN_CAP, "irq_pin": IRQ_PIN}
     if extra:
         p.update(extra)
     client.publish(TOPIC_STATUS, json.dumps(p), qos=1, retain=True)
@@ -206,7 +209,14 @@ GPIO.add_event_detect(IRQ_PIN, GPIO.RISING, callback=irq_handler)
 # Sensor config
 set_antenna_mode(ANTENNA_LOCATION)
 set_noise_floor(NOISE_FLOOR)
-print(f"AS3935 ready — interrupt mode on GPIO{IRQ_PIN}, noise_floor={NOISE_FLOOR}, antenna={ANTENNA_LOCATION}")
+
+# LC tank tuning — preserves DISP bits[7:5], rewrites TUN_CAP[3:0]
+_v = read_reg(0x08) & 0xF0
+bus.write_byte_data(AS3935_ADDR, 0x08, _v | (TUN_CAP & 0x0F))
+print(f"[init] TUN_CAP set to {TUN_CAP} ({TUN_CAP * 8} pF)")
+
+print(f"AS3935 ready — interrupt mode on GPIO{IRQ_PIN}, noise_floor={NOISE_FLOOR}, "
+      f"antenna={ANTENNA_LOCATION}, tun_cap={TUN_CAP}")
 
 # ── Main loop: heartbeat ────────────────────────────
 last_hb = 0
