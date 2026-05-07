@@ -14,7 +14,9 @@ Claude Code runs on **Mac Mini M4 Pro** with a local clone of the repo.
 | Local repo | `~/projects/vu2cpl-shack/` |
 | Mac hostname | `MiniM4-Pro` |
 | Pi SSH | `ssh vu2cpl@192.168.1.169` |
-| SwiftUI app | `~/Documents/vu2cpl-shack-app/` |
+| SwiftUI app (planned) | `~/projects/vu2cpl-shack-app/` |
+| Website source | `~/projects/vu2cpl-website/` (vu2cpl.com staging) |
+| GitHub Pages site | `~/projects/vu2cpl.github.io/` |
 
 **Claude Code cannot directly access the Pi.** Any changes to `flows.json` must be:
 1. Edited locally
@@ -23,7 +25,7 @@ Claude Code runs on **Mac Mini M4 Pro** with a local clone of the repo.
 
 For quick Node-RED flow edits, prefer the browser editor + `nrsave` on Pi directly.
 Use Claude Code on Mac for:
-- SwiftUI app development (`~/Documents/vu2cpl-shack-app/`)
+- SwiftUI app development (`~/projects/vu2cpl-shack-app/`)
 - Generating function node code to paste into Node-RED
 - Documentation, README, analysis
 - Flow JSON review and planning
@@ -408,7 +410,7 @@ cd ~/.node-red && npm install robertsLando/node-red-contrib-usbhid
 
 | Detail | Value |
 |--------|-------|
-| Project folder | `~/Documents/vu2cpl-shack-app/` |
+| Project folder | `~/projects/vu2cpl-shack-app/` |
 | Spec file | `CLAUDE.md` (in project folder) |
 | Target | macOS 14.0+ (Sonoma), Apple Silicon |
 | MQTT library | CocoaMQTT |
@@ -428,7 +430,7 @@ cd ~/.node-red && npm install robertsLando/node-red-contrib-usbhid
 
 **To start:**
 ```bash
-cd ~/Documents/vu2cpl-shack-app
+cd ~/projects/vu2cpl-shack-app
 claude
 # First message: "Read CLAUDE.md and scaffold the Xcode project."
 ```
