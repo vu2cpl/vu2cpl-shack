@@ -23,7 +23,7 @@
     {
         "id": "18fb42443172f33c",
         "type": "tab",
-        "label": "LP-700-HID",
+        "label": "LP-700-HID ws",
         "disabled": false,
         "info": "Prereq\r\n\r\nsudo apt-get install libudev-dev librtlsdr-dev libusb-1.0-0-dev libpthread-stubs0-dev\r\n\r\nnpm install robertsLando/node-red-contrib-usbhid\r\n\r\nsudo nano /etc/udev/rules.d/10-telepost.rules\r\n\r\n# this works, but is very generic\r\nKERNEL==\"hidraw*\",SUBSYSTEM==\"hidraw\", MODE:=\"777\", GROUP=\"telepost\"\r\n\r\nsudo udevadm control --reload-rules\r\nsudo groupadd -f telepost\r\nsudo gpasswd -a $USER telepost\r\n\r\nunplug/ replug"
     },
@@ -497,13 +497,6 @@
         "timeout": ""
     },
     {
-        "id": "d6d6ce7172ff637d",
-        "type": "HIDConfig",
-        "vid": "1240",
-        "pid": "1",
-        "name": "LP-500-LP-700"
-    },
-    {
         "id": "f4785be9863eab08",
         "type": "mqtt-broker",
         "name": "Tasmota MQTT Broker",
@@ -568,17 +561,6 @@
         "name": "Flexradio 6600",
         "tab": "vu2cpl_ui_tab_shack",
         "order": 4,
-        "disp": true,
-        "width": 6,
-        "collapse": true,
-        "className": ""
-    },
-    {
-        "id": "vu2cpl_grp_solar",
-        "type": "ui_group",
-        "name": "Solar Conditions",
-        "tab": "bcce4e07ac31b882",
-        "order": 5,
         "disp": true,
         "width": 6,
         "collapse": true,
@@ -727,6 +709,27 @@
         "width": 18,
         "collapse": false,
         "className": ""
+    },
+    {
+        "id": "vu2cpl_grp_solar",
+        "type": "ui_group",
+        "name": "Solar Conditions",
+        "tab": "bcce4e07ac31b882",
+        "order": 5,
+        "disp": true,
+        "width": 6,
+        "collapse": true,
+        "className": ""
+    },
+    {
+        "id": "lp7wsclient00001",
+        "type": "websocket-client",
+        "path": "ws://192.168.1.169:8089/ws",
+        "tls": "",
+        "wholemsg": "false",
+        "hb": "30",
+        "subprotocol": "",
+        "headers": []
     },
     {
         "id": "f0932848.b39158",
@@ -2834,213 +2837,6 @@
         ]
     },
     {
-        "id": "607416237cb5111a",
-        "type": "getHIDdevices",
-        "z": "18fb42443172f33c",
-        "name": "",
-        "x": 960,
-        "y": 40,
-        "wires": [
-            [
-                "33a94b715a40f009"
-            ]
-        ]
-    },
-    {
-        "id": "33a94b715a40f009",
-        "type": "debug",
-        "z": "18fb42443172f33c",
-        "name": "",
-        "active": true,
-        "tosidebar": true,
-        "console": false,
-        "tostatus": false,
-        "complete": "true",
-        "targetType": "full",
-        "x": 1130,
-        "y": 40,
-        "wires": []
-    },
-    {
-        "id": "b01e0551e1d4d9de",
-        "type": "inject",
-        "z": "18fb42443172f33c",
-        "name": "Poll Devices",
-        "props": [
-            {
-                "p": "payload"
-            },
-            {
-                "p": "topic",
-                "vt": "str"
-            }
-        ],
-        "repeat": "",
-        "crontab": "",
-        "once": false,
-        "onceDelay": 0.1,
-        "topic": "",
-        "payloadType": "date",
-        "x": 770,
-        "y": 40,
-        "wires": [
-            [
-                "607416237cb5111a"
-            ]
-        ]
-    },
-    {
-        "id": "7f3db7d4eebb09ac",
-        "type": "HIDdevice",
-        "z": "18fb42443172f33c",
-        "connection": "d6d6ce7172ff637d",
-        "name": "HID-LP",
-        "x": 160,
-        "y": 180,
-        "wires": [
-            [
-                "cc69b56bac0622fc",
-                "d465157947db61bc"
-            ],
-            [
-                "5d7dfc2582f43dd6"
-            ]
-        ]
-    },
-    {
-        "id": "cc69b56bac0622fc",
-        "type": "debug",
-        "z": "18fb42443172f33c",
-        "name": "Raw Buffer",
-        "active": false,
-        "tosidebar": true,
-        "console": false,
-        "tostatus": false,
-        "complete": "true",
-        "targetType": "full",
-        "x": 350,
-        "y": 160,
-        "wires": []
-    },
-    {
-        "id": "5d7dfc2582f43dd6",
-        "type": "debug",
-        "z": "18fb42443172f33c",
-        "name": "Errors",
-        "active": true,
-        "tosidebar": true,
-        "console": false,
-        "tostatus": false,
-        "complete": "true",
-        "targetType": "full",
-        "x": 290,
-        "y": 260,
-        "wires": []
-    },
-    {
-        "id": "a5ab9a85e89efd46",
-        "type": "function",
-        "z": "18fb42443172f33c",
-        "name": "Poll Meter Values",
-        "func": "var outbuff = Buffer.alloc(64);\noutbuff[1] = 48;\nmsg.payload = outbuff;\nreturn msg;",
-        "outputs": 1,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 570,
-        "y": 80,
-        "wires": [
-            [
-                "7f3db7d4eebb09ac"
-            ]
-        ]
-    },
-    {
-        "id": "d465157947db61bc",
-        "type": "function",
-        "z": "18fb42443172f33c",
-        "name": "LP Dice and Slice",
-        "func": "const PKPWR_HIBYTE = 23\nconst PKPWR_LOBYTE = 24\nconst AVGPWR_HIBYTE = 25\nconst AVGPWR_LOBYTE = 26\nconst SWR_HIBYTE = 2\nconst SWR_LOBYTE = 37\nconst PWRMULT_HIBYTE = 30\nconst PWRMULT_LOBYTE = 31\nconst MODE = 3\nconst CHANNEL = 4\nconst RANGE = 6\nconst CHANNELAUTO = 5\n\nvar msg1 = {};\nvar buff = msg.payload;\nvar mode = buff[MODE];\nvar channel = buff[CHANNEL];\nvar channelauto = buff[CHANNELAUTO];\nvar range = buff[RANGE];\n\nvar mult    = ( (buff[PWRMULT_HIBYTE] * 256) + buff[PWRMULT_LOBYTE]) * 2;\nvar Avg_Pwr = ( (buff[AVGPWR_HIBYTE] * 256) + buff[AVGPWR_LOBYTE] ) * 2 / 10;\nvar Pk_Pwr  = ( (buff[PKPWR_HIBYTE]  * 256) + buff[PKPWR_LOBYTE]  ) * 2 / 10;\nvar SWR     = ( (buff[SWR_HIBYTE]    * 256) + buff[SWR_LOBYTE]  ) / 100;\n\nmsg1.power_avg  = Avg_Pwr.toFixed(0);\nmsg1.power_peak = Pk_Pwr.toFixed(0);\nmsg1.swr        = SWR.toFixed(2);\nmsg1.scale      = mult / 4;\nmsg1.mode       = mode;\nmsg1.channel    = channel;\nmsg1.range      = range;\n\nreturn msg1;",
-        "outputs": 1,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 390,
-        "y": 200,
-        "wires": [
-            [
-                "f322dc03616cb20e",
-                "378721e33b7680cd"
-            ]
-        ]
-    },
-    {
-        "id": "f322dc03616cb20e",
-        "type": "debug",
-        "z": "18fb42443172f33c",
-        "name": "Parsed Data",
-        "active": false,
-        "tosidebar": true,
-        "console": false,
-        "tostatus": false,
-        "complete": "true",
-        "targetType": "full",
-        "x": 610,
-        "y": 180,
-        "wires": []
-    },
-    {
-        "id": "fe7ad02bf7c292d2",
-        "type": "inject",
-        "z": "18fb42443172f33c",
-        "name": "Kickstart",
-        "props": [
-            {
-                "p": "payload"
-            }
-        ],
-        "repeat": "",
-        "crontab": "",
-        "once": true,
-        "onceDelay": "1",
-        "topic": "",
-        "payloadType": "date",
-        "x": 120,
-        "y": 80,
-        "wires": [
-            [
-                "36f69a31dc8e4192"
-            ]
-        ]
-    },
-    {
-        "id": "36f69a31dc8e4192",
-        "type": "trigger",
-        "z": "18fb42443172f33c",
-        "name": "",
-        "op1": "1",
-        "op2": "0",
-        "op1type": "str",
-        "op2type": "str",
-        "duration": "-100",
-        "extend": false,
-        "overrideDelay": false,
-        "units": "ms",
-        "reset": "",
-        "bytopic": "all",
-        "topic": "topic",
-        "outputs": 1,
-        "x": 320,
-        "y": 80,
-        "wires": [
-            [
-                "a5ab9a85e89efd46"
-            ]
-        ]
-    },
-    {
         "id": "378721e33b7680cd",
         "type": "function",
         "z": "18fb42443172f33c",
@@ -3051,8 +2847,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 500,
-        "y": 300,
+        "x": 640,
+        "y": 380,
         "wires": [
             [
                 "c638a0991ad0b768"
@@ -3074,8 +2870,8 @@
         "resendOnRefresh": true,
         "templateScope": "local",
         "className": "",
-        "x": 700,
-        "y": 300,
+        "x": 680,
+        "y": 60,
         "wires": [
             [
                 "0feb87f388ee869b"
@@ -3087,58 +2883,319 @@
         "type": "function",
         "z": "18fb42443172f33c",
         "name": "LP Button Router",
-        "func": "if(msg.topic==='lp700_ch')  { return {payload: Buffer.alloc(64).fill(0), _cmd: 'ch'};  }\nif(msg.topic==='lp700_rng') { return {payload: Buffer.alloc(64).fill(0), _cmd: 'rng'}; }\nreturn null;",
+        "func": "// Emit JSON command verbs to the lp700-server WS gateway.\n// Wired (via link out) into the gateway tab's ws-out node.\nif (msg.topic === 'lp700_ch') {\n    return {\n        payload: JSON.stringify({\n            type: 'command',\n            id: 'vu2cpl-ch-' + Date.now(),\n            action: 'channel_step'\n        })\n    };\n}\nif (msg.topic === 'lp700_rng') {\n    return {\n        payload: JSON.stringify({\n            type: 'command',\n            id: 'vu2cpl-rng-' + Date.now(),\n            action: 'range_step'\n        })\n    };\n}\n// Future buttons can land here:\n// if (msg.topic === 'lp700_peak')  → action: 'peak_toggle'\n// if (msg.topic === 'lp700_alarm') → action: 'alarm_toggle'\n// if (msg.topic === 'lp700_mode')  → action: 'mode_step'\nreturn null;",
         "outputs": 1,
+        "timeout": "",
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 890,
-        "y": 300,
+        "x": 870,
+        "y": 60,
         "wires": [
             [
-                "999a47458987e524",
-                "312b5068f3979822"
+                "lp7wsout00000001"
             ]
         ]
     },
     {
-        "id": "999a47458987e524",
-        "type": "function",
+        "id": "lp7cmt_in_000001",
+        "type": "comment",
         "z": "18fb42443172f33c",
-        "name": "CH cmd",
-        "func": "if(msg._cmd!=='ch') return null;\nvar b=Buffer.alloc(64); b[1]=56; msg.payload=b; return msg;",
-        "outputs": 1,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 1060,
-        "y": 260,
+        "name": "INBOUND  ─  lp700-server  →  Node-RED",
+        "info": "Receives telemetry, heartbeat, ack, and status frames over /ws. Telemetry is reshaped to KD4Z-compatible keys and re-emitted on the `lp700-telemetry` link.",
+        "x": 160,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "lp7wsin000000001",
+        "type": "websocket in",
+        "z": "18fb42443172f33c",
+        "name": "ws://lp700-server/ws",
+        "server": "",
+        "client": "lp7wsclient00001",
+        "x": 110,
+        "y": 160,
         "wires": [
             [
-                "7f3db7d4eebb09ac"
+                "lp7parsefn00001"
             ]
         ]
     },
     {
-        "id": "312b5068f3979822",
+        "id": "lp7parsefn00001",
         "type": "function",
         "z": "18fb42443172f33c",
-        "name": "RNG cmd",
-        "func": "if(msg._cmd!=='rng') return null;\nvar b=Buffer.alloc(64); b[1]=57; msg.payload=b; return msg;",
+        "name": "Parse frame",
+        "func": "// Server frames are JSON text. Decode and route by type:\n//   telemetry → output 1\n//   heartbeat → output 2 (connection-alive ping)\n//   ack       → output 3 (last command's status)\n//   other     → dropped\nlet frame;\ntry { frame = JSON.parse(msg.payload); } catch (e) { return null; }\nif (!frame || !frame.type) return null;\n\nif (frame.type === 'telemetry') {\n    return [{ payload: frame.data, seq: frame.seq, ts: frame.ts }, null, null];\n}\nif (frame.type === 'heartbeat') {\n    return [null, { payload: frame.seq, ts: frame.ts }, null];\n}\nif (frame.type === 'ack') {\n    return [null, null, { payload: frame, ref: frame.ref }];\n}\nreturn null;\n",
+        "outputs": 3,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 320,
+        "y": 160,
+        "wires": [
+            [
+                "lp7slice000001"
+            ],
+            [
+                "lp7conn0000001"
+            ],
+            [
+                "lp7ackdbg00001"
+            ]
+        ]
+    },
+    {
+        "id": "lp7slice000001",
+        "type": "function",
+        "z": "18fb42443172f33c",
+        "name": "Reshape (KD4Z-compatible)",
+        "func": "// Map lp700-server's parsed telemetry frame back to the raw-byte\n// shape KD4Z's `LP Dice and Slice` emitted, so any downstream nodes\n// from the original flow (Peak Hold Logic, Set CH Label, Set Range\n// Label, dashboard gauges, …) keep working unchanged.\n//\n// Server →  KD4Z key   notes\n// ----------------------------------------------------------------\n// power_avg_w   → power_avg   stringified watts (toFixed 0)\n// power_peak_w  → power_peak  stringified watts (toFixed 0)\n// swr           → swr         stringified (toFixed 2), floor 1.00\n// range         → range       raw 0..11 index (5W .. 10K, 11=Auto)\n// top_mode      → mode        raw 0..3 index\n// channel       → channel     0=Auto, 1..4 = manual channel\n// derived       → scale       full-scale watts for the active range\nconst RANGE_NAMES = ['5W','10W','25W','50W','100W','250W','500W','1K','2.5K','5K','10K','auto'];\nconst RANGE_WATTS = [5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 0];\nconst TOP_MODES   = ['power_swr', 'waveform', 'spectrum', 'setup'];\n\nconst d = msg.payload || {};\nconst rangeIdx = RANGE_NAMES.indexOf(d.range);\nconst modeIdx  = TOP_MODES.indexOf(d.top_mode);\nconst channelByte = d.auto_channel ? 0 : (d.channel || 0);\n\nmsg.payload = {\n    power_avg:  (d.power_avg_w  || 0).toFixed(0),\n    power_peak: (d.power_peak_w || 0).toFixed(0),\n    swr:        (d.swr          || 1).toFixed(2),\n    scale:      RANGE_WATTS[rangeIdx >= 0 ? rangeIdx : 0],\n    mode:       modeIdx  >= 0 ? modeIdx  : 0,\n    channel:    channelByte,\n    range:      rangeIdx >= 0 ? rangeIdx : 0\n};\n// Keep the original parsed frame around in case a downstream node\n// wants the friendlier string fields too.\nmsg.parsed = d;\nreturn msg;\n",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1080,
-        "y": 320,
+        "x": 540,
+        "y": 160,
         "wires": [
             [
-                "7f3db7d4eebb09ac"
+                "378721e33b7680cd"
             ]
         ]
+    },
+    {
+        "id": "lp7conn0000001",
+        "type": "function",
+        "z": "18fb42443172f33c",
+        "name": "Connection state",
+        "func": "// Heartbeat received → set node.status to green (live).\nnode.status({ fill: 'green', shape: 'dot', text: 'live · seq ' + msg.payload });\nreturn null;\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 550,
+        "y": 220,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "lp7ackdbg00001",
+        "type": "debug",
+        "z": "18fb42443172f33c",
+        "name": "ack",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 550,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "lp7cmt_out_00001",
+        "type": "comment",
+        "z": "18fb42443172f33c",
+        "name": "OUTBOUND  ─  Node-RED  →  lp700-server",
+        "info": "Inject buttons emit JSON `{type:'command', action:'…'}` frames. The lp700-server forwards them into its single-writer HID OUT queue and an `ack` frame returns on the inbound side.\n\nVerbs: mode_step · channel_step · range_step · alarm_toggle · peak_toggle · setup · freeze",
+        "x": 160,
+        "y": 360,
+        "wires": []
+    },
+    {
+        "id": "lp7btn_peak0001",
+        "type": "inject",
+        "z": "18fb42443172f33c",
+        "name": "Peak / Avg / Tune cycle",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"type\":\"command\",\"id\":\"nr-peak\",\"action\":\"peak_toggle\"}",
+        "payloadType": "str",
+        "x": 140,
+        "y": 420,
+        "wires": [
+            [
+                "lp7wsout00000001"
+            ]
+        ]
+    },
+    {
+        "id": "lp7btn_chan0001",
+        "type": "inject",
+        "z": "18fb42443172f33c",
+        "name": "Channel step",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"type\":\"command\",\"id\":\"nr-ch\",\"action\":\"channel_step\"}",
+        "payloadType": "str",
+        "x": 120,
+        "y": 460,
+        "wires": [
+            [
+                "lp7wsout00000001"
+            ]
+        ]
+    },
+    {
+        "id": "lp7btn_rng00001",
+        "type": "inject",
+        "z": "18fb42443172f33c",
+        "name": "Range step",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"type\":\"command\",\"id\":\"nr-rng\",\"action\":\"range_step\"}",
+        "payloadType": "str",
+        "x": 120,
+        "y": 500,
+        "wires": [
+            [
+                "lp7wsout00000001"
+            ]
+        ]
+    },
+    {
+        "id": "lp7btn_alm00001",
+        "type": "inject",
+        "z": "18fb42443172f33c",
+        "name": "Alarm toggle",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"type\":\"command\",\"id\":\"nr-alm\",\"action\":\"alarm_toggle\"}",
+        "payloadType": "str",
+        "x": 120,
+        "y": 540,
+        "wires": [
+            [
+                "lp7wsout00000001"
+            ]
+        ]
+    },
+    {
+        "id": "lp7btn_mod00001",
+        "type": "inject",
+        "z": "18fb42443172f33c",
+        "name": "Mode step (LCD top mode)",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"type\":\"command\",\"id\":\"nr-mod\",\"action\":\"mode_step\"}",
+        "payloadType": "str",
+        "x": 160,
+        "y": 580,
+        "wires": [
+            [
+                "lp7wsout00000001"
+            ]
+        ]
+    },
+    {
+        "id": "lp7btn_set00001",
+        "type": "inject",
+        "z": "18fb42443172f33c",
+        "name": "Setup toggle",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"type\":\"command\",\"id\":\"nr-set\",\"action\":\"setup\"}",
+        "payloadType": "str",
+        "x": 130,
+        "y": 640,
+        "wires": [
+            [
+                "lp7wsout00000001"
+            ]
+        ]
+    },
+    {
+        "id": "lp7btn_frz00001",
+        "type": "inject",
+        "z": "18fb42443172f33c",
+        "name": "Freeze (Wfm/Spec only)",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"type\":\"command\",\"id\":\"nr-frz\",\"action\":\"freeze\"}",
+        "payloadType": "str",
+        "x": 140,
+        "y": 680,
+        "wires": [
+            [
+                "lp7wsout00000001"
+            ]
+        ]
+    },
+    {
+        "id": "lp7wsout00000001",
+        "type": "websocket out",
+        "z": "18fb42443172f33c",
+        "name": "ws://lp700-server/ws",
+        "server": "",
+        "client": "lp7wsclient00001",
+        "x": 540,
+        "y": 540,
+        "wires": []
     },
     {
         "id": "95be1a581b6d2d85",
