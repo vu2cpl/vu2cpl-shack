@@ -746,6 +746,106 @@ consumed it was already gone in `bf1b941`, so the write was dead.
 
 ---
 
+## 2026-05-09
+
+### LP-700 — switched from direct USB-HID to lp700-server WebSocket gateway
+
+**Tab:** LP-700-HID ws (`18fb42443172f33c`) — renamed from `LP-700-HID`,
+trimmed from 25 nodes to 18.
+
+VU3ESV's [LP-700-Server](https://github.com/VU3ESV/LP-700-Server) is now
+running as `lp700-server.service` on the Pi at `ws://192.168.1.169:8089/ws`.
+Pure-Go single binary; owns `/dev/hidraw*`; multi-client WebSocket fan-out.
+
+#### Why migrate
+
+`@gdziuba/node-red-usbhid` only allows one process to hold the LP-700's HID
+handle at a time, which would block any other consumer (browser, phone,
+the planned Mac SwiftUI app). The Go gateway moves ownership to a
+dedicated service; Node-RED becomes one of N clients on the bus, same
+as everything else.
+
+Deployment was already done — the user installed `lp700-server` on the Pi
+and confirmed `/healthz` before the Node-RED migration. This entry covers
+only the Node-RED side.
+
+#### What was deleted from the LP-700 tab
+
+11 nodes, all direct-HID plumbing:
+
+- `getHIDdevices`, `HIDdevice (HID-LP)` — HID node config + worker
+- `Poll Meter Values`, `LP Dice and Slice` — poll trigger + binary parser
+- `inject Poll Devices`, `inject Kickstart`, `trigger` — startup machinery
+- `Raw Buffer`, `Errors` — debug nodes
+- `CH cmd`, `RNG cmd` — HID-buffer button payloads (b[1]=56 / b[1]=57)
+
+#### What was added (imported from `examples/node-red/lp700-websocket-flow.json`)
+
+13 nodes from VU3ESV's example flow, all namespaced `lp7…` to avoid ID
+collisions:
+
+- `ws://lp700-server/ws` — websocket-in (URL `ws://192.168.1.169:8089/ws`,
+  `wholemsg=false` so payload arrives as message). One websocket-client
+  config (`lp7wsclient00001`).
+- `ws://lp700-server/ws` — websocket-out (same client config, send side)
+- `Parse frame` — JSON decoder; routes telemetry to output 1, heartbeat
+  to output 2, ack to output 3
+- `Reshape (KD4Z-compatible)` — maps the gateway's verbose snapshot to
+  the flat `power_avg / power_peak / swr / scale / mode / channel /
+  range` keys that the existing `LP State Aggregator` (and KD4Z's
+  upstream nodes) expect. Zero changes downstream.
+- `Connection state` — exposes link status as a status badge
+- `ack` debug — shows server replies to control verbs (`{ok:true}` or
+  `control disabled` etc.)
+- 7 `inject` nodes labelled with each verb (peak/channel/range/alarm/
+  mode/setup/freeze) — kept for canvas-side testing; deletable later
+- 2 comment nodes labelling the inbound/outbound halves of the gateway
+
+#### What was kept and rewired
+
+- `LP State Aggregator` — function body unchanged; now fed by `Reshape`
+  output (was `LP Dice and Slice` output)
+- `LP-700 Panel` — ui_template unchanged
+- `LP Button Router` — function body rewritten. Old version produced
+  HID buffers (`Buffer.alloc(64)` with `b[1]=56` for channel, `b[1]=57`
+  for range). New version emits JSON command frames:
+
+  ```js
+  if (msg.topic === 'lp700_ch')
+    return { payload: JSON.stringify({type:'command', id:'…', action:'channel_step'}) };
+  if (msg.topic === 'lp700_rng')
+    return { payload: JSON.stringify({type:'command', id:'…', action:'range_step'}) };
+  ```
+
+  Wired directly into the websocket-out node (no link-in/out indirection
+  since the gateway and dashboard live on the same tab).
+
+#### Configuration gotcha
+
+First import attempt produced a fake-green connection — the imported
+`websocket-client` config had a stale client ID that didn't match the
+URL after editing. Resolved by deleting the imported config and creating
+a fresh one pointed at `ws://192.168.1.169:8089/ws`. Telemetry flowed
+within 2 s of redeploy.
+
+#### Deps that became optional
+
+- npm: `@gdziuba/node-red-usbhid 1.0.3` — still installed but no longer
+  used by any flow. Keep for now; uninstall after a week of stable WS
+  operation.
+- apt: `libudev-dev`, `librtlsdr-dev`, `libusb-1.0-0-dev` — only needed
+  to *build* the HID node. Same retention guidance.
+
+#### Verified
+
+- Telemetry frames arriving at ~25 Hz (matches LP-700 LCD update cadence)
+- Power/SWR/channel/range labels all live on the dashboard
+- CH and RNG buttons step the meter; `ack` debug shows `{ok:true}`
+- Service status: `systemctl status lp700-server` clean; no Node-RED HID
+  errors after restart
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:

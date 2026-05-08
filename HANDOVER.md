@@ -1,15 +1,15 @@
 # Session Handover — VU2CPL Shack
 
-**Period:** 2026-05-01 → 2026-05-08
+**Period:** 2026-05-01 → 2026-05-09
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
-**Last commit at handover:** `6a03506`
+**Last commit at handover:** `c449c49`
 
 ---
 
 ## Repo state
 
 ```
-~/projects/vu2cpl-shack    main @ 6a03506   clean, in sync with origin
+~/projects/vu2cpl-shack    main @ c449c49   clean, in sync with origin
 ```
 
 `.DS_Store` is the only untracked thing — ignore.
@@ -34,6 +34,7 @@
 | 05-08 | Lightning UI → Shack tab | Lightning Detect dashboard tab deleted. Master Dashboard moved to a new `Lightning Protection` group on Shack tab (width 12, order 9). Internal header card + weather card removed (Shack tab supplies them). Nearest Strike gauge removed. Reconnect ↺ buttons grew labels (`↺ RECONNECT`) and match switch height. |
 | 05-08 | Bypass switch | New vertical `BYPASS` button between ANTENNA and RADIO. 120-min countdown, auto-expires, never survives Node-RED restart. While ON: yellow banner + amber strike alerts; Trigger Disconnect early-outs (no MQTT off, no reconnect timer). Activation force-reconnects ant + radio. New nodes: http-in `/lightning/bypass` + `Bypass Handler` function (3 outputs) + http response. `flow.bypass_active` / `flow.bypass_expires_at` reset by Init Defaults; replayed every 30 s by `Replay on lightning tab`. Verified end-to-end during a moderate-CAPE day. |
 | 05-08 | Last-activity recap | Old `✔ No recent activity` filler text replaced. Boot: `⏱ Awaiting first event`. After 30 s of no new alert: muted `⏱ Last: <previous text> · Nm ago` with auto-refreshing relative time. Banner is always visible — no more lying or auto-hide. |
+| 05-09 | LP-700 → WS gateway | [VU3ESV/LP-700-Server](https://github.com/VU3ESV/LP-700-Server) running as `lp700-server.service` on Pi @ `:8089`. Node-RED LP-700 tab migrated from direct `@gdziuba/node-red-usbhid` to a websocket-client of the gateway. Tab renamed `LP-700-HID ws`, trimmed 25→18 nodes. `LP State Aggregator` + `LP-700 Panel` + button router kept; `LP Dice and Slice`, `Poll Meter Values`, HID config, all polling injects + raw-buffer debug deleted. Buttons now emit JSON `{type:'command', action:'channel_step'\|'range_step'}` to ws-out. The 7 verb-test inject buttons from VU3ESV's example flow kept on canvas as testing affordances. Multi-client unlocked — Mac SwiftUI app (TODO #12) can subscribe in parallel. |
 
 ---
 
@@ -49,6 +50,7 @@
 | Master Dashboard handlers | `as3935_ready`, `as3935_hb`, `as3935_status`, `bypass_state`, `log`, `strike` (incl. `as3935`) all present |
 | Lightning Protection card | Lives at bottom of Shack tab (group `vu2cpl_grp_lightning`, width 12, order 9). Lightning detect tab deleted. |
 | Bypass switch | Off on every Node-RED launch (Init Defaults). Auto-expires after 120 min. State persists across page refresh via 30 s replay. Verified TD bypass early-out for both Open-Meteo and AS3935 strike paths. |
+| LP-700 telemetry | ✅ Via `lp700-server.service` (port 8089) → Node-RED ws-client. ~25 Hz updates. Multi-client capable. `@gdziuba/node-red-usbhid` still installed but unused; uninstall after 1 week of stable WS operation. |
 | HA Pi monitoring | ✅ Implemented via HA-side automation (no Node-RED changes — `mqtt.publish` to `rpi/HassPi/*` every 30 s) |
 
 ---
@@ -113,6 +115,8 @@ Critical Node-RED IDs (per CLAUDE.md):
 ## Recent commit log (for context)
 
 ```
+c449c49 LP-700: switch from direct HID to lp700-server WebSocket gateway
+b3261ba SHACK_CHANGELOG + HANDOVER: 2026-05-08 — Lightning UI on Shack tab + bypass + last-activity recap
 6a03506 Lightning: integrate to Shack tab + bypass + last-activity recap
 6ac6fef DXCC extract refresh
 0021bcd DXCC extract refresh

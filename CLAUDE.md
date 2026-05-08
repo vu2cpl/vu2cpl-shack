@@ -60,7 +60,7 @@ Node-RED shack automation running on Raspberry Pi 4B. Controls and monitors:
 - FlexRadio FLEX-6600 SDR transceiver
 - SPE Expert 1.5 KFA amplifier
 - Idiom Press Rotor-EZ rotator
-- Telepost LP-700 power/SWR meter
+- Telepost LP-700 power/SWR meter (via [VU3ESV/LP-700-Server](https://github.com/VU3ESV/LP-700-Server) WebSocket gateway on port 8089)
 - 21 Tasmota-controlled power outlets across 5 devices
 - Lightning protection (Open-Meteo + AS3935 sensor)
 - DX cluster monitoring and DXCC alerting
@@ -82,6 +82,7 @@ Node-RED shack automation running on Raspberry Pi 4B. Controls and monitors:
 | MQTT broker | Mosquitto @ `192.168.1.169:1883` (plain, no auth, LAN only) |
 | MQTT broker node ID | `f4785be9863eab08` |
 | FlexRadio | `192.168.1.148:4992` (TCP API + UDP discovery) |
+| LP-700 WS gateway | `lp700-server.service` on Pi @ `ws://192.168.1.169:8089/ws` (single HID owner, multi-client fan-out) |
 | Git alias | `nrsave "message"` → add flows.json + commit |
 | Dashboard theme | Dark, base #097479, bg #111111 |
 
@@ -106,7 +107,7 @@ git push
 | SPE | `648eb83c2566c7b6` | 29 | `vu2cpl_grp_spe` |
 | Rotor | `3d26c2c5270bdb37` | 24 | `84143f78d088f01d` |
 | FlexRadio | `a0a882f85c89cffc` | 43 | `vu2cpl_grp_flex` |
-| LP-700-HID | `18fb42443172f33c` | 25 | `vu2cpl_grp_lp700` |
+| LP-700-HID ws | `18fb42443172f33c` | 18 | `vu2cpl_grp_lp700` |
 | Solar | `590e889d44815afb` | 35 | `vu2cpl_grp_solar` |
 | RBN Skimmer Monitor | `f9a0e3ad0e019052` | 32 | `1bcbc2eb8f2124aa` |
 | RPi Fleet Monitor | `d5fec2fea3dd37f4` | 27 | `f8d1f7eb7403a442` |
@@ -155,10 +156,10 @@ git push
 
 ### USB HID
 
-| Device | VID | PID | Group |
-|--------|-----|-----|-------|
-| LP-700 / LP-500 | 0x04D8 (1240) | 0x0001 (1) | telepost |
-| udev rule | `/etc/udev/rules.d/10-telepost.rules` | | |
+| Device | VID | PID | Group | Owner |
+|--------|-----|-----|-------|-------|
+| LP-700 / LP-500 | 0x04D8 (1240) | 0x0001 (1) | telepost | `lp700-server.service` (Go, owns `/dev/hidraw*`); Node-RED is a WS client |
+| udev rules | `/etc/udev/rules.d/10-telepost.rules` (legacy, still in place); `/etc/udev/rules.d/99-lp700.rules` (installed by lp700-server's `redeploy.sh`) | | | |
 
 ### RPi Fleet (HTTP agent port 7799)
 
@@ -387,7 +388,7 @@ Weather data to Header template (`eee1a8b8552aa21f`): plain `wxData` object (no 
 node-red-dashboard           3.6.6
 node-red-node-serialport     2.0.3
 node-red-contrib-flexradio   1.2.5
-@gdziuba/node-red-usbhid     1.0.3  (manual npm install)
+@gdziuba/node-red-usbhid     1.0.3  (LEGACY — installed; LP-700 now uses WS gateway, no longer needed)
 node-red-contrib-ui-svg      2.3.3
 node-red-node-ping           0.3.3
 node-red-configurable-ping   1.0.1
@@ -396,7 +397,17 @@ node-red-contrib-loop        latest
 node-red-contrib-ui-level    latest
 ```
 
-HID package requires manual install:
+HID package and its build deps are no longer required (LP-700 migrated to
+the WS gateway 2026-05-09). Both are still present for now — uninstall once
+the WS path is proven stable for a week:
+
+```bash
+# When ready to clean up:
+cd ~/.node-red && npm uninstall @gdziuba/node-red-usbhid
+sudo apt remove libudev-dev librtlsdr-dev libusb-1.0-0-dev
+```
+
+Original install reference (kept for archaeology):
 ```bash
 cd ~/.node-red && npm install robertsLando/node-red-contrib-usbhid
 # Prereqs: libudev-dev librtlsdr-dev libusb-1.0-0-dev
