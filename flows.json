@@ -2841,8 +2841,9 @@
         "type": "function",
         "z": "18fb42443172f33c",
         "name": "LP State Aggregator",
-        "func": "var st = flow.get('lpState') || {};\n\nif (msg.power_avg  !== undefined) st.avg     = parseFloat(msg.power_avg);\nif (msg.power_peak !== undefined) st.peak    = parseFloat(msg.power_peak);\nif (msg.swr        !== undefined) st.swr     = parseFloat(msg.swr);\nif (msg.channel    !== undefined) st.channel = msg.channel;\nif (msg.range      !== undefined) st.range   = msg.range;\nif (msg.scale      !== undefined) st.scale   = msg.scale;\n\nflow.set('lpState', st);\nmsg.payload = Object.assign({}, st);\nreturn msg;",
+        "func": "// Tolerate both shapes:\n//   - top-level keys (legacy KD4Z `LP Dice and Slice` output)\n//   - msg.payload keys (new Reshape output from lp700-server gateway)\nconst d = (msg.payload && typeof msg.payload === 'object') ? msg.payload : msg;\n\nconst st = flow.get('lpState') || {};\n\nif (d.power_avg !== undefined) st.avg = parseFloat(d.power_avg);\nif (d.power_peak !== undefined) st.peak = parseFloat(d.power_peak);\nif (d.swr !== undefined) st.swr = parseFloat(d.swr);\nif (d.channel !== undefined) st.channel = d.channel;\nif (d.range !== undefined) st.range = d.range;\nif (d.scale !== undefined) st.scale = d.scale;\n\nflow.set('lpState', st);\nmsg.payload = Object.assign({}, st);\nreturn msg;",
         "outputs": 1,
+        "timeout": "",
         "noerr": 0,
         "initialize": "",
         "finalize": "",
@@ -2870,8 +2871,8 @@
         "resendOnRefresh": true,
         "templateScope": "local",
         "className": "",
-        "x": 680,
-        "y": 60,
+        "x": 580,
+        "y": 460,
         "wires": [
             [
                 "0feb87f388ee869b"
@@ -2890,8 +2891,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 870,
-        "y": 60,
+        "x": 890,
+        "y": 480,
         "wires": [
             [
                 "lp7wsout00000001"
@@ -2904,8 +2905,8 @@
         "z": "18fb42443172f33c",
         "name": "INBOUND  ─  lp700-server  →  Node-RED",
         "info": "Receives telemetry, heartbeat, ack, and status frames over /ws. Telemetry is reshaped to KD4Z-compatible keys and re-emitted on the `lp700-telemetry` link.",
-        "x": 160,
-        "y": 100,
+        "x": 200,
+        "y": 180,
         "wires": []
     },
     {
@@ -2915,8 +2916,8 @@
         "name": "ws://lp700-server/ws",
         "server": "",
         "client": "lp7wsclient00001",
-        "x": 110,
-        "y": 160,
+        "x": 120,
+        "y": 260,
         "wires": [
             [
                 "lp7parsefn00001"
@@ -2934,8 +2935,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 320,
-        "y": 160,
+        "x": 330,
+        "y": 260,
         "wires": [
             [
                 "lp7slice000001"
@@ -3007,7 +3008,7 @@
         "z": "18fb42443172f33c",
         "name": "OUTBOUND  ─  Node-RED  →  lp700-server",
         "info": "Inject buttons emit JSON `{type:'command', action:'…'}` frames. The lp700-server forwards them into its single-writer HID OUT queue and an `ack` frame returns on the inbound side.\n\nVerbs: mode_step · channel_step · range_step · alarm_toggle · peak_toggle · setup · freeze",
-        "x": 160,
+        "x": 260,
         "y": 360,
         "wires": []
     },
