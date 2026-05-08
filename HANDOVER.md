@@ -2,14 +2,14 @@
 
 **Period:** 2026-05-01 → 2026-05-08
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
-**Last commit at handover:** `bf1b941`
+**Last commit at handover:** `6a03506`
 
 ---
 
 ## Repo state
 
 ```
-~/projects/vu2cpl-shack    main @ bf1b941   clean, in sync with origin
+~/projects/vu2cpl-shack    main @ 6a03506   clean, in sync with origin
 ```
 
 `.DS_Store` is the only untracked thing — ignore.
@@ -30,7 +30,10 @@
 | 05-06 | Dashboard | AS3935 panel shows live `✓ READY · NF=4 · up Nm · irq=N`. Two new MQTT-in nodes + `Format AS3935 State` + `Replay AS3935 State`. Event Log moved above Map. |
 | 05-07 | Folders | Moved `~/Documents/vu2cpl website/` → `~/projects/vu2cpl-website/` and `~/vu2cpl.github.io/` → `~/projects/vu2cpl.github.io/`. CLAUDE.md path refs updated |
 | 05-08 | Lightning Detect map | Ripped out entirely. Both active strike sources (Open-Meteo, AS3935) only know distance — every dot stacked on the home marker, so the map showed nothing useful. Master Dashboard ui_template trimmed by ~100 lines (HTML + CSS + Leaflet imports + `initMap()` + strikeLayer/lzCnt code in 4 message handlers). Payload `lat/lon` fields kept for future Blitzortung wiring |
-| 05-08 | Nearest Strike gauge | Now persists across page refresh. `Strike → Dashboard` writes `flow.last_strike_km`; `Replay on lightning tab` emits `{type:'strikes_replay', lastKm}` on the 30 s tick; dashboard handler calls `drawGauge(lastKm)`. Boot-time `drawGauge(200)` dropped — gauge starts at "—" until first strike |
+| 05-08 | Nearest Strike gauge | Now persists across page refresh. `Strike → Dashboard` writes `flow.last_strike_km`; `Replay on lightning tab` emits `{type:'strikes_replay', lastKm}` on the 30 s tick; dashboard handler calls `drawGauge(lastKm)`. Boot-time `drawGauge(200)` dropped — gauge starts at "—" until first strike. **Gauge later removed entirely** when the Lightning tab was merged into the Shack tab (see below). |
+| 05-08 | Lightning UI → Shack tab | Lightning Detect dashboard tab deleted. Master Dashboard moved to a new `Lightning Protection` group on Shack tab (width 12, order 9). Internal header card + weather card removed (Shack tab supplies them). Nearest Strike gauge removed. Reconnect ↺ buttons grew labels (`↺ RECONNECT`) and match switch height. |
+| 05-08 | Bypass switch | New vertical `BYPASS` button between ANTENNA and RADIO. 120-min countdown, auto-expires, never survives Node-RED restart. While ON: yellow banner + amber strike alerts; Trigger Disconnect early-outs (no MQTT off, no reconnect timer). Activation force-reconnects ant + radio. New nodes: http-in `/lightning/bypass` + `Bypass Handler` function (3 outputs) + http response. `flow.bypass_active` / `flow.bypass_expires_at` reset by Init Defaults; replayed every 30 s by `Replay on lightning tab`. Verified end-to-end during a moderate-CAPE day. |
+| 05-08 | Last-activity recap | Old `✔ No recent activity` filler text replaced. Boot: `⏱ Awaiting first event`. After 30 s of no new alert: muted `⏱ Last: <previous text> · Nm ago` with auto-refreshing relative time. Banner is always visible — no more lying or auto-hide. |
 
 ---
 
@@ -43,7 +46,9 @@
 | Open-Meteo CAPE polling (every 5 min) | ✅ Auto-fires disconnect when CAPE ≥ 800 J/kg or `weather_code ∈ {95,96,99}` |
 | Antenna + radio auto-disconnect chain | ✅ Verified end-to-end during 05-01 storm |
 | Dashboard refresh persistence (log + map + AS3935) | ✅ All three replay within 30 s of page load |
-| Master Dashboard handlers | `as3935_ready`, `as3935_hb`, `as3935_status`, `strikes_replay`, `log` all present |
+| Master Dashboard handlers | `as3935_ready`, `as3935_hb`, `as3935_status`, `bypass_state`, `log`, `strike` (incl. `as3935`) all present |
+| Lightning Protection card | Lives at bottom of Shack tab (group `vu2cpl_grp_lightning`, width 12, order 9). Lightning detect tab deleted. |
+| Bypass switch | Off on every Node-RED launch (Init Defaults). Auto-expires after 120 min. State persists across page refresh via 30 s replay. Verified TD bypass early-out for both Open-Meteo and AS3935 strike paths. |
 | HA Pi monitoring | ✅ Implemented via HA-side automation (no Node-RED changes — `mqtt.publish` to `rpi/HassPi/*` every 30 s) |
 
 ---
@@ -108,6 +113,11 @@ Critical Node-RED IDs (per CLAUDE.md):
 ## Recent commit log (for context)
 
 ```
+6a03506 Lightning: integrate to Shack tab + bypass + last-activity recap
+6ac6fef DXCC extract refresh
+0021bcd DXCC extract refresh
+167133e Lightning: integrate to Shack tab + bypass switch (WIP — bypass not suppressing disconnect)
+45bd8dd SHACK_CHANGELOG + HANDOVER: 2026-05-08 — Lightning map ripped out, gauge persists across refreshes
 bf1b941 Lightning: rip out leaflet map; persist nearest-strike gauge across refreshes
 46a96e8 Add HANDOVER.md — session pickup notes for 05-01 to 05-07
 497ccf3 CLAUDE.md: consolidate vu2cpl repos under ~/projects/

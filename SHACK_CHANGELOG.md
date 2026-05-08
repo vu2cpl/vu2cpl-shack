@@ -647,6 +647,105 @@ strike, gauge stays at "—".
 
 ---
 
+### Lightning Detect — moved to Shack tab + bypass switch + last-activity recap
+
+**Tab moved:** Lightning Detect dashboard tab (`dd11372f9c492be8`) — deleted.
+**New group:** `vu2cpl_grp_lightning` "Lightning Protection" on the Shack
+tab (`vu2cpl_ui_tab_shack`), width 12, order 9.
+
+The lightning UI is no longer a separate dashboard tab — it lives at the
+bottom of the main Shack tab. The Master Dashboard ui_template
+(`557083037f168b22`) was relocated to the new group and trimmed:
+
+- Internal header card (`#hdr` with callsign + clock) removed — Shack tab's
+  existing Header (`eee1a8b8552aa21f`) provides clocks + weather.
+- Weather card removed — same reason.
+- The wire from `Parse Weather → Header` output 2 → Master Dashboard is no
+  longer needed; weather flows only to the existing Header template now.
+
+#### Bypass switch
+
+A new vertical `BYPASS` button lives in the switchBox between the ANTENNA
+and RADIO controls. Off = grey. On = amber with a live `MM:SS` countdown
+starting at `120:00`. Auto-expires after 2 hours; can be deactivated
+manually at any time.
+
+While bypass is active:
+
+- A yellow banner above the alert reads `🔕 BYPASS ACTIVE — strikes will
+  alert & log only · no auto-disconnect · expires in MM:SS`.
+- Strikes still fire the alert banner (in amber, with text `STRIKE N km —
+  BYPASS · alert only`) but **Trigger Disconnect** (`d62fb0c3c40f03b7`)
+  early-outs without publishing MQTT off, without flipping
+  `flow.antenna_off`, and without starting the reconnect timer.
+- The dashboard ANTENNA + RADIO switches stay green ON.
+- Activating bypass also force-reconnects (cancels any pending Reconnect
+  Timer + sends an ON command to ant + radio) — designed for "I'm on the
+  air, the storm is far enough away, don't drop me".
+
+**State variables:** `flow.bypass_active` (bool), `flow.bypass_expires_at`
+(ms timestamp). Init Defaults (`ec1fd4dece8c4dc0`) clears both on every
+deploy/launch — bypass never survives a Node-RED restart, by design.
+
+**Server side, three new nodes** (Lightning Antenna Protector tab):
+
+- `POST /lightning/bypass` http-in — receives `{action:'on'|'off'}`
+- `Bypass Handler` function (3 outputs):
+  1. → Master Dashboard — emits `{type:'bypass_state', active, expiresAt}`
+     plus a log line
+  2. → Reconnect Timer — `{payload:'cancel'}` to kill any pending timer
+  3. → Execute Reconnect — force ant + radio ON immediately on activation
+- `200 OK` http response (parallel wire from http-in for immediate ack)
+
+The `Replay on lightning tab` function (`f1c57672ba7c0ec1`) now emits
+`bypass_state` on every Refresh Stats tick (30 s), so the banner +
+countdown survive page refresh. Includes a server-side expiry safety net
+in case the in-process `setTimeout` is somehow lost.
+
+#### Reconnect buttons relabelled
+
+The two ↺ icons next to ANTENNA and RADIO were tiny 36×36 squares with
+no text. Now they stretch to match the switch row height with `↺
+RECONNECT` text and a 110 px minimum width — much easier to spot.
+
+#### Last-activity recap (replaces auto-clear)
+
+Old behaviour: 30 s after every alert, the banner displayed
+`✔ No recent activity` — misleading, since plenty of activity had
+just happened. New behaviour:
+
+- On boot, before any alert: `⏱ Awaiting first event` (muted).
+- During an alert: full colour (red / amber / green / yellow-bypass).
+- 30 s after the alert: banner transitions to muted recap form
+  `⏱ Last: STRIKE 12 km — ANTENNA + FlexRadio OFF · 4m ago`.
+- The `Nm ago` text auto-refreshes every 30 s. Hours roll into
+  `2h 17m ago`, days into `1d ago`.
+
+Two `window.lastAlert` tracking lines + a `setInterval` driver in the
+ui_template; no flow node changes required.
+
+#### Strike → Dashboard simplification
+
+Removed the `flow.set('last_strike_km', km)` line — the gauge that
+consumed it was already gone in `bf1b941`, so the write was dead.
+
+#### Verified end-to-end
+
+- Bypass-OFF + TEST inject (6 km strike) → red alert + ant/radio
+  → OFF + reconnect timer starts. ✓
+- Bypass-OFF + Open-Meteo poll (CAPE → synthetic 0–20 km strike) →
+  same as TEST. ✓
+- Bypass-ON + TEST inject → amber alert "BYPASS · alert only", switches
+  stay green, no MQTT publish. ✓
+- Bypass-ON + Open-Meteo poll → same as bypass-ON TEST (verified
+  during a moderate-CAPE day where polls fired every 5 min and TD's
+  status badge stayed `BYPASS · Open-Meteo Nkm — disconnect skipped`
+  for the full 2 h). ✓
+- Page refresh during bypass → banner + button + countdown all replay
+  within 30 s via Refresh Stats. ✓
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:
