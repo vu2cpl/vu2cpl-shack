@@ -844,6 +844,37 @@ within 2 s of redeploy.
 - Service status: `systemctl status lp700-server` clean; no Node-RED HID
   errors after restart
 
+#### Post-deploy fix (08c907f)
+
+After the migration deployed, the dashboard panel was stuck displaying
+stale `flow.lpState` values (AVG/PEAK 14 W, SWR 1.25 — the last numbers
+the old `LP Dice and Slice` had cached before the migration). Telemetry
+was flowing fine through the gateway → Reshape pipeline; the bug was
+that **`LP State Aggregator` couldn't see the new shape**.
+
+KD4Z's `LP Dice and Slice` returned `{power_avg, power_peak, swr, …}`
+at the **top level of msg**. The aggregator was hand-written to read
+`msg.power_avg` directly. VU3ESV's `Reshape (KD4Z-compatible)` puts
+those same keys on **`msg.payload`** (per his README, matching how
+KD4Z's downstream nodes consume them). So `msg.power_avg` was always
+`undefined`, every conditional in the aggregator was false, and
+`flow.lpState` never updated — the panel kept emitting whatever
+values were in flow context at deploy time.
+
+Fix: aggregator function body now reads from `msg.payload` first,
+falling back to the top of `msg` if payload is absent. Backward-
+compatible with the legacy KD4Z shape.
+
+```js
+const d = (msg.payload && typeof msg.payload === 'object') ? msg.payload : msg;
+// …then read d.power_avg, d.power_peak, d.swr, etc.
+```
+
+Lesson for future migrations on this flow: when swapping a parser, audit
+every consumer that reads from `msg` directly (not `msg.payload`) — the
+ui_template and the aggregator can both quietly drift out of sync with
+the new payload shape.
+
 ---
 
 ## Standard Commit Sequence (reminder)
