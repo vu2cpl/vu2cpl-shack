@@ -1,15 +1,15 @@
 # Session Handover — VU2CPL Shack
 
-**Period:** 2026-05-01 → 2026-05-07
+**Period:** 2026-05-01 → 2026-05-08
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
-**Last commit at handover:** `497ccf3`
+**Last commit at handover:** `bf1b941`
 
 ---
 
 ## Repo state
 
 ```
-~/projects/vu2cpl-shack    main @ 497ccf3   clean, in sync with origin
+~/projects/vu2cpl-shack    main @ bf1b941   clean, in sync with origin
 ```
 
 `.DS_Store` is the only untracked thing — ignore.
@@ -29,6 +29,8 @@
 | 05-06 | Chip init | Added `CALIB_RCO` at startup, INT register flush after config writes, retained status payload includes `tun_cap`/`irq_pin`/`calib_*` |
 | 05-06 | Dashboard | AS3935 panel shows live `✓ READY · NF=4 · up Nm · irq=N`. Two new MQTT-in nodes + `Format AS3935 State` + `Replay AS3935 State`. Event Log moved above Map. |
 | 05-07 | Folders | Moved `~/Documents/vu2cpl website/` → `~/projects/vu2cpl-website/` and `~/vu2cpl.github.io/` → `~/projects/vu2cpl.github.io/`. CLAUDE.md path refs updated |
+| 05-08 | Lightning Detect map | Ripped out entirely. Both active strike sources (Open-Meteo, AS3935) only know distance — every dot stacked on the home marker, so the map showed nothing useful. Master Dashboard ui_template trimmed by ~100 lines (HTML + CSS + Leaflet imports + `initMap()` + strikeLayer/lzCnt code in 4 message handlers). Payload `lat/lon` fields kept for future Blitzortung wiring |
+| 05-08 | Nearest Strike gauge | Now persists across page refresh. `Strike → Dashboard` writes `flow.last_strike_km`; `Replay on lightning tab` emits `{type:'strikes_replay', lastKm}` on the 30 s tick; dashboard handler calls `drawGauge(lastKm)`. Boot-time `drawGauge(200)` dropped — gauge starts at "—" until first strike |
 
 ---
 
@@ -106,6 +108,8 @@ Critical Node-RED IDs (per CLAUDE.md):
 ## Recent commit log (for context)
 
 ```
+bf1b941 Lightning: rip out leaflet map; persist nearest-strike gauge across refreshes
+46a96e8 Add HANDOVER.md — session pickup notes for 05-01 to 05-07
 497ccf3 CLAUDE.md: consolidate vu2cpl repos under ~/projects/
 08647ce Dashboard: AS3935 panel shows live ready/heartbeat state; Event Log moved above Map
 c2c2375 SHACK_CHANGELOG: 2026-05-06 — AS3935 dashboard liveness panel

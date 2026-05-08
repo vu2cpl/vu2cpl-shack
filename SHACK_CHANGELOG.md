@@ -556,6 +556,97 @@ than buried at the bottom.
 
 ---
 
+## 2026-05-08
+
+### Lightning Detect — Leaflet map removed
+
+**Tab:** Lightning Antenna Protector (`75e2cac8ab96f556`)
+**Node:** Master Dashboard (`557083037f168b22`)
+
+The map was dead weight. Both active strike sources only know
+*distance*, not direction:
+
+- **Open-Meteo** queries CAPE/`weather_code` at the home grid point,
+  so `Parse Open-Meteo → Strike` always emits with `lat=home_lat`,
+  `lon=home_lon`.
+- **AS3935** chip provides a distance estimate; no azimuth.
+
+Every strike circle therefore stacked on top of the green home marker
+and was invisible. The Leaflet map was originally designed for a
+Blitzortung TCP feed (real lat/lon for every strike worldwide), but
+that integration was never wired up.
+
+#### What was deleted from the ui_template
+
+- `<div id="leafletMap">` block + the legend bar / `lzCnt` counter
+- Leaflet 1.9.4 CSS + JS CDN imports
+- CSS rules: `#mapBox`, `#lzWrap`, `.lz-bar`, `.lz-d`, `.lz-home-tip`
+- JS state: `lmap`, `homeMarker`, `thrCircle`, `strikeLayer`, the
+  `strikes` array + `MAX=800` cap
+- `initMap()` function (Leaflet init, tile layer, threshold ring,
+  home marker, strike layer group)
+- `setTimeout(initMap, 400)` boot call + the `resize` listener
+- `strikeLayer` / `lzCnt` manipulation in 4 handlers: `strike`,
+  AS3935 `as3935`, `clear`, `strikes_replay`
+- The `thrCircle.setRadius()` follow-up in the threshold-update path
+
+Template trimmed from 1,047 lines → 943 lines.
+
+The payload `lat` and `lon` fields in `Strike → Dashboard` are
+intentionally retained — harmless dead data today, but they let
+Blitzortung be wired in without re-touching that function (HANDOVER
+follow-up #7).
+
+---
+
+### Lightning Detect — Nearest Strike gauge persists across page refresh
+
+**Nodes:** `Strike → Dashboard` (`51367d456e71fb3e`),
+`Replay on lightning tab` (`f1c57672ba7c0ec1`),
+Master Dashboard (`557083037f168b22`),
+`clear all` (`61516f75d2343aae`)
+
+#### Symptom
+
+The half-circle "Nearest Strike" gauge updated correctly when a strike
+arrived live, but on every dashboard reload it reverted to the boot
+value (200 km) and stayed there until the next live strike. The
+existing 30 s replay tick (which had restored the strike map and
+event log since 05-01) didn't touch the gauge.
+
+#### Why
+
+`Strike → Dashboard` was pushing only `{lat, lon, color, ts}` into
+`flow.strikes` — no `km` field — so even if the replay path had been
+wired to the gauge, there was nothing to feed it. And the replay
+emitter (`Replay on lightning tab`) was producing
+`{type:'strikes_replay', list}` for the map only; no `lastKm`. The
+boot script also painted `drawGauge(200)` immediately, overwriting
+the `—` placeholder before any data arrived.
+
+#### Fix
+
+With the map gone (above), the cache no longer needs a list at all.
+Simplified to a single value:
+
+- `Strike → Dashboard`: replaced the array push with
+  `flow.set('last_strike_km', km)`.
+- `Replay on lightning tab`: now reads `flow.get('last_strike_km')`
+  and emits `{type:'strikes_replay', lastKm:N}` (or returns `null`
+  when there is nothing to replay).
+- Master Dashboard: `strikes_replay` handler reduced to
+  `if(typeof d.lastKm === 'number') drawGauge(Math.min(d.lastKm,200));`.
+  Boot-time `drawGauge(200)` removed — gauge now starts at "—" until
+  first strike or replay.
+- `clear all`: clears `last_strike_km` (and the legacy `strikes` key,
+  in case anything still reads it).
+
+Verified: trigger synthetic strike → gauge updates → page refresh →
+gauge redraws to that km within the next 30 s tick. With no cached
+strike, gauge stays at "—".
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:
