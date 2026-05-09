@@ -549,9 +549,7 @@ tar -czf ~/nr_backup_$TS.tar.gz \
   ~/.node-red/projects/vu2cpl-shack/flows.json \
   ~/.node-red/projects/vu2cpl-shack/nr_dxcc_*.json \
   ~/.node-red/settings.js \
-  ~/power_spe_on.py \
-  ~/fetch_clublog.sh \
-  ~/enable_file_context.sh
+  ~/power_spe_on.py
 ```
 
 Critical files:
@@ -560,9 +558,6 @@ Critical files:
 - `nr_dxcc_seed.json` — worked data (update after QSOs)
 - `nr_dxcc_modes.json` — mode data
 - `~/.node-red/settings.js`
-- `~/power_spe_on.py` *(not yet checked into repo — see HANDOVER follow-ups)*
-- `~/fetch_clublog.sh` *(not yet checked into repo)*
-- `~/enable_file_context.sh` *(not yet checked into repo)*
 
 Pi-side scripts already in this repo (canonical paths shown):
 
@@ -573,6 +568,8 @@ Pi-side scripts already in this repo (canonical paths shown):
 | `rpi_agent.py` | `/home/vu2cpl/rpi_agent.py` | HTTP reboot/shutdown — `rpi-agent.service` |
 | `rpi-agent.service` | `/etc/systemd/system/rpi-agent.service` | systemd unit for rpi_agent |
 | `monitor.sh` | `/home/vu2cpl/monitor.sh` | MQTT telemetry cron (every minute) |
+| `power_spe_on.py` | `/home/vu2cpl/power_spe_on.py` | SPE Expert 1.5 KFA power-on via FTDI DTR/RTS toggle |
+| `enable_file_context.sh` | `/home/vu2cpl/enable_file_context.sh` | One-time idempotent settings.js patcher to enable Node-RED `localfilesystem` context store |
 
 ---
 

@@ -923,11 +923,40 @@ vu2cpl ALL=(ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown
 
 documented at `/etc/sudoers.d/rpi-agent` in the install commands.
 
-#### Still pending — see HANDOVER follow-up #9
+---
 
-`power_spe_on.py`, `fetch_clublog.sh`, `enable_file_context.sh` are
-similarly Pi-only. Same pattern applies: `scp` to Mac, place at repo
-root, document, check in.
+### Pi-side scripts — `power_spe_on.py` checked in, `fetch_clublog.sh` retired
+
+Follow-up to the earlier "Pi-side scripts" entry above.
+
+- **`power_spe_on.py`** added to the repo. Tiny FTDI DTR/RTS toggling
+  helper used to soft-power the SPE Expert 1.5 KFA. Already referenced
+  in CLAUDE.md ("Power-on requires external Python: `python3
+  ~/power_spe_on.py`") but never checked in. Now in repo root with the
+  rest.
+- **`enable_file_context.sh`** was discovered to already be tracked
+  in the repo — the earlier "not yet checked into repo" annotation in
+  CLAUDE.md was wrong. Annotation removed.
+- **`fetch_clublog.sh`** has been deleted from the Pi entirely. The
+  output file `nr_dxcc_live.json` it produced is referenced by zero
+  nodes in `flows.json` (verified by full-flow grep). Live DXCC fetch
+  happens in-flow via `Build Club Log API Request` →
+  `Fetch All Modes + Parse` → writes to `nr_dxcc_seed.json`. The
+  shell script and its output were a vestige of an older workflow.
+  Removed: `~/fetch_clublog.sh`, `~/bin/`, the orphaned
+  `nr_dxcc_live.json`. Cron entry checked and absent. Club Log
+  password + API key rotated since they had been pasted in plaintext
+  during the audit.
+
+CLAUDE.md updates:
+- "Pi-side scripts already in this repo" table extended to include
+  `power_spe_on.py` and `enable_file_context.sh`.
+- BACKUP section's tar glob trimmed: `fetch_clublog.sh` and
+  `enable_file_context.sh` no longer listed (one's deleted, one's now
+  in repo). The `power_spe_on.py` line drops the "not yet checked
+  into repo" annotation.
+
+HANDOVER follow-up #9 closed (the deferred Pi-side script migration).
 
 ---
 

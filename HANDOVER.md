@@ -37,6 +37,7 @@
 | 05-09 | LP-700 → WS gateway | [VU3ESV/LP-700-Server](https://github.com/VU3ESV/LP-700-Server) running as `lp700-server.service` on Pi @ `:8089`. Node-RED LP-700 tab migrated from direct `@gdziuba/node-red-usbhid` to a websocket-client of the gateway. Tab renamed `LP-700-HID ws`, trimmed 25→18 nodes. `LP State Aggregator` + `LP-700 Panel` + button router kept; `LP Dice and Slice`, `Poll Meter Values`, HID config, all polling injects + raw-buffer debug deleted. Buttons now emit JSON `{type:'command', action:'channel_step'\|'range_step'}` to ws-out. The 7 verb-test inject buttons from VU3ESV's example flow kept on canvas as testing affordances. Multi-client unlocked — Mac SwiftUI app (TODO #12) can subscribe in parallel. Post-deploy: aggregator was reading `msg.power_avg` (legacy KD4Z shape) instead of `msg.payload.power_avg` (Reshape output) → dashboard stuck at last cached values; fixed in 08c907f. |
 | 05-09 | LICENSE | Added MIT LICENSE + README badge. Third-party note covers VU3ESV gateway nodes embedded in flows.json (upstream unlicensed, retained terms). |
 | 05-09 | Pi-side scripts checked in | `rpi_agent.py` (HTTP reboot/shutdown agent), `monitor.sh` (MQTT telemetry cron), `rpi-agent.service` (systemd unit). Discovered during a CLAUDE.md audit that the agent doc was overstating its job — it's HTTP-only; telemetry comes from `monitor.sh` via per-minute crontab. CLAUDE.md split into separate "HTTP control agent" + "Telemetry publisher" subsections with copy/paste install commands. Backup section + new "Pi-side scripts in this repo" table added. |
+| 05-09 | More Pi-side scripts in | `power_spe_on.py` (SPE Expert 1.5 KFA power-on FTDI helper) added to repo. `enable_file_context.sh` was already tracked (predated my audit). `fetch_clublog.sh` deleted from the Pi entirely — it was an old artifact whose `nr_dxcc_live.json` output is referenced by zero nodes in flows.json (verified). Live DXCC fetch happens in-flow via `Build Club Log API Request` → `Fetch All Modes + Parse` → `nr_dxcc_seed.json`. Club Log password + API key rotated since they had been pasted in plaintext. |
 
 ---
 
@@ -69,7 +70,6 @@
 | 6 | Mac SwiftUI app scaffold | Per CLAUDE.md TODO #12 — not started. Path now `~/projects/vu2cpl-shack-app/` (was `~/Documents/...`) |
 | 7 | Blitzortung real-time integration | Catches strikes Open-Meteo's 13 km grid resolution misses. Parser Cases 2/3 already in place (binary/string TCP), source label hardcoded `'Blitzortung'`. Just need a TCP-in node feeding Parse Strike |
 | 8 | DXCC backlog (pending #6–11 in CLAUDE.md) | Filter persistence, separate CW/Ph/Data fetches, non-project-folder path support, README+PDF, Club Log API ban verification, daily 02:00 inject wiring |
-| 9 | Check in remaining Pi-side scripts | `power_spe_on.py`, `fetch_clublog.sh`, `enable_file_context.sh` are at `/home/vu2cpl/` on the Pi but not yet in the repo. SCP to the Mac, place at repo root, document purpose, check in. (Pattern matches `rpi_agent.py` / `monitor.sh` already done 2026-05-09.) |
 
 ---
 
