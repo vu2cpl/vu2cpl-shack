@@ -357,12 +357,54 @@ Weather data to Header template (`eee1a8b8552aa21f`): plain `wxData` object (no 
 - CSV logging enabled
 
 ### RPi Fleet Monitor
-- Telemetry topics: `rpi/<hostname>/{cpu,temp,mem,disk,uptime,ip,status}`
-- Alerts: CPU >90%, Temp >75°C, Mem >90%, Disk >90%
-- HTTP agent setup per Pi:
-  1. Deploy `rpi_agent.py` + systemd service at port 7799
-  2. Add sudoers: `vu2cpl ALL=(ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown`
-  3. Add to `httpDevices` in "Route CMD: HTTP or MQTT" node
+
+Per-Pi setup splits into **two independent components** — one for control,
+one for telemetry. Both check into this repo (root level).
+
+- **Telemetry topics** (published by `monitor.sh`):
+  `rpi/<hostname>/{cpu,temp,mem,disk,uptime,ip,status}`
+- **Alerts** (in Node-RED flow): CPU >90%, Temp >75°C, Mem >90%, Disk >90%
+
+#### 1. HTTP control agent — `rpi_agent.py`
+
+Listens on `:7799` for `POST /reboot` and `POST /shutdown`. Pure stdlib;
+no telemetry, no MQTT. Runs as systemd service.
+
+```bash
+# On the new Pi:
+sudo cp rpi_agent.py /home/vu2cpl/
+sudo cp rpi-agent.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now rpi-agent
+# Sudoers (one-time): allow vu2cpl to reboot/shutdown without password
+echo 'vu2cpl ALL=(ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown' | \
+  sudo tee /etc/sudoers.d/rpi-agent
+sudo chmod 440 /etc/sudoers.d/rpi-agent
+```
+
+Then add the host to `httpDevices` in the "Route CMD: HTTP or MQTT"
+node (`a0695975fec84e2c`).
+
+#### 2. Telemetry publisher — `monitor.sh`
+
+Reads CPU / mem / temp / disk / uptime / IP and `mosquitto_pub`s each as
+a separate topic. Cron-driven, every minute, from the user's crontab.
+
+```bash
+# On the new Pi:
+sudo cp monitor.sh /home/vu2cpl/
+sudo chmod +x /home/vu2cpl/monitor.sh
+# Confirm mosquitto-clients is installed for mosquitto_pub:
+sudo apt install -y mosquitto-clients
+# Append to user crontab (`crontab -e` as vu2cpl):
+* * * * *  /home/vu2cpl/monitor.sh
+```
+
+#### Home Assistant Pi (special case)
+
+HA Pi (`HassPi`) uses neither script. HA-side automation publishes the
+same `rpi/HassPi/*` topics directly via HA's `mqtt.publish` service every
+30 s. No Node-RED flow changes needed for HA Pi onboarding.
 
 ---
 
@@ -507,7 +549,9 @@ tar -czf ~/nr_backup_$TS.tar.gz \
   ~/.node-red/projects/vu2cpl-shack/flows.json \
   ~/.node-red/projects/vu2cpl-shack/nr_dxcc_*.json \
   ~/.node-red/settings.js \
-  ~/power_spe_on.py
+  ~/power_spe_on.py \
+  ~/fetch_clublog.sh \
+  ~/enable_file_context.sh
 ```
 
 Critical files:
@@ -516,7 +560,19 @@ Critical files:
 - `nr_dxcc_seed.json` — worked data (update after QSOs)
 - `nr_dxcc_modes.json` — mode data
 - `~/.node-red/settings.js`
-- `~/power_spe_on.py`
+- `~/power_spe_on.py` *(not yet checked into repo — see HANDOVER follow-ups)*
+- `~/fetch_clublog.sh` *(not yet checked into repo)*
+- `~/enable_file_context.sh` *(not yet checked into repo)*
+
+Pi-side scripts already in this repo (canonical paths shown):
+
+| Script in repo | Deployed path on Pi | Purpose |
+|----------------|---------------------|---------|
+| `as3935_mqtt.py` | `/home/vu2cpl/as3935_mqtt.py` | AS3935 chip daemon — `as3935.service` |
+| `as3935_tune.py` | `/home/vu2cpl/as3935_tune.py` | LC-tank TUN_CAP sweep helper |
+| `rpi_agent.py` | `/home/vu2cpl/rpi_agent.py` | HTTP reboot/shutdown — `rpi-agent.service` |
+| `rpi-agent.service` | `/etc/systemd/system/rpi-agent.service` | systemd unit for rpi_agent |
+| `monitor.sh` | `/home/vu2cpl/monitor.sh` | MQTT telemetry cron (every minute) |
 
 ---
 

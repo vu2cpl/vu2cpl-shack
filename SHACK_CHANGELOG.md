@@ -877,6 +877,60 @@ the new payload shape.
 
 ---
 
+### Pi-side scripts — check in `rpi_agent.py` + `monitor.sh` + systemd unit
+
+Discovered during a CLAUDE.md audit that the "RPi Fleet Monitor" docs
+described `rpi_agent.py` as both the HTTP reboot/shutdown handler AND
+the MQTT telemetry publisher. In reality the script is HTTP-only —
+telemetry comes from a separate shell script (`monitor.sh`) running
+once a minute via the `vu2cpl` user crontab. Both scripts existed
+only on the Pis themselves, not in this repo. If a Pi ever needed
+re-imaging the operational glue would have been lost.
+
+#### Files added (root level)
+
+- **`rpi_agent.py`** — 21-line stdlib-only `BaseHTTPRequestHandler`
+  bound to `:7799`. Two routes: `POST /reboot` and `POST /shutdown`,
+  each shells out to `sudo reboot` / `sudo shutdown -h now`. Returns
+  `{"status": "rebooting"}` JSON 200 then forks the syscall.
+- **`monitor.sh`** — bash, executable. Reads CPU (`top -bn1`), mem
+  (`free`), temp (`/sys/class/thermal/thermal_zone0`), disk (`df /`),
+  uptime (`uptime -p` with `/proc/uptime` fallback), IP (`hostname -I`
+  first non-blank). Publishes each as a separate MQTT topic
+  `rpi/<hostname>/{cpu,mem,temp,disk,uptime,ip,status}` to broker
+  `192.168.1.169` via `mosquitto_pub`.
+- **`rpi-agent.service`** — systemd unit. Runs as user `vu2cpl`,
+  `Restart=always`, `After=network.target`. Standard install path
+  `/etc/systemd/system/rpi-agent.service`.
+
+#### CLAUDE.md changes
+
+- Replaced the 7-line "RPi Fleet Monitor" subsection with a split
+  "HTTP control agent" + "Telemetry publisher" + "Home Assistant Pi
+  (special case)" structure. Each agent gets explicit per-Pi install
+  commands (cp, daemon-reload, enable --now, sudoers, crontab line).
+- Backup section: extended `tar -czf` glob to include the not-yet-
+  checked-in scripts (`fetch_clublog.sh`, `enable_file_context.sh`,
+  `power_spe_on.py`) flagged with HANDOVER follow-up reference.
+- Added a "Pi-side scripts already in this repo" table mapping each
+  repo file to its canonical deployment path under `/home/vu2cpl/`.
+
+#### Sudoers entry confirmed
+
+```
+vu2cpl ALL=(ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown
+```
+
+documented at `/etc/sudoers.d/rpi-agent` in the install commands.
+
+#### Still pending — see HANDOVER follow-up #9
+
+`power_spe_on.py`, `fetch_clublog.sh`, `enable_file_context.sh` are
+similarly Pi-only. Same pattern applies: `scp` to Mac, place at repo
+root, document, check in.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:

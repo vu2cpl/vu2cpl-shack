@@ -2,14 +2,14 @@
 
 **Period:** 2026-05-01 → 2026-05-09
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
-**Last commit at handover:** `c449c49`
+**Last commit at handover:** `<bumped on each cdp>`
 
 ---
 
 ## Repo state
 
 ```
-~/projects/vu2cpl-shack    main @ c449c49   clean, in sync with origin
+~/projects/vu2cpl-shack    main   clean, in sync with origin
 ```
 
 `.DS_Store` is the only untracked thing — ignore.
@@ -34,7 +34,9 @@
 | 05-08 | Lightning UI → Shack tab | Lightning Detect dashboard tab deleted. Master Dashboard moved to a new `Lightning Protection` group on Shack tab (width 12, order 9). Internal header card + weather card removed (Shack tab supplies them). Nearest Strike gauge removed. Reconnect ↺ buttons grew labels (`↺ RECONNECT`) and match switch height. |
 | 05-08 | Bypass switch | New vertical `BYPASS` button between ANTENNA and RADIO. 120-min countdown, auto-expires, never survives Node-RED restart. While ON: yellow banner + amber strike alerts; Trigger Disconnect early-outs (no MQTT off, no reconnect timer). Activation force-reconnects ant + radio. New nodes: http-in `/lightning/bypass` + `Bypass Handler` function (3 outputs) + http response. `flow.bypass_active` / `flow.bypass_expires_at` reset by Init Defaults; replayed every 30 s by `Replay on lightning tab`. Verified end-to-end during a moderate-CAPE day. |
 | 05-08 | Last-activity recap | Old `✔ No recent activity` filler text replaced. Boot: `⏱ Awaiting first event`. After 30 s of no new alert: muted `⏱ Last: <previous text> · Nm ago` with auto-refreshing relative time. Banner is always visible — no more lying or auto-hide. |
-| 05-09 | LP-700 → WS gateway | [VU3ESV/LP-700-Server](https://github.com/VU3ESV/LP-700-Server) running as `lp700-server.service` on Pi @ `:8089`. Node-RED LP-700 tab migrated from direct `@gdziuba/node-red-usbhid` to a websocket-client of the gateway. Tab renamed `LP-700-HID ws`, trimmed 25→18 nodes. `LP State Aggregator` + `LP-700 Panel` + button router kept; `LP Dice and Slice`, `Poll Meter Values`, HID config, all polling injects + raw-buffer debug deleted. Buttons now emit JSON `{type:'command', action:'channel_step'\|'range_step'}` to ws-out. The 7 verb-test inject buttons from VU3ESV's example flow kept on canvas as testing affordances. Multi-client unlocked — Mac SwiftUI app (TODO #12) can subscribe in parallel. |
+| 05-09 | LP-700 → WS gateway | [VU3ESV/LP-700-Server](https://github.com/VU3ESV/LP-700-Server) running as `lp700-server.service` on Pi @ `:8089`. Node-RED LP-700 tab migrated from direct `@gdziuba/node-red-usbhid` to a websocket-client of the gateway. Tab renamed `LP-700-HID ws`, trimmed 25→18 nodes. `LP State Aggregator` + `LP-700 Panel` + button router kept; `LP Dice and Slice`, `Poll Meter Values`, HID config, all polling injects + raw-buffer debug deleted. Buttons now emit JSON `{type:'command', action:'channel_step'\|'range_step'}` to ws-out. The 7 verb-test inject buttons from VU3ESV's example flow kept on canvas as testing affordances. Multi-client unlocked — Mac SwiftUI app (TODO #12) can subscribe in parallel. Post-deploy: aggregator was reading `msg.power_avg` (legacy KD4Z shape) instead of `msg.payload.power_avg` (Reshape output) → dashboard stuck at last cached values; fixed in 08c907f. |
+| 05-09 | LICENSE | Added MIT LICENSE + README badge. Third-party note covers VU3ESV gateway nodes embedded in flows.json (upstream unlicensed, retained terms). |
+| 05-09 | Pi-side scripts checked in | `rpi_agent.py` (HTTP reboot/shutdown agent), `monitor.sh` (MQTT telemetry cron), `rpi-agent.service` (systemd unit). Discovered during a CLAUDE.md audit that the agent doc was overstating its job — it's HTTP-only; telemetry comes from `monitor.sh` via per-minute crontab. CLAUDE.md split into separate "HTTP control agent" + "Telemetry publisher" subsections with copy/paste install commands. Backup section + new "Pi-side scripts in this repo" table added. |
 
 ---
 
@@ -67,6 +69,7 @@
 | 6 | Mac SwiftUI app scaffold | Per CLAUDE.md TODO #12 — not started. Path now `~/projects/vu2cpl-shack-app/` (was `~/Documents/...`) |
 | 7 | Blitzortung real-time integration | Catches strikes Open-Meteo's 13 km grid resolution misses. Parser Cases 2/3 already in place (binary/string TCP), source label hardcoded `'Blitzortung'`. Just need a TCP-in node feeding Parse Strike |
 | 8 | DXCC backlog (pending #6–11 in CLAUDE.md) | Filter persistence, separate CW/Ph/Data fetches, non-project-folder path support, README+PDF, Club Log API ban verification, daily 02:00 inject wiring |
+| 9 | Check in remaining Pi-side scripts | `power_spe_on.py`, `fetch_clublog.sh`, `enable_file_context.sh` are at `/home/vu2cpl/` on the Pi but not yet in the repo. SCP to the Mac, place at repo root, document purpose, check in. (Pattern matches `rpi_agent.py` / `monitor.sh` already done 2026-05-09.) |
 
 ---
 
@@ -115,6 +118,10 @@ Critical Node-RED IDs (per CLAUDE.md):
 ## Recent commit log (for context)
 
 ```
+9bb9631 Add MIT LICENSE + README badge
+bb7415b SHACK_CHANGELOG: 2026-05-09 footnote — LP State Aggregator payload-shape fix
+08c907f LP-700: fix LP State Aggregator to read msg.payload (new Reshape shape)
+28e8426 SHACK_CHANGELOG + HANDOVER + CLAUDE.md: 2026-05-09 — LP-700 → WebSocket gateway
 c449c49 LP-700: switch from direct HID to lp700-server WebSocket gateway
 b3261ba SHACK_CHANGELOG + HANDOVER: 2026-05-08 — Lightning UI on Shack tab + bypass + last-activity recap
 6a03506 Lightning: integrate to Shack tab + bypass + last-activity recap

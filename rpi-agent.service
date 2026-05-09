@@ -1,0 +1,11 @@
+[Unit]
+Description=RPi Agent
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /home/vu2cpl/rpi_agent.py
+Restart=always
+User=vu2cpl
+
+[Install]
+WantedBy=multi-user.target
