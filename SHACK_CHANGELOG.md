@@ -960,6 +960,35 @@ HANDOVER follow-up #9 closed (the deferred Pi-side script migration).
 
 ---
 
+### `DEPLOY_PI.md` — full Pi onboarding runbook
+
+Drafted while preparing to deploy the agent + telemetry to the two
+remaining Pis (and eventually the HA Pi). The CLAUDE.md "RPi Fleet
+Monitor" subsection has the right copy-paste blocks but lacks
+verification, troubleshooting, and the special-cases / removal flows.
+
+`DEPLOY_PI.md` covers the full per-Pi lifecycle:
+1. Prerequisites (SSH, hostname uniqueness, broker reachability)
+2. `scp` the three files from the Mac repo
+3. Install at canonical paths with the `sudo cp + chown` ownership
+   gotcha (the 2026-05-07 quirk) called out
+4. mosquitto-clients install + smoke-test telemetry with
+   `mosquitto_sub`
+5. Idempotent crontab append (`grep -v 'monitor.sh'` first)
+6. `/etc/sudoers.d/rpi-agent` with `visudo -c` syntax check
+7. `systemctl enable --now rpi-agent` + `curl /probe` smoke-test
+8. Add hostname to `httpDevices` in Node-RED → deploy → `nrsave`
+9. Dashboard verification
+
+Plus: HA Pi special case (HA-side automation, not script-based),
+troubleshooting table (8 common failure modes), and a clean
+decommission flow.
+
+CLAUDE.md gets a one-line cross-reference at the top of the RPi
+Fleet Monitor section pointing to the new doc.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:

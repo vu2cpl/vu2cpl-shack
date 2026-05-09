@@ -358,6 +358,9 @@ Weather data to Header template (`eee1a8b8552aa21f`): plain `wxData` object (no 
 
 ### RPi Fleet Monitor
 
+> **Full per-Pi onboarding runbook** with verification + troubleshooting:
+> see [`DEPLOY_PI.md`](DEPLOY_PI.md). The notes below are quick-reference.
+
 Per-Pi setup splits into **two independent components** — one for control,
 one for telemetry. Both check into this repo (root level).
 
