@@ -989,6 +989,146 @@ Fleet Monitor section pointing to the new doc.
 
 ---
 
+### Pi GPS NTP Server — new standalone repo, stratum 1 in service
+
+Standalone repo: [vu2cpl/pi-gps-ntp-server](https://github.com/vu2cpl/pi-gps-ntp-server)
+
+The shack now has a dedicated GPS-disciplined NTP server. A previously
+unused Raspberry Pi 3B was repurposed as `gpsntp.local` (192.168.1.158)
+running stratum-1 NTP for the LAN.
+
+#### Pivot from the original ESP32 plan
+
+The project directory was originally `~/projects/ESP32 GPS NTP/` and
+scoped as an embedded firmware build (ESP32 + NEO-M8N + custom NTP
+code). After re-evaluation the path was changed to a Raspberry Pi
+running chrony + gpsd + kernel PPS. Reasoning recorded in detail in the
+new repo's `HANDOVER.md`; short version:
+
+- chrony is what most public stratum-1 servers actually run; ESP32
+  hobby code has to re-implement leap seconds, holdover, multi-source
+  comparison, and stratum honesty — chrony already does this correctly.
+- Linux kernel timestamps NTP packets at NIC level; ESP32 lwIP does
+  this in userspace. Client-visible accuracy ends up better on the Pi.
+- Wired Ethernet by default vs Wi-Fi NTP jitter swamping ESP32's local
+  PPS lock.
+- Debug with SSH + `chronyc` + `gpsmon` rather than serial console +
+  logic analyzer.
+
+Local directory renamed `~/projects/ESP32 GPS NTP/` →
+`~/projects/Pi GPS NTP Server/`.
+
+#### How the GPS is sourced
+
+No new GPS hardware was purchased. The existing **QRP Labs QLG1**
+(MediaTek chipset, 10 ns RMS PPS) that already feeds the U3S beacon
+was tapped via its unused **6-way connector**. The U3S retains its
+own connection on the 4-way header and is electrically undisturbed.
+
+QLG1 outputs are 5 V (74ACT08 buffers from +5 V rail). Pi GPIO is not
+5 V tolerant. Each tapped signal (TXD, PPS) goes through a
+2.2 kΩ + 3.3 kΩ voltage divider that drops 5 V → 3.0 V — comfortably
+above the Pi's input-high threshold (~2.3 V) and well below the 3.6 V
+absolute max. Three wires from QLG1 6-way pins 3 (TXD), 5 (1PPS),
+6 (GND) to Pi physical pins 10 (GPIO15 / UART RX), 12 (GPIO18),
+6 (GND).
+
+#### Software stack
+
+- **Pi OS Lite, 64-bit, Trixie** (Bookworm successor — current Imager
+  default). Headless install via Imager OS Customisation with hostname
+  `gpsntp` and SSH public-key auth.
+- `/boot/firmware/config.txt` adds: `enable_uart=1`,
+  `dtoverlay=disable-bt` (frees PL011 from BT for GPIO14/15), and
+  `dtoverlay=pps-gpio,gpiopin=18`.
+- Serial login console disabled via `raspi-config`.
+- **`gpsd 3.25`** parsing NMEA from `/dev/serial0`, exporting PPS via
+  SHM-2. `GPSD_OPTIONS="-n"` so it polls without waiting for clients
+  (critical — without this chrony never gets data).
+- **Kernel PPS** via `pps-gpio` overlay on GPIO18 → `/dev/pps0`.
+- **chrony** with:
+  - `refclock SHM 0 refid NMEA offset 0.0 delay 0.2 noselect` —
+    gpsd's coarse second-of-time, used only to label which integer
+    second the PPS edge belongs to.
+  - `refclock PPS /dev/pps0 lock NMEA refid PPS` — kernel PPS device,
+    locked to NMEA's second-numbering. The actual time source.
+  - `allow 192.168.1.0/24` and `allow fd00::/8` (IPv6 ULA, so
+    `sntp gpsntp.local` from the Mac doesn't get a "recv failure" on
+    its first IPv6 attempt before falling back to IPv4).
+
+#### Achieved performance (first lock)
+
+| Metric | Value |
+|--------|-------|
+| Reference ID | PPS |
+| Stratum | 1 |
+| PPS error | ±152 ns |
+| System clock vs GPS truth | 35 ns slow |
+| Skew | 0.009 ppm |
+| Root dispersion | 18 µs |
+
+Mac (`MiniM4-Pro`) configured as client via
+`sudo systemsetup -setnetworktimeserver gpsntp.local`. `timed`
+disciplines the Mac continuously; observed offset 1–4 ms on the LAN
+(limited by macOS scheduling jitter, not the Pi or the network).
+
+SkimServer Mac, the U3S, and any other shack PCs all gain a precise,
+LAN-local, internet-independent time source by way of the Mac (or by
+pointing them at `gpsntp.local` directly).
+
+#### Repo contents
+
+- `BUILD.md` — full step-by-step procedure with per-stage verification
+  and a detailed troubleshooting section.
+- `HANDOVER.md` — context, decisions made, ops-checks block for
+  future diagnosis.
+- `README.md` — landing page with perf headlines and the
+  why-Pi-not-ESP32 case.
+- `LICENSE` — MIT, © 2026 Manoj Kumar R (VU2CPL).
+
+#### Known risk parked
+
+When the U3S transmits, the QLG1 sits next to the transmitter and may
+RFI-desensitize. This is a pre-existing condition of the U3S+QLG1
+combination; the new NTP server is downstream of it. If `chronyc
+tracking` shows fix-loss during transmissions over the next week or
+two, fall back to a dedicated NEO-M8N + antenna for the Pi (path
+documented in `pi-gps-ntp-server/HANDOVER.md`). HANDOVER follow-up #10.
+
+---
+
+### gpsntp — first Pi onboarded via `DEPLOY_PI.md`
+
+Companion to the GPS NTP server above, and the first real-world
+exercise of the new `DEPLOY_PI.md` runbook. The `gpsntp` Pi was added
+to the RPi Fleet Monitor agent set:
+
+- `rpi_agent.py` deployed to `/home/vu2cpl/`. Active on :7799,
+  HTTP 404 probe verified.
+- `monitor.sh` deployed to `/home/vu2cpl/`. Per-minute crontab line
+  `* * * * *  /home/vu2cpl/monitor.sh` publishes 7 MQTT topics
+  (`cpu/mem/temp/disk/uptime/ip/status`) under `rpi/gpsntp/` to broker
+  @ 192.168.1.169.
+- `rpi-agent.service` deployed to `/etc/systemd/system/`. Enabled +
+  active.
+- Sudoers entry `/etc/sudoers.d/rpi-agent`:
+  `vu2cpl ALL=(ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown`.
+
+Smoke test (`mosquitto_sub -h 192.168.1.169 -t "rpi/gpsntp/#" -v -C 7`)
+caught all 7 messages cleanly. Important note for `DEPLOY_PI.md`
+follow-up: `monitor.sh` publishes without `-r` (retain), so the
+smoke-test subscriber must be subscribed *before* `monitor.sh` runs —
+otherwise the messages fly past the broker and the sub hangs waiting
+for retained data that isn't there. Worth folding into the runbook so
+the next Pi onboarding doesn't get tripped by it.
+
+The Node-RED `httpDevices` map (function `a0695975fec84e2c`) still
+needs `'gpsntp':'http://gpsntp.local:7799'` added so the
+Reboot/Shutdown buttons surface for the new host. Tracked as HANDOVER
+follow-up #9.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:
