@@ -3,6 +3,8 @@
 Node-RED Shack Automation — Reference Document  
 VU2CPL · Manoj · Bengaluru · MK83TE · Licensed 1993 · 9× BDXCC
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 ---
 
 ## Overview
