@@ -1982,6 +1982,52 @@ unbold.
 
 ---
 
+### DXCC — alert-table dedup on `call+band+mode+alertType`
+
+**Tab:** DXCC Tracker (`d110d176c0aad308`)
+**Node:** `Format Alert for Dashboard Table` (`2286f0a512733e92`)
+**Closes:** HANDOVER follow-up #15
+
+The 60 s dedup in `Login + Parse + Dedup` catches back-to-back
+duplicate cluster spots, but identical spots arriving 60+ s apart
+(e.g. XE1RK on 15M USB twice within ~75 s — observed today on the
+dashboard) re-fired alerts and the alert table rendered the same
+NEW MODE / NEW BAND row twice within minutes. Visual noise; no
+functional impact.
+
+Added a second-tier dedup at the alert-table level. The existing
+TTL-expiry filter on `alerts` was extended in the same pass:
+
+```js
+alerts = alerts.filter(function (r) {
+    if ((now - (r.ts || 0)) >= ttlMs) return false;
+    if (r.call      === row.call      &&
+        r.band      === row.band      &&
+        r.mode      === row.mode      &&
+        r.alertType === row.alertType) return false;
+    return true;
+});
+alerts.unshift(row);
+```
+
+Net behaviour: at most one row per `(call, band, mode, alertType)`
+combination while inside the spot-lifetime TTL window. New
+sighting replaces the old row at the top — its timestamp / freq /
+spotter / `time` field reflect the latest hit, so the operator
+always sees current info.
+
+This complements the upstream 60 s spot dedup (per-spot
+suppression) without conflicting with it. The 60 s window is
+short enough to catch packet duplicates from the cluster network;
+the alert-table window is the configured spot-lifetime (default
+20 min) so alerts don't pile up when the same DX is repeatedly
+spotted by different spotters.
+
+No `REBUILD_PI.md` update needed — flows.json change, restored via
+git clone.
+
+---
+
 ### HANDOVER #3 — Open-Meteo dashboard placeholder — closed as obsolete
 
 The follow-up referred to the `OPEN-METEO MONITOR · Waiting for data…`
