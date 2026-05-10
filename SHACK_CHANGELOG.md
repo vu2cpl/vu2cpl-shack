@@ -3,7 +3,8 @@
 Fixes and changes to non-DXCC tabs of the Node-RED shack automation
 (SPE amplifier, Power Control, Solar Conditions, Lightning, Rotator, etc.).
 
-The DXCC Tracker has its own doc: see `README.md` / `DXCC_Tracker_README.pdf`.
+The DXCC Tracker has its own doc: see `DXCC.md` / `DXCC_Tracker_README.pdf`.
+For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
@@ -1310,6 +1311,33 @@ Net for this audit pass: -5 nodes, several dead wires removed,
 duplicated payload-construction merged, naming brought into line
 with current architecture. No behavioral changes for the operator
 beyond consistency (AS3935 distant strikes now banner-render).
+
+---
+
+### Documentation — README split into umbrella + DXCC reference
+
+The repo's `README.md` predated everything except DXCC and was
+effectively the DXCC reference doc with a station footer. Reflowed:
+
+- **`README.md`** — new umbrella overview. Hardware table, an
+  11-subsystem summary (Lightning / SPE / FlexRadio / Power / Solar /
+  LP-700 / Rotor / DXCC / RPi Fleet / Internet & Network / RBN
+  Skimmer), a repo-layout file tree, and a documentation map
+  pointing at each detailed reference. ~290 lines.
+- **`DXCC.md`** — new file. The previous README content moved here
+  verbatim (retitled and reframed as a subsystem reference, with a
+  link back to `README.md`). All node IDs, alert types, startup
+  sequence, persistence logic preserved.
+- **`DXCC_Tracker_README.pdf`** — regenerated from `DXCC.md` instead
+  of `README.md`. Same name, same role.
+- **CLAUDE.md rule #3** updated: the "regenerate the PDF when you
+  edit the doc" pairing now refers to `DXCC.md` ↔
+  `DXCC_Tracker_README.pdf`, not the old README pairing.
+- Header line in this changelog updated to point at `DXCC.md`.
+
+Future per-subsystem deep-dive docs (e.g. a hypothetical
+`LIGHTNING.md`) can now slot in cleanly without bloating the front
+page on GitHub.
 
 ---
 

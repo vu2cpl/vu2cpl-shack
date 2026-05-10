@@ -1,231 +1,236 @@
-# VU2CPL DXCC Tracker v7
-
-Node-RED Shack Automation — Reference Document  
-VU2CPL · Manoj · Bengaluru · MK83TE · Licensed 1993 · 9× BDXCC
+# VU2CPL Shack Automation
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+> Node-RED flows + supporting scripts that automate the VU2CPL amateur
+> radio shack: lightning protection, power control, radio + amplifier
+> telemetry, solar conditions, DXCC alerting, and Pi fleet monitoring.
+
+VU2CPL · Manoj · Bengaluru · MK83TE · Licensed 1993 · 9× BDXCC
 
 ---
 
 ## Overview
 
-The DXCC Tracker monitors DX cluster spots in real-time against Club Log worked data and fires alerts for new DXCC entities, new bands, and new modes. All processing runs inside Node-RED on a Raspberry Pi — no external Python scripts required.
+A single Node-RED instance on a Raspberry Pi 4B (`noderedpi4`,
+`192.168.1.169`) hosts 11 flow tabs and one consolidated Shack
+dashboard. Hardware talks to Node-RED via:
 
-The flow connects to DX clusters via TCP, parses spots, resolves DXCC prefix via cty.xml, classifies against worked/confirmed data from Club Log, and sends alerts to the Node-RED dashboard, MQTT, FlexRadio, and Telegram.
+- **MQTT** (Mosquitto on the same Pi) — Tasmota power outlets, AS3935
+  lightning sensor, RPi telemetry
+- **Direct TCP/UDP** — FlexRadio (4992), DX clusters
+- **Serial** — SPE amplifier, Rotor-EZ
+- **WebSocket** — LP-700 power/SWR meter (via the
+  [`lp700-server`](https://github.com/VU3ESV/LP-700-Server) gateway)
+- **HTTP** — Open-Meteo, NOAA SWPC, Club Log, RPi fleet agent
 
----
-
-## Architecture
-
-DX Cluster TCP → Login+Parse+Dedup → DXCC Prefix Lookup → Alert Classify → Dashboard + MQTT + FlexRadio + Telegram
-
-- cty.xml downloaded and parsed inside Node-RED (HTTP + zlib decompression)
-- Club Log API fetched directly via https lib (modes 0–3, `deleted=0`)
-- Dashboard controls use `fetch()` + HTTP-in nodes — `send()` not used
-- Filter state persists via localStorage (browser) + Node-RED file context store
-
----
-
-## Confirmed vs Unconfirmed Logic
-
-Club Log matrix values (undocumented):
-
-| Value | Meaning |
-|-------|---------|
-| 0 | Not worked |
-| 1 | Worked, no QSL |
-| 2 | Confirmed — LoTW or paper QSL |
-| 3 | Confirmed — eQSL only |
-
-The tracker uses `bands[mk] === 2` to classify confirmed slots. eQSL-only confirmations are intentionally excluded — matches ARRL DXCC award criteria.
-
-The `parseMatrix` function uses an inverted initialisation pattern:
-
-```javascript
-ew[adif][band] = ew[adif][band] || {confirmed:true, unconfirmed:true};
-if (conf) ew[adif][band].confirmed   = false;  // value===2 clears confirmed flag
-else      ew[adif][band].unconfirmed = false;  // others clear unconfirmed flag
-```
+The dashboard runs at `http://192.168.1.169:1880/ui` and is dark-themed
+(base `#097479`, bg `#111111`).
 
 ---
 
-## Alert Types
-
-Each spot can generate up to 2 independent alerts. NEW_DXCC is exclusive.
-
-| Alert | Colour | Condition |
-|-------|--------|-----------|
-| NEW DXCC | Red #f85149 | Entity never worked |
-| BAND | Blue #58a6ff | Band never worked |
-| ? BAND | Blue dim #2d6aad | Band worked but not LoTW/paper confirmed |
-| MODE | Amber #e3b341 | Mode never worked |
-| ? MODE | Amber dim #9a7030 | Mode worked but not LoTW/paper confirmed |
-
-`DXCC Prefix Lookup + Alert Classify` processes all alert types independently and fires one `node.send()` per alert. A spot can generate both a BAND and MODE alert simultaneously.
-
----
-
-## Cluster Status Panel
-
-Header bar above the main layout shows live status for all 4 DX cluster sources.
-
-| Source | Topic key | Host |
-|--------|-----------|------|
-| VU2CPL | cluster3 | vu2cpl.ddns.net:7550 |
-| VU2OY | cluster2 | 103.153.92.118:7550 |
-| VE7CC | cluster4 | ve7cc.net:23 |
-| N2WQ | cluster1 | cluster.n2wq.com:8300 |
-
-Each card shows source name, spot count, and last spot time.
-
-| Colour | Condition |
-|--------|-----------|
-| Green | Last spot within 5 minutes |
-| Amber | Last spot 5–15 minutes ago |
-| Red | No spot for >15 minutes or never seen |
-
-`Login + Parse + Dedup` updates `clusterStatus` flow variable on every valid spot (before dedup check). `Cluster Watchdog` inject (every 30s + on deploy) reads this and sends `{topic:'cluster_status'}` to the dashboard template.
-
----
-
-## HTTP Endpoints
-
-| Endpoint | Method | Function |
-|----------|--------|----------|
-| `/dxcc/filters` | POST | Save band/type/mode/TTL filters |
-| `/dxcc/refresh` | POST | Trigger Club Log re-fetch |
-| `/dxcc/clear` | POST | Clear alert table |
-| `/dxcc/blacklist-remove` | POST | Remove callsign (returns updated list) |
-| `/dxcc/blacklist-add` | POST | Add callsign (returns updated list) |
-| `/dxcc/stats` | GET | Return workedStats from flow context |
-| `/dxcc/blacklist` | GET | Return blacklist array from file |
-
-All POST endpoints: 2-output pattern (output 1 → downstream, output 2 → http response). GET endpoints return JSON directly.
-
----
-
-## Dashboard Features
-
-| Feature | Detail |
-|---------|--------|
-| Cluster status header | 4 source cards — name, spot count, last spot time |
-| Band filters | 160M–6M with All/HF/VHF presets |
-| Alert types | DXCC / BAND / ? BAND / MODE / ? MODE |
-| Mode filters | CW / Phone / Data |
-| Spot lifetime | Slider 5–60 min |
-| Block callsign | fetch POST /dxcc/blacklist-add |
-| Unblock | Click tag → fetch POST /dxcc/blacklist-remove |
-| Stats on load | GET /dxcc/stats on page init |
-| Blacklist on load | GET /dxcc/blacklist on page init |
-| Persistence | localStorage + Node-RED file context store |
-
----
-
-## Credentials — Edit Once
-
-Open the **Credentials** node and set:
-
-```javascript
-var cfg = {
-    cl_apikey   : 'YOUR_CLUBLOG_API_KEY',
-    cl_email    : 'your@email.com',
-    cl_password : 'your_clublog_password',
-    cl_callsign : 'YOUR_CALLSIGN',
-    tg_token    : 'YOUR_TELEGRAM_BOT_TOKEN',
-    tg_chat_id  : 'YOUR_CHAT_ID'
-};
-// Projects user:
-flow.set('cfg_flows_dir', os.homedir() + '/.node-red/projects/vu2cpl-shack');
-// Non-projects user:
-// flow.set('cfg_flows_dir', os.homedir() + '/.node-red');
-```
-
----
-
-## Club Log Data — Persistence & Daily Refresh
-
-`Fetch All Modes + Parse` saves to flow context RAM, file context store, and `nr_dxcc_seed.json` on every successful fetch.
-
-### Startup recovery sequence
-
-1. Bootstrap checks file store (fastest, survives reboot)
-2. File store empty → reads `nr_dxcc_seed.json` from `cfg_flows_dir`
-3. Fallback: `~/.node-red/nr_dxcc_seed.json`
-4. Club Log fetch fires at 12s → updates RAM and seed file
-
-### Failure handling
-
-| Scenario | Recovery |
-|----------|----------|
-| Club Log unreachable at startup | Retry at 90s |
-| Both fetches fail | Bootstrap uses file store / seed file |
-| Pi reboot | Bootstrap restores from file store instantly |
-| Data stale | Daily 02:00 refresh |
-
----
-
-## Startup Sequence
-
-| Step | Delay | Action |
-|------|-------|--------|
-| 1 | 0.5s | Credentials → set cfg_* variables |
-| 2 | 2s | Bootstrap → file store OR nr_dxcc_seed.json |
-| 3 | 3s | Load blacklist |
-| 4 | 5s | Load cty.xml → ~340 entities |
-| 5 | 12s | Fetch Club Log → modes 0–3 → dxccReady=true |
-| 6 | 90s | Retry Club Log if step 5 failed |
-| 7 | 02:00 | Daily re-fetch |
-
----
-
-## Files on Pi
-
-| File | Purpose |
-|------|---------|
-| `flows.json` | Main Node-RED flow (git tracked) |
-| `clublog_dxcc_tracker_v7.json` | DXCC tab export (synced on every commit) |
-| `nr_dxcc_seed.json` | Worked/confirmed seed |
-| `nr_dxcc_blacklist.json` | Blocked callsigns |
-| `README.md` | This document |
-| `DXCC_Tracker_README.pdf` | PDF version (always in sync) |
-| `enable_file_context.sh` | One-time file context store setup |
-
----
-
-## Standard Commit Sequence
-
-```bash
-cd ~/.node-red/projects/vu2cpl-shack
-python3 -c 'import json; d=json.load(open("flows.json")); v=[n for n in d if n.get("z")=="d110d176c0aad308" or n.get("id")=="d110d176c0aad308"]; json.dump(v,open("clublog_dxcc_tracker_v7.json","w"),indent=2); print(len(v),"nodes")'
-git add flows.json clublog_dxcc_tracker_v7.json README.md DXCC_Tracker_README.pdf
-git commit -m "v7: <description>"
-git push
-```
-
----
-
-## Technical Reference
-
-| Item | Value |
-|------|-------|
-| MQTT broker | 192.168.1.169:1883 |
-| FlexRadio | 192.168.1.148:4992 |
-| Telegram bot | @nrdxccbot |
-| Dedup window | 60s per callsign + frequency |
-| Club Log API | clublog.org/json_dxccchart.php |
-| Repo | github.com/vu2cpl/vu2cpl-shack |
-| Flow file | clublog_dxcc_tracker_v7.json |
-
----
-
-## Station
+## Hardware
 
 | Item | Detail |
 |------|--------|
 | Radio | FlexRadio FLEX-6600, RGO One, Icom IC-705 |
 | Amplifier | SPE Expert 1.5 KFA |
-| Antennas | Hex beam, 160m inverted-L, 6m LFA Yagi, Beverage/N6RK/K9AY receive |
+| Antennas | Hex beam, 160 m inverted-L, 6 m LFA Yagi, Beverage / N6RK / K9AY receive |
+| Power | 21 Tasmota-controlled outlets across 5 devices |
+| Power meter | Telepost LP-700 (USB HID, owned by `lp700-server` on the Pi) |
+| Rotator | Idiom Press Rotor-EZ |
+| Lightning | AS3935 sensor (I²C + IRQ on GPIO4) + Open-Meteo CAPE polling |
 | Awards | 9× BDXCC |
 | DXpeditions | VU7T, VU7MS (Lakshadweep), AT5P (Rameshwaram) |
 | Grid | MK83TE — Bengaluru |
 | Licensed | Since 1993 |
+
+---
+
+## Subsystems
+
+Eleven flow tabs, each handling one logical subsystem. Detailed node
+IDs, function bodies, and operational quirks live in
+[`CLAUDE.md`](CLAUDE.md). The summaries below are "what + why".
+
+### Lightning Antenna Protector
+
+Auto-disconnects the antenna and radio when lightning is detected
+within a configurable threshold (default 25 km). Two strike sources:
+
+- **Open-Meteo CAPE polling** every 5 min — synthesises a strike
+  distance from CAPE values and WMO weather codes (95/96/99 = thunderstorm).
+- **AS3935 chip** sensor on I²C — local ~40 km range (currently reduced
+  to a few km because the antenna is indoors; outdoor relocation pending).
+
+A vertical **BYPASS** switch on the dashboard suspends auto-disconnect
+for 120 minutes (force-reconnects ant + radio on activation, never
+survives a Node-RED restart). The alert banner always shows current
+state with a muted "Last: …" recap after 30 s of silence. Reconnect
+fires automatically after a configurable clear period (default 20 min)
+once the storm passes.
+
+UI lives on the main Shack tab as the *Lightning Protection* group
+(width 12, order 9).
+
+### SPE Amplifier
+
+Reads the SPE Expert 1.5 KFA over FTDI serial at 250 ms intervals
+(76-byte fixed frame, checksum + wraparound validation). Power-on
+requires a one-shot DTR/RTS toggle from `power_spe_on.py`. Output-power
+bar auto-scales between 500 W / 1000 W / 1500 W full scale based on
+the amp's selected level (L / M / H).
+
+### FlexRadio
+
+TCP API to the FLEX-6600 at `192.168.1.148:4992`, plus UDP discovery.
+Per-slice state (frequency, mode, RX/TX, meter levels) aggregated
+into `flowState` flow context and rendered into the FlexRadio panel.
+`clientHandleMap` is built from the discovery message so we can label
+slices with the GUI client station name.
+
+### Power Control (Tasmota fleet)
+
+5 Tasmota devices, 21 outlets total. Each outlet has its own dashboard
+tile; the panel template is fully driven from MQTT `stat/<device>/POWER<n>`
+state messages. Outlets default to `off` on page-load to avoid the
+"stale ON" bug; a 30 s poll loop pings every outlet across every
+device so the dashboard never lies for more than ~30 s.
+
+The 16 A master switch publishes energy data every 30 s for shack-wide
+consumption monitoring. The rotator outlet has a 60 s auto-off timer
+with idempotent retrigger guard + 10 s cooldown to prevent reset loops.
+
+### Solar Conditions
+
+Polls NOAA SWPC every 15 min for SFI, K-index (8 × 3-hour planetary
+Kp), A-index (planetary Ap), Scales (R/S/G), GOES X-ray flux, and
+prop.kc2g.com for MUF / foF2 at home grid. Three ui-level gauges +
+band-condition heatmap.
+
+### LP-700 Power/SWR Meter
+
+Migrated from direct USB-HID to a WebSocket client of the
+[VU3ESV/LP-700-Server](https://github.com/VU3ESV/LP-700-Server)
+gateway running on the same Pi. The gateway owns `/dev/hidraw*`;
+Node-RED, the embedded web client, and any future Mac SwiftUI app
+all subscribe to telemetry concurrently. Updates at ~25 Hz. Buttons
+emit JSON command verbs (`channel_step`, `range_step`, etc.).
+
+### Rotor
+
+Idiom Press Rotor-EZ on FTDI serial at 4800-8N1. Heading display +
+preset compass-rose buttons.
+
+### DXCC Tracker
+
+DX cluster spot monitoring with real-time alerts for new entities,
+bands, and modes against Club Log worked/confirmed data. Subscribes
+to four cluster sources (VU2CPL, VU2OY, VE7CC, N2WQ); resolves prefix
+via cty.xml; classifies against `bands[mk] === 2` confirmed criterion;
+fires alerts to dashboard, MQTT, FlexRadio, and Telegram.
+
+**Full reference:** [`DXCC.md`](DXCC.md) /
+[`DXCC_Tracker_README.pdf`](DXCC_Tracker_README.pdf).
+
+### RPi Fleet Monitor
+
+Subscribes to `rpi/<hostname>/{cpu,mem,temp,disk,uptime,ip,status}`
+MQTT topics. Builds a fleet-status panel with one card per host;
+alerts on CPU >90 %, Temp >75 °C, Mem >90 %, Disk >90 %. Reboot /
+Shutdown buttons send `POST /reboot` or `/shutdown` to each host's
+`rpi-agent.service` listening on `:7799`.
+
+Currently monitoring `noderedpi4`, `openwebrxplus`, `gpsntp`. Two more
+Pis + the Home Assistant Pi pending onboarding.
+
+**Per-Pi onboarding runbook:** [`DEPLOY_PI.md`](DEPLOY_PI.md).
+
+### Internet & Network Monitor
+
+Pings local infrastructure (router, AP, key servers) and the broader
+internet (DNS, well-known anycast hosts) at intervals; surfaces
+latency + reachability on a status grid. Used to diagnose whether a
+station-wide problem is local network or upstream.
+
+### RBN Skimmer Monitor
+
+Reverse Beacon Network monitoring — tracks how the VU2CPL signal is
+being heard worldwide via skimmer reports. Calibration data fetched
+from `sm7iun.se/rbnskew.csv` every 6 h.
+
+---
+
+## Repository Layout
+
+```
+├── flows.json                       Main Node-RED flow (canonical source)
+├── clublog_dxcc_tracker_v7.json     DXCC tab extract (auto-regen on commit)
+│
+├── as3935_mqtt.py                   AS3935 chip daemon (→ /home/vu2cpl/, as3935.service)
+├── as3935_tune.py                   LC-tank TUN_CAP sweep helper
+├── rpi_agent.py                     HTTP reboot/shutdown agent (→ rpi-agent.service)
+├── rpi-agent.service                systemd unit for rpi_agent
+├── monitor.sh                       MQTT telemetry cron (every minute)
+├── power_spe_on.py                  SPE amp FTDI DTR/RTS power-on helper
+├── enable_file_context.sh           One-shot Node-RED file context store enabler
+│
+├── README.md                        This file (umbrella overview)
+├── DXCC.md                          DXCC Tracker reference
+├── DXCC_Tracker_README.pdf          DXCC reference (rendered PDF)
+├── CLAUDE.md                        Operator deep-reference: node IDs, gotchas, runtimes
+├── DEPLOY_PI.md                     Per-Pi onboarding runbook
+├── HANDOVER.md                      Session pickup notes
+├── SHACK_CHANGELOG.md               Dated changelog of non-DXCC tab changes
+├── SHACK_CHANGELOG.pdf              Changelog rendered PDF (always in sync with .md)
+└── LICENSE                          MIT
+```
+
+---
+
+## Documentation map
+
+| Doc | Audience | When to read |
+|-----|----------|--------------|
+| [README.md](README.md) | Anyone | First — what is this repo |
+| [CLAUDE.md](CLAUDE.md) | Operator (and the LLM context) | Looking up a node ID, broker port, install command |
+| [DEPLOY_PI.md](DEPLOY_PI.md) | Operator | Onboarding a new Raspberry Pi onto the fleet |
+| [DXCC.md](DXCC.md) / [PDF](DXCC_Tracker_README.pdf) | Operator | Working on the DXCC tab specifically |
+| [SHACK_CHANGELOG.md](SHACK_CHANGELOG.md) / [PDF](SHACK_CHANGELOG.pdf) | Future-self | "What did I change on day X" |
+| [HANDOVER.md](HANDOVER.md) | New session pickup | "What was I in the middle of" |
+
+---
+
+## Standard commit sequence
+
+After deploying changes in the Node-RED editor:
+
+```bash
+ssh vu2cpl@192.168.1.169
+cd ~/.node-red/projects/vu2cpl-shack
+nrsave "<description>"     # alias: git add flows.json && git commit -m
+git push
+```
+
+Pull on the Mac side:
+
+```bash
+cd ~/projects/vu2cpl-shack
+git pull
+```
+
+For DXCC tab changes the commit additionally regenerates the tab
+extract — see [DXCC.md](DXCC.md#standard-commit-sequence).
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE). Third-party code embedded in
+`flows.json` (notably from
+[VU3ESV/LP-700-Server](https://github.com/VU3ESV/LP-700-Server))
+retains its own terms.
+
+---
+
+*73 de VU2CPL*
