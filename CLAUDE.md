@@ -568,7 +568,7 @@ claude
 | 1 | AetherSDR v0.8.11 MQTT bug — TLS reset on plain port 1883 | Open, upstream fix awaited |
 | 2 | FlexRadio split mode coloring (both slices tx:1, use active field) | Deferred |
 | 3 | Rotator timer: change `60 * 1000` → `5 * 60 * 1000` in Rotator Auto-Off Timer | **Done 2026-05-10** (`971f4b4`) |
-| 4 | RPi agent deploy on 2 remaining Pis + HA Pi (Bearer token) | Pending |
+| 4 | RPi agent deploy on 2 remaining Pis + HA Pi (Bearer token) | **Done 2026-05-10** |
 | 5 | Website: upload shack.jpg, VU7MS/VU7T PDFs | Pending |
 | 6 | DXCC: filter persistence (file context store) | Pending |
 | 7 | DXCC: CW/Ph/Data separate fetch modes | Pending |

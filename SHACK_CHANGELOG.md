@@ -1897,6 +1897,21 @@ with a one-paragraph summary at the top before the manual steps.
 
 ---
 
+### Two more follow-ups closed
+
+Brief admin entry — operator-confirmed both items today:
+
+- **CLAUDE.md TODO #4** — RPi agent deployed on remaining Pis +
+  HA Pi (Bearer token). Closes the multi-host fleet onboarding
+  thread that started 2026-05-09 with `DEPLOY_PI.md`.
+- **HANDOVER follow-up #9** — `gpsntp` added to `httpDevices`
+  map in `Route CMD: HTTP or MQTT` (function `a0695975fec84e2c`).
+  Reboot/shutdown buttons on the Chrony / GPS Time Server card
+  now route correctly through the existing fleet HTTP-control
+  pipeline (POST `/reboot` / `/shutdown` on `:7799`).
+
+---
+
 ### Rotator Auto-Off Timer — 60 s → 5 min for production
 
 **Tab:** All Power Strips (`b76a5310767803b4`)
