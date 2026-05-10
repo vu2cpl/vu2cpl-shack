@@ -124,6 +124,13 @@
         "info": "WebSocket-based SPE flow.\n\nTalks to the spe-remote Python server at ws://localhost:8888/ws\ninstead of holding /dev/ttyUSBx itself. This means:\n - Node-RED, the browser dashboard at http://<pi>:8888/, and\n   MacExpert can all monitor and control the amp simultaneously.\n - No serial port contention, no exec/python power-on dance.\n - Server handles framing, checksum, wraparound recovery, RCU.\n\nNodes are wired to the same dashboard layout as the original flow,\nso the SPE Panel UI Template + button router stay almost untouched —\nonly the I/O ends were swapped from serial to WebSocket.\n"
     },
     {
+        "id": "4cac0c07e2686c33",
+        "type": "tab",
+        "label": "GPS NTP",
+        "disabled": false,
+        "info": "Live status from gpsntp.local. Subscribes to shack/gpsntp/chrony on the shack MQTT broker."
+    },
+    {
         "id": "66ca1554.e4c85c",
         "type": "subflow",
         "name": "red trigger",
@@ -672,6 +679,57 @@
         "hb": "30",
         "subprotocol": "",
         "headers": []
+    },
+    {
+        "id": "uitab.gpsntp",
+        "type": "ui_tab",
+        "name": "GPS NTP",
+        "icon": "timer",
+        "order": 99,
+        "disabled": false,
+        "hidden": false
+    },
+    {
+        "id": "uigroup.chrony",
+        "type": "ui_group",
+        "name": "Chrony",
+        "tab": "uitab.gpsntp",
+        "order": 1,
+        "disp": true,
+        "width": "6",
+        "collapse": false
+    },
+    {
+        "id": "uigroup.gps",
+        "type": "ui_group",
+        "name": "GPS",
+        "tab": "uitab.gpsntp",
+        "order": 2,
+        "disp": true,
+        "width": "6",
+        "collapse": false
+    },
+    {
+        "id": "mqttbroker.shack",
+        "type": "mqtt-broker",
+        "name": "shack-mqtt",
+        "broker": "192.168.1.169",
+        "port": "1883",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": ""
     },
     {
         "id": "f0932848.b39158",
@@ -9161,5 +9219,187 @@
         "wires": [
             []
         ]
+    },
+    {
+        "id": "44b6fb0376a6b7b2",
+        "type": "mqtt in",
+        "z": "4cac0c07e2686c33",
+        "name": "shack/gpsntp/chrony",
+        "topic": "shack/gpsntp/chrony",
+        "qos": "0",
+        "datatype": "json",
+        "broker": "mqttbroker.shack",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 160,
+        "y": 120,
+        "wires": [
+            [
+                "b9e95786f98c4a93"
+            ]
+        ]
+    },
+    {
+        "id": "b9e95786f98c4a93",
+        "type": "function",
+        "z": "4cac0c07e2686c33",
+        "name": "split + format",
+        "func": "const p = msg.payload || {};\nconst sysOffUs = (p.system_time_offset_s || 0) * 1e6;\nconst rmsUs    = (p.rms_offset_s         || 0) * 1e6;\nconst rootUs   = (p.root_dispersion_s    || 0) * 1e6;\nconst fixStr   = p.fix_mode === 3 ? '3D fix'\n               : p.fix_mode === 2 ? '2D fix'\n               : 'NO FIX';\nreturn [\n  { payload: `${p.ref_name || '?'} (stratum ${p.stratum})` },\n  { payload: sysOffUs },\n  { payload: `RMS: ${rmsUs.toFixed(2)} µs` },\n  { payload: `Skew: ${p.skew_ppm} ppm` },\n  { payload: `Root disp: ${rootUs.toFixed(1)} µs` },\n  { payload: `${fixStr} \\u2014 ${p.sat_used}/${p.sat_seen} sats used` },\n  { payload: new Date((p.ts || 0) * 1000).toLocaleString() }\n];",
+        "outputs": 7,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 120,
+        "wires": [
+            [
+                "33c123d891f1aa16"
+            ],
+            [
+                "4eafa0ee882eac0d"
+            ],
+            [
+                "14ed931d476785e2"
+            ],
+            [
+                "43f9664df1bb4e56"
+            ],
+            [
+                "2a644f1dcc6c8561"
+            ],
+            [
+                "cbce877620d37f6a"
+            ],
+            [
+                "dda4a996b11a7080"
+            ]
+        ]
+    },
+    {
+        "id": "33c123d891f1aa16",
+        "type": "ui_text",
+        "z": "4cac0c07e2686c33",
+        "group": "uigroup.chrony",
+        "order": 1,
+        "width": "6",
+        "height": "1",
+        "name": "Reference",
+        "label": "Reference",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "x": 580,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "4eafa0ee882eac0d",
+        "type": "ui_gauge",
+        "z": "4cac0c07e2686c33",
+        "name": "System offset (µs)",
+        "group": "uigroup.chrony",
+        "order": 2,
+        "width": "6",
+        "height": "3",
+        "gtype": "gage",
+        "title": "System offset",
+        "label": "µs",
+        "format": "{{value}}",
+        "min": -500,
+        "max": 500,
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "-50",
+        "seg2": "50",
+        "className": "",
+        "x": 590,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "14ed931d476785e2",
+        "type": "ui_text",
+        "z": "4cac0c07e2686c33",
+        "group": "uigroup.chrony",
+        "order": 3,
+        "width": "6",
+        "height": "1",
+        "name": "RMS",
+        "label": "",
+        "format": "{{msg.payload}}",
+        "layout": "row-left",
+        "x": 570,
+        "y": 120,
+        "wires": []
+    },
+    {
+        "id": "43f9664df1bb4e56",
+        "type": "ui_text",
+        "z": "4cac0c07e2686c33",
+        "group": "uigroup.chrony",
+        "order": 4,
+        "width": "6",
+        "height": "1",
+        "name": "Skew",
+        "label": "",
+        "format": "{{msg.payload}}",
+        "layout": "row-left",
+        "x": 570,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "2a644f1dcc6c8561",
+        "type": "ui_text",
+        "z": "4cac0c07e2686c33",
+        "group": "uigroup.chrony",
+        "order": 5,
+        "width": "6",
+        "height": "1",
+        "name": "Root disp",
+        "label": "",
+        "format": "{{msg.payload}}",
+        "layout": "row-left",
+        "x": 580,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "cbce877620d37f6a",
+        "type": "ui_text",
+        "z": "4cac0c07e2686c33",
+        "group": "uigroup.gps",
+        "order": 1,
+        "width": "6",
+        "height": "1",
+        "name": "GPS",
+        "label": "GPS",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "x": 570,
+        "y": 240,
+        "wires": []
+    },
+    {
+        "id": "dda4a996b11a7080",
+        "type": "ui_text",
+        "z": "4cac0c07e2686c33",
+        "group": "uigroup.gps",
+        "order": 2,
+        "width": "6",
+        "height": "1",
+        "name": "Last update",
+        "label": "Last update",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "x": 590,
+        "y": 280,
+        "wires": []
     }
 ]
