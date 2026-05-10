@@ -1832,11 +1832,16 @@ The widget uses `ui_template`, `ui_group`, `ui_tab`.
 
 #### Current state
 
-`743a0d8` pushed the **transitional** seven-widget version on a
-dedicated `GPS NTP` tab (id `4cac0c07e2686c33`). The single
-`ui_template` migration via the in-place-edit path above is pending —
-once done, the dedicated tab will be deleted and the card will live
-alongside the existing fleet panel on the Shack tab.
+- `743a0d8` pushed the transitional seven-widget version on a
+  dedicated `GPS NTP` flow tab (id `4cac0c07e2686c33`).
+- `286348e` migrated to the single `ui_template` design — the new
+  card lives on flow tab `GPS NTP (card)` (id `4590ed80de4873b1`)
+  with just two nodes: `mqtt in shack/gpsntp/chrony` and
+  `Chrony status card` ui_template (id `38e130c3`). Dashboard tab
+  is `Shack Monitoring tools`, group `Network Monitor` (width 6).
+
+The original `GPS NTP` flow tab (`4cac0c07`) is now an empty
+orphan and should be deleted in a future cleanup.
 
 ---
 

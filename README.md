@@ -144,10 +144,11 @@ Shutdown buttons send `POST /reboot` or `/shutdown` to each host's
 Currently monitoring `noderedpi4`, `openwebrxplus`, `gpsntp`. Two more
 Pis + the Home Assistant Pi pending onboarding.
 
-A separate **Chrony / GPS Time Server** card on the same panel shows
-live status of `gpsntp.local` — the stratum-1 GPS-disciplined NTP
-server. Single `ui_template` driven by retained MQTT topic
-`shack/gpsntp/chrony` (cron-published every minute by the Pi-side
+A separate **Chrony / GPS Time Server** card on the *Shack Monitoring
+tools* dashboard tab (Network Monitor group) shows live status of
+`gpsntp.local` — the stratum-1 GPS-disciplined NTP server. Single
+`ui_template` driven by retained MQTT topic `shack/gpsntp/chrony`
+(cron-published every minute by the Pi-side
 [`pi-gps-ntp-server`](https://github.com/vu2cpl/pi-gps-ntp-server)
 project). Threshold-aware (orange when offset / dispersion / skew
 exceeds tolerance, ref source ≠ PPS, or fix < 3D).

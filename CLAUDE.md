@@ -411,9 +411,18 @@ same `rpi/HassPi/*` topics directly via HA's `mqtt.publish` service every
 
 #### Chrony / GPS Time Server card (gpsntp.local)
 
-Single `ui_template` widget on the RPi Fleet panel (Shack tab) showing
-live status of `gpsntp.local` — the stratum-1 GPS-disciplined NTP
-server. Replaces an earlier seven-widget version on a dedicated tab.
+Single `ui_template` widget showing live status of `gpsntp.local` —
+the stratum-1 GPS-disciplined NTP server. Replaces an earlier
+seven-widget version on a dedicated `GPS NTP` flow tab (now an
+empty orphan, scheduled for deletion).
+
+**Placement:**
+- **Flow tab** (editor view): `GPS NTP (card)` (id `4590ed80de4873b1`)
+  contains just `mqtt in shack/gpsntp/chrony` (id `a278b2a1`) +
+  `Chrony status card` ui_template (id `38e130c3`).
+- **Dashboard tab** (browser view at `/ui`): `Shack Monitoring tools`
+  (id `bcce4e07ac31b882`) → group `Network Monitor`
+  (id `f10110e00bae2689`, width 6).
 
 | Item | Detail |
 |------|--------|
