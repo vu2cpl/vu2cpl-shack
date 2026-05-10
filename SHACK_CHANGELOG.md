@@ -1897,6 +1897,36 @@ with a one-paragraph summary at the top before the manual steps.
 
 ---
 
+### Format Log — `0 km` strikes now render the distance segment
+
+**Tab:** Lightning Antenna Protector (`75e2cac8ab96f556`)
+**Node:** `Format Log` (`5bfc6db2af9dd24c`)
+**Closes:** HANDOVER follow-up #4
+
+One-character bug fix in the event-log formatter. Old line:
+
+```js
+const dist = msg.distance ? ' | ' + msg.distance + ' km' : '';
+```
+
+Truthy check on `msg.distance`. When the AS3935 chip reports an
+overhead strike (or an out-of-range strike that we treat as 0 per
+the chip's `dist=63 → null → 0` mapping in `AS3935 Threshold Check`),
+`msg.distance === 0` is falsy, so the `| 0 km` segment was dropped
+from the log line. Fixed with explicit null check:
+
+```js
+const dist = (msg.distance != null) ? ' | ' + msg.distance + ' km' : '';
+```
+
+Loose `!= null` catches both `null` and `undefined` but not `0` —
+exactly the desired semantics.
+
+No `REBUILD_PI.md` update needed — flows.json change, restored via
+git clone.
+
+---
+
 ### AS3935 systemd hardening
 
 **Unit:** `/etc/systemd/system/as3935.service`
