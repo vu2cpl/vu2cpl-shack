@@ -420,11 +420,13 @@ A 12-point checklist. Hit each one.
 | 8 | LP-700 telemetry alive | Dashboard LP-700 panel shows live values |
 | 9 | FlexRadio TCP up | Dashboard FlexRadio panel shows slice state |
 | 10 | Tasmota state sync | Toggle a power outlet from dashboard → relay clicks → state syncs back |
-| 11 | DXCC alerts firing | DXCC tab status badges green; spots arriving in the table |
+| 11 | DXCC alerts firing | DXCC tab status badges green; spots arriving in the table. `Login + Parse + Dedup` shows recent activity (`[cluster1] DX de ...`); `DXCC Prefix Lookup + Alert Classify` shows per-spot status (`worked` / `NEW DXCC` / etc.) |
 | 12 | Lightning auto-disconnect | Click `TEST ⚡ 6 km DISCONNECT` inject → antenna + radio go OFF |
+| 13 | Chrony / GPS card live | Dashboard tab `Shack Monitoring tools` → `Network Monitor` group shows `Chrony status card` updating every minute. Requires `gpsntp.local` to be up + its publisher cron firing (`/usr/local/bin/gpsntp-mqtt-publish.sh`). If silent: `mosquitto_sub -h localhost -t shack/gpsntp/chrony -v` should print one retained payload immediately + a fresh one each minute |
 
 If 1–7 pass but 8 fails: re-check Step 9 (lp700-server install).
 If 11 fails: re-check Step 10 (credentials node) and the file context store.
+If 13 fails but other cards are fine: not a noderedpi4 problem — it's gpsntp.local. See `pi-gps-ntp-server` repo.
 
 ---
 
