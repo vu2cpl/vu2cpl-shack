@@ -1599,12 +1599,36 @@ data on top later — idempotent.
 - "No status" on a function node means it hasn't processed a message
   since last deploy. Not an error. Wait for the next message.
 
-#### Pending follow-ups
+#### Correction (same day)
 
-- Investigate why Club Log fetch occasionally fails after a fresh
-  Pi reboot (intermittent — may be DNS warm-up timing). The Retry
-  Club Log inject at 90 s usually catches it. Logged as a soft
-  follow-up; not critical now thanks to Bootstrap's resilience fix.
+The "fix" of ticking the once-on-startup checkbox on
+`Load Club Log on startup` and `Retry Club Log (90s)` was wrong.
+Those injects had been deliberately set to `once: false` as an
+anti-ban measure — Club Log had previously rate-limited / banned
+the API key for over-eager re-fetches, and the operator's design
+was to fetch ONLY via the 02:00 cron (1 API call/day) and rely on
+`Bootstrap` reading from `nr_dxcc_seed.json` for startup
+operation. CLAUDE.md TODO #10 ("verify Club Log API ban status +
+re-enable nodes if lifted") had been the trail; it was missed
+during the diagnosis.
+
+**The Bootstrap-sets-`dxccReady` fix turned out to be the entire
+correct answer** — it makes the tracker functional from cached
+data on every restart with zero API calls. The once-on-startup
+checkboxes have been reverted.
+
+Final design (post-correction):
+
+| Trigger | What runs | Club Log API hits |
+|---|---|---|
+| Pi restart / Node-RED redeploy | Bootstrap loads `nr_dxcc_seed.json` → flips `dxccReady=true` | **0** |
+| Daily 02:00 (cron) | `Daily club log refresh (0200)` → fetch + refresh seed | 1 / day |
+| Operator manually clicks `Load Club Log on startup` inject | One-shot fetch | 1 / click |
+
+Lesson for future-self: **TODO #10's "Pending" status was a real
+constraint, not a stale note**. When in doubt about a node that
+looks "broken" but is intentionally disabled, check CLAUDE.md
+TODOs / HANDOVER follow-ups before flipping it.
 
 ---
 
