@@ -340,7 +340,7 @@ Weather data to Header template (`eee1a8b8552aa21f`): plain `wxData` object (no 
   - `nr_dxcc_modes.json` — per-entity CW/Ph/Data mode data
   - `nr_dxcc_blacklist.json` — blocked callsigns
 - Context store must be configured with `file` module in settings.js
-- DX Clusters: N2WQ (`cluster.n2wq.com:8300`), VU2OY (`103.153.92.118:7550`), VU2CPL (`vu2cpl.ddns.net:7550`), VE7CC (`ve7cc.net:23`)
+- DX Clusters: N2WQ (`cluster.n2wq.com:8300`), VU2OY (`vu2oy.ddns.net:7550`), VU2CPL (`vu2cpl.ddns.net:7550`), VE7CC (`ve7cc.net:23`)
 
 ### All Power Strips (Rotator)
 - Rotator timer node (`05f0ddeb566a90fc`): currently `60 * 1000` (1 min) — **change to `5 * 60 * 1000` for production**
