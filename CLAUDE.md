@@ -512,9 +512,9 @@ claude
 | 6 | DXCC: filter persistence (file context store) | Pending |
 | 7 | DXCC: CW/Ph/Data separate fetch modes | Pending |
 | 8 | DXCC: non-project folder path support | Pending |
-| 9 | DXCC: README + PDF commit | Pending |
+| 9 | DXCC: README + PDF commit | **Done 2026-05-10** (split into README.md umbrella + DXCC.md, PDF regenerated) |
 | 10 | DXCC: verify Club Log API ban status + re-enable nodes if lifted | Pending |
-| 11 | DXCC: verify daily 02:00 inject wired to Build Club Log API Request | Pending |
+| 11 | DXCC: verify daily 02:00 inject wired to Build Club Log API Request | **Done 2026-05-10** (root cause was `once: false` on `Load Club Log on startup` + `Retry Club Log (90s)` injects — never fired on deploy. Fixed; cron at 02:00 was already correct) |
 | 12 | Mac SwiftUI app: scaffold not yet started | Pending |
 
 ---

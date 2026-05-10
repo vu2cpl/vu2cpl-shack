@@ -1523,6 +1523,91 @@ sensitive and rarely change.
 
 ---
 
+### DXCC — startup-fetch trigger fixed + Bootstrap unblocks tracker without Club Log
+
+**Tab:** DXCC Tracker (`d110d176c0aad308`)
+**Nodes:** `Load Club Log on startup`, `Retry Club Log (90s)`,
+`Bootstrap Worked Table (manual seed)` (`1a13cd6d`)
+
+#### Symptom
+
+After deploying the secrets-to-env-var change, the dashboard stopped
+showing alerts and `DXCC Prefix Lookup + Alert Classify` was stuck on
+`Paused — reference data loading...`. Cluster spots were arriving fine
+(cluster-status panel green, counters incrementing), but no prefix
+lookup, no alert classification.
+
+#### Root cause #1 — startup injects had `once: false`
+
+`Load Club Log on startup` and `Retry Club Log (90s)` both had the
+"Inject once after start" checkbox **unticked**. Their `onceDelay`
+was set (12 s and 90 s respectively) but ignored. Result: the only
+nodes that triggered the Club Log fetch were the `0200` cron and the
+manual UI button. After every Node-RED restart the tracker stayed
+paused for the entire day until the cron fired or the operator
+manually re-triggered.
+
+This had been latent since some earlier deploy — surfaced today after
+the secrets-to-env-var redeploy made all the symptoms acute.
+
+Fix: ticked the once-on-startup checkbox on both injects. Now every
+deploy fires Club Log fetch at +12 s, with a +90 s safety retry.
+
+#### Root cause #2 — `dxccReady` only set by live Club Log fetch
+
+`DXCC Prefix Lookup + Alert Classify` gates on
+`flow.get('dxccReady') === true`. That flag was set ONLY by
+`Fetch All Modes + Parse` (or its lotw-only sibling) on a successful
+Club Log API response. `Bootstrap Worked Table` loaded cached data
+from `nr_dxcc_seed.json` (which is git-tracked and always fresh on a
+clone) but never flipped the flag.
+
+Result: any time Club Log was unreachable / auth failed / rate-limited,
+the tracker stayed paused even though all the worked-data was already
+loaded from cache. Brittle.
+
+Fix: `Bootstrap Worked Table` now sets `flow.set('dxccReady', true)`
+in all three of its success branches:
+
+1. **File store branch** — when `flow.get('workedTable', 'file')` returned cached worked-table from the file context store.
+2. **Already-loaded branch** — when `flow.workedTable` was already populated from a previous run (idempotent re-set).
+3. **Seed-file branch** — when `nr_dxcc_seed.json` was read from disk.
+
+Now the tracker is operational within ~2 s of any restart, regardless
+of Club Log availability. Live fetch (when it works) overlays fresh
+data on top later — idempotent.
+
+#### Verified
+
+- Manual trigger of `Load Club Log on startup` post-secrets-deploy →
+  `Fetch All Modes + Parse lotw only` turned green with entity count;
+  `dxccReady` flipped true; Prefix Lookup unpaused
+- Inject once-on-startup checkbox now persisted across re-import
+- Bootstrap fix: even with Club Log fetch artificially blocked,
+  Prefix Lookup stays unpaused on a fresh restart (cached data alone
+  is sufficient for operation)
+
+#### Diagnostic notes for future-self
+
+- AR-Cluster forks (N2WQ-2) don't have a `WHO` command — can't query
+  who else is logged in as your call. Brute-force device-by-device
+  was faster than network capture for finding LAN duplicates.
+- Bootstrap's status colours: blue = "Restored from file store",
+  green = "Loaded from nr_dxcc_seed.json", grey = "Already loaded".
+  All three are success states — only red = "File not found" indicates
+  a real problem.
+- "No status" on a function node means it hasn't processed a message
+  since last deploy. Not an error. Wait for the next message.
+
+#### Pending follow-ups
+
+- Investigate why Club Log fetch occasionally fails after a fresh
+  Pi reboot (intermittent — may be DNS warm-up timing). The Retry
+  Club Log inject at 90 s usually catches it. Logged as a soft
+  follow-up; not critical now thanks to Bootstrap's resilience fix.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:
