@@ -1897,6 +1897,40 @@ with a one-paragraph summary at the top before the manual steps.
 
 ---
 
+### Lightning — Blitzortung integration dropped from roadmap
+
+`HANDOVER.md` follow-up #7 had been carrying "wire Blitzortung TCP-in
+to Parse Strike" since the 2026-05-08 map removal. The parser's
+Case 2 (binary frame) and Case 3 (string frame) were left intact
+specifically for this future integration.
+
+Verified today on `map.blitzortung.org` — **zero coverage at MK83TE
+(13.06°N 77.63°E)**. Southern India has very few contributing
+stations and the TOA triangulation algorithm needs ≥4 stations
+seeing the same strike for usable accuracy. Bengaluru sits in a
+gap where Blitzortung would either miss strikes entirely or
+report them with kilometre-scale position errors.
+
+The two-tier coverage we already have is sufficient:
+
+| Tier | Source | Range |
+|------|--------|-------|
+| Close | AS3935 sensor | ~few km indoors / ~40 km outdoors |
+| Regional | Open-Meteo CAPE + weather_code | 5-min poll, 13 km grid |
+
+The mid-range gap (10–80 km, real-time strike-by-strike) that
+Blitzortung would have filled isn't actionable for the
+auto-disconnect decision (close range is) and isn't a planning
+question (regional CAPE is).
+
+Closed in HANDOVER.md as "dropped" rather than deleted, so future-
+self can see why we chose not to pursue this. Parser Cases 2/3 are
+now permanently dead code in `Parse Strike` — flagged for stripping
+in a future flow cleanup pass (low priority; the dead branches
+cost nothing at runtime).
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:
