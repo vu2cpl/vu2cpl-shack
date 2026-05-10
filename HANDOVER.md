@@ -80,7 +80,7 @@
 | # | Item | Notes |
 |---|------|-------|
 | 1 | Move AS3935 antenna **outdoors** | Hardware. Selective 500 kHz LC tank means indoors range is ~few km only. Outdoors regains the rated 40 km. Re-run `as3935_tune.py` after relocating — stray capacitance changes |
-| 2 | AS3935 systemd unit hardening | Add `After=network-online.target mosquitto.service` + `Wants=network-online.target` + `Restart=on-failure` to `/etc/systemd/system/as3935.service.d/override.conf`. Belt-and-braces with the script's own retry loop |
+| 2 | ~~AS3935 systemd unit hardening~~ | **Done 2026-05-10** (`c3f55a8`) — directives baked into the base `as3935.service` unit (simpler than a drop-in for a unit we own). `After=network-online.target mosquitto.service`, `Wants=network-online.target`, `Restart=on-failure`, `RestartSec=5`. Verified live |
 | 3 | Open-Meteo dashboard placeholder | Optional follow-up — the OPEN-METEO MONITOR badge still shows "Waiting for data..." between strikes. Same pattern as AS3935 fix would apply (output 2 wire + `om_status` handler). Currently low-priority — strike events already update it transiently |
 | 4 | Format Log cosmetic | `msg.distance != null` instead of truthy check — currently `0 km` doesn't render the `\| N km` segment |
 | 5 | ~~Rotator timer 60s → 5min~~ | **Done 2026-05-10** (`971f4b4`) — `05f0ddeb566a90fc` body now `var duration = 5 * 60 * 1000` + status badge updated to "Timer running — 5 mins" |

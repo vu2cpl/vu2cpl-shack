@@ -1897,6 +1897,52 @@ with a one-paragraph summary at the top before the manual steps.
 
 ---
 
+### AS3935 systemd hardening
+
+**Unit:** `/etc/systemd/system/as3935.service`
+**Repo source:** `as3935.service`
+**Closes:** HANDOVER follow-up #2
+
+The original unit had `After=network.target` (kernel-level only) and
+`Restart=always`. The 2026-04-21 silent outage that left the daemon
+dead for 10 days was caused by the boot-time race where `paho-mqtt`'s
+`client.connect()` ran before the network was actually routable.
+The May 1 hardening added a Python-side retry loop to the script;
+this commit hardens systemd itself as belt-and-braces.
+
+Four directive changes:
+
+| Before | After | Why |
+|---|---|---|
+| `After=network.target` | `After=network-online.target mosquitto.service` | Wait until network is *fully* up AND broker is ready — not just kernel-level reachability |
+| (no `Wants`) | `Wants=network-online.target` | Pulls `network-online.target` into the boot sequence so `After=` actually delays |
+| `Restart=always` | `Restart=on-failure` | Don't restart on clean SIGTERM during shutdown |
+| (no `RestartSec`) | `RestartSec=5` | Default 100 ms is too aggressive; 5 s lets transient errors clear |
+
+Verified post-deploy:
+
+```
+$ systemctl show as3935 -p Restart,RestartSec,Wants
+Restart=on-failure
+RestartSec=5s
+Wants=network-online.target
+```
+
+Directives are baked into the base unit (not a `.service.d/override.conf`
+drop-in) since we own this unit file. Drop-ins are the systemd-recommended
+approach for overriding **distro-provided** units we don't own; for
+self-owned units, editing the file directly is cleaner.
+
+The script's own MQTT retry loop (added 2026-05-01) handles broker
+disconnects mid-run. This systemd hardening handles the boot-time
+case and the post-broker-restart case.
+
+No `REBUILD_PI.md` update needed — `rebuild_pi.sh` Stage 9 already
+copies `as3935.service` from the repo, and Stage 13 verifies the
+service is active.
+
+---
+
 ### Two more follow-ups closed
 
 Brief admin entry — operator-confirmed both items today:
