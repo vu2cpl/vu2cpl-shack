@@ -1172,16 +1172,56 @@ dashboard handlers.
   Dashboard wire was removed)
 - Reconnect Timer still cancels on bypass-on
 
-#### Pending (deferred to later tiers)
+#### Pending (deferred to Tier 3)
 
-- Tier 2: drop the `Check Threshold` indirection (its `msg.shouldDisconnect`
-  field is read by no downstream node; the next switch evaluates the
-  flow context directly). Replace `Refresh Stats` (1-line passthrough)
-  with direct fan-out from the inject.
-- Tier 3: rename `Replay on lightning tab` → `Replay Bypass State`
-  (post-Shack-tab the old name is misleading). Demote Init Defaults
-  `node.warn` to `node.log`. Merge `Strike → Dashboard` and
-  `AS3935 → Dashboard` (90% duplicated payload construction).
+- Rename `Replay on lightning tab` → `Replay Bypass State`
+  (post-Shack-tab the old name is misleading)
+- Demote Init Defaults `node.warn` to `node.log`
+- Merge `Strike → Dashboard` and `AS3935 → Dashboard` (90% duplicated
+  payload construction)
+
+---
+
+### Lightning Antenna Protector — Tier 2 cleanup (drop passthroughs)
+
+**Tab:** Lightning Antenna Protector (`75e2cac8ab96f556`)
+
+Two more middleman nodes deleted; tab 78 → 76 nodes; flows.json -32 lines net.
+
+#### `Check Threshold` (`b9d407d9`) — deleted
+
+The strike chain ran `… → Haversine Distance → Check Threshold →
+Within threshold? → Trigger Disconnect`. Check Threshold computed
+`msg.shouldDisconnect` and `msg.thresholdKm` and updated its own
+status badge — but **no downstream node read either field**. The
+following `Within threshold?` switch evaluates `msg.strike.distance_km`
+against `flow.threshold_km` directly, bypassing the computation.
+
+Pure indirection node. Deleted; Haversine Distance output 1 now wires
+straight to `Within threshold?` (and continues to wire to
+`Strike → Dashboard` for the dashboard alert).
+
+Also drops one msg-mutation per strike (≈12 strike events/hour during
+active storms — small, but it's still N less work).
+
+#### `Refresh Stats` (`61dca3d9`) — deleted
+
+Body was literally `return msg;`. Existed only to fan out the 30 s
+tick from the `Stats refresh every 30s` inject to 5 destinations:
+`Sync Switch State`, `Stats → Dashboard`, `Log → Dashboard`,
+`Replay on lightning tab`, `Replay AS3935 State`.
+
+Deleted. The inject node's wires array now contains those 5
+destinations directly — Node-RED's inject natively supports
+multi-destination fan-out, no helper needed.
+
+#### Verified
+
+- TEST inject fires full disconnect chain
+- `TEST ✅ 120 km safe` correctly skips disconnect
+- Bypass banner + countdown still replay across page refresh
+- AS3935 panel "Last seen" updates on the 30 s tick
+- Stats box numbers update after strikes
 
 ---
 
