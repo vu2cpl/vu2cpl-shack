@@ -124,11 +124,11 @@
         "info": "WebSocket-based SPE flow.\n\nTalks to the spe-remote Python server at ws://localhost:8888/ws\ninstead of holding /dev/ttyUSBx itself. This means:\n - Node-RED, the browser dashboard at http://<pi>:8888/, and\n   MacExpert can all monitor and control the amp simultaneously.\n - No serial port contention, no exec/python power-on dance.\n - Server handles framing, checksum, wraparound recovery, RCU.\n\nNodes are wired to the same dashboard layout as the original flow,\nso the SPE Panel UI Template + button router stay almost untouched —\nonly the I/O ends were swapped from serial to WebSocket.\n"
     },
     {
-        "id": "4cac0c07e2686c33",
+        "id": "4590ed80de4873b1",
         "type": "tab",
-        "label": "GPS NTP",
+        "label": "GPS NTP (card)",
         "disabled": false,
-        "info": "Live status from gpsntp.local. Subscribes to shack/gpsntp/chrony on the shack MQTT broker."
+        "info": "Single ui_template card for the chrony status broadcast. Drag the ui_template node to your main fleet dashboard's group when ready, then delete this tab."
     },
     {
         "id": "66ca1554.e4c85c",
@@ -681,35 +681,6 @@
         "headers": []
     },
     {
-        "id": "uitab.gpsntp",
-        "type": "ui_tab",
-        "name": "GPS NTP",
-        "icon": "timer",
-        "order": 99,
-        "disabled": false,
-        "hidden": false
-    },
-    {
-        "id": "uigroup.chrony",
-        "type": "ui_group",
-        "name": "Chrony",
-        "tab": "uitab.gpsntp",
-        "order": 1,
-        "disp": true,
-        "width": "6",
-        "collapse": false
-    },
-    {
-        "id": "uigroup.gps",
-        "type": "ui_group",
-        "name": "GPS",
-        "tab": "uitab.gpsntp",
-        "order": 2,
-        "disp": true,
-        "width": "6",
-        "collapse": false
-    },
-    {
         "id": "mqttbroker.shack",
         "type": "mqtt-broker",
         "name": "shack-mqtt",
@@ -730,6 +701,16 @@
         "willTopic": "",
         "willQos": "0",
         "willPayload": ""
+    },
+    {
+        "id": "452b912eed73cb42",
+        "type": "ui_group",
+        "name": "Time",
+        "tab": "",
+        "order": 1,
+        "disp": true,
+        "width": "6",
+        "collapse": false
     },
     {
         "id": "f0932848.b39158",
@@ -3295,7 +3276,7 @@
         "name": "Solar Panel",
         "order": 1,
         "width": 6,
-        "height": 11,
+        "height": 14,
         "format": "<style>\n.sl{background:#0d1117;color:#c9d1d9;font-family:monospace;font-size:12px;border-radius:6px;padding:10px;}\n.sl-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;border-bottom:1px solid #21262d;padding-bottom:6px;}\n.sl-title{color:#58a6ff;font-weight:bold;font-size:14px;}\n.sl-sec{color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;margin-top:8px;}\n.sl-grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:6px;}\n.sl-box{background:#161b22;border:1px solid #21262d;border-radius:4px;padding:6px 7px;}\n.sl-lbl{color:#8b949e;font-size:10px;text-align:center;margin-bottom:4px;}\n.sl-arc-wrap{display:flex;flex-direction:column;align-items:center;}\n.sl-val{font-family:monospace;font-size:13px;font-weight:bold;text-align:center;margin-top:2px;}\n.sl-sublbl{font-size:9px;text-align:center;margin-top:1px;}\n.sl-badge{display:inline-flex;align-items:center;justify-content:center;border-radius:4px;padding:3px 0;font-size:12px;font-weight:700;width:100%;border:1px solid;}\n.sl-rsg-row{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;}\n.sl-band-row{display:flex;align-items:center;padding:3px 0;border-bottom:1px solid #21262d;}\n.sl-band-row:last-child{border-bottom:none;}\n.sl-band-name{font-size:10px;color:#8b949e;width:36px;flex-shrink:0;font-family:monospace;}\n.sl-band-bar-wrap{flex:1;background:#21262d;border-radius:2px;height:6px;margin:0 6px;overflow:hidden;}\n.sl-band-bar{height:6px;border-radius:2px;transition:width 0.5s;}\n.sl-band-score{font-size:10px;width:62px;text-align:right;font-family:monospace;}\n</style>\n\n<div class=\"sl\">\n  <div class=\"sl-hdr\">\n    <span class=\"sl-title\">&#9728; Solar Conditions — MK83TE</span>\n  </div>\n\n  <div class=\"sl-sec\">Solar Indices</div>\n  <div class=\"sl-grid3\">\n    <div class=\"sl-box sl-arc-wrap\">\n      <div class=\"sl-lbl\">Solar Flux</div>\n      <svg viewBox=\"0 0 80 44\" width=\"72\" style=\"overflow:visible\">\n        <path d=\"M8 40 A32 32 0 0 1 72 40\" fill=\"none\" stroke=\"#21262d\" stroke-width=\"7\" stroke-linecap=\"round\"/>\n        <path id=\"sl-sfi-arc\" d=\"M8 40 A32 32 0 0 1 72 40\" fill=\"none\" stroke=\"#3fb950\" stroke-width=\"7\" stroke-linecap=\"round\" stroke-dasharray=\"101\" stroke-dashoffset=\"80\"/>\n        <text id=\"sl-sfi-v\" x=\"40\" y=\"38\" text-anchor=\"middle\" fill=\"#3fb950\" font-size=\"13\" font-weight=\"bold\" font-family=\"monospace\">—</text>\n      </svg>\n      <div id=\"sl-sfi-l\" class=\"sl-sublbl\" style=\"color:#3fb950\">—</div>\n    </div>\n    <div class=\"sl-box sl-arc-wrap\">\n      <div class=\"sl-lbl\">K-Index</div>\n      <svg viewBox=\"0 0 80 44\" width=\"72\" style=\"overflow:visible\">\n        <path d=\"M8 40 A32 32 0 0 1 72 40\" fill=\"none\" stroke=\"#21262d\" stroke-width=\"7\" stroke-linecap=\"round\"/>\n        <path id=\"sl-k-arc\" d=\"M8 40 A32 32 0 0 1 72 40\" fill=\"none\" stroke=\"#3fb950\" stroke-width=\"7\" stroke-linecap=\"round\" stroke-dasharray=\"101\" stroke-dashoffset=\"90\"/>\n        <text id=\"sl-k-v\" x=\"40\" y=\"38\" text-anchor=\"middle\" fill=\"#3fb950\" font-size=\"13\" font-weight=\"bold\" font-family=\"monospace\">—</text>\n      </svg>\n      <div id=\"sl-k-l\" class=\"sl-sublbl\" style=\"color:#3fb950\">—</div>\n    </div>\n    <div class=\"sl-box sl-arc-wrap\">\n      <div class=\"sl-lbl\">A-Index</div>\n      <svg viewBox=\"0 0 80 44\" width=\"72\" style=\"overflow:visible\">\n        <path d=\"M8 40 A32 32 0 0 1 72 40\" fill=\"none\" stroke=\"#21262d\" stroke-width=\"7\" stroke-linecap=\"round\"/>\n        <path id=\"sl-a-arc\" d=\"M8 40 A32 32 0 0 1 72 40\" fill=\"none\" stroke=\"#3fb950\" stroke-width=\"7\" stroke-linecap=\"round\" stroke-dasharray=\"101\" stroke-dashoffset=\"95\"/>\n        <text id=\"sl-a-v\" x=\"40\" y=\"38\" text-anchor=\"middle\" fill=\"#3fb950\" font-size=\"13\" font-weight=\"bold\" font-family=\"monospace\">—</text>\n      </svg>\n      <div id=\"sl-a-l\" class=\"sl-sublbl\" style=\"color:#3fb950\">—</div>\n    </div>\n  </div>\n\n  <div class=\"sl-sec\">Space Weather (R/S/G)</div>\n  <div class=\"sl-grid3\">\n    <div class=\"sl-box\">\n      <div class=\"sl-lbl\">24-Hour</div>\n      <div class=\"sl-rsg-row\" id=\"sl-rsg24\"></div>\n    </div>\n    <div class=\"sl-box\">\n      <div class=\"sl-lbl\">Current</div>\n      <div class=\"sl-rsg-row\" id=\"sl-rsgcur\"></div>\n    </div>\n    <div class=\"sl-box\">\n      <div class=\"sl-lbl\">Predicted</div>\n      <div class=\"sl-rsg-row\" id=\"sl-rsgpred\"></div>\n    </div>\n  </div>\n\n  <div class=\"sl-grid3\" style=\"margin-top:6px;\">\n    <div class=\"sl-box\"><div class=\"sl-lbl\">MUF</div><div class=\"sl-val\" style=\"color:#58a6ff\" id=\"sl-muf\">— MHz</div></div>\n    <div class=\"sl-box\"><div class=\"sl-lbl\">foF2</div><div class=\"sl-val\" style=\"color:#58a6ff\" id=\"sl-fof2\">— MHz</div></div>\n    <div class=\"sl-box\"><div class=\"sl-lbl\">X-Ray 24h/2h</div><div class=\"sl-val\" id=\"sl-xray\">—</div></div>\n  </div>\n\n  <div class=\"sl-sec\">HF Band Conditions — SFI + K formula</div>\n  <div style=\"background:#161b22;border:1px solid #21262d;border-radius:4px;padding:6px 8px;\" id=\"sl-bands\"></div>\n  <div style=\"font-size:9px;color:#8b949e;margin-top:4px;line-height:1.7;\">Excellent ≥80 · Good ≥60 · Fair ≥40 · Poor ≥20 · Bad &lt;20 &nbsp;|&nbsp; score = SFI factor − K penalty</div>\n</div>\n\n<script>\n(function(){\n\n// Band definitions: name, minSFI for opening, K sensitivity weight\nvar BANDS=[\n  {name:'6M',   minSFI:200, maxSFI:300, kW:0.20},\n  {name:'10M',  minSFI:130, maxSFI:280, kW:0.25},\n  {name:'12M',  minSFI:115, maxSFI:270, kW:0.30},\n  {name:'15M',  minSFI:100, maxSFI:260, kW:0.35},\n  {name:'17M',  minSFI:90,  maxSFI:250, kW:0.40},\n  {name:'20M',  minSFI:70,  maxSFI:240, kW:0.45},\n  {name:'30M',  minSFI:65,  maxSFI:230, kW:0.55},\n  {name:'40M',  minSFI:60,  maxSFI:220, kW:0.65},\n  {name:'60M',  minSFI:60,  maxSFI:210, kW:0.70},\n  {name:'80M',  minSFI:55,  maxSFI:200, kW:0.80},\n  {name:'160M', minSFI:50,  maxSFI:180, kW:0.90}\n];\n\nfunction bandScore(b, sfi, k){\n  // SFI contribution: 0-100 based on where SFI sits between min and max\n  var sfiScore = Math.min(100, Math.max(0, (sfi - b.minSFI) / (b.maxSFI - b.minSFI) * 100));\n  // K penalty: K=0 no penalty, K=9 full penalty scaled by band sensitivity\n  var kPenalty = (k / 9) * b.kW * 100;\n  return Math.max(0, Math.min(100, sfiScore - kPenalty));\n}\n\nfunction scoreInfo(s){\n  if(s>=80) return {label:'Excellent', color:'#3fb950'};\n  if(s>=60) return {label:'Good',      color:'#3fb950'};\n  if(s>=40) return {label:'Fair',      color:'#e3b341'};\n  if(s>=20) return {label:'Poor',      color:'#e3b341'};\n  return          {label:'Bad',        color:'#f85149'};\n}\n\nfunction renderBands(sfi, k){\n  var html='';\n  BANDS.forEach(function(b){\n    var sc = bandScore(b, sfi, k);\n    var info = scoreInfo(sc);\n    html += '<div class=\"sl-band-row\">'\n          + '<span class=\"sl-band-name\">' + b.name + '</span>'\n          + '<div class=\"sl-band-bar-wrap\"><div class=\"sl-band-bar\" style=\"width:' + sc.toFixed(0) + '%;background:' + info.color + ';\"></div></div>'\n          + '<span class=\"sl-band-score\" style=\"color:' + info.color + ';\">' + info.label + '</span>'\n          + '</div>';\n  });\n  var el = document.getElementById('sl-bands');\n  if(el) el.innerHTML = html;\n}\n\nfunction rsgBadge(n, type){\n  var col = n===0 ? '#3fb950' : n<=2 ? '#e3b341' : '#f85149';\n  var bg  = n===0 ? '#0d2818' : n<=2 ? '#2d1800' : '#2d0808';\n  var bc  = n===0 ? '#238636' : n<=2 ? '#a87300' : '#a82020';\n  return '<div class=\"sl-badge\" style=\"color:'+col+';background:'+bg+';border-color:'+bc+'\">'+type+n+'</div>';\n}\n\nfunction arcOffset(pct){\n  return (101*(1-Math.min(1,Math.max(0,pct)))).toFixed(1);\n}\n\nfunction sfiColor(s){ return s>=130?'#3fb950':s>=90?'#e3b341':'#f85149'; }\nfunction kColor(k){   return k<4.5?'#3fb950':k<6?'#e3b341':'#f85149'; }\nfunction aColor(a){   return a<36?'#3fb950':a<103?'#e3b341':'#f85149'; }\n\nfunction sfiLabel(s){ return s>=150?'Excellent':s>=130?'Good':s>=110?'Moderate':s>=90?'Fair':s>=70?'Poor':'Bad'; }\nfunction kLabel(k){   return k<0.5?'Inactive':k<1.5?'Very Quiet':k<2.5?'Quiet':k<3.5?'Unsettled':k<4.5?'Active':k<5.5?'Minor Storm':k<6.5?'Major Storm':k<7.5?'Strong Storm':'Severe Storm'; }\nfunction aLabel(a){   return a<3?'Inactive':a<6?'Very Quiet':a<11?'Quiet':a<21?'Unsettled':a<36?'Active':a<62?'Minor Storm':a<103?'Major Storm':'Strong Storm'; }\n\nscope.$watch('msg', function(msg){\n  if(!msg || !msg.payload) return;\n  var d = msg.payload;\n\n  // SFI gauge\n  if(d.sfi !== undefined){\n    var sc = sfiColor(d.sfi);\n    var sp = Math.min(1, Math.max(0, (d.sfi-50)/200));\n    var arc=document.getElementById('sl-sfi-arc'),val=document.getElementById('sl-sfi-v'),lbl=document.getElementById('sl-sfi-l');\n    if(arc){arc.setAttribute('stroke-dashoffset',arcOffset(sp));arc.setAttribute('stroke',sc);}\n    if(val){val.textContent=d.sfi;val.setAttribute('fill',sc);}\n    if(lbl){lbl.textContent=d.sfiLabel||sfiLabel(d.sfi);lbl.style.color=sc;}\n  }\n\n  // K gauge\n  if(d.k !== undefined){\n    var kc=kColor(d.k),kp=d.k/9;\n    var karc=document.getElementById('sl-k-arc'),kval=document.getElementById('sl-k-v'),klbl=document.getElementById('sl-k-l');\n    if(karc){karc.setAttribute('stroke-dashoffset',arcOffset(kp));karc.setAttribute('stroke',kc);}\n    if(kval){kval.textContent=parseFloat(d.k).toFixed(1);kval.setAttribute('fill',kc);}\n    if(klbl){klbl.textContent=d.kLabel||kLabel(d.k);klbl.style.color=kc;}\n  }\n\n  // A gauge\n  if(d.a !== undefined){\n    var ac=aColor(d.a),ap=Math.min(1,d.a/167);\n    var aarc=document.getElementById('sl-a-arc'),aval=document.getElementById('sl-a-v'),albl=document.getElementById('sl-a-l');\n    if(aarc){aarc.setAttribute('stroke-dashoffset',arcOffset(ap));aarc.setAttribute('stroke',ac);}\n    if(aval){aval.textContent=d.a;aval.setAttribute('fill',ac);}\n    if(albl){albl.textContent=d.aLabel||aLabel(d.a);albl.style.color=ac;}\n  }\n\n  // RSG badges\n  function setRSG(elId, rsg){\n    if(!rsg) return;\n    var e=document.getElementById(elId);\n    if(e) e.innerHTML=rsgBadge(rsg.R,'R')+rsgBadge(rsg.S,'S')+rsgBadge(rsg.G,'G');\n  }\n  setRSG('sl-rsg24',  d.rsg24);\n  setRSG('sl-rsgcur', d.rsgCur);\n  setRSG('sl-rsgpred',d.rsgPred);\n\n  // MUF / foF2\n  if(d.muf !== undefined){\n    var me=document.getElementById('sl-muf');\n    if(me) me.innerHTML=parseFloat(d.muf).toFixed(1)+' <span style=\"font-size:10px;color:#8b949e;\">MHz</span>';\n  }\n  if(d.fof2 !== undefined){\n    var fe=document.getElementById('sl-fof2');\n    if(fe) fe.innerHTML=parseFloat(d.fof2).toFixed(1)+' <span style=\"font-size:10px;color:#8b949e;\">MHz</span>';\n  }\n\n  // X-ray\n  if(d.xray24 !== undefined){\n    var xe=document.getElementById('sl-xray');\n    if(xe){\n      function xrayColor(s){ return s&&s[0]==='X'?'#f85149':s&&s[0]==='M'?'#e3b341':'#3fb950'; }\n      xe.innerHTML='<span style=\"color:'+xrayColor(d.xray24)+'\">'+d.xray24+'</span>'\n                  +'<span style=\"color:#8b949e;\"> / </span>'\n                  +'<span style=\"color:'+xrayColor(d.xray2)+'\">'+d.xray2+'</span>';\n    }\n  }\n\n  // Band conditions\n  if(d.sfi !== undefined && d.k !== undefined){\n    renderBands(d.sfi, d.k);\n  }\n});\n\n})();\n</script>",
         "storeOutMessages": true,
         "fwdInMessages": false,
@@ -3604,219 +3585,6 @@
         "wires": [
             []
         ]
-    },
-    {
-        "id": "667128d1aa92d972",
-        "type": "comment",
-        "z": "f9a0e3ad0e019052",
-        "name": "VU2CPL  |  3 × DX Clusters  →  Flex 6600 192.168.1.148:4992 Redundant with DXCC tracker.",
-        "info": "",
-        "x": 1360,
-        "y": 60,
-        "wires": []
-    },
-    {
-        "id": "4609f64c740cb461",
-        "type": "comment",
-        "z": "f9a0e3ad0e019052",
-        "d": true,
-        "name": "Cluster 1 — db0sue.de:8000",
-        "info": "",
-        "x": 960,
-        "y": 120,
-        "wires": []
-    },
-    {
-        "id": "cead1092f810c8c1",
-        "type": "comment",
-        "z": "f9a0e3ad0e019052",
-        "d": true,
-        "name": "Cluster 2 vu2oy",
-        "info": "",
-        "x": 940,
-        "y": 220,
-        "wires": []
-    },
-    {
-        "id": "2038d5ce982f1d06",
-        "type": "comment",
-        "z": "f9a0e3ad0e019052",
-        "d": true,
-        "name": "Cluster 3 — ve7cc.net:23",
-        "info": "",
-        "x": 1010,
-        "y": 400,
-        "wires": []
-    },
-    {
-        "id": "473c4e2799efbda1",
-        "type": "tcp in",
-        "z": "f9a0e3ad0e019052",
-        "d": true,
-        "name": "db0sue.de:8000",
-        "server": "client",
-        "host": "db0sue.de",
-        "port": "8000",
-        "datatype": "utf8",
-        "newline": "",
-        "topic": "cluster1",
-        "trim": true,
-        "base64": false,
-        "tls": "",
-        "x": 940,
-        "y": 180,
-        "wires": [
-            [
-                "07e8b341c27348db"
-            ]
-        ]
-    },
-    {
-        "id": "28933639b16d1f7a",
-        "type": "tcp in",
-        "z": "f9a0e3ad0e019052",
-        "d": true,
-        "name": "vu2oy",
-        "server": "client",
-        "host": "vu2oy.ddns.net",
-        "port": "7550",
-        "datatype": "utf8",
-        "newline": "",
-        "topic": "cluster2",
-        "trim": true,
-        "base64": false,
-        "tls": "",
-        "x": 950,
-        "y": 260,
-        "wires": [
-            [
-                "07e8b341c27348db"
-            ]
-        ]
-    },
-    {
-        "id": "28863439040d84cc",
-        "type": "tcp in",
-        "z": "f9a0e3ad0e019052",
-        "d": true,
-        "name": "ve7cc.net:23",
-        "server": "client",
-        "host": "ve7cc.net",
-        "port": "23",
-        "datatype": "utf8",
-        "newline": "",
-        "topic": "cluster4",
-        "trim": true,
-        "base64": false,
-        "tls": "",
-        "x": 930,
-        "y": 440,
-        "wires": [
-            [
-                "07e8b341c27348db"
-            ]
-        ]
-    },
-    {
-        "id": "07e8b341c27348db",
-        "type": "function",
-        "z": "f9a0e3ad0e019052",
-        "d": true,
-        "name": "Login + Parse + Dedup",
-        "func": "// ─────────────────────────────────────────────────────────────\n// Handles ALL clusters feeding into this single node.\n// A) Login  — detects 'login:' and replies VU24DX on same session\n// B) Parse  — turns DX spot lines into SmartSDR spot add commands\n// C) Dedup  — suppresses duplicate callsign+freq within 60 seconds\n//             so multiple clusters don't spam the same spot\n// ─────────────────────────────────────────────────────────────\n\nvar line = (msg.payload || '').trim();\nvar src  = msg.topic || 'unknown';   // which cluster this came from\n\n// ── A) LOGIN ─────────────────────────────────────────────────\nif (line.toLowerCase().includes('login:') ||\n    line.toLowerCase().includes('please login')) {\n    node.status({ fill:'blue', shape:'dot', text: src + ' → login sent' });\n    return [\n        { payload: 'VU2CPL\\r\\n', _session: msg._session },\n        null\n    ];\n}\n\n// ── Skip non-DX lines ─────────────────────────────────────────\nif (!line.startsWith('DX de')) {\n    node.status({ fill:'grey', shape:'ring', text: '['+src+'] '+line.substring(0,50) });\n    return [ null, null ];\n}\n\n// ── B) PARSE ─────────────────────────────────────────────────\n// Timestamp optional — handles spots with and without time\n// var re = /^DX de\\s+([A-Z0-9\\/]+):\\s+([\\d.]+)\\s+([A-Z0-9\\/]+)\\s*(.*?)\\s*(\\d{4}Z?)?\\s*$/i;\nvar re = /^DX de\\s+([A-Z0-9\\/\\-#]+):\\s+([\\d.]+)\\s+([A-Z0-9\\/\\-#]+)\\s*(.*?)\\s*(\\d{4}Z?)?\\s*$/i;\nvar m  = line.match(re);\nif (!m) {\n    node.status({ fill:'yellow', shape:'dot', text:'no match: '+line.substring(0,45) });\n    return [ null, null ];\n}\n\nvar spotter = m[1].toUpperCase();\nvar freqKHz = parseFloat(m[2]);\nvar dxCall  = m[3].toUpperCase();\nvar comment = (m[4] || '').trim();\nvar freqMHz = (freqKHz / 1000).toFixed(6);\n\n// ── C) DEDUP ─────────────────────────────────────────────────\n// Key = callsign + frequency rounded to 1 kHz\n// If same key seen within 60 seconds → drop (already sent by another cluster)\nvar dedup    = flow.get('dedup') || {};\nvar now      = Date.now();\nvar dedupKey = dxCall + '_' + Math.round(freqKHz);\n\nif (dedup[dedupKey] && (now - dedup[dedupKey]) < 60000) {\n    node.status({ fill:'grey', shape:'ring', text:'dup skip: '+dxCall+' ('+src+')' });\n    return [ null, null ];   // duplicate — drop silently\n}\n\n// Record this spot\ndedup[dedupKey] = now;\n\n// Housekeeping: purge entries older than 120s to keep memory clean\nObject.keys(dedup).forEach(function(k) {\n    if (now - dedup[k] > 120000) delete dedup[k];\n});\nflow.set('dedup', dedup);\n\n// ── Mode detection ────────────────────────────────────────────\nfunction getMode(khz, cmt) {\n    var c = cmt.toUpperCase();\n    if (c.match(/\\bFT8\\b/))  return 'Data';\n    if (c.match(/\\bFT4\\b/))  return 'Data';\n    if (c.match(/\\bRTTY\\b/)) return 'Data';\n    if (c.match(/\\bPSK\\b/))  return 'Data';\n    if (c.match(/\\bDIGI\\b/)) return 'Data';\n    if (c.match(/\\bDATA\\b/)) return 'Data';\n    if (c.match(/\\bCW\\b/))   return 'CW';\n    if (c.match(/\\bSSB\\b/))  return (khz < 10000) ? 'LSB' : 'USB';\n    if (c.match(/\\bUSB\\b/))  return 'USB';\n    if (c.match(/\\bLSB\\b/))  return 'LSB';\n    if (c.match(/\\bAM\\b/))   return 'AM';\n    if (c.match(/\\bFM\\b/))   return 'FM';\n    var ft8 = [1840,3573,7074,10136,14074,18100,21074,24915,28074,50313];\n    for (var f=0; f<ft8.length; f++) {\n        if (Math.abs(khz - ft8[f]) <= 3) return 'Data';\n    }\n    var cw = [[1800,1840],[3500,3600],[7000,7040],[10100,10150],\n              [14000,14070],[18068,18110],[21000,21070],\n              [24890,24920],[28000,28070]];\n    for (var i=0; i<cw.length; i++) {\n        if (khz >= cw[i][0] && khz <= cw[i][1]) return 'CW';\n    }\n    return (khz < 10000) ? 'LSB' : 'USB';\n}\n\nvar mode = getMode(freqKHz, comment);\n\n// ── Sequence counter ──────────────────────────────────────────\nvar seq = flow.get('spotSeq') || 7000;\nseq++;\nflow.set('spotSeq', seq);\n\nvar ts = Math.floor(Date.now() / 1000);\n\n// ── Build SmartSDR command ────────────────────────────────────\nvar cmd = 'C' + seq + '|spot add' +\n    ' rx_freq='          + freqMHz +\n    ' callsign='         + dxCall +\n    ' mode='             + mode +\n    ' comment='          + (comment || 'DX') +\n    ' spotter_callsign=' + spotter +\n    ' timestamp='        + ts +\n    ' color=#FF00FCCC' +\n    ' priority=2' +\n    ' lifetime_seconds=1200' +\n    ' source=DX-Spot' +\n    '\\n';\n\nnode.status({\n    fill:'green', shape:'dot',\n    text: '['+src+'] C'+seq+' '+dxCall+' '+freqMHz+' '+mode\n});\n\nreturn [\n    null,\n    { payload: cmd, spot: { seq, dxCall, freqKHz, freqMHz, mode, spotter, comment, src } }\n];\n",
-        "outputs": 2,
-        "timeout": "",
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 1290,
-        "y": 260,
-        "wires": [
-            [
-                "b744991c37787424"
-            ],
-            [
-                "65e7fce8d5b3ad04"
-            ]
-        ]
-    },
-    {
-        "id": "b744991c37787424",
-        "type": "tcp out",
-        "z": "f9a0e3ad0e019052",
-        "d": true,
-        "name": "Reply to Cluster (same session)",
-        "host": "",
-        "port": "",
-        "beserver": "reply",
-        "base64": false,
-        "end": false,
-        "tls": "",
-        "x": 1600,
-        "y": 200,
-        "wires": []
-    },
-    {
-        "id": "65e7fce8d5b3ad04",
-        "type": "tcp out",
-        "z": "f9a0e3ad0e019052",
-        "d": true,
-        "name": "Flex 6600  192.168.1.148:4992",
-        "host": "192.168.1.148",
-        "port": "4992",
-        "beserver": "client",
-        "base64": false,
-        "end": false,
-        "tls": "",
-        "x": 1610,
-        "y": 320,
-        "wires": []
-    },
-    {
-        "id": "6f57256da0a977d6",
-        "type": "comment",
-        "z": "f9a0e3ad0e019052",
-        "d": true,
-        "name": "DEDUP: same callsign+freq from multiple clusters within 60s → only first spot sent to Flex\nAdd more clusters: copy any tcp in node, set new host/port, wire output to fn_handle_cluster",
-        "info": "",
-        "x": 1460,
-        "y": 540,
-        "wires": []
-    },
-    {
-        "id": "82a719b0a1c33fe1",
-        "type": "tcp in",
-        "z": "f9a0e3ad0e019052",
-        "d": true,
-        "name": "vu2cpl",
-        "server": "client",
-        "host": "vu2cpl.ddns.net",
-        "port": "7550",
-        "datatype": "utf8",
-        "newline": "",
-        "topic": "cluster3",
-        "trim": true,
-        "base64": false,
-        "tls": "",
-        "x": 950,
-        "y": 340,
-        "wires": [
-            [
-                "07e8b341c27348db"
-            ]
-        ]
-    },
-    {
-        "id": "99b0a432b5c116a0",
-        "type": "comment",
-        "z": "f9a0e3ad0e019052",
-        "d": true,
-        "name": "Cluster 2 vu2cpl",
-        "info": "",
-        "x": 960,
-        "y": 300,
-        "wires": []
     },
     {
         "id": "7fb3b051c27b98a3",
@@ -4479,7 +4247,7 @@
         "name": "RPi Fleet Panel",
         "order": 1,
         "width": 6,
-        "height": 11,
+        "height": 14,
         "format": "<style>\n.rp{background:#0d1117;color:#c9d1d9;font-family:monospace;font-size:12px;border-radius:6px;padding:10px;}\n.rp-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;border-bottom:1px solid #21262d;padding-bottom:6px;}\n.rp-title{color:#58a6ff;font-weight:bold;font-size:14px;}\n.rp-sec{color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;margin-top:8px;}\n.rp-card{background:#161b22;border:1px solid #21262d;border-radius:4px;padding:8px;margin-bottom:5px;}\n.rp-card.online{border-left:3px solid #3fb950;}\n.rp-card.offline{border-left:3px solid #f85149;}\n.rp-name{font-weight:bold;font-size:12px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;}\n.rp-dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0;}\n.rp-dot.online{background:#3fb950;}\n.rp-dot.offline{background:#f85149;}\n.rp-grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:4px;}\n.rp-metric{background:#0d1117;border-radius:3px;padding:3px 5px;}\n.rp-mlbl{font-size:9px;color:#8b949e;}\n.rp-mval{font-size:11px;font-weight:bold;margin-top:1px;}\n.rp-bar-wrap{background:#21262d;border-radius:2px;height:4px;margin-top:3px;overflow:hidden;}\n.rp-bar{height:4px;border-radius:2px;}\n.rp-meta{font-size:9px;color:#8b949e;margin-top:3px;}\n.rp-btn{border-radius:4px;padding:4px 8px;font-size:10px;font-family:monospace;cursor:pointer;border:1px solid;margin-top:2px;}\n.rp-btn-reboot{background:#161b22;border-color:#e3b341;color:#e3b341;}\n.rp-btn-shutdown{background:#161b22;border-color:#f85149;color:#f85149;}\n.rp-summary{display:flex;gap:8px;margin-bottom:6px;}\n.rp-sum-box{background:#161b22;border:1px solid #21262d;border-radius:4px;padding:6px 10px;flex:1;text-align:center;}\n.rp-sum-val{font-size:16px;font-weight:bold;}\n.rp-sum-lbl{font-size:9px;color:#8b949e;margin-top:2px;}\n/* Modal */\n.rp-modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;}\n.rp-modal-overlay.active{display:flex;}\n.rp-modal{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:20px;min-width:260px;max-width:320px;text-align:center;}\n.rp-modal-icon{font-size:28px;margin-bottom:8px;}\n.rp-modal-title{font-size:14px;font-weight:bold;margin-bottom:4px;}\n.rp-modal-body{font-size:11px;color:#8b949e;margin-bottom:16px;line-height:1.5;}\n.rp-modal-btns{display:flex;gap:8px;justify-content:center;}\n.rp-modal-cancel{background:#21262d;border:1px solid #30363d;color:#c9d1d9;border-radius:4px;padding:6px 16px;font-family:monospace;font-size:11px;cursor:pointer;}\n.rp-modal-confirm{border-radius:4px;padding:6px 16px;font-family:monospace;font-size:11px;cursor:pointer;font-weight:bold;}\n.rp-modal-confirm.reboot{background:#161b22;border:1px solid #e3b341;color:#e3b341;}\n.rp-modal-confirm.shutdown{background:#f85149;border:1px solid #f85149;color:#fff;}\n</style>\n\n<!-- Confirmation Modal -->\n<div class=\"rp-modal-overlay\" id=\"rp-modal\">\n  <div class=\"rp-modal\">\n    <div class=\"rp-modal-icon\" id=\"rp-modal-icon\"></div>\n    <div class=\"rp-modal-title\" id=\"rp-modal-title\"></div>\n    <div class=\"rp-modal-body\" id=\"rp-modal-body\"></div>\n    <div class=\"rp-modal-btns\">\n      <button class=\"rp-modal-cancel\" onclick=\"window.rpiModalCancel()\">Cancel</button>\n      <button class=\"rp-modal-confirm\" id=\"rp-modal-confirm-btn\" onclick=\"window.rpiModalConfirm()\">Confirm</button>\n    </div>\n  </div>\n</div>\n\n<div class=\"rp\">\n  <div class=\"rp-hdr\"><span class=\"rp-title\">&#128225; RPi Fleet Monitor</span></div>\n  <div class=\"rp-summary\">\n    <div class=\"rp-sum-box\"><div class=\"rp-sum-val\" id=\"rp-total\" style=\"color:#58a6ff\">0</div><div class=\"rp-sum-lbl\">Total</div></div>\n    <div class=\"rp-sum-box\"><div class=\"rp-sum-val\" id=\"rp-online\" style=\"color:#3fb950\">0</div><div class=\"rp-sum-lbl\">Online</div></div>\n    <div class=\"rp-sum-box\"><div class=\"rp-sum-val\" id=\"rp-offline\" style=\"color:#f85149\">0</div><div class=\"rp-sum-lbl\">Offline</div></div>\n  </div>\n  <div class=\"rp-sec\">Devices</div>\n  <div id=\"rp-devices\"></div>\n</div>\n\n<script>\n(function(){\n  function bar(val,warn,crit){\n    var col=val>=crit?'#f85149':val>=warn?'#e3b341':'#3fb950';\n    return '<div class=\"rp-bar-wrap\"><div class=\"rp-bar\" style=\"width:'+Math.min(100,val)+'%;background:'+col+';\"></div></div>';\n  }\n  function metric(lbl,val,unit,warn,crit){\n    var col=val>=crit?'#f85149':val>=warn?'#e3b341':'#3fb950';\n    return '<div class=\"rp-metric\">'\n      +'<div class=\"rp-mlbl\">'+lbl+'</div>'\n      +'<div class=\"rp-mval\" style=\"color:'+col+'\">'+val+(unit||'')+'</div>'\n      +bar(parseFloat(val),warn,crit)+'</div>';\n  }\n\n  var _send = scope.send.bind(scope);\n  var _pendingMsg = null;\n\n  // Modal helpers\n  window.rpiModalCancel = function(){\n    document.getElementById('rp-modal').classList.remove('active');\n    _pendingMsg = null;\n  };\n  window.rpiModalConfirm = function(){\n    document.getElementById('rp-modal').classList.remove('active');\n    if(_pendingMsg) _send(_pendingMsg);\n    _pendingMsg = null;\n  };\n\n  function showConfirm(name, action){\n    var isShutdown = action === 'shutdown';\n    _pendingMsg = {payload: action, topic: 'rpi/'+name+'/cmd'};\n    document.getElementById('rp-modal-icon').textContent  = isShutdown ? '\\u26a0\\ufe0f' : '\\ud83d\\udd04';\n    document.getElementById('rp-modal-title').textContent = (isShutdown ? 'Shutdown ' : 'Reboot ') + name + '?';\n    document.getElementById('rp-modal-body').textContent  = isShutdown\n      ? 'This will power off ' + name + ' completely.\\nIt will NOT restart automatically.'\n      : 'This will reboot ' + name + '.\\nIt will come back online in ~30s.';\n    var btn = document.getElementById('rp-modal-confirm-btn');\n    btn.className = 'rp-modal-confirm ' + (isShutdown ? 'shutdown' : 'reboot');\n    btn.textContent = isShutdown ? 'Yes, Shut Down' : 'Yes, Reboot';\n    document.getElementById('rp-modal').classList.add('active');\n  }\n\n  scope.$watch('msg', function(msg){\n    if(!msg||!msg.payload) return;\n    var d=msg.payload;\n    var devs=d.devices||{};\n    var keys=Object.keys(devs);\n    var onlineCount=keys.filter(function(k){return devs[k].status==='online';}).length;\n    var el;\n    el=document.getElementById('rp-total');  if(el) el.textContent=keys.length;\n    el=document.getElementById('rp-online'); if(el) el.textContent=onlineCount;\n    el=document.getElementById('rp-offline');if(el) el.textContent=keys.length-onlineCount;\n\n    // Register confirm launchers on window keyed by hostname\n    keys.forEach(function(name){\n      var safe=name.replace(/[^a-zA-Z0-9]/g,'_');\n      window['rpi_reboot_'+safe]   = function(){ showConfirm(name,'reboot'); };\n      window['rpi_shutdown_'+safe] = function(){ showConfirm(name,'shutdown'); };\n    });\n\n    var html='';\n    keys.forEach(function(name){\n      var dev=devs[name];\n      var safe=name.replace(/[^a-zA-Z0-9]/g,'_');\n      var online=dev.status==='online';\n      var cpu=parseFloat(dev.cpu)||0;\n      var temp=parseFloat(dev.temp)||0;\n      var mem=parseFloat(dev.mem)||0;\n      var disk=parseFloat(dev.disk)||0;\n      html+='<div class=\"rp-card '+(online?'online':'offline')+'\">'\n          +'<div class=\"rp-name\">'\n          +'<span><span class=\"rp-dot '+(online?'online':'offline')+'\"></span> '+name+'</span>'\n          +'<div style=\"display:flex;gap:4px;\">'\n          +'<button class=\"rp-btn rp-btn-reboot\" onclick=\"window.rpi_reboot_'+safe+'()\">Reboot</button>'\n          +'<button class=\"rp-btn rp-btn-shutdown\" onclick=\"window.rpi_shutdown_'+safe+'()\">Shutdown</button>'\n          +'</div></div>'\n          +'<div class=\"rp-grid4\">'\n          +metric('CPU',cpu,'%',60,85)\n          +metric('Temp',temp,'\\u00b0C',60,75)\n          +metric('RAM',mem,'%',70,90)\n          +metric('Disk',disk,'%',75,90)\n          +'</div>'\n          +'<div class=\"rp-meta\">IP: '+(dev.ip||'?')+'  &nbsp; Up: '+(dev.uptime||'?')+'  &nbsp; Seen: '+(dev.lastSeen||'?')+'</div>'\n          +'</div>';\n    });\n    if(!html) html='<div style=\"color:#8b949e;font-size:11px;padding:8px;\">No devices yet \\u2014 waiting for MQTT on rpi/#</div>';\n    var cont=document.getElementById('rp-devices');\n    if(cont) cont.innerHTML=html;\n  });\n})();\n</script>",
         "storeOutMessages": true,
         "fwdInMessages": true,
@@ -4911,7 +4679,7 @@
         "name": "Network Monitor Panel",
         "order": 1,
         "width": 6,
-        "height": 11,
+        "height": 7,
         "format": "<style>\n.nm{background:#0d1117;color:#c9d1d9;font-family:monospace;font-size:12px;border-radius:6px;padding:10px;}\n.nm-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;border-bottom:1px solid #21262d;padding-bottom:6px;}\n.nm-title{color:#58a6ff;font-weight:bold;font-size:14px;}\n.nm-sec{color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;margin-top:8px;}\n.nm-host-row{display:flex;align-items:center;padding:5px 0;border-bottom:1px solid #21262d;}\n.nm-host-row:last-child{border-bottom:none;}\n.nm-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-right:8px;}\n.nm-dot.up{background:#3fb950;box-shadow:0 0 4px #3fb950;}\n.nm-dot.down{background:#f85149;}\n.nm-name{flex:1;font-size:11px;font-weight:bold;}\n.nm-ms{font-size:11px;font-family:monospace;text-align:right;width:60px;}\n.nm-bar-wrap{flex:1;background:#21262d;border-radius:2px;height:4px;margin:0 8px;max-width:80px;overflow:hidden;}\n.nm-bar{height:4px;border-radius:2px;transition:width 0.3s;}\n.nm-status-box{border-radius:4px;padding:6px 10px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}\n.nm-status-box.up{background:#0d2818;border:1px solid #238636;}\n.nm-status-box.down{background:#2d0808;border:1px solid #a82020;}\n.nm-fail-item{font-size:10px;color:#8b949e;padding:3px 0;border-bottom:1px solid #21262d;}\n.nm-fail-item:last-child{border-bottom:none;}\n.nm-grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:6px;}\n.nm-box{background:#161b22;border:1px solid #21262d;border-radius:4px;padding:5px 7px;text-align:center;}\n.nm-box-lbl{font-size:9px;color:#8b949e;}\n.nm-box-val{font-size:13px;font-weight:bold;margin-top:2px;}\n</style>\n<div class=\"nm\">\n  <div class=\"nm-hdr\">\n    <span class=\"nm-title\">&#127760; Network Monitor</span>\n  </div>\n\n  <div class=\"nm-sec\">Internet Status</div>\n  <div id=\"nm-inet-box\" class=\"nm-status-box up\">\n    <div>\n      <div style=\"font-size:10px;color:#8b949e;\">Status</div>\n      <div id=\"nm-inet-status\" style=\"font-size:14px;font-weight:bold;color:#3fb950;\">&#9679; UP</div>\n    </div>\n    <div style=\"text-align:right;\">\n      <div style=\"font-size:10px;color:#8b949e;\">Total Fails</div>\n      <div id=\"nm-fails\" style=\"font-size:14px;font-weight:bold;color:#58a6ff;\">0</div>\n    </div>\n  </div>\n  <div style=\"font-size:10px;color:#8b949e;margin-bottom:6px;\" id=\"nm-lastfail\">Last fail: —</div>\n\n  <div class=\"nm-sec\">Host Ping Status</div>\n  <div id=\"nm-hosts\"></div>\n\n  <div class=\"nm-sec\">Fail History</div>\n  <div id=\"nm-history\" style=\"background:#161b22;border:1px solid #21262d;border-radius:4px;padding:6px 8px;max-height:120px;overflow-y:auto;\"></div>\n  <div style=\"font-size:9px;color:#8b949e;margin-top:3px;\">Last 10 outages</div>\n</div>\n\n<script>\n(function(){\n  var HOSTS=[\n    {key:'Internet', label:'Internet (8.8.8.8)', maxMs:100},\n    {key:'Flex',     label:'Flex 6600',          maxMs:5},\n    {key:'OpenwebRX',label:'OpenwebRX+',         maxMs:5},\n    {key:'RBN_PC',   label:'RBN PC',             maxMs:5},\n    {key:'RBN_SDR',  label:'RBN SDR',            maxMs:5}\n  ];\n\n  function msColor(ms, maxMs){\n    if(ms===null) return '#f85149';\n    var pct=ms/maxMs;\n    return pct>0.8?'#f85149':pct>0.5?'#e3b341':'#3fb950';\n  }\n\n  scope.$watch('msg', function(msg){\n    if(!msg||!msg.payload) return;\n    var d=msg.payload;\n\n    // Internet status bar\n    var ibox=document.getElementById('nm-inet-box');\n    var istat=document.getElementById('nm-inet-status');\n    var isUp=(d.status==='up'||d.status===undefined);\n    if(ibox){ ibox.className='nm-status-box '+(isUp?'up':'down'); }\n    if(istat){ istat.textContent='\\u25CF '+(isUp?'UP':'DOWN'); istat.style.color=isUp?'#3fb950':'#f85149'; }\n    if(d.totalFails!==undefined){ var fe=document.getElementById('nm-fails'); if(fe) fe.textContent=d.totalFails; }\n    if(d.lastFail){ var lf=document.getElementById('nm-lastfail'); if(lf) lf.textContent='Last fail: '+d.lastFail; }\n\n    // Host rows\n    if(d.pings){\n      var html='';\n      HOSTS.forEach(function(h){\n        var p=d.pings[h.key];\n        var up=p&&p.up;\n        var ms=p?p.ms:null;\n        var msStr=ms===null?'—':ms+'ms';\n        var col=msColor(ms,h.maxMs);\n        var barW=ms===null?0:Math.min(100,ms/h.maxMs*100);\n        html+='<div class=\"nm-host-row\">'\n            +'<div class=\"nm-dot '+(up?'up':'down')+'\"></div>'\n            +'<div class=\"nm-name\">'+h.label+'</div>'\n            +'<div class=\"nm-bar-wrap\"><div class=\"nm-bar\" style=\"width:'+barW.toFixed(0)+'%;background:'+col+';\"></div></div>'\n            +'<div class=\"nm-ms\" style=\"color:'+col+'\">'+msStr+'</div>'\n            +'</div>';\n      });\n      var he=document.getElementById('nm-hosts');\n      if(he) he.innerHTML=html||'<div style=\"color:#8b949e;font-size:10px;\">Waiting for ping data...</div>';\n    }\n\n    // Fail history\n    if(d.failHistory!==undefined){\n      var fh=d.failHistory;\n      var fhtml=fh.length?fh.map(function(f){ return '<div class=\"nm-fail-item\">'+f+'</div>'; }).join('')\n                        :'<div style=\"color:#8b949e;font-size:10px;padding:4px;\">No outages recorded</div>';\n      var fhe=document.getElementById('nm-history');\n      if(fhe) fhe.innerHTML=fhtml;\n    }\n  });\n})();\n</script>",
         "storeOutMessages": true,
         "fwdInMessages": false,
@@ -9221,9 +8989,9 @@
         ]
     },
     {
-        "id": "44b6fb0376a6b7b2",
+        "id": "a278b2a11351fcfb",
         "type": "mqtt in",
-        "z": "4cac0c07e2686c33",
+        "z": "4590ed80de4873b1",
         "name": "shack/gpsntp/chrony",
         "topic": "shack/gpsntp/chrony",
         "qos": "0",
@@ -9233,173 +9001,33 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 160,
+        "x": 200,
         "y": 120,
         "wires": [
             [
-                "b9e95786f98c4a93"
+                "38e130c3d311583b"
             ]
         ]
     },
     {
-        "id": "b9e95786f98c4a93",
-        "type": "function",
-        "z": "4cac0c07e2686c33",
-        "name": "split + format",
-        "func": "const p = msg.payload || {};\nconst sysOffUs = (p.system_time_offset_s || 0) * 1e6;\nconst rmsUs    = (p.rms_offset_s         || 0) * 1e6;\nconst rootUs   = (p.root_dispersion_s    || 0) * 1e6;\nconst fixStr   = p.fix_mode === 3 ? '3D fix'\n               : p.fix_mode === 2 ? '2D fix'\n               : 'NO FIX';\nreturn [\n  { payload: `${p.ref_name || '?'} (stratum ${p.stratum})` },\n  { payload: sysOffUs },\n  { payload: `RMS: ${rmsUs.toFixed(2)} µs` },\n  { payload: `Skew: ${p.skew_ppm} ppm` },\n  { payload: `Root disp: ${rootUs.toFixed(1)} µs` },\n  { payload: `${fixStr} \\u2014 ${p.sat_used}/${p.sat_seen} sats used` },\n  { payload: new Date((p.ts || 0) * 1000).toLocaleString() }\n];",
-        "outputs": 7,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 360,
-        "y": 120,
-        "wires": [
-            [
-                "33c123d891f1aa16"
-            ],
-            [
-                "4eafa0ee882eac0d"
-            ],
-            [
-                "14ed931d476785e2"
-            ],
-            [
-                "43f9664df1bb4e56"
-            ],
-            [
-                "2a644f1dcc6c8561"
-            ],
-            [
-                "cbce877620d37f6a"
-            ],
-            [
-                "dda4a996b11a7080"
-            ]
-        ]
-    },
-    {
-        "id": "33c123d891f1aa16",
-        "type": "ui_text",
-        "z": "4cac0c07e2686c33",
-        "group": "uigroup.chrony",
-        "order": 1,
-        "width": "6",
-        "height": "1",
-        "name": "Reference",
-        "label": "Reference",
-        "format": "{{msg.payload}}",
-        "layout": "row-spread",
-        "x": 580,
-        "y": 40,
-        "wires": []
-    },
-    {
-        "id": "4eafa0ee882eac0d",
-        "type": "ui_gauge",
-        "z": "4cac0c07e2686c33",
-        "name": "System offset (µs)",
-        "group": "uigroup.chrony",
+        "id": "38e130c3d311583b",
+        "type": "ui_template",
+        "z": "4590ed80de4873b1",
+        "group": "f10110e00bae2689",
+        "name": "Chrony status card",
         "order": 2,
-        "width": "6",
-        "height": "3",
-        "gtype": "gage",
-        "title": "System offset",
-        "label": "µs",
-        "format": "{{value}}",
-        "min": -500,
-        "max": 500,
-        "colors": [
-            "#00b500",
-            "#e6e600",
-            "#ca3838"
-        ],
-        "seg1": "-50",
-        "seg2": "50",
+        "width": 6,
+        "height": 10,
+        "format": "<style>\n.gpsntp-card {\n  background: #0e151e;\n  border: 1px solid #1c2530;\n  border-radius: 8px;\n  width: 100%;\n  padding: 14px 16px 14px;\n  font-family: -apple-system, \"SF Pro Text\", system-ui, sans-serif;\n  font-size: 13px;\n  color: #cdd6e0;\n  -webkit-font-smoothing: antialiased;\n  box-sizing: border-box;\n}\n.gpsntp-card .ttl {\n  color: #5cd0d6;\n  font-weight: 600;\n  font-size: 14px;\n  margin: 0 0 10px;\n  letter-spacing: 0.02em;\n}\n.gpsntp-card .sect {\n  color: #5cd0d6;\n  text-align: center;\n  font-size: 11px;\n  font-weight: 500;\n  letter-spacing: 0.08em;\n  margin: 12px 0 8px;\n  user-select: none;\n}\n.gpsntp-card .sect:before, .gpsntp-card .sect:after {\n  content: \"\\2014\\2014\\2014\";\n  color: #5cd0d6;\n  opacity: 0.7;\n  margin: 0 8px;\n  letter-spacing: -1px;\n}\n.gpsntp-card .row {\n  display: flex;\n  justify-content: space-between;\n  align-items: center;\n  padding: 5px 0;\n  border-bottom: 1px solid #1a232c;\n  gap: 10px;\n}\n.gpsntp-card .row:last-of-type { border-bottom: none; }\n.gpsntp-card .lab {\n  color: #cdd6e0;\n  font-size: 12.5px;\n}\n.gpsntp-card .val {\n  color: #e6edf3;\n  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;\n  font-feature-settings: \"tnum\";\n  font-size: 12.5px;\n}\n.gpsntp-card .val.attn { color: #e89a4a; }\n.gpsntp-card .chip {\n  display: inline-block;\n  padding: 1px 10px;\n  border-radius: 12px;\n  font-size: 11px;\n  font-weight: 500;\n  border: 1px solid currentColor;\n  background: transparent;\n  letter-spacing: 0.02em;\n  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;\n  font-feature-settings: \"tnum\";\n  white-space: nowrap;\n}\n.gpsntp-card .chip.good { color: #5cd36e; }\n.gpsntp-card .chip.info { color: #5cd0d6; }\n.gpsntp-card .chip.warn { color: #e89a4a; }\n.gpsntp-card .chip.bad  { color: #e57373; }\n.gpsntp-card .gps-val {\n  display: inline-flex;\n  align-items: center;\n  gap: 8px;\n  color: #e6edf3;\n}\n.gpsntp-card .ftr {\n  margin-top: 12px;\n  padding-top: 9px;\n  border-top: 1px solid #1a232c;\n  display: flex;\n  justify-content: space-between;\n  color: #7d8896;\n  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;\n  font-feature-settings: \"tnum\";\n  font-size: 11.5px;\n  letter-spacing: 0.02em;\n}\n</style>\n\n<div class=\"gpsntp-card\">\n  <h3 class=\"ttl\">🛰 {{data.title}}</h3>\n\n  <div class=\"sect\">SYNC STATUS</div>\n\n  <div class=\"row\">\n    <span class=\"lab\">Reference</span>\n    <span class=\"chip\" ng-class=\"data.ref_class\">{{data.ref_text}}</span>\n  </div>\n  <div class=\"row\">\n    <span class=\"lab\">Stratum</span>\n    <span class=\"chip\" ng-class=\"data.stratum_class\">{{data.stratum}}</span>\n  </div>\n  <div class=\"row\">\n    <span class=\"lab\">System offset</span>\n    <span class=\"val\" ng-class=\"{attn: data.sys_off_attn}\">{{data.sys_off}}</span>\n  </div>\n  <div class=\"row\">\n    <span class=\"lab\">RMS offset</span>\n    <span class=\"val\" ng-class=\"{attn: data.rms_attn}\">{{data.rms}}</span>\n  </div>\n  <div class=\"row\">\n    <span class=\"lab\">Root dispersion</span>\n    <span class=\"val\" ng-class=\"{attn: data.root_disp_attn}\">{{data.root_disp}}</span>\n  </div>\n  <div class=\"row\">\n    <span class=\"lab\">Skew</span>\n    <span class=\"val\" ng-class=\"{attn: data.skew_attn}\">{{data.skew}}</span>\n  </div>\n  <div class=\"row\">\n    <span class=\"lab\">Leap</span>\n    <span class=\"val\">{{data.leap}}</span>\n  </div>\n  <div class=\"row\">\n    <span class=\"lab\">GPS</span>\n    <span class=\"val gps-val\">\n      <span class=\"chip\" ng-class=\"data.fix_class\">{{data.fix_text}}</span>{{data.sat_used}}&nbsp;/&nbsp;{{data.sat_seen}}\n    </span>\n  </div>\n\n  <div class=\"ftr\">\n    <span>{{data.utc_time}}</span>\n    <span>{{data.ago}}</span>\n  </div>\n</div>\n\n<script>\n(function(scope) {\n  var DASH = '—';\n\n  scope.data = scope.data || {\n    title: 'GPS Time Server',\n    ts: 0,\n    ref_text: DASH, ref_class: 'info',\n    stratum: DASH, stratum_class: 'info',\n    sys_off: DASH, sys_off_attn: false,\n    rms: DASH, rms_attn: false,\n    root_disp: DASH, root_disp_attn: false,\n    skew: DASH, skew_attn: false,\n    leap: DASH,\n    fix_text: DASH, fix_class: 'info',\n    sat_used: DASH, sat_seen: DASH,\n    utc_time: DASH, ago: DASH\n  };\n\n  function fmtSigned(v) {\n    if (v === undefined || v === null) return DASH;\n    var sign = v >= 0 ? '+' : '-';\n    var a = Math.abs(v);\n    if (a < 1e-6) return sign + Math.round(a * 1e9) + ' ns';\n    if (a < 1e-3) return sign + (a * 1e6).toFixed(1) + ' µs';\n    if (a < 1)    return sign + (a * 1e3).toFixed(2) + ' ms';\n    return sign + a.toFixed(3) + ' s';\n  }\n  function fmtAbs(v) {\n    if (v === undefined || v === null) return DASH;\n    var a = Math.abs(v);\n    if (a < 1e-6) return Math.round(a * 1e9) + ' ns';\n    if (a < 1e-3) return (a * 1e6).toFixed(1) + ' µs';\n    if (a < 1)    return (a * 1e3).toFixed(2) + ' ms';\n    return a.toFixed(3) + ' s';\n  }\n  function pad2(n) { return (n < 10 ? '0' : '') + n; }\n  function utcTime(ts) {\n    if (!ts) return DASH;\n    var d = new Date(ts * 1000);\n    return pad2(d.getUTCHours()) + ':' + pad2(d.getUTCMinutes()) + ':' + pad2(d.getUTCSeconds()) + ' UTC';\n  }\n  function agoText(ts) {\n    if (!ts) return DASH;\n    var age = Math.max(0, Math.floor(Date.now() / 1000) - ts);\n    if (age < 60)   return age + ' s ago';\n    if (age < 3600) return Math.floor(age / 60) + ' m ago';\n    return Math.floor(age / 3600) + ' h ago';\n  }\n  function classifyRef(ref) {\n    if (ref === 'PPS' || ref === 'PPS2') return 'good';\n    if (ref === 'NMEA' || ref === 'NMEB') return 'warn';\n    return 'info';\n  }\n  function classifyStratum(s) {\n    if (s === 1) return 'good';\n    if (s >= 2 && s <= 15) return 'warn';\n    return 'bad';\n  }\n  function classifyFix(m) {\n    if (m === 3) return 'good';\n    if (m === 2) return 'warn';\n    return 'bad';\n  }\n\n  function rebuild(p) {\n    var sys = p.system_time_offset_s || 0;\n    var rms = p.rms_offset_s         || 0;\n    var rd  = p.root_dispersion_s    || 0;\n    var sk  = p.skew_ppm             || 0;\n    return {\n      title:           'GPS Time Server',\n      ts:              p.ts || 0,\n      ref_text:        p.ref_name || DASH,\n      ref_class:       classifyRef(p.ref_name),\n      stratum:         (p.stratum === undefined ? DASH : p.stratum),\n      stratum_class:   classifyStratum(p.stratum),\n      sys_off:         fmtSigned(sys),\n      sys_off_attn:    Math.abs(sys) > 1e-3,\n      rms:             fmtAbs(rms),\n      rms_attn:        rms > 1e-3,\n      root_disp:       fmtAbs(rd),\n      root_disp_attn:  rd > 5e-3,\n      skew:            sk.toFixed(3) + ' ppm',\n      skew_attn:       Math.abs(sk) > 1,\n      leap:            p.leap || DASH,\n      fix_text:        p.fix_mode === 3 ? '3D'\n                     : p.fix_mode === 2 ? '2D'\n                     : 'no fix',\n      fix_class:       classifyFix(p.fix_mode),\n      sat_used:        (p.sat_used === undefined ? DASH : p.sat_used),\n      sat_seen:        (p.sat_seen === undefined ? DASH : p.sat_seen),\n      utc_time:        utcTime(p.ts || 0),\n      ago:             agoText(p.ts || 0)\n    };\n  }\n\n  scope.$watch('msg', function(msg) {\n    if (!msg || !msg.payload) return;\n    scope.data = rebuild(msg.payload);\n  });\n\n  if (!scope._gpsntpTicker) {\n    scope._gpsntpTicker = setInterval(function() {\n      if (scope.data && scope.data.ts) {\n        scope.data.ago = agoText(scope.data.ts);\n        try { scope.$apply(); } catch (e) {}\n      }\n    }, 5000);\n    scope.$on('$destroy', function() {\n      clearInterval(scope._gpsntpTicker);\n      scope._gpsntpTicker = null;\n    });\n  }\n})(scope);\n</script>\n",
+        "storeOutMessages": true,
+        "fwdInMessages": false,
+        "resendOnRefresh": true,
+        "templateScope": "local",
         "className": "",
-        "x": 590,
-        "y": 80,
-        "wires": []
-    },
-    {
-        "id": "14ed931d476785e2",
-        "type": "ui_text",
-        "z": "4cac0c07e2686c33",
-        "group": "uigroup.chrony",
-        "order": 3,
-        "width": "6",
-        "height": "1",
-        "name": "RMS",
-        "label": "",
-        "format": "{{msg.payload}}",
-        "layout": "row-left",
-        "x": 570,
+        "x": 460,
         "y": 120,
-        "wires": []
-    },
-    {
-        "id": "43f9664df1bb4e56",
-        "type": "ui_text",
-        "z": "4cac0c07e2686c33",
-        "group": "uigroup.chrony",
-        "order": 4,
-        "width": "6",
-        "height": "1",
-        "name": "Skew",
-        "label": "",
-        "format": "{{msg.payload}}",
-        "layout": "row-left",
-        "x": 570,
-        "y": 160,
-        "wires": []
-    },
-    {
-        "id": "2a644f1dcc6c8561",
-        "type": "ui_text",
-        "z": "4cac0c07e2686c33",
-        "group": "uigroup.chrony",
-        "order": 5,
-        "width": "6",
-        "height": "1",
-        "name": "Root disp",
-        "label": "",
-        "format": "{{msg.payload}}",
-        "layout": "row-left",
-        "x": 580,
-        "y": 200,
-        "wires": []
-    },
-    {
-        "id": "cbce877620d37f6a",
-        "type": "ui_text",
-        "z": "4cac0c07e2686c33",
-        "group": "uigroup.gps",
-        "order": 1,
-        "width": "6",
-        "height": "1",
-        "name": "GPS",
-        "label": "GPS",
-        "format": "{{msg.payload}}",
-        "layout": "row-spread",
-        "x": 570,
-        "y": 240,
-        "wires": []
-    },
-    {
-        "id": "dda4a996b11a7080",
-        "type": "ui_text",
-        "z": "4cac0c07e2686c33",
-        "group": "uigroup.gps",
-        "order": 2,
-        "width": "6",
-        "height": "1",
-        "name": "Last update",
-        "label": "Last update",
-        "format": "{{msg.payload}}",
-        "layout": "row-spread",
-        "x": 590,
-        "y": 280,
-        "wires": []
+        "wires": [
+            []
+        ]
     }
 ]
