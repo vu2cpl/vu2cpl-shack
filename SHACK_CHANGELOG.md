@@ -1971,6 +1971,15 @@ at amber. Lesson: **dynamic colours and auto-scale don't
 compose well** — one or the other carries the magnitude info, not
 both. We chose to keep auto-scale and drop the dynamic colours.
 
+#### Follow-up — SPE scale label legibility (`0d10af3`)
+
+The first SPE WS scale label was styled `opacity:0.55;font-size:9px`
+on top of the dim `gh-lbl` colour, which made it nearly invisible
+in practice. Bumped to `font-size:11px;color:#c9d1d9` (the panel's
+bright text colour) and dropped the opacity entirely. Operator
+also tried bold and rejected it ("too thick") — final version is
+unbold.
+
 ---
 
 ### HANDOVER #3 — Open-Meteo dashboard placeholder — closed as obsolete
