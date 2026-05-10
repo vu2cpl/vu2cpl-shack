@@ -1225,6 +1225,94 @@ multi-destination fan-out, no helper needed.
 
 ---
 
+### Lightning Antenna Protector — Tier 3 cleanup (rename + dedup + trim)
+
+**Tab:** Lightning Antenna Protector (`75e2cac8ab96f556`)
+
+Three follow-up cleanups + one consistency fix; tab 76 → 75 nodes.
+
+#### Renames + small tweaks
+
+- `Replay on lightning tab` → **`Replay Bypass State`**. The old name
+  was a relic from when the lightning UI had its own dashboard tab.
+  After the 05-08 Shack-tab merge, that label was misleading. New name
+  describes what the function actually does: emit `bypass_state` on
+  the 30 s tick so the bypass banner survives page refresh.
+- `Init Defaults` `node.warn(...)` line **deleted**. The existing
+  `node.status({...})` already shows broker, callsign, threshold,
+  reconnect-min in the node's badge — the warn was just spamming
+  the in-editor debug sidebar on every deploy.
+
+#### Strike → Dashboard / AS3935 → Dashboard merge
+
+Two functions, ~25 lines each, ~90 % duplicated payload construction.
+Merged into a single `Strike → Dashboard` that handles both paths.
+
+Detection inside the function:
+
+```js
+const isAS3935 = (msg.strike.source || '').toLowerCase().indexOf('as3935') !== -1;
+```
+
+If true: payload gets `source:'as3935'` and `energy:<n>` fields. If
+false: those fields are omitted (matches old OM payload shape exactly).
+
+Both upstream nodes (`Haversine Distance` for OM/TEST, `AS3935 Threshold
+Check` for AS3935) already populate `msg.strike` with `lat`, `lon`,
+`distance_km`, `time`, and `source`. AS3935 Threshold Check additionally
+sets `msg.strike.energy`. So the unified function only reads from
+`msg.strike` regardless of source.
+
+Wiring:
+- `Strike → Dashboard` (the unified function) is now fed by
+  `Haversine Distance` AND `AS3935 Threshold Check` (the function
+  *before* the AS3935 threshold switch).
+- `AS3935 → Dashboard` deleted.
+
+#### AS3935 banner consistency fix
+
+The first wiring attempt fed `Strike → Dashboard` from
+`AS3935 within threshold?` output 1 (within-threshold strikes only),
+which was a behavior change from the old `AS3935 → Dashboard` (fed
+by both switch outputs). That made AS3935 distant strikes silently
+log to the event log without firing the alert banner — inconsistent
+with the OM path, where `Haversine → Strike → Dashboard` runs
+unconditionally and the banner colours by km.
+
+Corrected: rewired to feed `Strike → Dashboard` from
+`AS3935 Threshold Check` (one node *earlier*, before the switch).
+All AS3935 strikes now fire the banner; the colour distinguishes
+within-threshold (red) vs. nearby (amber) vs. far (green), exactly
+like OM.
+
+#### `Within threshold?` switch trim
+
+Operator noticed that the OM-path `Within threshold?` switch had two
+output ports, only one of which was wired. The `else` branch was
+genuinely unneeded:
+- The alert banner for distant OM strikes already fires upstream via
+  `Haversine Distance → Strike → Dashboard` (no threshold filter on
+  that branch).
+- The event log for OM polls is already populated by
+  `Parse Open-Meteo → Strike` output 2, regardless of distance.
+
+Switch reduced from 2 rules / 2 outputs to 1 rule (`≤ threshold_km`)
+/ 1 output. (The `AS3935 within threshold?` switch is unchanged —
+its out2 is genuinely used by `AS3935 Warn Log`.)
+
+#### Tier-by-tier audit summary
+
+| | Start | After T1 | After T2 | After T3 |
+|---|---|---|---|---|
+| Nodes on Lightning tab | 80 | 78 | 76 | **75** |
+
+Net for this audit pass: -5 nodes, several dead wires removed,
+duplicated payload-construction merged, naming brought into line
+with current architecture. No behavioral changes for the operator
+beyond consistency (AS3935 distant strikes now banner-render).
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:
