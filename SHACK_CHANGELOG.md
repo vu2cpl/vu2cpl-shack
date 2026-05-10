@@ -1897,6 +1897,39 @@ with a one-paragraph summary at the top before the manual steps.
 
 ---
 
+### Rotator Auto-Off Timer — 60 s → 5 min for production
+
+**Tab:** All Power Strips (`b76a5310767803b4`)
+**Node:** `Rotator Auto-Off Timer` (`05f0ddeb566a90fc`)
+
+Two-character config change. The timer that auto-cuts power to the
+rotator (Tasmota `powerstrip1/POWER2`) was set to 60 s back when
+this flow was first iterated; the production target was always 5
+minutes. Surfaced by HANDOVER follow-up #5 / CLAUDE.md TODO #3.
+
+```js
+// before
+var duration = 60 * 1000;
+node.status({fill:'yellow', shape:'dot', text:'Timer running — 60s'});
+
+// after
+var duration = 5 * 60 * 1000;
+node.status({fill:'yellow', shape:'dot', text:'Timer running — 5 mins'});
+```
+
+The idempotent retrigger guard + 10 s post-OFF cooldown (added
+2026-04-22 to break the reset loop from spurious Tasmota stat-republishes)
+remain unchanged. Both still operate independently of the duration
+value.
+
+`flow.rotatorTimerEnd` (the dashboard countdown anchor) is also
+unchanged — it was already computed as `Date.now() + duration` so
+it auto-scaled.
+
+Closes CLAUDE.md TODO #3 and HANDOVER follow-up #5.
+
+---
+
 ### Lightning — Blitzortung integration dropped from roadmap
 
 `HANDOVER.md` follow-up #7 had been carrying "wire Blitzortung TCP-in

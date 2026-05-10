@@ -83,7 +83,7 @@
 | 2 | AS3935 systemd unit hardening | Add `After=network-online.target mosquitto.service` + `Wants=network-online.target` + `Restart=on-failure` to `/etc/systemd/system/as3935.service.d/override.conf`. Belt-and-braces with the script's own retry loop |
 | 3 | Open-Meteo dashboard placeholder | Optional follow-up — the OPEN-METEO MONITOR badge still shows "Waiting for data..." between strikes. Same pattern as AS3935 fix would apply (output 2 wire + `om_status` handler). Currently low-priority — strike events already update it transiently |
 | 4 | Format Log cosmetic | `msg.distance != null` instead of truthy check — currently `0 km` doesn't render the `\| N km` segment |
-| 5 | Rotator timer 60s → 5min | Per CLAUDE.md TODO #3 — change `60 * 1000` to `5 * 60 * 1000` in node `05f0ddeb566a90fc` for production |
+| 5 | ~~Rotator timer 60s → 5min~~ | **Done 2026-05-10** (`971f4b4`) — `05f0ddeb566a90fc` body now `var duration = 5 * 60 * 1000` + status badge updated to "Timer running — 5 mins" |
 | 6 | Mac SwiftUI app scaffold | Per CLAUDE.md TODO #12 — not started. Path now `~/projects/vu2cpl-shack-app/` (was `~/Documents/...`) |
 | 7 | ~~Blitzortung real-time integration~~ | **Dropped 2026-05-10** — verified zero coverage at MK83TE on map.blitzortung.org. Sparse south-India contributor stations make TOA triangulation unreliable in this region. AS3935 (close-range) + Open-Meteo CAPE (regional) cover the operational need. Parser Cases 2/3 in `Parse Strike` are now permanently dead code; can be stripped in a future flow cleanup |
 | 8 | DXCC backlog (pending #6–11 in CLAUDE.md) | Filter persistence, separate CW/Ph/Data fetches, non-project-folder path support, README+PDF, Club Log API ban verification, daily 02:00 inject wiring |
