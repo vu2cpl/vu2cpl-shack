@@ -5249,22 +5249,6 @@
         ]
     },
     {
-        "id": "a870e611736ea27a",
-        "type": "function",
-        "z": "75e2cac8ab96f556",
-        "name": "UI Stats",
-        "func": "return msg;",
-        "outputs": 1,
-        "noerr": 0,
-        "x": 780,
-        "y": 960,
-        "wires": [
-            [
-                "d1dca3df391cdfb8"
-            ]
-        ]
-    },
-    {
         "id": "22e5df9713499f53",
         "type": "function",
         "z": "75e2cac8ab96f556",
@@ -5372,7 +5356,7 @@
         "type": "function",
         "z": "75e2cac8ab96f556",
         "name": "Init Defaults  ✏️ EDIT HERE",
-        "func": "// ╔══════════════════════════════════════════════════════════════╗\n// ║  ⚙️  ALL SETTINGS DOCUMENTED IN THE CONFIG COMMENT NODE      ║\n// ╚══════════════════════════════════════════════════════════════╝\n\n// ── MQTT BROKER ────────────────────────────────────────────────\nconst MQTT_BROKER = '192.168.1.169'; // ← broker IP or hostname\n\n// ── CALLSIGN ───────────────────────────────────────────────────\nconst CALLSIGN    = 'VU2CPL';      // ← your callsign (shown on map)\n\n// ── LOCATION — ONLY EDIT THIS ─────────────────────────────────\nconst GRID_SQUARE = 'MK83TE';     // ← your Maidenhead grid square (6-char)\n\n// ── ANTENNA POWER SWITCH ───────────────────────────────────────\nconst POWER_STRIP = 'powerstrip1'; // ← Tasmota device name for antenna\nconst POWER_CH    = 'POWER5';     // ← antenna socket: POWER1–POWER5\n\n// ── RADIO SWITCH (optional secondary device) ────────────────────\nconst RADIO_ENABLED = true;        // ← false = skip radio switching entirely\nconst RADIO_LABEL   = 'Flex Radio';// ← friendly name shown in dashboard/log\nconst RADIO_STRIP   = '4relayboard'; // ← Tasmota device name for the radio\nconst RADIO_CH      = 'POWER1';   // ← radio socket: POWER1–POWER4\n\n// ── DISCONNECT DISTANCE ────────────────────────────────────────\nconst THRESHOLD_KM = 25;          // ← km — also adjustable via slider\n\n// ── RECONNECT TIMER ────────────────────────────────────────────\nconst RECONNECT_MIN = 20;          // ← minutes clear before antenna reconnects\n\n// ── Maidenhead → Lat/Lon (centre of square) ────────────────────\nfunction gridToLatLon(gs) {\n    gs = gs.toUpperCase();\n    const lon = (gs.charCodeAt(0) - 65) * 20\n              + (parseInt(gs[2]) * 2)\n              + (gs.length >= 6 ? (gs.charCodeAt(4) - 65) / 12 + 1/24 : 1)\n              - 180;\n    const lat = (gs.charCodeAt(1) - 65) * 10\n              + parseInt(gs[3])\n              + (gs.length >= 6 ? (gs.charCodeAt(5) - 65) / 24 + 1/48 : 0.5)\n              - 90;\n    return { lat: Math.round(lat * 10000) / 10000,\n             lon: Math.round(lon * 10000) / 10000 };\n}\n\nconst ll = gridToLatLon(GRID_SQUARE);\n\n// ── DO NOT EDIT BELOW ──────────────────────────────────────────\nflow.set('mqtt_broker',  MQTT_BROKER);\nflow.set('callsign',     CALLSIGN);\nflow.set('grid_square',  GRID_SQUARE);\nflow.set('home_lat',     ll.lat);\nflow.set('home_lon',     ll.lon);\nflow.set('power_strip',  POWER_STRIP);\nflow.set('power_ch',     POWER_CH);\nflow.set('radio_enabled', RADIO_ENABLED);\nflow.set('radio_label',  RADIO_LABEL);\nflow.set('radio_strip',  RADIO_STRIP);\nflow.set('radio_ch',     RADIO_CH);\nflow.set('reconnect_min', RECONNECT_MIN);\nflow.set('threshold_km',  THRESHOLD_KM);  // always overwrite from config\nflow.set('antenna_off', false);   // always reset to ON at deploy\nflow.set('radio_off',   false);   // always reset to ON at deploy\nflow.set('bypass_active', false);  // bypass always off on deploy/launch\nflow.set('bypass_expires_at', null);\nif (!flow.get('stats'))         flow.set('stats',    {total:0,near:0,mid:0,far:0,closest:9999});\nif (!flow.get('recent'))        flow.set('recent',   []);\nif (!flow.get('event_log'))     flow.set('event_log',[]);\nif (!flow.get('wssStatus'))     flow.set('wssStatus','disconnected');\nif (!flow.get('connectCount'))  flow.set('connectCount', 0);\nif (!flow.get('map_count'))     flow.set('map_count',    0);\nnode.status({fill:'blue', shape:'dot',\n  text: 'broker:'+MQTT_BROKER+'  '+CALLSIGN+' '+GRID_SQUARE+' → '+ll.lat+','+ll.lon\n      +'  ant:'+POWER_STRIP+'/'+POWER_CH\n      +(RADIO_ENABLED?' radio:'+RADIO_STRIP+'/'+RADIO_CH:'')\n      +'  thr:'+THRESHOLD_KM+'km  recon:'+RECONNECT_MIN+'min'});\nnode.warn('Init Defaults ran: thr=' + flow.get('threshold_km') + ' rec=' + flow.get('reconnect_min'));\nreturn msg;\n",
+        "func": "// ╔══════════════════════════════════════════════════════════════╗\n// ║  ⚙️  ALL SETTINGS DOCUMENTED IN THE CONFIG COMMENT NODE      ║\n// ╚══════════════════════════════════════════════════════════════╝\n\n// ── MQTT BROKER ────────────────────────────────────────────────\nconst MQTT_BROKER = '192.168.1.169'; // ← broker IP or hostname\n\n// ── CALLSIGN ───────────────────────────────────────────────────\nconst CALLSIGN    = 'VU2CPL';      // ← your callsign (shown on map)\n\n// ── LOCATION — ONLY EDIT THIS ─────────────────────────────────\nconst GRID_SQUARE = 'MK83TE';     // ← your Maidenhead grid square (6-char)\n\n// ── ANTENNA POWER SWITCH ───────────────────────────────────────\nconst POWER_STRIP = 'powerstrip1'; // ← Tasmota device name for antenna\nconst POWER_CH    = 'POWER5';     // ← antenna socket: POWER1–POWER5\n\n// ── RADIO SWITCH (optional secondary device) ────────────────────\nconst RADIO_ENABLED = true;        // ← false = skip radio switching entirely\nconst RADIO_LABEL   = 'Flex Radio';// ← friendly name shown in dashboard/log\nconst RADIO_STRIP   = '4relayboard'; // ← Tasmota device name for the radio\nconst RADIO_CH      = 'POWER1';   // ← radio socket: POWER1–POWER4\n\n// ── DISCONNECT DISTANCE ────────────────────────────────────────\nconst THRESHOLD_KM = 25;          // ← km — also adjustable via slider\n\n// ── RECONNECT TIMER ────────────────────────────────────────────\nconst RECONNECT_MIN = 20;          // ← minutes clear before antenna reconnects\n\n// ── Maidenhead → Lat/Lon (centre of square) ────────────────────\nfunction gridToLatLon(gs) {\n    gs = gs.toUpperCase();\n    const lon = (gs.charCodeAt(0) - 65) * 20\n              + (parseInt(gs[2]) * 2)\n              + (gs.length >= 6 ? (gs.charCodeAt(4) - 65) / 12 + 1/24 : 1)\n              - 180;\n    const lat = (gs.charCodeAt(1) - 65) * 10\n              + parseInt(gs[3])\n              + (gs.length >= 6 ? (gs.charCodeAt(5) - 65) / 24 + 1/48 : 0.5)\n              - 90;\n    return { lat: Math.round(lat * 10000) / 10000,\n             lon: Math.round(lon * 10000) / 10000 };\n}\n\nconst ll = gridToLatLon(GRID_SQUARE);\n\n// ── DO NOT EDIT BELOW ──────────────────────────────────────────\nflow.set('mqtt_broker',  MQTT_BROKER);\nflow.set('callsign',     CALLSIGN);\nflow.set('grid_square',  GRID_SQUARE);\nflow.set('home_lat',     ll.lat);\nflow.set('home_lon',     ll.lon);\nflow.set('power_strip',  POWER_STRIP);\nflow.set('power_ch',     POWER_CH);\nflow.set('radio_enabled', RADIO_ENABLED);\nflow.set('radio_label',  RADIO_LABEL);\nflow.set('radio_strip',  RADIO_STRIP);\nflow.set('radio_ch',     RADIO_CH);\nflow.set('reconnect_min', RECONNECT_MIN);\nflow.set('threshold_km',  THRESHOLD_KM);  // always overwrite from config\nflow.set('antenna_off', false);   // always reset to ON at deploy\nflow.set('radio_off',   false);   // always reset to ON at deploy\nflow.set('bypass_active', false);  // bypass always off on deploy/launch\nflow.set('bypass_expires_at', null);\nif (!flow.get('stats'))         flow.set('stats',    {total:0,near:0,mid:0,far:0,closest:9999});\nif (!flow.get('recent'))        flow.set('recent',   []);\nif (!flow.get('event_log'))     flow.set('event_log',[]);\nnode.status({fill:'blue', shape:'dot',\n  text: 'broker:'+MQTT_BROKER+'  '+CALLSIGN+' '+GRID_SQUARE+' → '+ll.lat+','+ll.lon\n      +'  ant:'+POWER_STRIP+'/'+POWER_CH\n      +(RADIO_ENABLED?' radio:'+RADIO_STRIP+'/'+RADIO_CH:'')\n      +'  thr:'+THRESHOLD_KM+'km  recon:'+RECONNECT_MIN+'min'});\nnode.warn('Init Defaults ran: thr=' + flow.get('threshold_km') + ' rec=' + flow.get('reconnect_min'));\nreturn msg;\n",
         "outputs": 1,
         "timeout": "",
         "noerr": 0,
@@ -5509,8 +5493,7 @@
         "wires": [
             [
                 "22e5df9713499f53",
-                "88ce7a0b9c27747d",
-                "c95abd8843fd8fde"
+                "88ce7a0b9c27747d"
             ]
         ]
     },
@@ -5538,7 +5521,7 @@
         "type": "function",
         "z": "75e2cac8ab96f556",
         "name": "Strike → Dashboard",
-        "func": "const km = msg.strike.distance_km;\nconst thr = flow.get('threshold_km') || 20;\nconst ren = flow.get('radio_enabled') || false;\nconst rlbl = flow.get('radio_label') || 'Radio';\nconst count = (flow.get('map_count') || 0) + 1;\nflow.set('map_count', count);\nmsg.payload = {\n    type: 'strike',\n    lat: msg.strike.lat,\n    lon: msg.strike.lon,\n    km: km,\n    time: msg.strike.time,\n    color: km <= thr ? '#f85149' : km <= 50 ? '#e3b341' : '#FFEE00',\n    offLabel: ren ? 'ANTENNA + ' + rlbl + ' OFF' : 'ANTENNA OFF',\n    homeLat: flow.get('home_lat'),\n    homeLon: flow.get('home_lon'),\n    thrKm: thr,\n    callsign: flow.get('callsign') || '',\n    gs: flow.get('grid_square') || ''\n};\nreturn msg;",
+        "func": "const km = msg.strike.distance_km;\nconst thr = flow.get('threshold_km') || 20;\nconst ren = flow.get('radio_enabled') || false;\nconst rlbl = flow.get('radio_label') || 'Radio';\nmsg.payload = {\n    type: 'strike',\n    lat: msg.strike.lat,\n    lon: msg.strike.lon,\n    km: km,\n    time: msg.strike.time,\n    color: km <= thr ? '#f85149' : km <= 50 ? '#e3b341' : '#FFEE00',\n    offLabel: ren ? 'ANTENNA + ' + rlbl + ' OFF' : 'ANTENNA OFF',\n    homeLat: flow.get('home_lat'),\n    homeLon: flow.get('home_lon'),\n    thrKm: thr,\n    callsign: flow.get('callsign') || '',\n    gs: flow.get('grid_square') || ''\n};\nreturn msg;",
         "outputs": 1,
         "timeout": "",
         "noerr": 0,
@@ -5680,12 +5663,11 @@
         "checkall": "false",
         "repair": false,
         "outputs": 2,
-        "x": 730,
-        "y": 460,
+        "x": 690,
+        "y": 480,
         "wires": [
             [
                 "d62fb0c3c40f03b7",
-                "46aa290b65f66928",
                 "611667d11de744ed",
                 "8506fa532919068a"
             ],
@@ -5738,8 +5720,9 @@
         "type": "function",
         "z": "75e2cac8ab96f556",
         "name": "AS3935 → Dashboard",
-        "func": "\nconst km  = msg._as3935_km;\nconst thr = flow.get('threshold_km') || 20;\nconst ren = flow.get('radio_enabled') || false;\nconst rlbl= flow.get('radio_label')   || 'Radio';\nconst count = (flow.get('map_count')||0) + 1;\nflow.set('map_count', count);\n\nmsg.payload = {\n    type:       'strike',\n    source:     'as3935',          // extra field for display\n    lat:        flow.get('home_lat'),\n    lon:        flow.get('home_lon'),\n    km:         km,\n    energy:     (msg.as3935||{}).energy || 0,\n    time:       (msg.as3935||{}).timestamp || new Date().toLocaleString(),\n    color:      km <= thr ? '#f85149' : km <= 50 ? '#e3b341' : '#FFEE00',\n    offLabel:   ren ? 'ANTENNA + '+rlbl+' OFF' : 'ANTENNA OFF',\n    homeLat:    flow.get('home_lat'),\n    homeLon:    flow.get('home_lon'),\n    thrKm:      thr,\n    callsign:   flow.get('callsign') || '',\n    gs:         flow.get('grid_square') || ''\n};\nreturn msg;\n",
+        "func": "const km = msg._as3935_km;\nconst thr = flow.get('threshold_km') || 20;\nconst ren = flow.get('radio_enabled') || false;\nconst rlbl = flow.get('radio_label') || 'Radio';\n\nmsg.payload = {\n    type: 'strike',\n    source: 'as3935',\n    lat: flow.get('home_lat'),\n    lon: flow.get('home_lon'),\n    km: km,\n    energy: (msg.as3935 || {}).energy || 0,\n    time: (msg.as3935 || {}).timestamp || new Date().toLocaleString(),\n    color: km <= thr ? '#f85149' : km <= 50 ? '#e3b341' : '#FFEE00',\n    offLabel: ren ? 'ANTENNA + ' + rlbl + ' OFF' : 'ANTENNA OFF',\n    homeLat: flow.get('home_lat'),\n    homeLon: flow.get('home_lon'),\n    thrKm: thr,\n    callsign: flow.get('callsign') || '',\n    gs: flow.get('grid_square') || ''\n};\nreturn msg;",
         "outputs": 1,
+        "timeout": "",
         "noerr": 0,
         "initialize": "",
         "finalize": "",
@@ -6033,23 +6016,6 @@
         "wires": []
     },
     {
-        "id": "c95abd8843fd8fde",
-        "type": "function",
-        "z": "75e2cac8ab96f556",
-        "name": "Save Reconnect",
-        "func": "\nif (msg.topic !== 'reconnect_change') return null;\nconst v = parseInt(msg.payload);\nif (isNaN(v) || v < 1) return null;\nflow.set('reconnect_min', v);\nnode.status({fill:'blue', shape:'dot', text:'Reconnect: ' + v + ' min'});\nreturn null;\n",
-        "outputs": 1,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 1340,
-        "y": 180,
-        "wires": [
-            []
-        ]
-    },
-    {
         "id": "2120186f2e63db69",
         "type": "http in",
         "z": "75e2cac8ab96f556",
@@ -6332,16 +6298,17 @@
         "z": "75e2cac8ab96f556",
         "name": "Parse Weather → Header",
         "func": "const WMO_TEXT={0:'Clear Sky',1:'Mainly Clear',2:'Partly Cloudy',3:'Overcast',45:'Foggy',48:'Icy Fog',51:'Light Drizzle',53:'Drizzle',55:'Dense Drizzle',61:'Slight Rain',63:'Moderate Rain',65:'Heavy Rain',71:'Slight Snow',73:'Moderate Snow',75:'Heavy Snow',77:'Snow Grains',80:'Slight Showers',81:'Moderate Showers',82:'Violent Showers',95:'Thunderstorm',96:'Thunderstorm+Hail',99:'Thunderstorm+Hail'};\nconst WMO_EMOJI={0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',71:'❄️',73:'❄️',75:'❄️',77:'❄️',80:'🌦️',81:'🌦️',82:'⛈️',95:'⛈️',96:'⛈️',99:'⛈️'};\nfunction windDir(d){return['N','NE','E','SE','S','SW','W','NW'][Math.round(d/45)%8];}\nconst d=msg.payload;\nif(!d||!d.current){node.error('Bad response');return null;}\nconst c=d.current,hr=d.hourly;\nconst now=new Date();\nconst nowISO=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0')+'T'+String(now.getHours()).padStart(2,'0')+':00';\nlet si=hr.time.indexOf(nowISO);\nif(si===-1){for(let i=hr.time.length-1;i>=0;i--){if(hr.time[i]<=nowISO){si=i;break;}}}\nif(si===-1)si=0;\nconst hourly=[];\nfor(let i=si;i<Math.min(si+13,hr.time.length);i++){\n  const t=new Date(hr.time[i]);\n  hourly.push({h:String(t.getHours()).padStart(2,'0')+':00',temp:Math.round(hr.temperature_2m[i]),emoji:WMO_EMOJI[hr.weather_code[i]]||'🌡️',pop:hr.precipitation_probability[i]||0});\n}\nconst wxData={\n  temp:Math.round(c.temperature_2m),\n  feels:Math.round(c.apparent_temperature),\n  hum:c.relative_humidity_2m,\n  rain:(c.rain||0).toFixed(1),\n  wind:Math.round(c.wind_speed_10m),\n  windDir:windDir(c.wind_direction_10m||0),\n  pressure:Math.round(c.surface_pressure),\n  cond:WMO_TEXT[c.weather_code]||'Unknown',\n  emoji:WMO_EMOJI[c.weather_code]||'🌡️',\n  hourly:hourly,\n  updated:now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})\n};\nflow.set('wxData', wxData);\nnode.status({fill:'green',shape:'dot',text:wxData.temp+'°C '+wxData.cond});\n// Output 1 → Header ui_template (plain payload)\n// Output 2 → Master Dashboard (typed payload)\nconst msg2 = {payload: {type:'weather', wx: wxData}};\nmsg.payload = wxData;\nreturn [msg, msg2];",
-        "outputs": 2,
+        "outputs": 1,
+        "timeout": "",
         "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
         "x": 810,
         "y": 100,
         "wires": [
             [
                 "eee1a8b8552aa21f"
-            ],
-            [
-                "557083037f168b22"
             ]
         ]
     },
@@ -7626,8 +7593,8 @@
                 "232b502c3ee8478c",
                 "aea6d6f85a001e71",
                 "2e0f3fcc5d7743d4",
-                "d5eca40d3503035d",
-                "94b77826079bad57"
+                "94b77826079bad57",
+                "d5eca40d3503035d"
             ]
         ]
     },
@@ -8139,26 +8106,6 @@
         "wires": []
     },
     {
-        "id": "d5eca40d3503035d",
-        "type": "function",
-        "z": "d110d176c0aad308",
-        "d": true,
-        "name": "Format Telegram Alert",
-        "func": "var a = msg.alert;\n\n// Apply same filters as dashboard\nvar filterBands     = flow.get('filterBands')   || {};\nvar filterNewDxcc   = flow.get('filterNewDxcc');\nvar filterNewBand   = flow.get('filterNewBand');\nvar filterNewMode   = flow.get('filterNewMode');\nvar filterModeCW    = flow.get('filterModeCW');\nvar filterModePhone = flow.get('filterModePhone');\nvar filterModeData  = flow.get('filterModeData');\n\n// Band filter\nif (Object.keys(filterBands).length > 0 && !filterBands[a.band]) return null;\n\n// Alert type filter\nif (a.type === 'NEW_DXCC' && filterNewDxcc === false) return null;\nif (a.type === 'NEW_BAND' && filterNewBand === false) return null;\nif (a.type === 'NEW_MODE' && filterNewMode === false) return null;\n\n// Mode filter\nvar _modeMap = {CW:'cw',USB:'phone',LSB:'phone',SSB:'phone',AM:'phone',FM:'phone',\n                FT8:'data',FT4:'data',RTTY:'data',PSK31:'data',JS8:'data',Data:'data'};\nvar _modeCat = _modeMap[a.mode] || null;\nif (_modeCat === 'cw'    && filterModeCW    === false) return null;\nif (_modeCat === 'phone' && filterModePhone === false) return null;\nif (_modeCat === 'data'  && filterModeData  === false) return null;\n\nvar icons = {NEW_DXCC:'🔴', NEW_BAND:'🔵', NEW_MODE:'🟡'};\nvar icon = icons[a.type] || '📻';\n\nvar text = icon + ' *' + a.label + '*\\n' +\n    '📞 `' + a.call + '` — ' + a.entity + '\\n' +\n    '📻 ' + a.band + ' | ' + a.mode + ' | ' + a.freqMHz + ' MHz\\n' +\n    '👁 Spotter: ' + a.spotter + '\\n' +\n    '🕐 ' + a.time;\n\nvar token  = flow.get('cfg_tg_token')   || '';\nvar chatId = flow.get('cfg_tg_chat_id') || '';\n\nmsg.url     = 'https://api.telegram.org/bot' + token + '/sendMessage';\nmsg.method  = 'POST';\nmsg.headers = {'Content-Type': 'application/json'};\nmsg.payload = JSON.stringify({\n    chat_id:    chatId,\n    text:       text,\n    parse_mode: 'Markdown'\n});\n\nnode.status({fill:'blue', shape:'dot', text: a.call + ' → Telegram'});\nreturn msg;",
-        "outputs": 1,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 1240,
-        "y": 800,
-        "wires": [
-            [
-                "c99019cb78d6877c"
-            ]
-        ]
-    },
-    {
         "id": "c99019cb78d6877c",
         "type": "http request",
         "z": "d110d176c0aad308",
@@ -8255,8 +8202,8 @@
         "y": 760,
         "wires": [
             [
-                "d5eca40d3503035d",
-                "94b77826079bad57"
+                "94b77826079bad57",
+                "d5eca40d3503035d"
             ]
         ]
     },
@@ -8438,49 +8385,8 @@
         "y": 200,
         "wires": [
             [
-                "9fd52c02a8486dce",
-                "aa7434df62b95ebc"
-            ]
-        ]
-    },
-    {
-        "id": "9fd52c02a8486dce",
-        "type": "function",
-        "z": "d110d176c0aad308",
-        "d": true,
-        "name": "Fetch All Modes + Parse",
-        "func": "var meterToBand = {\n    '160':'160M','80':'80M','40':'40M','30':'30M',\n    '20':'20M','17':'17M','15':'15M','12':'12M','10':'10M','6':'6M'\n};\n\nfunction fetchURL(target) {\n    return new Promise(function(resolve, reject) {\n        var u = urlmod.parse(target);\n        var options = { hostname:u.hostname, path:u.path, method:'GET',\n                        headers:{'User-Agent':'Mozilla/5.0'} };\n        var req = https.request(options, function(res) {\n            var data = '';\n            res.on('data', function(chunk){ data += chunk; });\n            res.on('end', function(){ resolve(data); });\n        });\n        req.on('error', reject);\n        req.end();\n    });\n}\n\nfunction parseMatrix(raw) {\n    raw = raw.trim();\n    if (!raw || raw.charAt(0) !== '{') throw new Error('Bad response: ' + raw.substring(0,100));\n    var matrix = JSON.parse(raw);\n    if (matrix.Error || matrix.error) throw new Error('CL error: ' + (matrix.Error||matrix.error));\n    var ew = {};\n    Object.keys(matrix).forEach(function(adif) {\n        var bands = matrix[adif];\n        if (typeof bands !== 'object') return;\n        ew[adif] = {};\n        Object.keys(bands).forEach(function(mk) {\n            var band = meterToBand[mk];\n            if (!band || bands[mk] < 1) return;\n            var conf = bands[mk] >= 2;\n            ew[adif][band] = ew[adif][band] || {confirmed:false,unconfirmed:false};\n            if (conf) ew[adif][band].confirmed = true;\n            else      ew[adif][band].unconfirmed = true;\n        });\n    });\n    return ew;\n}\n\nnode.status({fill:'blue', shape:'dot', text:'Fetching all modes...'});\n\nPromise.all([\n    fetchURL(msg.mode0url),\n    fetchURL(msg.mode1url),\n    fetchURL(msg.mode2url),\n    fetchURL(msg.mode3url)\n]).then(function(results) {\n    var ew0 = parseMatrix(results[0]);\n    var ew1 = parseMatrix(results[1]);\n    var ew2 = parseMatrix(results[2]);\n    var ew3 = parseMatrix(results[3]);\n\n    var workedTable = {};\n    Object.keys(ew0).forEach(function(adif) {\n        Object.keys(ew0[adif]).forEach(function(band) {\n            var key = adif + '|' + band;\n            workedTable[key] = {dxcc:adif, band:band,\n                confirmed:ew0[adif][band].confirmed,\n                unconfirmed:ew0[adif][band].unconfirmed};\n        });\n    });\n\n    var modeWorked = {};\n    var allAdifs = {};\n    [ew1,ew2,ew3].forEach(function(ew){ Object.keys(ew).forEach(function(a){ allAdifs[a]=1; }); });\n    Object.keys(allAdifs).forEach(function(adif) {\n        modeWorked[adif] = {\n            cw:    !!(ew1[adif] && Object.keys(ew1[adif]).length > 0),\n            phone: !!(ew2[adif] && Object.keys(ew2[adif]).length > 0),\n            data:  !!(ew3[adif] && Object.keys(ew3[adif]).length > 0)\n        };\n    });\n\n    var stats = {\n        entities:    Object.keys(ew0).length,\n        confirmed:   Object.keys(workedTable).filter(function(k){return workedTable[k].confirmed;}).length,\n        unconfirmed: Object.keys(workedTable).filter(function(k){return !workedTable[k].confirmed;}).length,\n        bandSlots:   Object.keys(workedTable).length\n    };\n\n                \n    flow.set('workedTable',    workedTable);\n    flow.set('entityWorked',   ew0);\n    flow.set('dxccModeWorked', modeWorked);\n    flow.set('workedStats',    stats);\n\n    // Also save to file store — survives reboot without re-fetch\n    flow.set('workedTable',    workedTable, 'file');\n    flow.set('entityWorked',   ew0,         'file');\n    flow.set('dxccModeWorked', modeWorked,  'file');\n    flow.set('workedStats',    stats,       'file');\n\n    // Write nr_dxcc_seed.json to both locations\n    var seed = JSON.stringify({workedTable:workedTable, entityWorked:ew0, dxccModeWorked:modeWorked, stats:stats, updated:new Date().toISOString()});\n    var flowsDir = flow.get('cfg_flows_dir') || os.homedir() + '/.node-red';\n    var paths = [ flowsDir + '/nr_dxcc_seed.json' ];\n    paths.forEach(function(p){\n        try { fs.writeFileSync(p, seed); } catch(e) { node.warn('seed write failed: ' + p + ' ' + e.message); }\n    });\n    node.warn('Seed written to ' + paths.length + ' locations');\n\n    flow.set('dxccReady', true);\n    node.status({fill:'green', shape:'dot',\n        text: stats.entities + ' entities | ' + stats.confirmed + '✓ ' + stats.unconfirmed + '✗ | modes OK'});\n    node.send({payload: stats});\n}).catch(function(err) {\n    node.error('Club Log fetch failed: ' + err.message);\n    node.status({fill:'red', shape:'dot', text:'Club Log unreachable — using seed'});\n    // Fall back to seed data if already loaded by bootstrap\n    var existing = flow.get('workedTable');\n    if (existing && Object.keys(existing).length > 10) {\n        flow.set('dxccReady', true);\n        node.warn('Club Log unreachable — falling back to seed data, alerts enabled');\n        node.send({payload: flow.get('workedStats') || {entities:0,confirmed:0,unconfirmed:0,bandSlots:0}});\n    } else {\n        node.warn('Club Log unreachable and no seed data — alerts remain paused');\n    }\n});\nreturn;",
-        "outputs": 1,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [
-            {
-                "var": "https",
-                "module": "https"
-            },
-            {
-                "var": "urlmod",
-                "module": "url"
-            },
-            {
-                "var": "fs",
-                "module": "fs"
-            },
-            {
-                "var": "os",
-                "module": "os"
-            },
-            {
-                "var": "path",
-                "module": "path"
-            }
-        ],
-        "x": 710,
-        "y": 200,
-        "wires": [
-            [
-                "bb17fc08553256e0"
+                "aa7434df62b95ebc",
+                "9fd52c02a8486dce"
             ]
         ]
     },
@@ -9051,6 +8957,67 @@
         "wires": [
             [
                 "c99019cb78d6877c"
+            ]
+        ]
+    },
+    {
+        "id": "d5eca40d3503035d",
+        "type": "function",
+        "z": "d110d176c0aad308",
+        "d": true,
+        "name": "Format Telegram Alert",
+        "func": "var a = msg.alert;\n\n// Apply same filters as dashboard\nvar filterBands     = flow.get('filterBands')   || {};\nvar filterNewDxcc   = flow.get('filterNewDxcc');\nvar filterNewBand   = flow.get('filterNewBand');\nvar filterNewMode   = flow.get('filterNewMode');\nvar filterModeCW    = flow.get('filterModeCW');\nvar filterModePhone = flow.get('filterModePhone');\nvar filterModeData  = flow.get('filterModeData');\n\n// Band filter\nif (Object.keys(filterBands).length > 0 && !filterBands[a.band]) return null;\n\n// Alert type filter\nif (a.type === 'NEW_DXCC' && filterNewDxcc === false) return null;\nif (a.type === 'NEW_BAND' && filterNewBand === false) return null;\nif (a.type === 'NEW_MODE' && filterNewMode === false) return null;\n\n// Mode filter\nvar _modeMap = {CW:'cw',USB:'phone',LSB:'phone',SSB:'phone',AM:'phone',FM:'phone',\n                FT8:'data',FT4:'data',RTTY:'data',PSK31:'data',JS8:'data',Data:'data'};\nvar _modeCat = _modeMap[a.mode] || null;\nif (_modeCat === 'cw'    && filterModeCW    === false) return null;\nif (_modeCat === 'phone' && filterModePhone === false) return null;\nif (_modeCat === 'data'  && filterModeData  === false) return null;\n\nvar icons = {NEW_DXCC:'🔴', NEW_BAND:'🔵', NEW_MODE:'🟡'};\nvar icon = icons[a.type] || '📻';\n\nvar text = icon + ' *' + a.label + '*\\n' +\n    '📞 `' + a.call + '` — ' + a.entity + '\\n' +\n    '📻 ' + a.band + ' | ' + a.mode + ' | ' + a.freqMHz + ' MHz\\n' +\n    '👁 Spotter: ' + a.spotter + '\\n' +\n    '🕐 ' + a.time;\n\nvar token  = flow.get('cfg_tg_token')   || '';\nvar chatId = flow.get('cfg_tg_chat_id') || '';\n\nmsg.url     = 'https://api.telegram.org/bot' + token + '/sendMessage';\nmsg.method  = 'POST';\nmsg.headers = {'Content-Type': 'application/json'};\nmsg.payload = JSON.stringify({\n    chat_id:    chatId,\n    text:       text,\n    parse_mode: 'Markdown'\n});\n\nnode.status({fill:'blue', shape:'dot', text: a.call + ' → Telegram'});\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1240,
+        "y": 800,
+        "wires": [
+            [
+                "c99019cb78d6877c"
+            ]
+        ]
+    },
+    {
+        "id": "9fd52c02a8486dce",
+        "type": "function",
+        "z": "d110d176c0aad308",
+        "d": true,
+        "name": "Fetch All Modes + Parse",
+        "func": "var meterToBand = {\n    '160':'160M','80':'80M','40':'40M','30':'30M',\n    '20':'20M','17':'17M','15':'15M','12':'12M','10':'10M','6':'6M'\n};\n\nfunction fetchURL(target) {\n    return new Promise(function(resolve, reject) {\n        var u = urlmod.parse(target);\n        var options = { hostname:u.hostname, path:u.path, method:'GET',\n                        headers:{'User-Agent':'Mozilla/5.0'} };\n        var req = https.request(options, function(res) {\n            var data = '';\n            res.on('data', function(chunk){ data += chunk; });\n            res.on('end', function(){ resolve(data); });\n        });\n        req.on('error', reject);\n        req.end();\n    });\n}\n\nfunction parseMatrix(raw) {\n    raw = raw.trim();\n    if (!raw || raw.charAt(0) !== '{') throw new Error('Bad response: ' + raw.substring(0,100));\n    var matrix = JSON.parse(raw);\n    if (matrix.Error || matrix.error) throw new Error('CL error: ' + (matrix.Error||matrix.error));\n    var ew = {};\n    Object.keys(matrix).forEach(function(adif) {\n        var bands = matrix[adif];\n        if (typeof bands !== 'object') return;\n        ew[adif] = {};\n        Object.keys(bands).forEach(function(mk) {\n            var band = meterToBand[mk];\n            if (!band || bands[mk] < 1) return;\n            var conf = bands[mk] >= 2;\n            ew[adif][band] = ew[adif][band] || {confirmed:false,unconfirmed:false};\n            if (conf) ew[adif][band].confirmed = true;\n            else      ew[adif][band].unconfirmed = true;\n        });\n    });\n    return ew;\n}\n\nnode.status({fill:'blue', shape:'dot', text:'Fetching all modes...'});\n\nPromise.all([\n    fetchURL(msg.mode0url),\n    fetchURL(msg.mode1url),\n    fetchURL(msg.mode2url),\n    fetchURL(msg.mode3url)\n]).then(function(results) {\n    var ew0 = parseMatrix(results[0]);\n    var ew1 = parseMatrix(results[1]);\n    var ew2 = parseMatrix(results[2]);\n    var ew3 = parseMatrix(results[3]);\n\n    var workedTable = {};\n    Object.keys(ew0).forEach(function(adif) {\n        Object.keys(ew0[adif]).forEach(function(band) {\n            var key = adif + '|' + band;\n            workedTable[key] = {dxcc:adif, band:band,\n                confirmed:ew0[adif][band].confirmed,\n                unconfirmed:ew0[adif][band].unconfirmed};\n        });\n    });\n\n    var modeWorked = {};\n    var allAdifs = {};\n    [ew1,ew2,ew3].forEach(function(ew){ Object.keys(ew).forEach(function(a){ allAdifs[a]=1; }); });\n    Object.keys(allAdifs).forEach(function(adif) {\n        modeWorked[adif] = {\n            cw:    !!(ew1[adif] && Object.keys(ew1[adif]).length > 0),\n            phone: !!(ew2[adif] && Object.keys(ew2[adif]).length > 0),\n            data:  !!(ew3[adif] && Object.keys(ew3[adif]).length > 0)\n        };\n    });\n\n    var stats = {\n        entities:    Object.keys(ew0).length,\n        confirmed:   Object.keys(workedTable).filter(function(k){return workedTable[k].confirmed;}).length,\n        unconfirmed: Object.keys(workedTable).filter(function(k){return !workedTable[k].confirmed;}).length,\n        bandSlots:   Object.keys(workedTable).length\n    };\n\n                \n    flow.set('workedTable',    workedTable);\n    flow.set('entityWorked',   ew0);\n    flow.set('dxccModeWorked', modeWorked);\n    flow.set('workedStats',    stats);\n\n    // Also save to file store — survives reboot without re-fetch\n    flow.set('workedTable',    workedTable, 'file');\n    flow.set('entityWorked',   ew0,         'file');\n    flow.set('dxccModeWorked', modeWorked,  'file');\n    flow.set('workedStats',    stats,       'file');\n\n    // Write nr_dxcc_seed.json to both locations\n    var seed = JSON.stringify({workedTable:workedTable, entityWorked:ew0, dxccModeWorked:modeWorked, stats:stats, updated:new Date().toISOString()});\n    var flowsDir = flow.get('cfg_flows_dir') || os.homedir() + '/.node-red';\n    var paths = [ flowsDir + '/nr_dxcc_seed.json' ];\n    paths.forEach(function(p){\n        try { fs.writeFileSync(p, seed); } catch(e) { node.warn('seed write failed: ' + p + ' ' + e.message); }\n    });\n    node.warn('Seed written to ' + paths.length + ' locations');\n\n    flow.set('dxccReady', true);\n    node.status({fill:'green', shape:'dot',\n        text: stats.entities + ' entities | ' + stats.confirmed + '✓ ' + stats.unconfirmed + '✗ | modes OK'});\n    node.send({payload: stats});\n}).catch(function(err) {\n    node.error('Club Log fetch failed: ' + err.message);\n    node.status({fill:'red', shape:'dot', text:'Club Log unreachable — using seed'});\n    // Fall back to seed data if already loaded by bootstrap\n    var existing = flow.get('workedTable');\n    if (existing && Object.keys(existing).length > 10) {\n        flow.set('dxccReady', true);\n        node.warn('Club Log unreachable — falling back to seed data, alerts enabled');\n        node.send({payload: flow.get('workedStats') || {entities:0,confirmed:0,unconfirmed:0,bandSlots:0}});\n    } else {\n        node.warn('Club Log unreachable and no seed data — alerts remain paused');\n    }\n});\nreturn;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [
+            {
+                "var": "https",
+                "module": "https"
+            },
+            {
+                "var": "urlmod",
+                "module": "url"
+            },
+            {
+                "var": "fs",
+                "module": "fs"
+            },
+            {
+                "var": "os",
+                "module": "os"
+            },
+            {
+                "var": "path",
+                "module": "path"
+            }
+        ],
+        "x": 710,
+        "y": 200,
+        "wires": [
+            [
+                "bb17fc08553256e0"
             ]
         ]
     },
