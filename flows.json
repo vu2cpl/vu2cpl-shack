@@ -5134,20 +5134,17 @@
                 "t": "lte",
                 "v": "threshold_km",
                 "vt": "flow"
-            },
-            {
-                "t": "else"
             }
         ],
         "checkall": "false",
-        "outputs": 2,
-        "x": 430,
+        "repair": false,
+        "outputs": 1,
+        "x": 390,
         "y": 520,
         "wires": [
             [
                 "d62fb0c3c40f03b7"
-            ],
-            []
+            ]
         ]
     },
     {
@@ -5607,7 +5604,8 @@
         "y": 620,
         "wires": [
             [
-                "af1b4512527ffb45"
+                "af1b4512527ffb45",
+                "51367d456e71fb3e"
             ]
         ]
     },
@@ -5636,8 +5634,7 @@
         "wires": [
             [
                 "d62fb0c3c40f03b7",
-                "611667d11de744ed",
-                "51367d456e71fb3e"
+                "611667d11de744ed"
             ],
             [
                 "ce9e579e7aa7fcf4"
