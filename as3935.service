@@ -1,11 +1,13 @@
 [Unit]
 Description=AS3935 Lightning Sensor MQTT Publisher
-After=network.target
+After=network-online.target mosquitto.service
+Wants=network-online.target
 
 [Service]
 ExecStart=/usr/bin/python3 /home/vu2cpl/as3935_mqtt.py
 WorkingDirectory=/home/vu2cpl
-Restart=always
+Restart=on-failure
+RestartSec=5
 User=vu2cpl
 
 [Install]
