@@ -1341,6 +1341,61 @@ page on GitHub.
 
 ---
 
+### Rebuild runbook + missing systemd unit
+
+The repo had `rpi-agent.service` checked in (since 2026-05-09) but
+**not** the AS3935 daemon's systemd unit (`as3935.service`). Disaster-
+recovery had a real gap: if the SD card died, you'd be reconstructing
+the install path from CLAUDE.md fragments and memory.
+
+#### `as3935.service` checked in
+
+Pulled verbatim from `/etc/systemd/system/as3935.service` on the
+Pi. Standard `User=vu2cpl`, `Restart=always`, `WorkingDirectory=
+/home/vu2cpl`. Added to the "Pi-side scripts in this repo" table
+in CLAUDE.md alongside `rpi-agent.service`.
+
+#### `REBUILD_PI.md` runbook added
+
+A new top-level doc — linear, copy-pastable, "blank SD card to
+working shack" sequence in 12 steps:
+
+1. OS install (Pi OS Lite 64-bit), hostname, SSH, DHCP reservation
+2. System packages (`mosquitto`, `python3-paho-mqtt`, `python3-rpi.gpio`,
+   `i2c-tools`, build tools); enable I²C + UART
+3. Mosquitto LAN-only config + autostart
+4. Node-RED via official installer + 9 palette packages + Projects
+   feature in settings.js
+5. GitHub SSH key → clone the project (Projects-feature path or
+   manual git clone) → `nrsave` git alias setup
+6. `enable_file_context.sh` for persistent flow context
+7. Pi-side scripts deploy: `as3935_mqtt.py`, `as3935.service`,
+   `rpi_agent.py`, `rpi-agent.service`, `monitor.sh` (cron),
+   `power_spe_on.py`. Sudoers entry. Ownership reset (the 05-07
+   quirk explicitly called out).
+8. Hardware setup: udev rules for Telepost / LP-700, AS3935 wiring
+   confirmation (IRQ on **GPIO4** not GPIO17)
+9. `lp700-server` install via VU3ESV's `redeploy.sh`
+10. Manual paste of DXCC + Telegram credentials into the
+    `⚙️ Credentials` node (these aren't in the repo — were rotated
+    after the 05-09 plaintext-leak audit)
+11. Tasmota broker pointer check (no-op if the new Pi keeps
+    `192.168.1.169`)
+12. 12-point final-verification checklist (ping, dashboard,
+    MQTT, AS3935 heartbeat, RPi telemetry, LP-700 telemetry,
+    FlexRadio TCP, Tasmota state sync, DXCC alerts, lightning
+    auto-disconnect)
+
+Plus a 6-row common-failure-modes table.
+
+CLAUDE.md and README.md cross-link the new runbook. README's
+"Documentation map" now distinguishes:
+- `REBUILD_PI.md` = **the shack Pi** (this repo, full install)
+- `DEPLOY_PI.md` = **a different Pi** as a fleet member (telemetry +
+  reboot agent only)
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:

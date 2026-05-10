@@ -567,12 +567,18 @@ Pi-side scripts already in this repo (canonical paths shown):
 | Script in repo | Deployed path on Pi | Purpose |
 |----------------|---------------------|---------|
 | `as3935_mqtt.py` | `/home/vu2cpl/as3935_mqtt.py` | AS3935 chip daemon — `as3935.service` |
+| `as3935.service` | `/etc/systemd/system/as3935.service` | systemd unit for the AS3935 daemon |
 | `as3935_tune.py` | `/home/vu2cpl/as3935_tune.py` | LC-tank TUN_CAP sweep helper |
 | `rpi_agent.py` | `/home/vu2cpl/rpi_agent.py` | HTTP reboot/shutdown — `rpi-agent.service` |
 | `rpi-agent.service` | `/etc/systemd/system/rpi-agent.service` | systemd unit for rpi_agent |
 | `monitor.sh` | `/home/vu2cpl/monitor.sh` | MQTT telemetry cron (every minute) |
 | `power_spe_on.py` | `/home/vu2cpl/power_spe_on.py` | SPE Expert 1.5 KFA power-on via FTDI DTR/RTS toggle |
 | `enable_file_context.sh` | `/home/vu2cpl/enable_file_context.sh` | One-time idempotent settings.js patcher to enable Node-RED `localfilesystem` context store |
+
+For a full from-scratch rebuild of this Pi (blank SD card → working
+shack), see [`REBUILD_PI.md`](REBUILD_PI.md). For onboarding a
+*different* Pi as a fleet member (just telemetry + reboot agent),
+see [`DEPLOY_PI.md`](DEPLOY_PI.md).
 
 ---
 

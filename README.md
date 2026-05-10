@@ -175,11 +175,14 @@ from `sm7iun.se/rbnskew.csv` every 6 h.
 ├── power_spe_on.py                  SPE amp FTDI DTR/RTS power-on helper
 ├── enable_file_context.sh           One-shot Node-RED file context store enabler
 │
+├── as3935.service                   systemd unit for as3935_mqtt.py
+│
 ├── README.md                        This file (umbrella overview)
 ├── DXCC.md                          DXCC Tracker reference
 ├── DXCC_Tracker_README.pdf          DXCC reference (rendered PDF)
 ├── CLAUDE.md                        Operator deep-reference: node IDs, gotchas, runtimes
-├── DEPLOY_PI.md                     Per-Pi onboarding runbook
+├── REBUILD_PI.md                    Disaster-recovery runbook: blank SD → working shack
+├── DEPLOY_PI.md                     Per-host fleet-member onboarding runbook
 ├── HANDOVER.md                      Session pickup notes
 ├── SHACK_CHANGELOG.md               Dated changelog of non-DXCC tab changes
 ├── SHACK_CHANGELOG.pdf              Changelog rendered PDF (always in sync with .md)
@@ -194,7 +197,8 @@ from `sm7iun.se/rbnskew.csv` every 6 h.
 |-----|----------|--------------|
 | [README.md](README.md) | Anyone | First — what is this repo |
 | [CLAUDE.md](CLAUDE.md) | Operator (and the LLM context) | Looking up a node ID, broker port, install command |
-| [DEPLOY_PI.md](DEPLOY_PI.md) | Operator | Onboarding a new Raspberry Pi onto the fleet |
+| [REBUILD_PI.md](REBUILD_PI.md) | Operator (disaster recovery) | "The shack Pi died — rebuild from blank SD card" |
+| [DEPLOY_PI.md](DEPLOY_PI.md) | Operator | Onboarding a *different* Pi as a fleet member (telemetry + reboot agent only) |
 | [DXCC.md](DXCC.md) / [PDF](DXCC_Tracker_README.pdf) | Operator | Working on the DXCC tab specifically |
 | [SHACK_CHANGELOG.md](SHACK_CHANGELOG.md) / [PDF](SHACK_CHANGELOG.pdf) | Future-self | "What did I change on day X" |
 | [HANDOVER.md](HANDOVER.md) | New session pickup | "What was I in the middle of" |
