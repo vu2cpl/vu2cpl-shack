@@ -5117,23 +5117,7 @@
         "y": 360,
         "wires": [
             [
-                "b9d407d94ea9719c",
-                "51367d456e71fb3e"
-            ]
-        ]
-    },
-    {
-        "id": "b9d407d94ea9719c",
-        "type": "function",
-        "z": "75e2cac8ab96f556",
-        "name": "Check Threshold",
-        "func": "const MAX_KM = flow.get('threshold_km') || 20;\nconst km = msg.strike.distance_km;\nmsg.shouldDisconnect = (km <= MAX_KM);\nmsg.thresholdKm = MAX_KM;\nnode.status({\n    fill:  msg.shouldDisconnect ? 'red' : (km <= 50 ? 'yellow' : 'green'),\n    shape: 'dot',\n    text:  msg.shouldDisconnect ? 'ALERT ' + km + 'km' : 'Safe ' + km + 'km'\n});\nreturn msg;\n",
-        "outputs": 1,
-        "noerr": 0,
-        "x": 210,
-        "y": 520,
-        "wires": [
-            [
+                "51367d456e71fb3e",
                 "12c029b533385153"
             ]
         ]
@@ -5393,26 +5377,10 @@
         "y": 1060,
         "wires": [
             [
-                "61dca3d98a0e4c28"
-            ]
-        ]
-    },
-    {
-        "id": "61dca3d98a0e4c28",
-        "type": "function",
-        "z": "75e2cac8ab96f556",
-        "name": "Refresh Stats",
-        "func": "// Trigger stats aggregator\nreturn msg;\n",
-        "outputs": 1,
-        "noerr": 0,
-        "x": 380,
-        "y": 1060,
-        "wires": [
-            [
-                "e2af4f2e46feba21",
-                "d1dca3df391cdfb8",
-                "4238d94eb39edbf1",
                 "f1c57672ba7c0ec1",
+                "d1dca3df391cdfb8",
+                "e2af4f2e46feba21",
+                "4238d94eb39edbf1",
                 "as3935_replay_state"
             ]
         ]
@@ -6483,8 +6451,8 @@
         "name": "200 OK",
         "statusCode": "200",
         "headers": {},
-        "x": 420,
-        "y": 520,
+        "x": 280,
+        "y": 420,
         "wires": []
     },
     {
