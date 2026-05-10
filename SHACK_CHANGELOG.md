@@ -1396,6 +1396,133 @@ CLAUDE.md and README.md cross-link the new runbook. README's
 
 ---
 
+### DXCC — N2WQ disconnect cycle + secrets out of flows.json
+
+**Tab:** DXCC Tracker (`d110d176c0aad308`)
+**Nodes:** `⚙️ Credentials (edit once)` (`08dcd537`),
+`Login + Parse + Dedup` (`login-parse-dedup-v2`)
+
+#### The disconnect cycle
+
+N2WQ was kicking us in a tight loop with `Another login with your call.
+This session is being closed (multiple logins are not allowed)`. tcp-in
+auto-reconnect produced a new session every ~10 s and the loop never
+broke. Two interlocking causes:
+
+**1. Login regex matched the welcome banner.** The original detector was
+
+```js
+line.toLowerCase().includes('login:')
+```
+
+N2WQ-2's welcome banner contains `Last login: (first login) from <ip>`.
+That triggered a *second* `VU2CPL\r\n` send after we'd already
+authenticated. AR-Cluster treats the second send as a command, replies
+`Unknown command: VU2CPL`, and ~10 s later the duplicate-login policy
+kicks the session.
+
+Fixed by tightening the detector to match a *prompt*, not a banner
+mention:
+
+```js
+var lc = line.trim().toLowerCase();
+if (lc.length < 40 && (
+    lc.endsWith('login:') ||
+    lc.endsWith('please login') ||
+    lc.endsWith('please login:') ||
+    lc.endsWith('callsign:') ||
+    lc.endsWith('callsign please:') ||
+    lc.endsWith('your callsign:') ||
+    lc.endsWith('enter your callsign:')
+)) { ... }
+```
+
+The `length < 40` guard kills false positives in the 412-char welcome
+banner. `endsWith` confirms we're at a *prompt* waiting for input,
+not a mid-banner reference.
+
+**2. Another VU2CPL client was on the LAN.** With the regex fix in,
+we *still* got kicked. Confirmed via `nc cluster.n2wq.com 8300` —
+even with Node-RED stopped, manual `VU2CPL` login was kicked, but
+a different test callsign stayed connected. Some other LAN device
+(unidentified — not Mac, not Pi; possibly an iOS app, logging
+program, or forgotten `nc` session) was also logged in as
+`VU2CPL`. AR-Cluster's "no duplicate logins" enforcement was
+firing.
+
+Sidestepped using a packet-radio SSID:
+
+- **Credentials node** got a new `cl_login_ssid: '-1'` config
+- **Login + Parse + Dedup** now sends
+  `(flow.get('cfg_cl_callsign') || 'VU2CPL') +
+   (flow.get('cfg_cl_login_ssid') || '') + '\r\n'`
+
+So Node-RED logs in as `VU2CPL-1` and the other unidentified `VU2CPL`
+client coexists peacefully. AR-Cluster treats `-1`–`-15` SSIDs as
+distinct users (standard packet-radio convention).
+
+Verified `VU2CPL-1` accepted by N2WQ-2 via manual `nc` test before
+deploying.
+
+#### Secrets out of flows.json
+
+While the Credentials node was being touched anyway, the API key,
+password, and Telegram token were moved from inline-in-function to
+systemd environment variables. The motivation isn't repo exposure
+(repo is private) — it's rotation friction. Previously each rotation
+required: edit node → Done → Full Deploy → `nrsave` → push. With
+env-vars: edit `/etc/systemd/system/nodered.service.d/secrets.conf` →
+`systemctl restart nodered`. One step, no commit needed.
+
+Setup on the Pi:
+
+```bash
+sudo mkdir -p /etc/systemd/system/nodered.service.d/
+sudo tee /etc/systemd/system/nodered.service.d/secrets.conf <<'EOF'
+[Service]
+Environment="CLUBLOG_API_KEY=<key>"
+Environment="CLUBLOG_PASSWORD=<pwd>"
+Environment="TELEGRAM_TOKEN=<token>"
+EOF
+sudo chmod 600 /etc/systemd/system/nodered.service.d/secrets.conf
+sudo systemctl daemon-reload
+sudo systemctl restart nodered
+```
+
+The Credentials node now reads each via `env.get('VAR_NAME')` with a
+pre-flight validation block — if any of the three are missing it
+fires `node.error()` and a red status badge so misconfiguration is
+loud, not silent.
+
+`cl_email`, `cl_callsign`, `cl_login_ssid`, `tg_chat_id`, and
+`cfg_flows_dir` stay inline in the Credentials node — they aren't
+sensitive and rarely change.
+
+#### Diagnostic notes for future-self
+
+- **AR-Cluster forks (like N2WQ-2) don't have a `WHO` command.**
+  `HELP` showed only spot/filter commands; no way to query who
+  else is logged in as your call. `SH/USER`, `WHO`, `LIST USERS`
+  all returned `Unknown command`.
+- `tcpdump` on the Pi only sees the Pi's own packets — switch
+  doesn't mirror unicast LAN traffic to the Pi's NIC. Not useful
+  for finding which LAN device is talking to a remote IP. Brute-
+  force quit / power-down was faster than network capture for
+  identifying the offender (though we never positively identified
+  it; the SSID workaround sidestepped the need).
+
+#### Pending follow-ups
+
+- Remaining ghost VU2CPL session on the LAN — never identified.
+  Currently harmless thanks to the `-1` SSID workaround, but
+  worth tracking down eventually (search `tmux` / `screen`
+  sessions, iOS apps, logging programs).
+- API key + Telegram token historical commits — rotation
+  recommended if/when the repo is ever made public. Currently
+  private.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:

@@ -341,26 +341,49 @@ curl http://localhost:8089/healthz        # expect: ok
 
 ---
 
-## Step 10 — DXCC + Telegram credentials
+## Step 10 — DXCC + Telegram secrets via systemd
 
-Open Node-RED → DXCC Tracker tab → **`⚙️ Credentials`** node
-(`08dcd5378a79bb18`). Paste your current Club Log API key, email,
-password, callsign, and Telegram bot token / chat_id. These are
-**not** in the repo — they were rotated and stored only on the
-working Pi.
+Since 2026-05-10 the API key, password, and Telegram token live in a
+systemd drop-in, NOT in the Credentials node body. Node-RED reads
+them at startup via `env.get('VAR_NAME')`.
 
-```javascript
-var cfg = {
-    cl_apikey   : '<your-club-log-api-key>',
-    cl_email    : 'vu2cpl@gmail.com',
-    cl_password : '<your-club-log-password>',
-    cl_callsign : 'VU2CPL',
-    tg_token    : '<your-telegram-bot-token>',
-    tg_chat_id  : '<your-telegram-chat-id>'
-};
+```bash
+sudo mkdir -p /etc/systemd/system/nodered.service.d/
+sudo tee /etc/systemd/system/nodered.service.d/secrets.conf <<'EOF'
+[Service]
+Environment="CLUBLOG_API_KEY=<your-club-log-api-key>"
+Environment="CLUBLOG_PASSWORD=<your-club-log-password>"
+Environment="TELEGRAM_TOKEN=<your-telegram-bot-token>"
+EOF
+sudo chmod 600 /etc/systemd/system/nodered.service.d/secrets.conf
+sudo chown root:root /etc/systemd/system/nodered.service.d/secrets.conf
+sudo systemctl daemon-reload
+sudo systemctl restart nodered
 ```
 
-Click Done → **Full Deploy**.
+These three values are NOT in the repo — they live only on the Pi.
+Source them from your password manager / Club Log account / Telegram
+@BotFather.
+
+The Credentials node (`08dcd5378a79bb18`) on the DXCC tab loads them
+at deploy/restart time. Verify with the node's status badge:
+
+- **Green** `Config loaded: VU2CPL-1 / tg:<chat-id>` → all three env-vars
+  reached the Node-RED process
+- **Red** `Missing: CLUBLOG_API_KEY,...` → env-var didn't reach the
+  process; check `secrets.conf` has the right `Environment=` syntax
+  (quoted values, no spaces around `=`) and that you ran
+  `daemon-reload` + `restart nodered`
+
+The remaining non-secret config (`cl_email`, `cl_callsign`,
+`cl_login_ssid`, `tg_chat_id`, `cfg_flows_dir`) stays inline in the
+Credentials node body and is committed to the repo — you don't need to
+edit them on a fresh rebuild as long as the values match VU2CPL's
+operator identity.
+
+**Rotation flow** (after rebuild, when secrets need refresh):
+edit `secrets.conf` → `sudo systemctl restart nodered`. No editor
+deploy, no commit, no flows.json change.
 
 ---
 
