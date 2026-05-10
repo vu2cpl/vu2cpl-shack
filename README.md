@@ -183,6 +183,7 @@ from `sm7iun.se/rbnskew.csv` every 6 h.
 ├── monitor.sh                       MQTT telemetry cron (every minute)
 ├── power_spe_on.py                  SPE amp FTDI DTR/RTS power-on helper
 ├── enable_file_context.sh           One-shot Node-RED file context store enabler
+├── rebuild_pi.sh                    Automated bare-metal rebuild script (paired with REBUILD_PI.md)
 │
 ├── as3935.service                   systemd unit for as3935_mqtt.py
 │

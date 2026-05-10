@@ -1839,9 +1839,61 @@ The widget uses `ui_template`, `ui_group`, `ui_tab`.
   with just two nodes: `mqtt in shack/gpsntp/chrony` and
   `Chrony status card` ui_template (id `38e130c3`). Dashboard tab
   is `Shack Monitoring tools`, group `Network Monitor` (width 6).
+- The orphan `GPS NTP` flow tab was subsequently deleted by the
+  operator (closes HANDOVER follow-up #13).
 
-The original `GPS NTP` flow tab (`4cac0c07`) is now an empty
-orphan and should be deleted in a future cleanup.
+---
+
+### `rebuild_pi.sh` — automated rebuild script
+
+Disaster-recovery just got faster. `REBUILD_PI.md` (Pi-rebuild
+runbook from 2026-05-09) was a manual copy-paste sequence taking
+~90 minutes. Wrapped it in a single bash script that automates
+Stages 2–13 (everything after the SD-card burn).
+
+`rebuild_pi.sh` highlights:
+
+- **Stage-based, 1:1 with REBUILD_PI.md numbering.** Each stage
+  has its own function (`stage_01_apt_packages`, …,
+  `stage_13_verify`), prints a banner, runs commands with
+  `set -euo pipefail`, marks itself done in a state file.
+- **Resumable.** State persisted in `/tmp/rebuild_pi.state`. After
+  Ctrl-C or unexpected reboot, re-run and it skips completed
+  stages. `--reset` wipes the state file. `--stage N` re-runs a
+  single stage. `--status` lists what's done.
+- **Idempotent.** Every operation safe to re-run. apt installs
+  are no-ops once present; npm install skips already-installed
+  packages; clones detect existing repo and `git pull` instead;
+  systemd `enable --now` is idempotent; sudoers entry uses `tee`
+  with overwrite; cron is grep+tee idempotent.
+- **Two interactive pauses** (necessarily so):
+  1. Stage 6 — generate ed25519 keypair, print pubkey, wait for
+     operator to paste it into GitHub Settings → SSH keys
+  2. Stage 12 — `read -s` for Club Log API key, password,
+     Telegram token (no echo); written to
+     `/etc/systemd/system/nodered.service.d/secrets.conf`
+- **Fail-fast pre-flight.** Refuses to run as root (sudo only
+  when needed). Verifies hostname, internet, sudo auth.
+- **Built-in verification** at Stage 13 — 10-point checklist
+  matching REBUILD_PI.md Step 12 (ping, Node-RED editor + UI,
+  Mosquitto, as3935 service, rpi-agent, lp700-server `/healthz`,
+  three MQTT topic smoke-tests). Pass/fail summary; pointer to
+  manual diagnosis on failures.
+- **Coloured output** (red/green/yellow/blue helpers) for at-a-
+  glance progress.
+
+Wall-clock target: ~30 min vs. ~90 min manual. Uses include the
+obvious "shack Pi died, rebuild" plus quicker iteration on test
+Pis or VMs.
+
+The script lives next to REBUILD_PI.md as a peer source-of-truth.
+The runbook stays as the **manual fallback** when the script
+breaks (which it eventually will, e.g. when Pi OS bumps a major
+version). The two must stay in sync — script banners reference
+the runbook's section numbers.
+
+REBUILD_PI.md updated to point at the script as the faster path,
+with a one-paragraph summary at the top before the manual steps.
 
 ---
 

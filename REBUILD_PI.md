@@ -15,6 +15,33 @@ shack, assuming reasonable internet and existing GitHub SSH keys.
 
 ---
 
+## Faster path — the rebuild script
+
+After Step 1 (OS install) and SSH access, you can run
+[`rebuild_pi.sh`](rebuild_pi.sh) which automates Stages 2–13 of this
+runbook. Stage-based, idempotent, resumable, fail-fast.
+
+```bash
+# On the new Pi, after first boot + SSH:
+git clone https://github.com/vu2cpl/vu2cpl-shack.git /tmp/vu2cpl-shack
+bash /tmp/vu2cpl-shack/rebuild_pi.sh
+```
+
+The script pauses for two interactive steps:
+- Stage 6 — paste the new SSH public key into your GitHub account
+- Stage 12 — paste Club Log API key, password, Telegram token (no echo)
+
+Everything else runs automatically. Re-run safely after Ctrl-C or reboot:
+state is tracked in `/tmp/rebuild_pi.state`. Single-stage re-run with
+`bash rebuild_pi.sh --stage 9`. Wipe state and start over with
+`--reset`.
+
+The runbook below stays as the **manual fallback** when the script
+breaks, and as the source-of-truth for what each stage does. Both must
+stay in sync — the script's banners reference these section numbers.
+
+---
+
 ## What you need
 
 ### Hardware
