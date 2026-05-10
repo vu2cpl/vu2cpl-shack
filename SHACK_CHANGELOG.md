@@ -1632,6 +1632,102 @@ TODOs / HANDOVER follow-ups before flipping it.
 
 ---
 
+### DXCC — `Login+Parse+Dedup` was emitting wrong spot field names (real regression)
+
+**Tab:** DXCC Tracker (`d110d176c0aad308`)
+**Nodes:** `Login + Parse + Dedup` (`login-parse-dedup-v2`),
+`DXCC Prefix Lookup + Alert Classify` (`b981643f`)
+
+#### Symptom
+
+User reported "I was getting alerts a few per hour earlier — now
+nothing" despite all 4 cluster cards green and spots flowing.
+The `DXCC Prefix Lookup + Alert Classify` node had **empty status**
+— never updating, never firing alerts.
+
+#### Root cause — field-name mismatch between two functions
+
+`Login + Parse + Dedup` was emitting spots as:
+
+```js
+spot: { seq, dxCall, freqKHz, freqMHz, mode, spotter, comment, src }
+```
+
+But `DXCC Prefix Lookup + Alert Classify` was reading:
+
+- `spot.call` — for blacklist check, DXCC resolution, status text,
+  alert payloads
+- `spot.band` — for band filtering and band-worked classification
+
+Neither field was being set by the upstream parser. So Prefix
+Lookup hit this line near the top:
+
+```js
+var band = (spot.band || '').toString().toUpperCase().trim();
+if (!band) return null;   // silent return — no status update
+```
+
+…and silently returned on every real spot. Empty status, no alerts,
+forever.
+
+The `TEST P5ABC` / `TEST C6ABC 160M` / etc. inject buttons that
+feed Prefix Lookup directly **were setting `call` and `band`
+correctly** in their payloads, which is why manual-test alerts
+fired but real cluster spots never did. That masked the bug for
+some unknown duration.
+
+#### Fix
+
+Added a `getBand(khz)` helper inside `Login + Parse + Dedup`
+(standard amateur band ranges, kHz → band name) and updated the
+emitted spot object:
+
+```js
+spot: {
+    seq:      seq,
+    call:     dxCall,         // ← NEW — what Prefix Lookup reads
+    dxCall:   dxCall,         //         kept for any legacy consumer
+    freqKHz:  freqKHz,
+    freqMHz:  freqMHz,
+    mode:     mode,
+    band:     getBand(freqKHz),   // ← NEW
+    spotter:  spotter,
+    comment:  comment,
+    src:      src
+}
+```
+
+`call` is added alongside `dxCall` (rather than replacing) so
+nothing else that reads `spot.dxCall` (e.g. SmartSDR command
+construction earlier in the function) breaks.
+
+#### Verification
+
+After deploy, `DXCC Prefix Lookup + Alert Classify` immediately
+started showing per-spot activity:
+- Grey ring `K1ABC worked (United States 20M)` for already-worked
+- Red/blue/yellow on actual alerts
+
+#### Sequence of today's diagnostic missteps (worth recording)
+
+1. Symptom appeared after the secrets-to-env-var redeploy →
+   wrongly attributed to Club Log fetch failure
+2. Investigated `dxccReady` flag → made Bootstrap unilaterally
+   set it (correct fix, but for a different problem)
+3. Ticked once-on-startup checkboxes → wrong fix; reverted
+4. Verified all clusters green / spots flowing → realised the
+   issue is downstream of the parser
+5. Read both function bodies side-by-side → found the field-name
+   mismatch
+
+Lesson: when a node has empty status and the symptom is
+"downstream silence despite upstream activity", suspect a
+field-name mismatch between producer and consumer before
+suspecting flag/state issues. Should have read both function
+bodies first.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:
