@@ -409,6 +409,58 @@ HA Pi (`HassPi`) uses neither script. HA-side automation publishes the
 same `rpi/HassPi/*` topics directly via HA's `mqtt.publish` service every
 30 s. No Node-RED flow changes needed for HA Pi onboarding.
 
+#### Chrony / GPS Time Server card (gpsntp.local)
+
+Single `ui_template` widget on the RPi Fleet panel (Shack tab) showing
+live status of `gpsntp.local` — the stratum-1 GPS-disciplined NTP
+server. Replaces an earlier seven-widget version on a dedicated tab.
+
+| Item | Detail |
+|------|--------|
+| Topic | `shack/gpsntp/chrony` (retained, JSON, every minute) |
+| Broker | `192.168.1.169:1883` — reuses existing `mqttbroker.shack` config node, **do not duplicate** |
+| Publisher | `/usr/local/bin/gpsntp-mqtt-publish.sh` on `gpsntp.local` (cron-driven; Pi-side, not in this repo) |
+| Source of truth | [`vu2cpl/pi-gps-ntp-server`](https://github.com/vu2cpl/pi-gps-ntp-server) repo, `dashboard/` folder |
+
+**Payload shape** (chrony tracking + GPS fix):
+
+```json
+{
+  "host": "gpsntp", "ts": 1747032600, "ref_id": "50505300", "ref_name": "PPS",
+  "stratum": 1, "system_time_offset_s": -3.5e-08, "last_offset_s": 1.52e-07,
+  "rms_offset_s": 2.1e-07, "freq_ppm": 0.142, "skew_ppm": 0.009,
+  "root_delay_s": 0.0, "root_dispersion_s": 1.8e-05, "leap": "Normal",
+  "fix_mode": 3, "sat_used": 9, "sat_seen": 12
+}
+```
+
+**Architecture note:** one `mqtt in` → one `ui_template`, no function
+node in between. All formatting + threshold logic lives in the
+template's AngularJS `<script>`. CSS is namespaced under `.gpsntp-card`
+so it doesn't bleed into other widgets. UTC-only clock in the footer
+(ham-radio convention — never `toLocaleString()`).
+
+**Attention thresholds** (rendered in orange when crossed):
+- `|system_time_offset_s|` > 1 ms
+- `rms_offset_s` > 1 ms
+- `root_dispersion_s` > 5 ms
+- `|skew_ppm|` > 1
+- `ref_name` ≠ PPS / PPS2
+- `fix_mode` ≠ 3
+
+**Updating the widget:** preferred path is in-place edit — open the
+existing Chrony status card `ui_template` node, replace the format
+box with `dashboard/chrony-card-template.html` from
+`pi-gps-ntp-server`, Done → Deploy. Doesn't disturb group / position.
+Re-importing the flow is only for replacing the broker / mqtt-in
+nodes too — use Import → "Copy" (not Replace) to avoid resetting
+position.
+
+**Gotcha:** the core MQTT input node's type string is `"mqtt in"`
+(with a space), not `"mqtt-in"`. Only the broker config node uses
+the hyphen (`mqtt-broker`). Hand-built flows that get this wrong are
+rejected on import as "unknown types".
+
 ---
 
 ## EXTERNAL APIs

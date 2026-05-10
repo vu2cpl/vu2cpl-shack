@@ -1728,6 +1728,118 @@ bodies first.
 
 ---
 
+### RPi Fleet — Chrony / GPS Time Server card
+
+**Tab:** RPi Fleet Monitor (`d5fec2fea3dd37f4`) — eventual home
+**Source of truth:** [`vu2cpl/pi-gps-ntp-server`](https://github.com/vu2cpl/pi-gps-ntp-server),
+`dashboard/` folder
+
+#### What
+
+A single `ui_template` widget showing live status of `gpsntp.local`
+(the stratum-1 GPS-disciplined NTP server installed 2026-05-09).
+Replaces a transitional seven-widget version on a dedicated `GPS NTP`
+dashboard tab.
+
+#### Data source
+
+| | |
+|---|---|
+| Broker | `192.168.1.169:1883` (the existing shack MQTT broker) |
+| Config node | reuses existing `mqttbroker.shack` — **do not duplicate** |
+| Topic | `shack/gpsntp/chrony` |
+| QoS | retained, JSON, refreshed every minute |
+| Publisher | `/usr/local/bin/gpsntp-mqtt-publish.sh` on `gpsntp.local` (Pi-side cron, NOT in this repo) |
+
+Because the topic is retained, any new subscriber gets the latest
+snapshot the moment it connects.
+
+#### Payload
+
+```json
+{
+  "host": "gpsntp",
+  "ts": 1747032600,                 // Unix epoch seconds
+  "ref_id": "50505300",             // chrony hex ref id
+  "ref_name": "PPS",                // PPS / NMEA / pool host etc.
+  "stratum": 1,                     // 1 healthy, 16 unsynced
+  "system_time_offset_s": -3.5e-08,
+  "last_offset_s": 1.52e-07,
+  "rms_offset_s": 2.1e-07,
+  "freq_ppm": 0.142,
+  "skew_ppm": 0.009,
+  "root_delay_s": 0.0,
+  "root_dispersion_s": 1.8e-05,
+  "leap": "Normal",
+  "fix_mode": 3,                    // 0/1/2/3 = none/nofix/2D/3D
+  "sat_used": 9,
+  "sat_seen": 12
+}
+```
+
+#### Architecture
+
+- One `mqtt in` → one `ui_template`. **No function node in between** —
+  all formatting + threshold logic lives in the template's AngularJS
+  `<script>`.
+- CSS namespaced under `.gpsntp-card` so it doesn't bleed into other
+  widgets.
+- Footer: UTC clock (`HH:MM:SS UTC`, derived from `ts`) plus a
+  `setInterval` ticker that updates the relative "N s ago" stamp every
+  5 s without re-rendering the card. Interval cleared on `$destroy` so
+  navigating between tabs doesn't leak.
+- `ui_group` width 6 to match other dashboard panels; inner card uses
+  `width: 100%` (no max-width) so it fills whatever group width is
+  assigned.
+
+#### Attention thresholds
+
+Value rendered in orange when crossed:
+
+- `|system_time_offset_s|` > 1 ms
+- `rms_offset_s` > 1 ms
+- `root_dispersion_s` > 5 ms
+- `|skew_ppm|` > 1
+- `ref_name` ≠ PPS / PPS2
+- `fix_mode` ≠ 3
+
+#### Updating the widget — preferred path
+
+1. **In-place edit** — open the existing Chrony status card
+   `ui_template` node, replace the format box with
+   `dashboard/chrony-card-template.html` from `pi-gps-ntp-server`,
+   Done → Deploy. Doesn't disturb the group / position.
+2. **Re-import the flow** — only if you also want to replace the
+   broker / mqtt-in nodes. Use Import → "Copy" (not "Replace") and
+   move the new `ui_template` into your group, otherwise the import
+   resets the widget's position.
+
+#### Gotchas
+
+- The core MQTT input node's type string is `"mqtt in"` (with a
+  space), not `"mqtt-in"`. Only the broker config node uses the
+  hyphen (`mqtt-broker`). Hand-built flows that get this wrong are
+  rejected on import as "unknown types".
+- The publisher publishes Unix epoch in `ts`. The widget formats it
+  as **UTC** for the footer (ham radio convention). Do **not** switch
+  to `toLocaleString()` — that's a local-time bug we already fixed
+  elsewhere.
+
+#### Required palette
+
+`node-red-dashboard` (classic Angular dashboard, **not** Dashboard 2.0).
+The widget uses `ui_template`, `ui_group`, `ui_tab`.
+
+#### Current state
+
+`743a0d8` pushed the **transitional** seven-widget version on a
+dedicated `GPS NTP` tab (id `4cac0c07e2686c33`). The single
+`ui_template` migration via the in-place-edit path above is pending —
+once done, the dedicated tab will be deleted and the card will live
+alongside the existing fleet panel on the Shack tab.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:
