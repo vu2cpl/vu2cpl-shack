@@ -41,6 +41,7 @@
 | 05-09 | `DEPLOY_PI.md` runbook | New top-level doc walking through full per-Pi onboarding: scp files, ownership fix, mosquitto-clients install, cron, sudoers, systemd, Node-RED httpDevices update, dashboard verify. Also covers HA Pi special case, 8-row troubleshooting table, and clean decommission flow. CLAUDE.md cross-references it. Use this when finally bringing the 2 remaining Pis online (HANDOVER follow-up #4). |
 | 05-09 | Pi GPS NTP server | New standalone repo [vu2cpl/pi-gps-ntp-server](https://github.com/vu2cpl/pi-gps-ntp-server). Project pivoted from the originally-planned ESP32 firmware build (rationale: chrony + gpsd + kernel PPS on a Pi gives more accurate client-visible time, with orders of magnitude less custom code, than ESP32 firmware). Pi 3B repurposed as `gpsntp.local` @ 192.168.1.158. Taps the U3S's QLG1 GPS via the unused **6-way** header (2.2 kΩ + 3.3 kΩ voltage dividers — QLG1 outputs 5 V, Pi GPIO is 3.3 V only); U3S still has its own QLG1 connection on the 4-way and is electrically undisturbed. Stack: Pi OS Lite 64-bit Trixie, `gpsd 3.25` (`-n` flag), kernel PPS via `dtoverlay=pps-gpio,gpiopin=18` → `/dev/pps0`, chrony with `refclock PPS /dev/pps0 lock NMEA refid PPS` + `allow 192.168.1.0/24` + `allow fd00::/8` (IPv6 ULA). Headline numbers at first lock: stratum 1, PPS error ±152 ns, system clock 35 ns slow of GPS, skew 0.009 ppm, root dispersion 18 µs. Mac disciplined via `sudo systemsetup -setnetworktimeserver gpsntp.local`; `timed` keeps it within 1–4 ms over LAN. Repo carries MIT LICENSE + README + BUILD.md (stage-by-stage procedure with per-stage verification + troubleshooting) + HANDOVER.md (context, decisions, ops checks). Local dir `~/projects/Pi GPS NTP Server/` (renamed from `ESP32 GPS NTP/`). |
 | 05-09 | gpsntp on RPi Fleet | First Pi onboarded via the brand-new `DEPLOY_PI.md` runbook (above). `rpi_agent.py` + `monitor.sh` + `rpi-agent.service` deployed; sudoers `vu2cpl ALL=(ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown` added; `mosquitto-clients` installed; cron publishes 7 MQTT topics per minute (`cpu/mem/temp/disk/uptime/ip/status` under `rpi/gpsntp/`) to broker @ 192.168.1.169. Smoke test caught all 7 messages cleanly with `mosquitto_sub -C 7` (DEPLOY_PI.md updated implicitly: `monitor.sh` publishes without `-r`, so sub must subscribe before pub). `rpi-agent.service` active on :7799, HTTP 404 probe verified. Node-RED `httpDevices` map (function `a0695975fec84e2c`) still needs the `'gpsntp':'http://gpsntp.local:7799'` row — flagged as follow-up #9. |
+| 05-10 | Lightning tier-1 cleanup | Audit pass on Lightning Antenna Protector tab dropped 2 dead nodes (`Save Reconnect`, `UI Stats`), 2 dead wires (Parse Weather → Master Dashboard, AS3935-within-threshold → Send Radio Command), and 5 dead `flow.set` lines (`map_count`, `connectCount`, `wssStatus`). 80 → 78 nodes. Operator also reduced Parse Weather output count 2 → 1 (cleaner than the wire-only fix). Tier 2 (drop `Check Threshold` indirection + replace `Refresh Stats` 1-line passthrough with direct fan-out) and Tier 3 (rename `Replay on lightning tab`, demote Init Defaults `node.warn`, merge `Strike → Dashboard` and `AS3935 → Dashboard`) deferred. |
 
 ---
 
@@ -127,6 +128,13 @@ Critical Node-RED IDs (per CLAUDE.md):
 ## Recent commit log (for context)
 
 ```
+f8ee18c Lightning: tier-1 cleanup — drop dead nodes, wires, vars
+30d540e DXCC seed refresh
+4791c2f some minor cleanup of unused nodes and deleted ols spe serial flow
+e9c7d8e SHACK_CHANGELOG + HANDOVER: 2026-05-09 — Pi GPS NTP server build + gpsntp on RPi Fleet
+0c1546d Add DEPLOY_PI.md — full per-Pi onboarding runbook
+964cb04 Pi-side scripts: power_spe_on.py in, fetch_clublog.sh retired
+8636ff4 Pi-side scripts: check in rpi_agent.py + monitor.sh + rpi-agent.service
 9bb9631 Add MIT LICENSE + README badge
 bb7415b SHACK_CHANGELOG: 2026-05-09 footnote — LP State Aggregator payload-shape fix
 08c907f LP-700: fix LP State Aggregator to read msg.payload (new Reshape shape)

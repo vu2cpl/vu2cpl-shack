@@ -1129,6 +1129,62 @@ follow-up #9.
 
 ---
 
+## 2026-05-10
+
+### Lightning Antenna Protector — Tier 1 cleanup (drop dead nodes/wires/vars)
+
+**Tab:** Lightning Antenna Protector (`75e2cac8ab96f556`)
+
+Audit pass after the Shack-tab merge, the bypass switch landing, and
+yesterday's "minor cleanup of unused nodes" cleared visible deadwood.
+80 → 78 nodes; flows.json -33 lines net.
+
+#### Deleted nodes
+
+| Node | Why dead |
+|------|----------|
+| `Save Reconnect` (`c95abd88`) | Listened for `msg.topic === 'reconnect_change'`. No node anywhere emits that topic. The real handler is `Save Reconnect HTTP`, fed by `POST /lightning/reconnect`. |
+| `UI Stats` (`a870e611`) | Body was literally `return msg;`. Pure passthrough with no inbound wires — orphan. |
+
+#### Deleted wires
+
+| Wire | Why dead |
+|------|----------|
+| `Parse Weather → Header` output 2 → `Master Dashboard` | The Shack-tab merge stripped the weather card from Master Dashboard. The dashboard's `type:'weather'` handler was deleted in that pass. Operator went one further and reduced the function's output count from 2 → 1, so `msg2` is no longer constructed. |
+| `AS3935 within threshold?` output 1 → `Send Radio Command` | At that point in the chain `msg.payload` is the strike object (not `'ON'/'OFF'`), so Send Radio Command's guard returned `null`. The intended OFF for the radio comes via `Trigger Disconnect → Send Radio Command` with proper payload — that path is unchanged. |
+
+#### Stripped flow-context vars
+
+`map_count` / `connectCount` / `wssStatus` were initialised in
+`Init Defaults` and incremented in `Strike → Dashboard` and
+`AS3935 → Dashboard`, but had no readers — the consumers (the strike
+map and an old WS status panel) were both removed earlier this week.
+Three lines out of `Init Defaults` plus the two-line `count = …` /
+`flow.set('map_count', …)` block removed from each of the two
+dashboard handlers.
+
+#### Verified
+
+- Bypass toggle still works (banner + countdown + force-reconnect)
+- TEST inject still triggers full disconnect chain
+- AS3935 panel still updates from heartbeat / status frames
+- Header weather card still renders (only the duplicate Master
+  Dashboard wire was removed)
+- Reconnect Timer still cancels on bypass-on
+
+#### Pending (deferred to later tiers)
+
+- Tier 2: drop the `Check Threshold` indirection (its `msg.shouldDisconnect`
+  field is read by no downstream node; the next switch evaluates the
+  flow context directly). Replace `Refresh Stats` (1-line passthrough)
+  with direct fan-out from the inject.
+- Tier 3: rename `Replay on lightning tab` → `Replay Bypass State`
+  (post-Shack-tab the old name is misleading). Demote Init Defaults
+  `node.warn` to `node.log`. Merge `Strike → Dashboard` and
+  `AS3935 → Dashboard` (90% duplicated payload construction).
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:
