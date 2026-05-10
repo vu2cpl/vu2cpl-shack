@@ -1897,6 +1897,82 @@ with a one-paragraph summary at the top before the manual steps.
 
 ---
 
+### Power meter panels — auto-scale + 10 px bars + stable colours
+
+**Tabs / nodes:** LP-700-HID ws (`18fb42443172f33c`) `LP-700 Panel`
+(`c638a0991ad0b768`); SPE (WS) (`spe_ws_tab_01`) `SPE Panel (WS)`
+(`ws_panel_node`).
+
+Both power-meter panels grew an auto-scaling display bar so single
+visual works across QRP through high-power operation without manual
+fiddling.
+
+#### Common — auto-scale steps
+
+`5 / 25 / 50 / 100 / 500 / 1000 / 1500 / 2000 / 5000 W`. The bar's
+full-scale auto-picks the smallest step ≥ current power. As power
+crosses a step boundary, the scale snaps up to the next step and the
+bar redraws (typical auto-ranging-meter behaviour).
+
+A small `scale: NW` indicator alongside the relevant header tells
+the operator what the bar's full-width represents — separate from
+the meter's own range setting (LP-700) or the amp's rated power
+(SPE).
+
+#### Common — bar thickness
+
+6 px → **10 px**, with a 1 px border on the track for definition and
+an inset shadow on the fill for depth. Conspicuous without being
+overwhelming. CSS transitions on `width` and `background-color`
+both eased to 0.3 s for smooth movement.
+
+#### LP-700 panel
+
+- Header gets `scale: <auto-picked> W` indicator next to the title.
+- Both AVG and PEAK bars share the same auto-scale, computed from
+  `max(avg, peak)`. Keeps the visual relationship between AVG and
+  PEAK meaningful — peak fills more of the bar than avg.
+- **Stable bar colours** — AVG always green (`#3fb950`), PEAK always
+  amber (`#e3b341`). The earlier dynamic 70/90 % thresholds were
+  rejected after first deploy: with auto-scale, the bar nearly
+  always sits in the upper portion of its current band, so the
+  threshold colour-shift triggered constantly and stopped meaning
+  anything. Solid colours preserve the panel's pre-auto-scale visual
+  identity (AVG=green / PEAK=amber).
+- SWR bar **keeps** its original threshold logic (1.0–3.0 mapping,
+  thresholds at 1.5 / 2.0). SWR colour transitions remain meaningful
+  because SWR has fixed safety zones independent of the bar's
+  auto-scale.
+
+#### SPE WS panel
+
+Only the Output Power bar got the treatment — SWR bars unchanged.
+
+- Inline `style="height:10px"` on the Output Power track + fill
+  (preserves `gh-track` / `gh-fill` defaults at 6 px so ATU SWR and
+  ANT SWR stay thin).
+- Auto-scale logic identical to LP-700.
+- Small `(scale NW)` indicator inline next to the "Output Power"
+  label.
+- Removed the redundant `currentW / pwrMax W` text on the right side
+  of the row. The bar shows the live value visually; the scale label
+  shows the bar's full-width; the amp's rated power level is
+  already shown in the separate `PWR Lvl` badge above the bar. The
+  `currentW / 500W` text was just sitting at "0W / 500W" between
+  TXs and adding noise.
+
+#### Diagnostic note for future-self
+
+The LP-700 first attempted the dynamic-threshold colours pattern
+(red/amber/green based on % of the current scale step). Looked good
+in theory; visually broken in practice because auto-scale always
+picks the tight-fitting step → bar always near top → colour stuck
+at amber. Lesson: **dynamic colours and auto-scale don't
+compose well** — one or the other carries the magnitude info, not
+both. We chose to keep auto-scale and drop the dynamic colours.
+
+---
+
 ### HANDOVER #3 — Open-Meteo dashboard placeholder — closed as obsolete
 
 The follow-up referred to the `OPEN-METEO MONITOR · Waiting for data…`
