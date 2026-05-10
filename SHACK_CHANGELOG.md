@@ -1897,6 +1897,24 @@ with a one-paragraph summary at the top before the manual steps.
 
 ---
 
+### HANDOVER #3 — Open-Meteo dashboard placeholder — closed as obsolete
+
+The follow-up referred to the `OPEN-METEO MONITOR · Waiting for data…`
+badge in the Master Dashboard's `#hdr` block. That entire header block
+was stripped during the 2026-05-08 Shack-tab merge (Master Dashboard
+moved to a new group on the Shack tab; the dashboard's own header was
+removed in favour of the Shack tab's existing Header card).
+
+The badge therefore no longer exists, so the follow-up is moot. OM
+polls continue to produce `type:'log'` messages every 5 min via
+`Parse Open-Meteo` output 2 → Master Dashboard, which flow into the
+event log normally.
+
+No code change. Closing the entry rather than deleting so future-self
+sees the rationale.
+
+---
+
 ### Format Log — `0 km` strikes now render the distance segment
 
 **Tab:** Lightning Antenna Protector (`75e2cac8ab96f556`)

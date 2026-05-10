@@ -81,7 +81,7 @@
 |---|------|-------|
 | 1 | Move AS3935 antenna **outdoors** | Hardware. Selective 500 kHz LC tank means indoors range is ~few km only. Outdoors regains the rated 40 km. Re-run `as3935_tune.py` after relocating — stray capacitance changes |
 | 2 | ~~AS3935 systemd unit hardening~~ | **Done 2026-05-10** (`c3f55a8`) — directives baked into the base `as3935.service` unit (simpler than a drop-in for a unit we own). `After=network-online.target mosquitto.service`, `Wants=network-online.target`, `Restart=on-failure`, `RestartSec=5`. Verified live |
-| 3 | Open-Meteo dashboard placeholder | Optional follow-up — the OPEN-METEO MONITOR badge still shows "Waiting for data..." between strikes. Same pattern as AS3935 fix would apply (output 2 wire + `om_status` handler). Currently low-priority — strike events already update it transiently |
+| 3 | ~~Open-Meteo dashboard placeholder~~ | **Obsolete 2026-05-10** — the badge this referred to (`OPEN-METEO MONITOR · Waiting for data…` in the Master Dashboard `#hdr` block) was removed during the 2026-05-08 Shack-tab merge. OM polls already produce `type:'log'` messages that flow into the event log via Parse Open-Meteo output 2. No code change needed |
 | 4 | ~~Format Log cosmetic~~ | **Done 2026-05-10** (`f15cad8`) — `(msg.distance != null) ?` instead of truthy ternary; 0 km strikes (AS3935 overhead/out-of-range) now render `\| 0 km` |
 | 5 | ~~Rotator timer 60s → 5min~~ | **Done 2026-05-10** (`971f4b4`) — `05f0ddeb566a90fc` body now `var duration = 5 * 60 * 1000` + status badge updated to "Timer running — 5 mins" |
 | 6 | Mac SwiftUI app scaffold | Per CLAUDE.md TODO #12 — not started. Path now `~/projects/vu2cpl-shack-app/` (was `~/Documents/...`) |
