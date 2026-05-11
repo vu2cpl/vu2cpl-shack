@@ -94,6 +94,7 @@
 | 11 | ~~Optional: chrony metrics on Shack dashboard~~ | **Done 2026-05-10** — Chrony status card landed via `743a0d8` + `286348e` migration to single `ui_template`; placement on `Shack Monitoring tools` → `Network Monitor` group |
 | 12 | ~~Install `log2ram` on `gpsntp`~~ | **Done 2026-05-11** — azlux repo (`trixie main`, not `bookworm main` as BUILD.md said — gpsntp moved to Debian 13), `log2ram` installed + enabled, rebooted. `/var/log` now tmpfs 128 MB; chrony re-locked to stratum 1 with PPS within ~60 s of boot. BUILD.md upstream fix landed in [`pi-gps-ntp-server@5b115ba`](https://github.com/vu2cpl/pi-gps-ntp-server/commit/5b115ba) — release-agnostic `${VERSION_CODENAME}` + explicit reboot step |
 | 13 | ~~Delete orphan `GPS NTP` flow tab~~ | **Done 2026-05-10** — operator deleted the empty tab; closed in next `nrsave` |
+| 16 | Clear LP-700-HID ws tab Description field | Cosmetic. The tab's sidebar Description (visible in editor's Info pane) still carries the legacy `npm install robertsLando/node-red-contrib-usbhid` + telepost udev install instructions, predating the 2026-05-09 WS-gateway migration and 2026-05-11 HID-package uninstall. Clear via Node-RED editor → right-click tab → Properties → Description → empty → Deploy → `nrsave`. Zero runtime impact |
 
 ---
 
