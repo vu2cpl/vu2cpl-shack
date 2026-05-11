@@ -2263,6 +2263,25 @@ just dead — they're gone).
 
 ---
 
+### LP-700-HID ws tab: Description field cleared (closes HANDOVER #16)
+
+[`72fc31e`](https://github.com/vu2cpl/vu2cpl-shack/commit/72fc31e) —
+operator-side. The tab's sidebar Description carried 419 chars of
+legacy install instructions (`npm install robertsLando/node-red-contrib-usbhid`
++ telepost udev rules + `gpasswd -a $USER telepost` + unplug/replug
+note), all from the pre-WS-gateway era. Useless after the
+2026-05-09 migration and 2026-05-11 HID-package uninstall — anyone
+following them now would either install a redundant package or
+modify udev rules for a `/dev/hidraw*` node we don't even talk to
+directly anymore.
+
+HANDOVER #16 had been closed as won't-do earlier today (purely
+cosmetic, editor-only sidebar text); operator did it anyway as a
+zero-risk paste-the-empty-string change. Reopened and closed as
+done.
+
+---
+
 ### LP-700: HID package uninstalled (post-WS-migration cleanup)
 
 The 2026-05-09 LP-700 → WebSocket-gateway migration left
