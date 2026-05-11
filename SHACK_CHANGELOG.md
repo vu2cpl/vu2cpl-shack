@@ -2206,6 +2206,63 @@ cost nothing at runtime).
 
 ## 2026-05-11
 
+### LP-700: HID package uninstalled (post-WS-migration cleanup)
+
+The 2026-05-09 LP-700 → WebSocket-gateway migration left
+`@gdziuba/node-red-usbhid` installed in `~/.node-red/` as a
+no-longer-used palette package. CLAUDE.md's "uninstall after a week
+of stable WS operation" check has been met (stable since 05-09,
+verified end-to-end on the Lightning storm day 05-10 + LP-700 panel
+auto-scale work). Cleaned up today:
+
+```sh
+cd ~/.node-red && npm uninstall @gdziuba/node-red-usbhid
+sudo systemctl restart nodered
+```
+
+Node-RED restarted clean (`journalctl -u nodered` showed no
+errors), LP-700 panel still rendering at ~25 Hz from the WS path.
+
+The accompanying `-dev` build libs (`libudev-dev`, `librtlsdr-dev`,
+`libusb-1.0-0-dev`) — flagged in CLAUDE.md as needing apt removal —
+turned out **not to be installed** on the current Pi. Either an
+earlier cleanup pass removed them or the original
+`node-red-contrib-usbhid` build linked against system libs without
+needing the dev headers persistently. Either way, no apt action
+needed. The runtime counterparts (`libudev1`, `libusb-1.0-0`,
+`librtlsdr0`) remain — they're transitive deps of many system
+packages and have nothing to do with the HID node.
+
+**Audit before uninstall:** `grep -nE 'usbhid|hid-manager|@gdziuba'
+flows.json` returned only a single stale `info`-description field
+on the LP-700-HID ws tab (legacy install instructions in the tab's
+sidebar Description). Cosmetic, zero runtime impact — flagged for
+the operator to clear via the Node-RED editor when convenient (tab
+Properties → Description → empty → Deploy → `nrsave`). Not edited
+here because flows.json edits must come from the Pi-side editor as
+the source of truth (CLAUDE.md rule #1).
+
+**`npm audit` noise:** the uninstall surfaced "13 vulnerabilities
+(12 moderate, 1 high)" from npm's blanket audit across the whole
+`~/.node-red` install. Unrelated to this change — same advisories
+were present before. `npm audit fix --force` is **not** safe to
+run in a Node-RED palette directory (breaks pinned palette
+versions). Left as-is.
+
+**REBUILD_PI.md check:** that runbook already did not install
+`@gdziuba/node-red-usbhid` or its -dev libs in Step 2 (system
+packages) or "Install required palette packages". No
+`REBUILD_PI.md` change needed — a fresh rebuild from scratch
+will land in the same clean state.
+
+CLAUDE.md `## NODE-RED PALETTE PACKAGES` cleaned up: HID row,
+"When ready to clean up" block, and "Original install reference"
+archaeology block all removed. Replaced with a brief paragraph
+recording the migration + uninstall dates for future
+archaeologists.
+
+---
+
 ### `gpsntp.local`: log2ram installed (closes HANDOVER #12)
 
 SD card wear mitigation on the stratum-1 GPS NTP server. Chrony +

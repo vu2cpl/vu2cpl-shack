@@ -494,7 +494,6 @@ rejected on import as "unknown types".
 node-red-dashboard           3.6.6
 node-red-node-serialport     2.0.3
 node-red-contrib-flexradio   1.2.5
-@gdziuba/node-red-usbhid     1.0.3  (LEGACY — installed; LP-700 now uses WS gateway, no longer needed)
 node-red-contrib-ui-svg      2.3.3
 node-red-node-ping           0.3.3
 node-red-configurable-ping   1.0.1
@@ -503,21 +502,13 @@ node-red-contrib-loop        latest
 node-red-contrib-ui-level    latest
 ```
 
-HID package and its build deps are no longer required (LP-700 migrated to
-the WS gateway 2026-05-09). Both are still present for now — uninstall once
-the WS path is proven stable for a week:
-
-```bash
-# When ready to clean up:
-cd ~/.node-red && npm uninstall @gdziuba/node-red-usbhid
-sudo apt remove libudev-dev librtlsdr-dev libusb-1.0-0-dev
-```
-
-Original install reference (kept for archaeology):
-```bash
-cd ~/.node-red && npm install robertsLando/node-red-contrib-usbhid
-# Prereqs: libudev-dev librtlsdr-dev libusb-1.0-0-dev
-```
+LP-700 used to use `@gdziuba/node-red-usbhid` (direct HID access from
+Node-RED). Migrated to the [`lp700-server`](https://github.com/VU3ESV/LP-700-Server)
+WebSocket gateway on 2026-05-09 and uninstalled the HID package on
+2026-05-11. Its build-time `-dev` libs (`libudev-dev`, `librtlsdr-dev`,
+`libusb-1.0-0-dev`) were not present at uninstall time either. The
+runtime counterparts (`libudev1`, `libusb-1.0-0`, `librtlsdr0`) remain
+as transitive deps of system packages and are unrelated.
 
 ---
 
