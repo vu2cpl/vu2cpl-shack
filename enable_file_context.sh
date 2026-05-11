@@ -7,7 +7,10 @@ SETTINGS=~/.node-red/settings.js
 echo "=== Node-RED File Context Store Setup ==="
 
 # Already enabled?
-if grep -q '"localfilesystem"' "$SETTINGS" 2>/dev/null; then
+# Match only an uncommented `contextStorage:` line — the boilerplate
+# settings.js ships with a commented template block that mentions
+# "localfilesystem", so we can't just grep for that substring.
+if grep -qE '^[[:space:]]+contextStorage[[:space:]]*:' "$SETTINGS" 2>/dev/null; then
     echo "✅ Already enabled — nothing to do."
     exit 0
 fi
