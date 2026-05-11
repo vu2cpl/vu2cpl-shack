@@ -96,6 +96,7 @@
 | 13 | ~~Delete orphan `GPS NTP` flow tab~~ | **Done 2026-05-10** — operator deleted the empty tab; closed in next `nrsave` |
 | 16 | ~~Clear LP-700-HID ws tab Description field~~ | **Done 2026-05-11** (`72fc31e`) — initially marked won't-do as cosmetic, but operator cleared it via editor → tab Properties → Description → empty → Deploy → commit. Tab sidebar is now blank (was 419 chars of legacy `npm install robertsLando/node-red-contrib-usbhid` + telepost udev notes from the pre-WS-gateway era) |
 | 17 | ~~Fold DXCC extract regen into `nrsave` alias~~ | **Done 2026-05-11** — `nrsave` was an alias on `~/.bashrc:114`; converted to a bash function that runs the rule #4 extract regen before `git add`, then stages flows.json + the extract together. `~/.bashrc.bak.YYYYMMDD_HHMM` backup retained on Pi. CLAUDE.md rule #4 reworded to note nrsave handles it automatically; REBUILD_PI.md + rebuild_pi.sh updated so a fresh rebuild lands the same function definition (was carrying a stale `git save`-based variant) |
+| 18 | ~~Club Log API ban verification (CLAUDE.md TODO #10)~~ | **Closed 2026-05-11** — ban lifted, confirmed by operator + verified live (`nr_dxcc_seed.json.updated` = 2026-05-11T03:27:47Z, written by the daily 02:00 cron). No flow change: `once: false` on the startup injects is the right defence — one fetch per day via cron, ad-hoc refreshes via `POST /dxcc/refresh`. CLAUDE.md TODO #10 row reworded, Data files list corrected (modes lives inside seed, maps comes from cty.xml runtime) |
 
 ---
 

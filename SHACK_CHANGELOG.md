@@ -2206,6 +2206,52 @@ cost nothing at runtime).
 
 ## 2026-05-11
 
+### DXCC: Club Log API ban verification — lifted, no flow change (closes CLAUDE.md TODO #10)
+
+Operator confirmed the Club Log API ban from earlier this year is
+no longer in effect. Verified live: `nr_dxcc_seed.json` has
+`updated: "2026-05-11T03:27:47.276Z"`, written by the daily
+`00 02 * * *` cron's `Daily club log refresh (0200)` inject
+(`c43fbdd61175ce24`). The fetch chain is healthy end-to-end.
+
+**No flow change.** The current `once: false` posture on
+`Load Club Log on startup` (`4ebafea5ce2d9d7b`) and
+`Retry Club Log (90s)` (`9c98f9e7a941e852`) remains correct
+defence-in-depth, *even with the ban lifted*. Why: those injects
+fire on every Deploy (not just every Node-RED restart). Flipping
+to `once: true` would mean a 10-deploy active development session
+makes 11 Club Log API calls instead of 1. The daily cron + the
+existing `POST /dxcc/refresh` HTTP endpoint cover every real
+refresh need:
+
+- Scheduled fetch — daily cron, 02:00 IST, 1 call/day.
+- Ad-hoc fetch after a session of QSOs — `POST /dxcc/refresh`
+  (manual button on the DXCC dashboard).
+- Restart-time freshness — `Bootstrap Worked Table`
+  (`1a13cd6d9aabaa54`) flips `dxccReady=true` from cached
+  `nr_dxcc_seed.json`, so the tracker is fully operational on
+  cached data within ~2s of Node-RED start.
+
+**CLAUDE.md cleanup folded in:**
+
+- TODO #10 row reworded to "Closed 2026-05-11 — ban lifted; design
+  retained".
+- "Data files (must exist in `cfg_flows_dir`)" list was
+  inaccurate — claimed `nr_dxcc_maps.json` and `nr_dxcc_modes.json`
+  were required. Neither exists on the Pi or in this repo. The
+  modes data lives **inside** `nr_dxcc_seed.json` under key
+  `dxccModeWorked`; the prefix-to-DXCC-entity map is rebuilt
+  in-memory from `cty.xml` on every startup (the file fetched by
+  `Load cty.xml on startup` `3720b5e9691dfb9c`). Corrected.
+- BACKUP section's "Critical files" list also referenced both
+  stale files — replaced with the actual two-file truth.
+
+**REBUILD_PI.md impact:** none. The runbook fetches all DXCC data
+from a fresh `git clone` + a runtime cty.xml + a runtime Club Log
+call — never depended on the two phantom files existing.
+
+---
+
 ### `nrsave`: auto-regenerate DXCC tab extract (closes HANDOVER #17)
 
 Pi-side `nrsave` was an alias on `~/.bashrc:114`:

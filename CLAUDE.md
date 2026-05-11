@@ -334,11 +334,10 @@ Weather data to Header template (`eee1a8b8552aa21f`): plain `wxData` object (no 
 - Alert types: NEW_DXCC (red), NEW BAND (blue), NEW MODE (amber), NEW_BAND_UNCONF (blue dim), NEW_MODE_UNCONF (amber dim)
 - Dedup window: 60 seconds per callsign+frequency
 - Startup sequence: 0.5s Credentials → 2s Bootstrap → 5s cty.xml → 12s Club Log → 90s retry
-- Data files (must exist in `cfg_flows_dir`):
-  - `nr_dxcc_maps.json` — prefix → DXCC entity map
-  - `nr_dxcc_seed.json` — worked/confirmed data (update after DXpeditions)
-  - `nr_dxcc_modes.json` — per-entity CW/Ph/Data mode data
+- Data files (in `cfg_flows_dir`):
+  - `nr_dxcc_seed.json` — worked/confirmed data, including per-entity CW/Ph/Data mode data under key `dxccModeWorked` (auto-refreshed daily; `updated` field is the last successful fetch ISO timestamp)
   - `nr_dxcc_blacklist.json` — blocked callsigns
+  - (cty.xml — prefix → DXCC entity map; fetched on startup, not persisted as a file)
 - Context store must be configured with `file` module in settings.js
 - DX Clusters: N2WQ (`cluster.n2wq.com:8300`), VU2OY (`vu2oy.ddns.net:7550`), VU2CPL (`vu2cpl.ddns.net:7550`), VE7CC (`ve7cc.net:23`)
 
@@ -565,7 +564,7 @@ claude
 | 7 | DXCC: CW/Ph/Data separate fetch modes | Pending |
 | 8 | DXCC: non-project folder path support | Pending |
 | 9 | DXCC: README + PDF commit | **Done 2026-05-10** (split into README.md umbrella + DXCC.md, PDF regenerated) |
-| 10 | DXCC: verify Club Log API ban status + re-enable nodes if lifted | Pending |
+| 10 | DXCC: verify Club Log API ban status + re-enable nodes if lifted | **Closed 2026-05-11** — ban lifted (confirmed by operator + verified live: `nr_dxcc_seed.json` `updated` field shows 2026-05-11T03:27:47Z, written by the daily 02:00 cron). `once: false` on the startup injects retained as defence-in-depth: flipping to `once: true` would mean +1 API call per Deploy (not just per Node-RED restart), so 10 Deploys/day = 11 calls instead of 1. Daily cron + `POST /dxcc/refresh` HTTP endpoint cover all real refresh needs. |
 | 11 | DXCC: verify daily 02:00 inject wired to Build Club Log API Request | **Verified 2026-05-10** — the cron `00 02 * * *` is correctly wired to `Build Club Log API Request`. The `once: false` on `Load Club Log on startup` + `Retry Club Log (90s)` is **intentional** (anti-ban; see TODO #10). Bootstrap-sets-dxccReady fix (also 2026-05-10) makes startup independent of any Club Log API call. |
 | 12 | Mac SwiftUI app: scaffold not yet started | Pending |
 
@@ -611,9 +610,8 @@ tar -czf ~/nr_backup_$TS.tar.gz \
 
 Critical files:
 - `flows.json` — main flows
-- `nr_dxcc_maps.json` — prefix map
-- `nr_dxcc_seed.json` — worked data (update after QSOs)
-- `nr_dxcc_modes.json` — mode data
+- `nr_dxcc_seed.json` — worked data + per-entity CW/Ph/Data mode data (`dxccModeWorked` key); auto-refreshed daily, also written after QSOs
+- `nr_dxcc_blacklist.json` — blocked callsigns
 - `~/.node-red/settings.js`
 
 Pi-side scripts already in this repo (canonical paths shown):
