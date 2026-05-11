@@ -2206,6 +2206,62 @@ cost nothing at runtime).
 
 ## 2026-05-11
 
+### `gpsntp.local`: log2ram installed (closes HANDOVER #12)
+
+SD card wear mitigation on the stratum-1 GPS NTP server. Chrony +
+gpsd run 24/7 and write continuously to `/var/log`; on a Pi 3B with
+a consumer SD card this eventually wears out the card. log2ram from
+the azlux apt repo mounts `/var/log` as tmpfs (128 MB) and flushes
+to SD hourly + on shutdown.
+
+**Procedure followed** ([`pi-gps-ntp-server/BUILD.md`](https://github.com/vu2cpl/pi-gps-ntp-server/blob/main/BUILD.md)
+"Optional — Reduce SD card wear"), with one fix: BUILD.md hardcodes
+`bookworm main` in the apt sources line, but `gpsntp` is now on
+Debian 13 (`trixie`). Confirmed the azlux repo has a `trixie/`
+suite before adding it. Steps:
+
+```sh
+echo "deb http://packages.azlux.fr/debian/ trixie main" | \
+  sudo tee /etc/apt/sources.list.d/azlux.list
+sudo wget -q -O /etc/apt/trusted.gpg.d/azlux.gpg https://azlux.fr/repo.gpg
+sudo apt update
+sudo apt install -y log2ram
+sudo systemctl enable log2ram
+sudo reboot
+```
+
+The `enable --now` form from the BUILD.md doc would not actually
+move `/var/log` to RAM on first install — log2ram's bind-mount has
+to happen before any service opens a log file, so it only takes
+effect on next boot. Reboot is mandatory.
+
+**Verification after boot:**
+
+```
+log2ram on /var/log type tmpfs (rw,nosuid,nodev,noexec,noatime,size=131072k,mode=755)
+systemctl is-active log2ram      → active
+systemctl is-enabled log2ram     → enabled
+df -h /var/log                   → 128M total, 612K used
+```
+
+Chrony re-locked to stratum 1 with PPS reference within ~60 s of
+boot. Numbers at first re-lock: system time 181 ns fast of NTP
+truth, root dispersion 16 µs, skew 0.087 ppm, residual freq −0.168
+ppm. Indistinguishable from pre-log2ram numbers (as expected —
+log2ram only changes where `/var/log` writes land, not anything
+chrony reads).
+
+**Action item flagged for the other repo:** `pi-gps-ntp-server/BUILD.md`
+line 497 needs the `bookworm` → `trixie` fix so future-self
+following the runbook on a fresh trixie Pi doesn't get a 404 from
+apt update. Separate-repo follow-up; not in this commit.
+
+**No REBUILD_PI.md impact** — that runbook is for the shack Pi
+(`noderedpi4`); log2ram is on `gpsntp.local`, a different host with
+its own (separate) build doc.
+
+---
+
 ### N2WQ login pattern — ported to DXClusterAggregator (Swift)
 
 No Node-RED code change. Recording this as a cross-project
