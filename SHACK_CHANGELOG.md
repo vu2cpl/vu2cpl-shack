@@ -2206,6 +2206,17 @@ cost nothing at runtime).
 
 ## 2026-05-11
 
+### CLAUDE.md TODO #5 (website uploads): closed as already done
+
+Stale carryover. `~/projects/vu2cpl.github.io/` already carried
+all referenced assets — `shack-desk.jpg`, `shack-workbench.jpg`,
+`vu7ms_writeup.pdf`, `vu7t_writeup.pdf` — committed and in sync
+with `origin/main`; `index.html` correctly references them. The
+TODO had said `shack.jpg` singular; the page design evolved to a
+two-image gallery (desk + workbench). No further action.
+
+---
+
 ### DXCC TODOs #7 + #8: closed as no-action (already done / already covered)
 
 End-of-day audit pass on the two remaining DXCC backlog items.
