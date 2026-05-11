@@ -560,7 +560,7 @@ claude
 | 3 | Rotator timer: change `60 * 1000` → `5 * 60 * 1000` in Rotator Auto-Off Timer | **Done 2026-05-10** (`971f4b4`) |
 | 4 | RPi agent deploy on 2 remaining Pis + HA Pi (Bearer token) | **Done 2026-05-10** |
 | 5 | Website: upload shack.jpg, VU7MS/VU7T PDFs | Pending |
-| 6 | DXCC: filter persistence (file context store) | Pending |
+| 6 | DXCC: filter persistence (file context store) | **Done 2026-05-11** — root cause was deeper than the surface bug: the `'file'` context store wasn't actually configured in settings.js (only a commented template). Fixed via `enable_file_context.sh` (now installs two named stores `memory` + `file` with `default: "memory"`), then aligned the 5 filter/spotTTL readers to use `'file'` scope to match the writer. Filter chip toggles and spot TTL slider now survive Node-RED restart |
 | 7 | DXCC: CW/Ph/Data separate fetch modes | Pending |
 | 8 | DXCC: non-project folder path support | Pending |
 | 9 | DXCC: README + PDF commit | **Done 2026-05-10** (split into README.md umbrella + DXCC.md, PDF regenerated) |

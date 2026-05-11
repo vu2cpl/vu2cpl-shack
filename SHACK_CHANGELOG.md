@@ -2206,6 +2206,94 @@ cost nothing at runtime).
 
 ## 2026-05-11
 
+### DXCC: filter persistence end-to-end (closes CLAUDE.md TODO #6)
+
+Filter chip state on the DXCC dashboard + the spot TTL slider now
+survive a Node-RED restart. Verified live: toggled `● MODE` off,
+restarted nodered, fired the `TEST XE2ABC 20M SSB (new mode)` inject
+— the `DXCC Prefix Lookup + Alert Classify` node correctly dropped
+it (no alert table row, no Telegram). Re-enabled `● MODE`, fired
+the same inject — alert appeared.
+
+**Root cause was deeper than the surface bug.** Investigation
+turned up that `Save Alert Filters HTTP` writes filter state with
+`flow.set('filterX', val, 'file')` but every reader across the tab
+(`DXCC Prefix Lookup`, `Format Alert for Dashboard Table`, the two
+`Format Telegram Alert*` functions, `Format FlexRadio Spot
+Command`) reads with `flow.get('filterX')` — no scope arg = default
+(memory). That alone would mean reads never see writes. **But** the
+`'file'` context store wasn't actually configured on this Pi:
+`enable_file_context.sh` had been part of REBUILD_PI Stage 8 but
+**had never run** here — its idempotency check (`grep -q
+'"localfilesystem"'`) matched the commented template block in stock
+`settings.js`, short-circuiting before any edit. And even if it had
+run, its substitution block declared a single store named `default`
+backed by localfilesystem — which would have silently routed all
+no-scope `flow.set/get` calls across the whole codebase to disk and
+still left the `'file'`-scoped calls (which look for a store
+literally named `'file'`) unbacked.
+
+**Two-part fix:**
+
+1. **`enable_file_context.sh` rewritten** —
+   - Idempotency check now anchors on `^\s+contextStorage:` so the
+     commented template doesn't match.
+   - Substitution installs **two** named stores plus a string-alias
+     default:
+     ```javascript
+     contextStorage: {
+         default: "memory",
+         memory: { module: "memory" },
+         file:   { module: "localfilesystem" }
+     },
+     ```
+     This keeps every existing no-scope `flow.set/get` in the
+     codebase in-memory (zero behaviour change for the 100s of
+     such calls outside DXCC) while giving the explicit
+     `flow.set/get(..., 'file')` calls a real file-backed store.
+   - Ran on the Pi → `~/.node-red/context/` now populated; flow-scope
+     file for the DXCC tab landed at
+     `~/.node-red/context/d110d176c0aad308/flow.json`.
+
+2. **Readers aligned to `'file'` scope.** 32 mechanical
+   substitutions across 5 reader function bodies, regex
+   `flow\.get\('(filter\w+|spotTTL)'\)` → `flow.get('$1', 'file')`.
+   No structural changes; the regex was tight enough to leave the
+   no-scope reads of `dxccReady`, `entityWorked`, `workedTable`,
+   `dxccBlacklist`, etc. completely untouched. Per-function count:
+   ```
+   DXCC Prefix Lookup + Alert Classify    9
+   Format Alert for Dashboard Table       7
+   Format FlexRadio Spot Command          1
+   Format Telegram Alert Dedup 10 minute  8
+   Format Telegram Alert                  7
+   ```
+   Applied programmatically from Mac side after operator
+   confirmation (per CLAUDE.md rule #1) since 32 manual editor
+   edits across 5 functions had material miss-one-and-it's-silently-half-broken
+   risk. Loaded via `git pull` + `sudo systemctl restart nodered`
+   on Pi.
+
+**Surfaced bug, queued as HANDOVER #20.** `Fetch All Modes + Parse`
+writes worked-table data (`workedTable`, `entityWorked`,
+`dxccModeWorked`, `workedStats`) to `'file'` scope only; consumers
+(`DXCC Prefix Lookup`, `Return Stats`) read no-scope. With the file
+store newly live, post-fetch updates land on disk but the running
+session keeps using its pre-restart memory copy until Bootstrap
+runs again. Worked tables are 24-h-stale-tolerant so this is lower
+priority; documented for cleanup either by adding a memory write
+alongside the file write, or by switching consumers to read from
+file (and accepting the per-spot disk-cache overhead, which
+localfilesystem caches transparently so it's near-free after first
+read).
+
+**REBUILD_PI.md impact:** none directly — Stage 8 already ran
+`enable_file_context.sh`; the script fix flows through automatically.
+A fresh rebuild today would now actually produce a working file
+context store (previously the install was silently no-oping).
+
+---
+
 ### DXCC: Club Log API ban verification — lifted, no flow change (closes CLAUDE.md TODO #10)
 
 Operator confirmed the Club Log API ban from earlier this year is
