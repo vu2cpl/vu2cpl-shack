@@ -18,7 +18,7 @@
         "type": "tab",
         "label": "LP-700-HID ws",
         "disabled": false,
-        "info": "Prereq\r\n\r\nsudo apt-get install libudev-dev librtlsdr-dev libusb-1.0-0-dev libpthread-stubs0-dev\r\n\r\nnpm install robertsLando/node-red-contrib-usbhid\r\n\r\nsudo nano /etc/udev/rules.d/10-telepost.rules\r\n\r\n# this works, but is very generic\r\nKERNEL==\"hidraw*\",SUBSYSTEM==\"hidraw\", MODE:=\"777\", GROUP=\"telepost\"\r\n\r\nsudo udevadm control --reload-rules\r\nsudo groupadd -f telepost\r\nsudo gpasswd -a $USER telepost\r\n\r\nunplug/ replug"
+        "info": ""
     },
     {
         "id": "590e889d44815afb",
