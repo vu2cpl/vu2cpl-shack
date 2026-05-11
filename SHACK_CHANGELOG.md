@@ -2204,6 +2204,103 @@ cost nothing at runtime).
 
 ---
 
+## 2026-05-11
+
+### N2WQ login pattern — ported to DXClusterAggregator (Swift)
+
+No Node-RED code change. Recording this as a cross-project
+reference so future-self knows the canonical fix lives in two
+places (and how to keep them aligned).
+
+The 2026-05-10 N2WQ disconnect cycle (see entries above) was fixed
+on the Node-RED side via:
+- Tightened login regex: short line `endsWith('login:')` style,
+  rejects the banner's `Last login:` mention
+- Packet-radio SSID suffix `-1` on the callsign sent to N2WQ to
+  sidestep the cluster's no-duplicate-login enforcement when
+  another LAN client is also logged in as `VU2CPL`
+
+Both patterns have now been ported to the macOS app
+**DXClusterAggregator** (Swift, separate repo). Notable Swift-side
+porting issues that Node-RED's `tcp in` node had quietly handled
+for us:
+
+#### 1. Telnet IAC binary preamble
+
+N2WQ emits 6 bytes of Telnet option negotiation before the prompt:
+
+```
+FF FB 03    IAC WILL SUPPRESS-GA
+FF FB 01    IAC WILL ECHO
+```
+
+These are invalid UTF-8 and corrupt the first chunk if you decode
+directly. Node-RED's `tcp in` with `datatype: utf8` silently
+strips/replaces them; a raw-socket client (Swift `NWConnection`,
+Python `socket.recv`, raw `nc`, `socat`) sees them verbatim.
+
+Swift fix: byte-level `stripTelnetIAC(_:) -> Data` scanner that
+drops `IAC WILL/WONT/DO/DONT` (3-byte sequences), `IAC SB ... IAC SE`
+(variable subnegotiation), `IAC IAC` (literal 0xFF), and other
+2-byte IAC commands. Applied to every `receive()` chunk before
+String decoding. No reply needed — clusters tolerate silent
+partners fine.
+
+#### 2. Hanging prompt without trailing LF
+
+N2WQ sends `login: ` with no LF — a classic Telnet hanging prompt
+waiting for a live cursor. Code that splits incoming bytes only on
+newlines never sees the prompt; bytes accumulate in the buffer
+forever, the server times out, infinite reconnect loop.
+
+Swift fix: after the line-buffer loop drains LF-terminated input,
+peek at the residual `buffer`. If it trims to a short string
+(`< 40` chars) ending in a recognized login/password prompt suffix,
+hand it to the auth handler and consume.
+
+Node-RED's `tcp in` model accidentally handles this fine — each
+TCP chunk arrives as its own `msg.payload`, treated as a complete
+unit by our function. No line buffer to drain. Different model;
+same outcome.
+
+#### Cross-project alignment
+
+Both implementations use the same prompt suffix list:
+`login:`, `please login`, `please login:`, `callsign:`,
+`callsign please:`, `your callsign:`, `enter your callsign:`.
+Treat this list as a shared canon — if a new cluster needs a
+different prompt match, update both. The Swift code centralises
+its list as `static let promptSuffixes`; the Node-RED code keeps
+it inline in `Login + Parse + Dedup` (`login-parse-dedup-v2`).
+
+Both also rely on operator configuration to set a callsign-SSID
+(e.g. `VU2CPL-1`) when an LAN-side duplicate is detected. No code
+change to enable — just edit the cred / source-config field on
+each side.
+
+#### Lessons portable to any cluster client
+
+1. **A login prompt is a short line ending with the indicator.**
+   Detecting `login:` as a substring anywhere will eventually
+   match a banner mention. Use `endsWith()` plus a sanity length
+   guard.
+2. **Telnet IAC negotiation must be stripped at byte level** for
+   raw socket clients. Anything decoding UTF-8 from `recv()` will
+   either choke or get garbage on the first chunk.
+3. **Cluster software enforces uniqueness on the bare callsign**;
+   packet-radio SSIDs (`-1` through `-15`) are accepted as
+   distinct logins by most AR-Cluster forks. `-N` letter suffixes
+   are not always validated cleanly; numeric SSIDs are the safest
+   default.
+4. **Hanging prompts vs newline-terminated input** are two
+   different I/O paths. If your client splits on `\n` only, you
+   need an explicit "buffer residual after split, check for prompt"
+   path or you'll deadlock on the very first connection.
+
+No Node-RED code change in this commit. Documentation only.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:
