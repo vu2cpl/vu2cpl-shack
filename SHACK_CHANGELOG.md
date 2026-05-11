@@ -2206,6 +2206,65 @@ cost nothing at runtime).
 
 ## 2026-05-11
 
+### `nrsave`: auto-regenerate DXCC tab extract (closes HANDOVER #17)
+
+Pi-side `nrsave` was an alias on `~/.bashrc:114`:
+
+```
+alias nrsave="cd ~/.node-red/projects/vu2cpl-shack && git add flows.json && git commit -m"
+```
+
+It did not regenerate `clublog_dxcc_tracker_v7.json` — meaning
+CLAUDE.md rule #4 ("on every flows.json commit, extract the DXCC
+Tracker tab") was being silently violated on every `nrsave`. The
+extract was only refreshed when something on the Mac side did the
+python one-liner manually. Today's Parse Strike rebase
+([`e8a2dd4`](https://github.com/vu2cpl/shack/commit/e8a2dd4))
+had to amend in 97/76-line drift accumulated since whenever the
+extract was last regenerated. Don't want that pattern to recur.
+
+Fix: convert the alias to a function (aliases can't run logic
+between args, only chain commands), with the extract step
+threaded in before `git add`:
+
+```bash
+nrsave() {
+    cd ~/.node-red/projects/vu2cpl-shack || return 1
+    python3 -c 'import json; d=json.load(open("flows.json")); v=[n for n in d if n.get("z")=="d110d176c0aad308" or n.get("id")=="d110d176c0aad308"]; json.dump(v,open("clublog_dxcc_tracker_v7.json","w"),indent=2)' || return 1
+    git add flows.json clublog_dxcc_tracker_v7.json
+    git commit -m "$1"
+}
+```
+
+The function fail-fasts if either the `cd` or the extract step
+returns non-zero, so a malformed flows.json doesn't get committed
+with a stale extract.
+
+**Applied via** a python-based in-place edit of `~/.bashrc` (safer
+than `sed` with the JSON literal's quote-soup in the python
+one-liner). Backup `~/.bashrc.bak.YYYYMMDD_HHMM` retained on the
+Pi. Verified live with `type nrsave`.
+
+**Documentation alignment:**
+
+- **CLAUDE.md rule #4** reworded — now says the regen happens
+  automatically inside `nrsave`, with the manual python one-liner
+  kept as a fallback for non-nrsave commit paths
+- **CLAUDE.md "Save changes" + "GIT WORKFLOW"** sections updated
+  to drop the now-redundant manual extract step
+- **CLAUDE.md infrastructure table** row reworded from "Git alias"
+  to "Git function"
+- **REBUILD_PI.md Step 5** — the "Set up the `nrsave` git alias"
+  block had been carrying a **stale** definition that wrapped a
+  `git save` config alias indirection (a variant that was never
+  actually used on this Pi). Replaced with the current function
+  form so a fresh rebuild lands the same `nrsave` that's running
+  today.
+- **`rebuild_pi.sh` Stage 7** — same fix in the automation script.
+  Bash syntax-checked.
+
+---
+
 ### Lightning: Parse Strike — Blitzortung dead-code strip (closes HANDOVER #7)
 
 [`e8a2dd4`](https://github.com/vu2cpl/vu2cpl-shack/commit/e8a2dd4) —

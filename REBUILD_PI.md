@@ -216,13 +216,26 @@ git clone git@github.com:vu2cpl/vu2cpl-shack.git
 # Then in Node-RED editor → Projects → Open Project → vu2cpl-shack
 ```
 
-### Set up the `nrsave` git alias
+### Set up the `nrsave` shell function
+
+`nrsave` regenerates the DXCC tab extract (CLAUDE.md rule #4) and
+commits flows.json + the extract in one shot. As of 2026-05-11 it
+is a bash function (not an alias), because aliases can't run logic
+between args.
 
 ```bash
-git -C ~/.node-red/projects/vu2cpl-shack config alias.save '!f() { git add flows.json && git commit -m "$1"; }; f'
-# Test:
-nrsave () { git -C ~/.node-red/projects/vu2cpl-shack save "$1"; }
-echo 'nrsave () { git -C ~/.node-red/projects/vu2cpl-shack save "$1"; }' >> ~/.bashrc
+cat >> ~/.bashrc <<'EOF'
+
+# nrsave — regen DXCC tab extract + stage flows.json + commit (CLAUDE.md rule #4)
+nrsave() {
+    cd ~/.node-red/projects/vu2cpl-shack || return 1
+    python3 -c 'import json; d=json.load(open("flows.json")); v=[n for n in d if n.get("z")=="d110d176c0aad308" or n.get("id")=="d110d176c0aad308"]; json.dump(v,open("clublog_dxcc_tracker_v7.json","w"),indent=2)' || return 1
+    git add flows.json clublog_dxcc_tracker_v7.json
+    git commit -m "$1"
+}
+EOF
+source ~/.bashrc
+type nrsave   # should report: nrsave is a function
 ```
 
 ---

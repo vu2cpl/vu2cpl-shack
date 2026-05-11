@@ -337,16 +337,17 @@ stage_07_clone_repo() {
         git clone "$REPO_URL" "$REPO_DIR"
     fi
 
-    step "Configure git alias 'nrsave' on the repo"
-    git -C "$REPO_DIR" config alias.save \
-        '!f() { git add flows.json && git commit -m "$1"; }; f'
+    if ! grep -q '^nrsave()' ~/.bashrc 2>/dev/null; then
+        step "Add nrsave shell function to ~/.bashrc (CLAUDE.md rule #4: regen DXCC tab extract on every flows.json commit)"
+        cat >> ~/.bashrc <<'EOF'
 
-    if ! grep -q 'nrsave' ~/.bashrc 2>/dev/null; then
-        step "Add nrsave shell function to ~/.bashrc"
-        cat >> ~/.bashrc <<EOF
-
-# nrsave — git add+commit flows.json from any cwd (added by rebuild_pi.sh)
-nrsave () { git -C "$REPO_DIR" save "\$1"; }
+# nrsave — regen DXCC tab extract + stage flows.json + commit (CLAUDE.md rule #4)
+nrsave() {
+    cd ~/.node-red/projects/vu2cpl-shack || return 1
+    python3 -c 'import json; d=json.load(open("flows.json")); v=[n for n in d if n.get("z")=="d110d176c0aad308" or n.get("id")=="d110d176c0aad308"]; json.dump(v,open("clublog_dxcc_tracker_v7.json","w"),indent=2)' || return 1
+    git add flows.json clublog_dxcc_tracker_v7.json
+    git commit -m "$1"
+}
 EOF
     fi
 

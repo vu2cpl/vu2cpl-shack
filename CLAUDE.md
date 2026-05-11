@@ -45,7 +45,7 @@ sudo systemctl restart nodered
 1. **Never generate or output a Node-RED flow JSON** unless Manoj explicitly confirms he wants it. Always propose changes first, describe what will change, wait for approval.
 2. **Node IDs are NOT stable** across import/redeploy. Never hardcode an ID from memory. Match nodes by name, type, or tab label when inspecting flows.
 3. **When updating `DXCC.md`**, always regenerate `DXCC_Tracker_README.pdf` and commit both together. They must stay in sync. (Pre-2026-05-10: this rule applied to `README.md`, which was the DXCC doc; now `README.md` is the umbrella overview and `DXCC.md` is the DXCC reference.)
-4. **On every git commit**, extract the DXCC Tracker tab alongside flows.json:
+4. **On every flows.json commit**, extract the DXCC Tracker tab alongside it. **As of 2026-05-11 this is baked into the Pi-side `nrsave` function** (`~/.bashrc`) so the normal `nrsave "msg"` workflow handles it automatically. If you commit flows.json by any other path (`git add` directly, an editor's git plugin, etc.), run the extract yourself:
    ```bash
    python3 -c 'import json; d=json.load(open("flows.json")); v=[n for n in d if n.get("z")=="d110d176c0aad308" or n.get("id")=="d110d176c0aad308"]; json.dump(v,open("clublog_dxcc_tracker_v7.json","w"),indent=2)'
    git add flows.json clublog_dxcc_tracker_v7.json
@@ -83,7 +83,7 @@ Node-RED shack automation running on Raspberry Pi 4B. Controls and monitors:
 | MQTT broker node ID | `f4785be9863eab08` |
 | FlexRadio | `192.168.1.148:4992` (TCP API + UDP discovery) |
 | LP-700 WS gateway | `lp700-server.service` on Pi @ `ws://192.168.1.169:8089/ws` (single HID owner, multi-client fan-out) |
-| Git alias | `nrsave "message"` → add flows.json + commit |
+| Git function | `nrsave "message"` (bash function in `~/.bashrc` on Pi) → regen DXCC tab extract → add flows.json + extract → commit |
 | Dashboard theme | Dark, base #097479, bg #111111 |
 
 ### Restart Node-RED
@@ -575,14 +575,16 @@ claude
 
 ```bash
 # Save after any Deploy:
-nrsave "description"   # runs: cd ~/.node-red/projects/vu2cpl-shack && git add flows.json && git commit -m
+nrsave "description"   # regen DXCC extract → add flows.json + extract → commit (function in ~/.bashrc)
 git push
 
-# Full commit with DXCC tab extract:
+# Rule #4 (DXCC tab extract regen on every commit) is now baked into nrsave.
+# If you need to commit flows.json manually (rare — e.g. fixing something
+# nrsave doesn't cover), run the extract step yourself:
 cd ~/.node-red/projects/vu2cpl-shack
 python3 -c 'import json; d=json.load(open("flows.json")); v=[n for n in d if n.get("z")=="d110d176c0aad308" or n.get("id")=="d110d176c0aad308"]; json.dump(v,open("clublog_dxcc_tracker_v7.json","w"),indent=2)'
 git add flows.json clublog_dxcc_tracker_v7.json
-git commit -m "v7: description"
+git commit -m "description"
 git push
 
 # Rollback:
