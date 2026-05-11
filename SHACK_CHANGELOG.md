@@ -2274,18 +2274,17 @@ literally named `'file'`) unbacked.
    risk. Loaded via `git pull` + `sudo systemctl restart nodered`
    on Pi.
 
-**Surfaced bug, queued as HANDOVER #20.** `Fetch All Modes + Parse`
-writes worked-table data (`workedTable`, `entityWorked`,
-`dxccModeWorked`, `workedStats`) to `'file'` scope only; consumers
-(`DXCC Prefix Lookup`, `Return Stats`) read no-scope. With the file
-store newly live, post-fetch updates land on disk but the running
-session keeps using its pre-restart memory copy until Bootstrap
-runs again. Worked tables are 24-h-stale-tolerant so this is lower
-priority; documented for cleanup either by adding a memory write
-alongside the file write, or by switching consumers to read from
-file (and accepting the per-spot disk-cache overhead, which
-localfilesystem caches transparently so it's near-free after first
-read).
+**Surfaced bug, queued as HANDOVER #20 — and later closed as
+misdiagnosis the same day.** I had flagged a worked-table dual-write
+issue in `Fetch All Modes + Parse` based on the `'file'`-only writes
+on L91-94. Wrong: a closer read showed the function does *triple*
+persistence — L85-88 are memory writes (no scope), L91-94 are file
+context writes (`'file'`), and L96-103 also writes `nr_dxcc_seed.json`
+to disk directly via `fs.writeFileSync`. Architecture has always been
+correct; today's enable-the-file-store fix just makes the L91-94 path
+finally land where it always intended. Lesson, recorded for future
+audits: filtering scope-by-scope hides parallel writes — scan full
+function bodies before claiming a dual-write gap.
 
 **REBUILD_PI.md impact:** none directly — Stage 8 already ran
 `enable_file_context.sh`; the script fix flows through automatically.
