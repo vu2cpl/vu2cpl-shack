@@ -2206,6 +2206,26 @@ cost nothing at runtime).
 
 ## 2026-05-11
 
+### HANDOVER #10 (gpsntp + TX RFI watch): closed — no issue at 1 kW
+
+When `gpsntp.local` was first deployed (2026-05-09) with its QLG1
+patch antenna tapped off the U3S's 6-way header, the obvious risk
+was RFI desensitisation of the GPS during shack transmissions —
+the QLG1 sits physically next to the U3S WSPR TX, and a stratum-1
+NTP server losing fix during a transmission is the kind of bug
+that takes a week of watching to catch.
+
+Operator verified today that `gpsntp` holds stratum-1 PPS lock
+through full **1 kW** SPE amplifier transmissions — well above the
+~200 mW WSPR level the original watch was designed against. If
+1 kW doesn't move the needle, the U3S certainly won't either.
+
+Dedicated NEO-M8N + antenna fallback (documented in
+`pi-gps-ntp-server/HANDOVER.md` as the planned recovery path)
+remains unused and parked.
+
+---
+
 ### CLAUDE.md TODO #1 (AetherSDR MQTT bug): closed — upstream fix shipped
 
 Tracked at [ten9876/AetherSDR#1348](https://github.com/ten9876/AetherSDR/issues/1348)
