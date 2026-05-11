@@ -2206,6 +2206,35 @@ cost nothing at runtime).
 
 ## 2026-05-11
 
+### DXCC TODOs #7 + #8: closed as no-action (already done / already covered)
+
+End-of-day audit pass on the two remaining DXCC backlog items.
+
+**TODO #7 — Separate CW/Ph/Data fetch modes.** Already in place.
+`Build Club Log API Request` (`6e60f619acad462e`) constructs four
+URLs (`mode=0` all-modes, `mode=1` CW, `mode=2` Phone, `mode=3`
+Data) and the active `Fetch All Modes + Parse lotw only`
+(`aa7434df62b95ebc`) runs all four in parallel via
+`Promise.all([fetchURL(m0), fetchURL(m1), fetchURL(m2), fetchURL(m3)])`,
+parsing each into ew0/ew1/ew2/ew3 and composing `dxccModeWorked`
+as `{adif: {cw:bool, phone:bool, data:bool}}` consumed by the
+`NEW_MODE` classifier. Likely the TODO predates this
+implementation. (The legacy `Fetch All Modes + Parse` variant
+with `bands[mk]>=2 = confirmed` is disabled; the live LoTW-only
+variant uses strict `===2`.)
+
+**TODO #8 — Non-project folder path support.** Already covered by
+a fallback. Both Fetch functions read
+`var flowsDir = flow.get('cfg_flows_dir') || os.homedir() + '/.node-red';`
+— if `cfg_flows_dir` is empty (Projects feature not enabled), the
+default `~/.node-red/` kicks in. VU2CPL uses Projects so the
+fallback never fires here, but the defensive code is present for
+operators who fork the flow into a non-Projects setup.
+
+No code change. CLAUDE.md rows reworded to closed-no-action.
+
+---
+
 ### DXCC: filter persistence end-to-end (closes CLAUDE.md TODO #6)
 
 Filter chip state on the DXCC dashboard + the spot TTL slider now
