@@ -2251,10 +2251,12 @@ ppm. Indistinguishable from pre-log2ram numbers (as expected —
 log2ram only changes where `/var/log` writes land, not anything
 chrony reads).
 
-**Action item flagged for the other repo:** `pi-gps-ntp-server/BUILD.md`
-line 497 needs the `bookworm` → `trixie` fix so future-self
-following the runbook on a fresh trixie Pi doesn't get a 404 from
-apt update. Separate-repo follow-up; not in this commit.
+**Fix landed in the other repo** ([`pi-gps-ntp-server@5b115ba`](https://github.com/vu2cpl/pi-gps-ntp-server/commit/5b115ba)):
+swapped the hardcoded `bookworm` for `${VERSION_CODENAME}` read
+from `/etc/os-release` (release-agnostic — survives the eventual
+Debian 14 move), changed `enable --now` to `enable` + explicit
+`reboot` with a note explaining why `--now` doesn't actually
+move `/var/log` on first install, and added a verify block.
 
 **No REBUILD_PI.md impact** — that runbook is for the shack Pi
 (`noderedpi4`); log2ram is on `gpsntp.local`, a different host with
