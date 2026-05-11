@@ -406,12 +406,16 @@ stage_09_pi_scripts() {
     (crontab -l 2>/dev/null | grep -v 'monitor.sh' ; \
      echo '* * * * *  /home/vu2cpl/monitor.sh') | crontab -
 
-    # Enable + start services
-    step "Enable + start as3935 and rpi-agent services"
-    sudo systemctl enable --now as3935 rpi-agent
+    # Enable + start rpi-agent only.
+    # as3935.service is intentionally NOT enabled — the ESP32 bridge
+    # (vu2cpl-as3935-bridge repo) is the canonical publisher to
+    # lightning/as3935/*. The Pi unit stays installed-but-disabled as a
+    # fallback: `sudo systemctl enable --now as3935` resurrects it if
+    # the ESP32 ever fails. Enabling both at once races the MQTT topic.
+    step "Enable + start rpi-agent service (as3935 stays installed-but-disabled)"
+    sudo systemctl enable --now rpi-agent
     sleep 2
     systemctl is-active --quiet rpi-agent || warn "rpi-agent not active — check journalctl -u rpi-agent"
-    systemctl is-active --quiet as3935    || warn "as3935 not active — check journalctl -u as3935 (may be normal if AS3935 hardware absent)"
 
     step "Smoke-test telemetry publishes"
     if timeout 5 mosquitto_sub -h localhost -t "rpi/$(hostname)/cpu" -C 1 >/dev/null 2>&1; then
@@ -538,7 +542,8 @@ stage_13_verify() {
     check "Node-RED editor :1880"   "curl -sf http://localhost:1880"
     check "Node-RED dashboard /ui"  "curl -sf http://localhost:1880/ui"
     check "Mosquitto broker alive"  "timeout 3 mosquitto_sub -h localhost -t '\$SYS/#' -C 1"
-    check "as3935.service active"   "systemctl is-active --quiet as3935"
+    # as3935.service is intentionally disabled — check the topic from
+    # the ESP32 bridge instead (lightning/as3935/hb test below).
     check "rpi-agent.service active" "systemctl is-active --quiet rpi-agent"
     check "lp700-server /healthz"   "curl -sf http://localhost:8089/healthz"
     check "rpi/$(hostname) telemetry" "timeout 65 mosquitto_sub -h localhost -t 'rpi/$(hostname)/cpu' -C 1"

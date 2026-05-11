@@ -291,9 +291,13 @@ sudo visudo -c                            # must print "parsed OK"
  echo '* * * * *  /home/vu2cpl/monitor.sh') | crontab -
 crontab -l | grep monitor.sh              # one line expected
 
-# Enable + start the two services
-sudo systemctl enable --now as3935 rpi-agent
-sudo systemctl status as3935 --no-pager
+# Enable + start rpi-agent. NOTE: as3935 is intentionally NOT enabled.
+# The ESP32 bridge (vu2cpl-as3935-bridge repo) is the primary publisher
+# to lightning/as3935/*. The Pi daemon's files stay installed as a
+# fallback — if the ESP32 fails, `sudo systemctl enable --now as3935`
+# resurrects the Pi as publisher. Enabling both at once would race the
+# MQTT topic and corrupt retained status.
+sudo systemctl enable --now rpi-agent
 sudo systemctl status rpi-agent --no-pager
 ```
 
@@ -455,7 +459,7 @@ A 12-point checklist. Hit each one.
 | 3 | Dashboard loads | Browser → `http://192.168.1.169:1880/ui` |
 | 4 | All 11 flow tabs deploy clean | No red triangles on tab labels |
 | 5 | MQTT broker alive | `mosquitto_sub -h localhost -t '#' -C 5` shows traffic |
-| 6 | AS3935 daemon publishing | Topic `lightning/as3935/hb` ticks every 30 s |
+| 6 | AS3935 publishing (from ESP32 bridge) | Topic `lightning/as3935/hb` ticks every 30 s. The Pi daemon (`as3935.service`) is intentionally disabled — the ESP-WROOM-32 in [`vu2cpl-as3935-bridge`](https://github.com/vu2cpl/vu2cpl-as3935-bridge) is the live publisher. If the ESP32 is offline / dead, `sudo systemctl enable --now as3935` on this Pi resurrects the indoor daemon as fallback |
 | 7 | RPi telemetry publishing | Topic `rpi/noderedpi4/cpu` updates every 60 s |
 | 8 | LP-700 telemetry alive | Dashboard LP-700 panel shows live values |
 | 9 | FlexRadio TCP up | Dashboard FlexRadio panel shows slice state |
@@ -475,7 +479,8 @@ If 13 fails but other cards are fine: not a noderedpi4 problem — it's gpsntp.l
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
 | `nrsave` reports "nothing to commit" after every Deploy | Projects feature not enabled, flows.json not in the project dir | Re-do Step 4's projects block + Step 5 |
-| AS3935 daemon starts but counters never increment | IRQ wired to wrong GPIO | Re-check pin 7 / GPIO4 (Step 8) |
+| Two publishers fighting on `lightning/as3935/*` | Pi `as3935.service` was enabled despite ESP32 also running | `sudo systemctl disable --now as3935` — ESP32 (vu2cpl-as3935-bridge) is the canonical publisher; Pi daemon stays installed but disabled |
+| AS3935 daemon starts but counters never increment (only if Pi fallback is enabled) | IRQ wired to wrong GPIO | Re-check pin 7 / GPIO4 (Step 8) |
 | Mosquitto refuses connections from Tasmota devices | Default config bound to localhost only | Re-do Step 3's `lan.conf` |
 | Node-RED can't open USB serial | User not in `dialout` group | `sudo usermod -aG dialout vu2cpl` then re-login |
 | LP-700 dashboard frozen at one value | aggregator reading wrong msg shape (the 2026-05-09 fix) | The repo already has the fix; if you see this on a fresh clone, double-check `git pull` actually landed |

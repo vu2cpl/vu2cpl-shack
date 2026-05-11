@@ -618,8 +618,8 @@ Pi-side scripts already in this repo (canonical paths shown):
 
 | Script in repo | Deployed path on Pi | Purpose |
 |----------------|---------------------|---------|
-| `as3935_mqtt.py` | `/home/vu2cpl/as3935_mqtt.py` | AS3935 chip daemon — `as3935.service` |
-| `as3935.service` | `/etc/systemd/system/as3935.service` | systemd unit for the AS3935 daemon |
+| `as3935_mqtt.py` | `/home/vu2cpl/as3935_mqtt.py` | AS3935 chip daemon — **standby fallback** (ESP32 bridge in [`vu2cpl-as3935-bridge`](https://github.com/vu2cpl/vu2cpl-as3935-bridge) is the live publisher since 2026-05-11; this daemon is `disable`d but kept on disk for failover) |
+| `as3935.service` | `/etc/systemd/system/as3935.service` | systemd unit for the AS3935 daemon — **disabled by default**, re-enable with `sudo systemctl enable --now as3935` if the ESP32 fails |
 | `as3935_tune.py` | `/home/vu2cpl/as3935_tune.py` | LC-tank TUN_CAP sweep helper |
 | `rpi_agent.py` | `/home/vu2cpl/rpi_agent.py` | HTTP reboot/shutdown — `rpi-agent.service` |
 | `rpi-agent.service` | `/etc/systemd/system/rpi-agent.service` | systemd unit for rpi_agent |

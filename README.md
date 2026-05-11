@@ -39,7 +39,7 @@ The dashboard runs at `http://192.168.1.169:1880/ui` and is dark-themed
 | Power | 21 Tasmota-controlled outlets across 5 devices |
 | Power meter | Telepost LP-700 (USB HID, owned by `lp700-server` on the Pi) |
 | Rotator | Idiom Press Rotor-EZ |
-| Lightning | AS3935 sensor (I²C + IRQ on GPIO4) + Open-Meteo CAPE polling |
+| Lightning | AS3935 sensor on ESP-WROOM-32 bridge → WiFi → MQTT (see [`vu2cpl-as3935-bridge`](https://github.com/vu2cpl/vu2cpl-as3935-bridge)) + Open-Meteo CAPE polling. Indoor Pi-side daemon retained as standby fallback |
 | Awards | 9× BDXCC |
 | DXpeditions | VU7T, VU7MS (Lakshadweep), AT5P (Rameshwaram) |
 | Grid | MK83TE — Bengaluru |
@@ -60,8 +60,12 @@ within a configurable threshold (default 25 km). Two strike sources:
 
 - **Open-Meteo CAPE polling** every 5 min — synthesises a strike
   distance from CAPE values and WMO weather codes (95/96/99 = thunderstorm).
-- **AS3935 chip** sensor on I²C — local ~40 km range (currently reduced
-  to a few km because the antenna is indoors; outdoor relocation pending).
+- **AS3935 chip** sensor — local ~40 km range. Bridged onto MQTT by an
+  ESP-WROOM-32 ([`vu2cpl-as3935-bridge`](https://github.com/vu2cpl/vu2cpl-as3935-bridge),
+  v0.1.1 on the bench since 2026-05-11). Indoor `as3935.service` on the
+  Pi is retained as standby fallback. Outdoor enclosure + 18650/solar
+  build + field install pending — until then the antenna is still
+  indoors, range still ~few km.
 
 A vertical **BYPASS** switch on the dashboard suspends auto-disconnect
 for 120 minutes (force-reconnects ant + radio on activation, never
@@ -176,7 +180,7 @@ from `sm7iun.se/rbnskew.csv` every 6 h.
 ├── flows.json                       Main Node-RED flow (canonical source)
 ├── clublog_dxcc_tracker_v7.json     DXCC tab extract (auto-regen on commit)
 │
-├── as3935_mqtt.py                   AS3935 chip daemon (→ /home/vu2cpl/, as3935.service)
+├── as3935_mqtt.py                   AS3935 chip daemon — standby fallback (ESP32 bridge is primary publisher)
 ├── as3935_tune.py                   LC-tank TUN_CAP sweep helper
 ├── rpi_agent.py                     HTTP reboot/shutdown agent (→ rpi-agent.service)
 ├── rpi-agent.service                systemd unit for rpi_agent
@@ -185,7 +189,7 @@ from `sm7iun.se/rbnskew.csv` every 6 h.
 ├── enable_file_context.sh           One-shot Node-RED file context store enabler
 ├── rebuild_pi.sh                    Automated bare-metal rebuild script (paired with REBUILD_PI.md)
 │
-├── as3935.service                   systemd unit for as3935_mqtt.py
+├── as3935.service                   systemd unit for as3935_mqtt.py (installed but disabled; re-enable as fallback if ESP32 fails)
 │
 ├── README.md                        This file (umbrella overview)
 ├── DXCC.md                          DXCC Tracker reference

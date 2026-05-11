@@ -2206,6 +2206,68 @@ cost nothing at runtime).
 
 ## 2026-05-11
 
+### AS3935 publisher: ESP32 bridge takes over from Pi daemon (same day bench bring-up)
+
+After this morning's planning conversation (recorded in HANDOVER #21
++ the scaffold for [`vu2cpl-as3935-bridge`](https://github.com/vu2cpl/vu2cpl-as3935-bridge)),
+the operator wired the ESP-WROOM-32 + AS3935 on a breadboard and got
+firmware v0.1.1 publishing live the same evening. Key bench results:
+
+- `TRCO=OK`, `SRCO=OK` after `CALIB_RCO` — internal oscillators
+  calibrated cleanly.
+- I²C link solid at address `0x03`.
+- MQTT pipe live to `192.168.1.169:1883` — retained `status` lands
+  immediately on connect, `hb` ticks every 30 s, retained status
+  auto-refreshes every 5 min.
+- WiFi credentials now via WiFiManager captive portal
+  (`vu2cpl-as3935-setup` / `vu2cpl1234` AP on first boot — no
+  `secrets.h` to bake into firmware).
+- End-to-end verified: piezo-lighter sparks produce
+  `event:"disturber"` events on `lightning/as3935`. Counters
+  increment. Node-RED Lightning Antenna Protector flow consumed
+  everything without a single config change — the goal of the
+  contract-identical design.
+- Indoor Pi daemon `as3935.service` on `noderedpi4` **stopped and
+  disabled**. ESP32 is the sole publisher on `lightning/as3935/*`.
+
+**Reflected in this repo (vu2cpl-shack):**
+
+- **REBUILD_PI.md Step 7** — no longer enables `as3935.service` on
+  rebuild. Pi daemon stays installed (files in `/home/vu2cpl/` and
+  `/etc/systemd/system/`) but disabled by default. If the ESP32 ever
+  fails, `sudo systemctl enable --now as3935` resurrects the Pi as
+  publisher. Enabling both at once would race the MQTT topic and
+  corrupt retained status — added a row in the failure-modes table
+  for that.
+- **REBUILD_PI.md Step 12 verification row #6** — reworded to "AS3935
+  publishing (from ESP32 bridge)"; still asserts the same
+  `lightning/as3935/hb` topic ticks every 30 s, just from a different
+  publisher.
+- **`rebuild_pi.sh` Stage 9** — `enable --now as3935 rpi-agent` →
+  `enable --now rpi-agent` only. Stage 13 verification drops the
+  `systemctl is-active --quiet as3935` check (the `lightning/as3935/hb`
+  topic check below it covers the actual operational signal). Bash
+  syntax-checked.
+- **CLAUDE.md Pi-side scripts table** — `as3935_mqtt.py` and
+  `as3935.service` rows now annotated as standby fallback.
+- **README.md** — Lightning Antenna Protector subsystem description
+  updated; hardware table row updated; file-tree comments updated.
+- **HANDOVER.md "Current system state"** — AS3935 row reflects ESP32
+  primary, Pi daemon disabled.
+- **HANDOVER.md #1** (AS3935 outdoors) — still open; the physical
+  outdoor install (enclosure, power chain, shade mount, post-install
+  TUN_CAP re-tune) remains. Annotated with the bench milestone.
+- **HANDOVER.md #21** — updated from "planning" to "v0.1.1 live on
+  bench, indoor daemon retired". Lists v0.2.0+ open items (on-device
+  TUN_CAP cal mode, power chain, enclosure, field install).
+
+**No `flows.json` change.** The MQTT-contract-identical design paid
+off — Node-RED keeps consuming `lightning/as3935`,
+`lightning/as3935/status`, `lightning/as3935/hb`, `lightning/as3935/lwt`
+exactly as before, just from a different publisher.
+
+---
+
 ### HANDOVER #10 (gpsntp + TX RFI watch): closed — no issue at 1 kW
 
 When `gpsntp.local` was first deployed (2026-05-09) with its QLG1
