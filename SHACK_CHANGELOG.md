@@ -2206,6 +2206,34 @@ cost nothing at runtime).
 
 ## 2026-05-11
 
+### CLAUDE.md TODO #1 (AetherSDR MQTT bug): closed — upstream fix shipped
+
+Tracked at [ten9876/AetherSDR#1348](https://github.com/ten9876/AetherSDR/issues/1348)
+— "MQTT: 'Connect failed: Socket is not connected' on plain port
+1883 with TLS off (macOS)". Reported against AetherSDR v0.8.11
+with the exact symptom Manoj hit (TCP SYN → SYN-ACK from the Pi
+broker → immediate RST from the Mac client, repeating every 4-5 s
+without ever reaching the MQTT handshake — Mosquitto logs zero
+connection attempts).
+
+Root cause was a macOS-specific bug in the bundled libmosquitto's
+non-blocking connect + immediate packet write path. Fixed in
+[PR #1349](https://github.com/ten9876/AetherSDR/pull/1349), merged
+2026-04-15 and shipped in [v0.8.15](https://github.com/ten9876/AetherSDR/releases/tag/v0.8.15)
+~25 minutes after the merge ("Fix MQTT macOS connection failure"
+in the changelog). Subsequent MQTT polish landed across v0.8.15.1,
+v0.8.16 (proper TLS with OpenSSL 3.5+), and the 0.9.x line. The
+project switched from semver to CalVer today; current release is
+[v26.5.1](https://github.com/ten9876/AetherSDR/releases/tag/v26.5.1).
+
+**Mac-side action (separate from this repo):** upgrade AetherSDR
+on the Mac Mini to v26.5.1, re-test MQTT to `192.168.1.169:1883`
+with TLS off. If it connects clean, the loop is closed; if it
+still fails, file a fresh issue with current tcpdump against
+v26.5.1.
+
+---
+
 ### CLAUDE.md TODO #5 (website uploads): closed as already done
 
 Stale carryover. `~/projects/vu2cpl.github.io/` already carried

@@ -555,7 +555,7 @@ claude
 
 | # | Item | Status |
 |---|------|--------|
-| 1 | AetherSDR v0.8.11 MQTT bug — TLS reset on plain port 1883 | Open, upstream fix awaited |
+| 1 | AetherSDR v0.8.11 MQTT bug — TLS reset on plain port 1883 | **Closed 2026-05-11** — upstream fix shipped. Tracked at [ten9876/AetherSDR#1348](https://github.com/ten9876/AetherSDR/issues/1348), fixed in [PR #1349](https://github.com/ten9876/AetherSDR/pull/1349), released in [v0.8.15](https://github.com/ten9876/AetherSDR/releases/tag/v0.8.15) on 2026-04-15. Root cause: macOS-specific libmosquitto race on non-blocking connect + immediate packet write. Subsequent MQTT polish (incl. proper OpenSSL 3.5+ TLS support) landed across v0.8.16 and 0.9.x. Mac-side action: upgrade to current AetherSDR (`v26.5.1` as of today) — separate from this repo. |
 | 2 | FlexRadio split mode coloring (both slices tx:1, use active field) | Deferred |
 | 3 | Rotator timer: change `60 * 1000` → `5 * 60 * 1000` in Rotator Auto-Off Timer | **Done 2026-05-10** (`971f4b4`) |
 | 4 | RPi agent deploy on 2 remaining Pis + HA Pi (Bearer token) | **Done 2026-05-10** |
