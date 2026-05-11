@@ -2206,6 +2206,63 @@ cost nothing at runtime).
 
 ## 2026-05-11
 
+### Lightning: Parse Strike — Blitzortung dead-code strip (closes HANDOVER #7)
+
+[`e8a2dd4`](https://github.com/vu2cpl/vu2cpl-shack/commit/e8a2dd4) —
+operator-side flow change, audited + extract-regen-amended +
+rebased Mac-side.
+
+After the 2026-05-10 Blitzortung drop (HANDOVER #7), the
+`Parse Strike` function node (`26ddff0cbbfe5fc1`, Lightning
+Antenna Protector tab) still carried its full Buffer/string parser
+for Blitzortung's binary-with-embedded-text TCP feed: ~30 lines of
+`findKey` byte-scanner + `readCoord` digit-parser + a CASE 2/3
+branch entered on any non-object `msg.payload`. Nothing was ever
+wired to feed it — audit of upstream connections returned only:
+
+- 3 TEST inject nodes (object payload)
+- `Parse Open-Meteo → Strike` (object payload)
+
+All four upstreams use CASE 1, so CASE 2/3 was unreachable in
+production. Replaced the dead branch with a one-line "dropped
+2026-05-11 (HANDOVER #7) — restore from git history if reinstated"
+note + `return null`. Net flows.json change: 1 insertion, 1 deletion
+(function body is a single JSON-encoded string).
+
+**Rule #4 catch-up — DXCC tab extract drift fix:** the operator's
+`nrsave` (alias for `git add flows.json && git commit`) did not
+regen `clublog_dxcc_tracker_v7.json`, so the extract had been
+drifting behind every nrsave-only commit for an unknown number of
+days. Today's amend re-ran the extract script and folded the
+resulting 97-insertion / 76-deletion diff into the Parse Strike
+commit before pushing. Most of the drift was unrelated (`tx_color`
+field on FlexRadio slices, AS3935 panel additions, etc. — all
+already in flows.json from earlier deploys); just nobody had
+re-run the extract. Worth folding the extract step into `nrsave`
+itself, but that's a separate Pi-side alias change (HANDOVER #17,
+queued).
+
+**No behaviour change** for any payload that actually fires
+today — CASE 1 retained verbatim. Only difference: a Buffer or
+string payload (which never arrives) now returns null in 1 line
+instead of running 30 lines and returning null.
+
+**Mac-side rebase note:** operator's commit landed on a Pi-side
+main branch that was 5 commits behind origin (today's doc
+commits). Stash-seed → amend-extract → rebase-pull → pop-stash →
+seed-commit → push sequence kept history linear and the seed
+refresh as its own commit, per repo convention. Operator's
+authorship preserved through the amend.
+
+**No `REBUILD_PI.md` impact** — disaster recovery just clones the
+repo, and the cleaned-up `flows.json` comes along for free.
+
+CLAUDE.md "Key Node IDs" + HANDOVER.md "Key files & IDs to know"
+caveats updated to drop the "Cases 2/3 dead" note (they're not
+just dead — they're gone).
+
+---
+
 ### LP-700: HID package uninstalled (post-WS-migration cleanup)
 
 The 2026-05-09 LP-700 → WebSocket-gateway migration left

@@ -87,7 +87,7 @@
 | 15 | ~~DXCC alert-table dedup~~ | **Done 2026-05-10** (`8965d8e`) — `Format Alert for Dashboard Table` filter now drops existing rows matching `call+band+mode+alertType` before unshift. Combined with TTL expiry into a single pass. Identical spots re-firing after the 60 s upstream dedup window no longer double-render — the existing row gets replaced with the latest timestamp/freq/spotter |
 | 5 | ~~Rotator timer 60s → 5min~~ | **Done 2026-05-10** (`971f4b4`) — `05f0ddeb566a90fc` body now `var duration = 5 * 60 * 1000` + status badge updated to "Timer running — 5 mins" |
 | 6 | Mac SwiftUI app scaffold | Per CLAUDE.md TODO #12 — not started. Path now `~/projects/vu2cpl-shack-app/` (was `~/Documents/...`) |
-| 7 | ~~Blitzortung real-time integration~~ | **Dropped 2026-05-10** — verified zero coverage at MK83TE on map.blitzortung.org. Sparse south-India contributor stations make TOA triangulation unreliable in this region. AS3935 (close-range) + Open-Meteo CAPE (regional) cover the operational need. Parser Cases 2/3 in `Parse Strike` are now permanently dead code; can be stripped in a future flow cleanup |
+| 7 | ~~Blitzortung real-time integration~~ | **Dropped 2026-05-10**, dead code stripped **2026-05-11** (`e8a2dd4`) — verified zero coverage at MK83TE on map.blitzortung.org. Sparse south-India contributor stations make TOA triangulation unreliable in this region. AS3935 (close-range) + Open-Meteo CAPE (regional) cover the operational need. Parser Cases 2/3 in `Parse Strike` (Buffer/string TCP payload parser, ~30 lines including `findKey` + `readCoord` helpers) deleted from the function body; CASE 1 (object payloads — test injects + Parse Open-Meteo) is the only path now |
 | 8 | DXCC backlog (pending #6–11 in CLAUDE.md) | Filter persistence, separate CW/Ph/Data fetches, non-project-folder path support, README+PDF, Club Log API ban verification, daily 02:00 inject wiring |
 | 9 | ~~Add `gpsntp` to RPi Fleet `httpDevices`~~ | **Done 2026-05-10** — `'gpsntp': 'http://gpsntp.local:7799'` added to `Route CMD: HTTP or MQTT` (`a0695975fec84e2c`). Reboot/shutdown buttons functional via the existing fleet-card mechanism |
 | 10 | Watch `gpsntp` through a U3S TX session | When U3S keys up, the QLG1 sits next to the transmitter and may RFI-desensitize. If `chronyc tracking` on `gpsntp` shows fix-loss during transmissions over the next week or so, fall back to a dedicated NEO-M8N + antenna for the Pi (already documented in `pi-gps-ntp-server/HANDOVER.md`) |
@@ -95,6 +95,7 @@
 | 12 | ~~Install `log2ram` on `gpsntp`~~ | **Done 2026-05-11** — azlux repo (`trixie main`, not `bookworm main` as BUILD.md said — gpsntp moved to Debian 13), `log2ram` installed + enabled, rebooted. `/var/log` now tmpfs 128 MB; chrony re-locked to stratum 1 with PPS within ~60 s of boot. BUILD.md upstream fix landed in [`pi-gps-ntp-server@5b115ba`](https://github.com/vu2cpl/pi-gps-ntp-server/commit/5b115ba) — release-agnostic `${VERSION_CODENAME}` + explicit reboot step |
 | 13 | ~~Delete orphan `GPS NTP` flow tab~~ | **Done 2026-05-10** — operator deleted the empty tab; closed in next `nrsave` |
 | 16 | Clear LP-700-HID ws tab Description field | Cosmetic. The tab's sidebar Description (visible in editor's Info pane) still carries the legacy `npm install robertsLando/node-red-contrib-usbhid` + telepost udev install instructions, predating the 2026-05-09 WS-gateway migration and 2026-05-11 HID-package uninstall. Clear via Node-RED editor → right-click tab → Properties → Description → empty → Deploy → `nrsave`. Zero runtime impact |
+| 17 | Fold DXCC extract regen into `nrsave` alias | Pi-side `nrsave` currently runs only `git add flows.json && git commit -m "$1"`. CLAUDE.md rule #4 requires regenerating `clublog_dxcc_tracker_v7.json` (DXCC tab extract) on every commit, but `nrsave` doesn't, so the extract has been drifting silently. Today's Parse Strike rebase had to amend in 97/76-line extract drift accumulated over an unknown number of nrsave commits. Fix: edit `~/.bash_aliases` (or wherever `nrsave` lives) on the Pi to run the extract one-liner before `git add` — see CLAUDE.md rule #4 for the exact `python3 -c '…'` invocation |
 
 ---
 
@@ -114,7 +115,7 @@ Critical Node-RED IDs (per CLAUDE.md):
 
 - `75e2cac8ab96f556` Lightning Antenna Protector tab
 - `557083037f168b22` Master Dashboard
-- `26ddff0cbbfe5fc1` Parse Strike (only Case 1 fires — OM + test injects; Cases 2/3 dead)
+- `26ddff0cbbfe5fc1` Parse Strike (handles object payloads from OM + test injects; Blitzortung Buffer/string parser stripped 2026-05-11 `e8a2dd4`)
 - `d62fb0c3c40f03b7` Trigger Disconnect
 - `593f22a507b46335` Parse Open-Meteo → Strike (CAPE-based)
 - `61dca3d98a0e4c28` Refresh Stats — fan-out hub for all 30 s replays
