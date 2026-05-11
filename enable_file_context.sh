@@ -16,16 +16,21 @@ fi
 cp "$SETTINGS" "$SETTINGS.bak.$(date +%Y%m%d_%H%M%S)"
 echo "📋 Backed up settings.js"
 
-# Use Python to do a safe in-place edit
+# Use Python to do a safe in-place edit.
+# Two named stores: `default` (alias of `memory`) keeps existing no-scope
+# flow.set/get behaviour unchanged; `file` (localfilesystem) backs every
+# explicit `flow.set(..., 'file')` call. Without the explicit `memory`
+# entry, declaring `default` would silently route ALL no-scope traffic
+# to disk and balloon I/O.
 python3 << 'PYEOF'
 import re, os
 path = os.path.expanduser('~/.node-red/settings.js')
 with open(path) as f:
     txt = f.read()
 block = """    contextStorage: {
-        default: {
-            module: "localfilesystem"
-        }
+        default: "memory",
+        memory: { module: "memory" },
+        file:   { module: "localfilesystem" }
     },"""
 txt2 = re.sub(
     r'[ \t]*\/\/\s*contextStorage\s*:\s*\{[^}]*\}[^}]*\},?',
