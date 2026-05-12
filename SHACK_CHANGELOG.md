@@ -2206,6 +2206,192 @@ cost nothing at runtime).
 
 ## 2026-05-12
 
+### Lightning protection: distance-graded disconnect + AS3935 runtime cmd channel
+
+Big day. Two related changes landed, plus a runtime control surface for
+the ESP32 sensor bridge:
+
+#### 1. Decision matrix — `Trigger Disconnect` now grades by zone × OM state
+
+`Trigger Disconnect` (`d62fb0c3c40f03b7`) used to fire unconditionally on
+any strike that passed the upstream threshold switch — regardless of
+source, regardless of corroboration. With Open-Meteo synthesising a
+0 km "strike" on any current-hour `weather_code ∈ {95, 96, 99}` and a
+10 km "strike" on any CAPE ≥ 2500, the chain was firing
+preemptively on high-CAPE-no-storm days. Conservative, but noisy.
+
+New logic: AS3935 lightning events drive the chain; OM is a probability /
+severity signal that modulates the corroboration threshold per zone.
+**Open-Meteo never directly fires the disconnect** anymore.
+
+**Decision matrix:**
+
+| OM state | AS3935 close (<10 km) | AS3935 medium (10–25 km) | AS3935 far (≥25 km) |
+|----------|------------------------|---------------------------|----------------------|
+| **cold**   | single hit → DC | 2 hits in 5 min → DC, else log only | log only |
+| **lit**    | single hit → DC | single hit → DC (corroborated) | log only |
+| **severe** | single hit → DC | single hit → DC | single hit → DC |
+
+**OM state derivation** (computed every 5-min poll in `Parse Open-Meteo → Strike`):
+
+| OM state | Condition |
+|----------|-----------|
+| cold   | CAPE < `cfg_om_cape_thresh` (default 800 J/kg) OR wmo ∉ {95, 96, 99} |
+| lit    | CAPE ≥ 800 AND wmo ∈ {95, 96, 99} |
+| severe | CAPE ≥ `cfg_om_cape_severe_thresh` (default 2500 J/kg) AND wmo ∈ {95, 96, 99} |
+
+State persists `cfg_om_lit_window_min` (default 20 min) after each poll, so a
+transient calm-CAPE reading mid-storm doesn't immediately drop OM back to cold.
+
+**Invariants** chosen deliberately during planning:
+
+- **Close zone always fires on single hit.** The user accepted the trade-off:
+  this means single misclassified-disturber-as-lightning events at distance 1 km
+  still trigger DC. Cost of a false positive (≤20 min radio offline) ≪ cost
+  of missing a real close strike (FlexRadio + SPE + antennas exposed).
+- **OM alone never disconnects.** Even with `severe` state, if AS3935 has
+  seen nothing, no DC fires. OM is pure probability — it can amplify trust
+  in an AS3935 hit but cannot manufacture one.
+- **Disturber events don't feed the chain.** Only `lightning`-typed AS3935
+  events go through `Trigger Disconnect`; disturbers still increment
+  counters and log for diagnostics.
+
+**Config keys (all live-tunable from `Init Defaults`):**
+
+```
+cfg_close_km              = 10    // AS3935 close-zone radius (km)
+cfg_medium_km             = 25    // AS3935 medium-zone radius (km)
+cfg_med_window_min        = 5     // sliding strike window
+cfg_med_count             = 2     // hits in window for OM-cold medium DC
+cfg_om_lit_window_min     = 20    // OM state persistence
+cfg_om_cape_thresh        = 800   // "lit" CAPE threshold
+cfg_om_cape_severe_thresh = 2500  // "severe" CAPE threshold
+```
+
+Strike history lives in `flow.recent_as3935 = [{ts, km}, …]`, trimmed
+to the sliding window on every call. Reset on every `Init Defaults`
+run (deploy / restart).
+
+**Implementation** ([`76d60e5`](https://github.com/vu2cpl/vu2cpl-shack/commit/76d60e5)):
+three function-body changes, no wire changes.
+- `Init Defaults` (`ec1fd4dece8c4dc0`) — 7 new cfg keys + `recent_as3935`/`om_state` reset.
+- `Parse Open-Meteo → Strike` (`593f22a507b46335`) — derive OM state from
+  CAPE + wmo; persist with TTL. Strike-emission path (Output 1) kept intact
+  for dashboard / event log compatibility — the actual filter happens
+  downstream.
+- `Trigger Disconnect` (`d62fb0c3c40f03b7`) — full rewrite. Source filter,
+  matrix decision, sliding history. Status badge now reports the decision
+  (`close 6km`, `medium 18km · uncorroborated`, `far 30km · OM severe`, …)
+  for live observability.
+
+**Net behaviour shift vs pre-today:** OM-only DCs stop happening
+(today's pain). Single-AS3935-hit medium-zone DCs only happen when
+OM agrees there's a storm. Far-zone hits log unless OM is severe.
+
+#### 2. AS3935 ESP32 bridge — v0.2.0 cmd channel (firmware repo)
+
+Operator built v0.2.0 of [`vu2cpl-as3935-bridge`](https://github.com/vu2cpl/vu2cpl-as3935-bridge)
+firmware between yesterday's bench bring-up (v0.1.1) and this morning.
+v0.2.0 adds runtime tunability of every AS3935 register field over MQTT,
+NVS persistence, and an on-device port of `as3935_tune.py`'s TUN_CAP sweep.
+
+**New MQTT topics:**
+
+| Topic | Direction | Payload |
+|-------|-----------|---------|
+| `lightning/as3935/cmd`     | Node-RED → ESP32 | `{"set": "<key>", "value": …}` or `{"action": "<name>"}` |
+| `lightning/as3935/cmd/ack` | ESP32 → Node-RED | `{"ok": bool, "cmd": "set:<key>"\|"action:<name>", "ts": "..."}` (not retained) |
+| `lightning/as3935/status`  | ESP32 → Node-RED | retained; republished after every successful set/action so subscribers see fresh state |
+
+**Tunables** (NVS-backed, range-validated):
+`nf` (0–7) · `wdth` (0–15) · `srej` (0–15) · `tun_cap` (0–15) ·
+`mask_dist` (bool) · `min_num_lightning` (1|5|9|16) ·
+`afe_gb` (`"indoor"`/`"outdoor"`) · `modem_sleep` (`"max"`/`"min"`).
+
+**Actions:** `republish_status` · `calibrate_tun_cap` (~35 s sweep, MQTT
+keepalive pumped inside the loop) · `reboot` · `factory_reset_wifi`.
+
+Full HANDOVER entry drafted in this session; pasteable into
+`vu2cpl-as3935-bridge/HANDOVER.md` separately when the operator gets
+to it.
+
+#### 3. AS3935 Control Panel — runtime tunables on the shack dashboard
+
+A self-contained admin panel for the v0.2.0 cmd channel, living on its
+own flow tab (`AS3935 Tuning`, id `fe70cfdcdfa19aa4`) and its own
+dashboard group (`as3935_ctl_grp`). Three mqtt-in nodes (status / hb /
+cmd/ack) feed a single `ui_template`; ui_template's output wires to a
+single mqtt-out publishing to `lightning/as3935/cmd`. All UI logic and
+formatting lives inside the template.
+
+Visual design follows the GitHub-dark conventions used by the chrony
+card and Master Dashboard: `--bg #0d1117`, `--card #161b22`,
+`--border #30363d`, `--green #3fb950`, `--amber #e3b341`, `--red #f85149`;
+LED indicator dots inside status chips; 8 px rounded card corners.
+
+**Rows shipped today:**
+- LED + title + meta (FW · IP · RSSI · uptime)
+- Counters (⚡ disturber 📡 IRQ)
+- Calib (TRCO · SRCO)
+- **Tunables** (NF / WDTH / SREJ / TUN_CAP nudgeable; Mask dist toggleable;
+  **AFE GB toggleable** [`cf6816f`](https://github.com/vu2cpl/vu2cpl-shack/commit/cf6816f) / [`80a8b40`](https://github.com/vu2cpl/vu2cpl-shack/commit/80a8b40);
+  Min strikes / Modem sleep dropdowns)
+- Actions (Calibrate TUN_CAP · Republish · Reboot · Factory Reset WiFi)
+- Command log (last ack)
+
+**One nontrivial bug hit and fixed during bring-up** ([`7d205c1`](https://github.com/vu2cpl/vu2cpl-shack/commit/7d205c1)):
+The template's IIFE wrapper had been refactored to `(function(){…})()`
+with no `scope` binding. Inside the IIFE, `scope.$watch` and `scope.send`
+both reference an undeclared `scope` — the IIFE silently threw a
+ReferenceError on first run. Heartbeat counters appeared to update only
+because of cached DOM from a prior working deploy; status never
+populated, buttons silently dropped clicks. Fix was a two-token change
+to **Pattern B** (matching the chrony card): `(function(scope){…})(scope)`.
+The outer `scope` reads from node-red-dashboard's script-wrapper closure
+where it IS available; the IIFE captures it as a parameter. Restored the
+`var scope = this;` alternative (Pattern A, used by the original
+panel and Master Dashboard) was also viable; Pattern B chosen because
+it's explicit + matches a known-good newer template.
+
+**Cosmetic cleanup** ([`00f4270`](https://github.com/vu2cpl/vu2cpl-shack/commit/00f4270)):
+- Header meta line (FW / IP / RSSI / uptime) recoloured from `--muted`
+  to `--text` (white) — more readable, matches the body text below it.
+- Calib row trimmed to `TRCO=… · SRCO=…`; the `· afe_gb=…` segment
+  removed (now a dedicated row in Tunables, deduplicated).
+
+#### 4. Side-quest: rollback-tab pattern
+
+Worth recording as a Node-RED pattern. During v0.2.0 panel development
+([`f88e965`](https://github.com/vu2cpl/vu2cpl-shack/commit/f88e965))
+the operator imported a fresh clone of the AS3935 control flow onto a
+brand-new tab id, disabled the **original** tab as single-toggle rollback
+insurance, deployed. With the new copy verified working, the original
+disabled tab was deleted on 2026-05-12. Note for the future:
+
+- A disabled flow tab still consumes node IDs and counts toward the flow
+  file's bulk; safe to keep short-term, plan to clean up.
+- Two ui_templates with the same `group` ID render into the same dashboard
+  group. Even when the source tab is disabled, the dashboard runtime in
+  node-red-dashboard 1.x may not cleanly stop the disabled instance from
+  participating in group registration — observed-but-uncertain
+  sluggishness while both copies were live. Deleting the disabled tab
+  outright (not just `disabled:true`) is the reliable fix.
+
+#### Other ops notes from today
+
+- Real lightning fired at AS3935 distance 1 km mid-session (`energy 219990`,
+  `timestamp 2026-05-12T16:00:06`), 56 disturbers in the previous 4 min
+  prior. Disconnect chain fired correctly per the close-zone rule.
+- Indoor noise floor remains high; ESP32-outdoor-install (HANDOVER #1)
+  is the path to material false-positive reduction. The graded matrix
+  helps medium / far zones; close zone false positives remain inherent
+  until the sensor relocates outside.
+
+**REBUILD_PI.md impact:** none. All changes are inside `flows.json` —
+a fresh rebuild clones the repo and gets the new logic automatically.
+
+---
+
 ### Chrony status card: GitHub-dark palette + vanilla JS DOM ([`d9d57e8`](https://github.com/vu2cpl/vu2cpl-shack/commit/d9d57e8))
 
 Brought the GPS NTP chrony card in line with the rest of the

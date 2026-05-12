@@ -322,10 +322,45 @@ Weather data to Header template (`eee1a8b8552aa21f`): plain `wxData` object (no 
 
 ### Lightning Antenna Protector
 - **Init Defaults** node is the single config point — edit only this node
-- Open-Meteo index mapping: `km = (1 - index/100) * 200` (index < 5 dropped)
-- AS3935 MQTT topic: `lightning/as3935`, payload: `{event, distance, energy, timestamp}`
-- AS3935 distance 63 = out of range → treated as 0 km (always disconnect)
+- Open-Meteo CAPE→state mapping (2026-05-12): cold / lit / severe — see "Distance-graded disconnect" matrix below. Replaces older `km = (1 - index/100) * 200` lightning_potential synthesis (null in India)
+- AS3935 MQTT topic: `lightning/as3935` (published by ESP32 bridge in `vu2cpl-as3935-bridge` since 2026-05-11), payload: `{event, distance, energy, timestamp}`
+- AS3935 distance 63 = out of range → treated as 0 km (close zone → always disconnect)
+- AS3935 ESP32 bridge cmd channel: `lightning/as3935/cmd` (in), `lightning/as3935/cmd/ack` (out, not retained). `set` keys: nf, wdth, srej, tun_cap, mask_dist, min_num_lightning, afe_gb (`"indoor"`/`"outdoor"`), modem_sleep. Actions: republish_status, calibrate_tun_cap, reboot, factory_reset_wifi. NVS-persisted; status republished after each successful set. Controlled from the **AS3935 Control Panel** ui_template on the `AS3935 Tuning` flow tab (`fe70cfdcdfa19aa4`)
 - Weather: Parse Weather has 2 outputs — output 1 → Header (plain wxData), output 2 → Master Dashboard ({type:'weather'})
+
+#### Distance-graded disconnect (2026-05-12)
+
+`Trigger Disconnect` (`d62fb0c3c40f03b7`) no longer fires unconditionally — it filters by source (only AS3935 lightning events ever trigger; Open-Meteo never directly fires DC), then runs a 3×3 decision matrix:
+
+| OM state | AS3935 close (<10 km) | AS3935 medium (10–25 km) | AS3935 far (≥25 km) |
+|----------|------------------------|---------------------------|----------------------|
+| **cold**   | single hit → DC | 2 hits in 5 min → DC, else log only | log only |
+| **lit**    | single hit → DC | single hit → DC (corroborated) | log only |
+| **severe** | single hit → DC | single hit → DC | single hit → DC |
+
+OM state is derived in `Parse Open-Meteo → Strike` from the 5-min poll and held for 20 min (`cfg_om_lit_window_min`):
+
+| OM state | Condition |
+|----------|-----------|
+| cold   | CAPE < `cfg_om_cape_thresh` (800) OR wmo ∉ {95, 96, 99} |
+| lit    | CAPE ≥ 800 AND wmo ∈ {95, 96, 99} |
+| severe | CAPE ≥ `cfg_om_cape_severe_thresh` (2500) AND wmo ∈ {95, 96, 99} |
+
+All seven thresholds live-tunable from `Init Defaults`:
+
+```
+cfg_close_km             = 10    // AS3935 close-zone radius (km)
+cfg_medium_km            = 25    // AS3935 medium-zone radius (km)
+cfg_med_window_min       = 5     // sliding window for strike counting
+cfg_med_count            = 2     // hits needed in window for OM-cold medium DC
+cfg_om_lit_window_min    = 20    // OM state persistence after each poll
+cfg_om_cape_thresh       = 800   // "lit" CAPE threshold (J/kg)
+cfg_om_cape_severe_thresh= 2500  // "severe" CAPE threshold (J/kg)
+```
+
+Sliding strike history lives in `flow.recent_as3935 = [{ts, km}, …]`. Pushed on every AS3935 lightning event passing through Trigger Disconnect; filtered to the trailing `cfg_med_window_min`-minute window on every call. Persists across deploys only via memory (resets on Init Defaults run / Node-RED restart). Bypass switch still wins over everything (early-exit at top of Trigger Disconnect).
+
+**Behaviour change vs pre-2026-05-12:** Open-Meteo-only "synthetic strike" disconnects (CAPE > 800 alone → DC) stop happening. Only actual AS3935 lightning events drive the chain; OM modulates the corroboration threshold per the matrix. Net effect: fewer false-positive DCs during high-CAPE-no-storm Bengaluru summer afternoons; same protection on real-storm days.
 
 ### DXCC Tracker
 - **Credentials node** (`08dcd5378a79bb18`): set `cl_apikey`, `cl_email`, `cl_password`, `cl_callsign`, `tg_token`, `tg_chat_id`, `cfg_flows_dir`
