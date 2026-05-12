@@ -131,6 +131,13 @@
         "info": "Single ui_template card for the chrony status broadcast. Drag the ui_template node to your main fleet dashboard's group when ready, then delete this tab."
     },
     {
+        "id": "as3935_ctl_flow",
+        "type": "tab",
+        "label": "AS3935 Tuning",
+        "disabled": false,
+        "info": "MQTT control + live status panel for the vu2cpl-as3935-bridge ESP32.\n\nPublishes to lightning/as3935/cmd. Subscribes to status/hb/cmd/ack.\n\nDashboard group: Shack Monitoring tools > AS3935 Tuning."
+    },
+    {
         "id": "66ca1554.e4c85c",
         "type": "subflow",
         "name": "red trigger",
@@ -701,6 +708,26 @@
         "willTopic": "",
         "willQos": "0",
         "willPayload": ""
+    },
+    {
+        "id": "c55b930b17a24bb1",
+        "type": "ui_tab",
+        "name": "AS3935 Tuning",
+        "icon": "dashboard",
+        "order": 4,
+        "disabled": false,
+        "hidden": false
+    },
+    {
+        "id": "as3935_ctl_grp",
+        "type": "ui_group",
+        "name": "AS3935 Tuning",
+        "tab": "c55b930b17a24bb1",
+        "order": 30,
+        "disp": false,
+        "width": 12,
+        "collapse": false,
+        "className": ""
     },
     {
         "id": "f0932848.b39158",
@@ -9008,7 +9035,7 @@
         "order": 2,
         "width": 6,
         "height": 10,
-        "format": "<style>\n.gpsntp-card {\n  background: #0e151e;\n  border: 1px solid #1c2530;\n  border-radius: 8px;\n  width: 100%;\n  padding: 14px 16px 14px;\n  font-family: -apple-system, \"SF Pro Text\", system-ui, sans-serif;\n  font-size: 13px;\n  color: #cdd6e0;\n  -webkit-font-smoothing: antialiased;\n  box-sizing: border-box;\n}\n.gpsntp-card .ttl {\n  color: #5cd0d6;\n  font-weight: 600;\n  font-size: 14px;\n  margin: 0 0 10px;\n  letter-spacing: 0.02em;\n}\n.gpsntp-card .sect {\n  color: #5cd0d6;\n  text-align: center;\n  font-size: 11px;\n  font-weight: 500;\n  letter-spacing: 0.08em;\n  margin: 12px 0 8px;\n  user-select: none;\n}\n.gpsntp-card .sect:before, .gpsntp-card .sect:after {\n  content: \"\\2014\\2014\\2014\";\n  color: #5cd0d6;\n  opacity: 0.7;\n  margin: 0 8px;\n  letter-spacing: -1px;\n}\n.gpsntp-card .row {\n  display: flex;\n  justify-content: space-between;\n  align-items: center;\n  padding: 5px 0;\n  border-bottom: 1px solid #1a232c;\n  gap: 10px;\n}\n.gpsntp-card .row:last-of-type { border-bottom: none; }\n.gpsntp-card .lab {\n  color: #cdd6e0;\n  font-size: 12.5px;\n}\n.gpsntp-card .val {\n  color: #e6edf3;\n  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;\n  font-feature-settings: \"tnum\";\n  font-size: 12.5px;\n}\n.gpsntp-card .val.attn { color: #e89a4a; }\n.gpsntp-card .chip {\n  display: inline-block;\n  padding: 1px 10px;\n  border-radius: 12px;\n  font-size: 11px;\n  font-weight: 500;\n  border: 1px solid currentColor;\n  background: transparent;\n  letter-spacing: 0.02em;\n  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;\n  font-feature-settings: \"tnum\";\n  white-space: nowrap;\n}\n.gpsntp-card .chip.good { color: #5cd36e; }\n.gpsntp-card .chip.info { color: #5cd0d6; }\n.gpsntp-card .chip.warn { color: #e89a4a; }\n.gpsntp-card .chip.bad  { color: #e57373; }\n.gpsntp-card .gps-val {\n  display: inline-flex;\n  align-items: center;\n  gap: 8px;\n  color: #e6edf3;\n}\n.gpsntp-card .ftr {\n  margin-top: 12px;\n  padding-top: 9px;\n  border-top: 1px solid #1a232c;\n  display: flex;\n  justify-content: space-between;\n  color: #7d8896;\n  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;\n  font-feature-settings: \"tnum\";\n  font-size: 11.5px;\n  letter-spacing: 0.02em;\n}\n</style>\n\n<div class=\"gpsntp-card\">\n  <h3 class=\"ttl\">🛰 {{data.title}}</h3>\n\n  <div class=\"sect\">SYNC STATUS</div>\n\n  <div class=\"row\">\n    <span class=\"lab\">Reference</span>\n    <span class=\"chip\" ng-class=\"data.ref_class\">{{data.ref_text}}</span>\n  </div>\n  <div class=\"row\">\n    <span class=\"lab\">Stratum</span>\n    <span class=\"chip\" ng-class=\"data.stratum_class\">{{data.stratum}}</span>\n  </div>\n  <div class=\"row\">\n    <span class=\"lab\">System offset</span>\n    <span class=\"val\" ng-class=\"{attn: data.sys_off_attn}\">{{data.sys_off}}</span>\n  </div>\n  <div class=\"row\">\n    <span class=\"lab\">RMS offset</span>\n    <span class=\"val\" ng-class=\"{attn: data.rms_attn}\">{{data.rms}}</span>\n  </div>\n  <div class=\"row\">\n    <span class=\"lab\">Root dispersion</span>\n    <span class=\"val\" ng-class=\"{attn: data.root_disp_attn}\">{{data.root_disp}}</span>\n  </div>\n  <div class=\"row\">\n    <span class=\"lab\">Skew</span>\n    <span class=\"val\" ng-class=\"{attn: data.skew_attn}\">{{data.skew}}</span>\n  </div>\n  <div class=\"row\">\n    <span class=\"lab\">Leap</span>\n    <span class=\"val\">{{data.leap}}</span>\n  </div>\n  <div class=\"row\">\n    <span class=\"lab\">GPS</span>\n    <span class=\"val gps-val\">\n      <span class=\"chip\" ng-class=\"data.fix_class\">{{data.fix_text}}</span>{{data.sat_used}}&nbsp;/&nbsp;{{data.sat_seen}}\n    </span>\n  </div>\n\n  <div class=\"ftr\">\n    <span>{{data.utc_time}}</span>\n    <span>{{data.ago}}</span>\n  </div>\n</div>\n\n<script>\n(function(scope) {\n  var DASH = '—';\n\n  scope.data = scope.data || {\n    title: 'GPS Time Server',\n    ts: 0,\n    ref_text: DASH, ref_class: 'info',\n    stratum: DASH, stratum_class: 'info',\n    sys_off: DASH, sys_off_attn: false,\n    rms: DASH, rms_attn: false,\n    root_disp: DASH, root_disp_attn: false,\n    skew: DASH, skew_attn: false,\n    leap: DASH,\n    fix_text: DASH, fix_class: 'info',\n    sat_used: DASH, sat_seen: DASH,\n    utc_time: DASH, ago: DASH\n  };\n\n  function fmtSigned(v) {\n    if (v === undefined || v === null) return DASH;\n    var sign = v >= 0 ? '+' : '-';\n    var a = Math.abs(v);\n    if (a < 1e-6) return sign + Math.round(a * 1e9) + ' ns';\n    if (a < 1e-3) return sign + (a * 1e6).toFixed(1) + ' µs';\n    if (a < 1)    return sign + (a * 1e3).toFixed(2) + ' ms';\n    return sign + a.toFixed(3) + ' s';\n  }\n  function fmtAbs(v) {\n    if (v === undefined || v === null) return DASH;\n    var a = Math.abs(v);\n    if (a < 1e-6) return Math.round(a * 1e9) + ' ns';\n    if (a < 1e-3) return (a * 1e6).toFixed(1) + ' µs';\n    if (a < 1)    return (a * 1e3).toFixed(2) + ' ms';\n    return a.toFixed(3) + ' s';\n  }\n  function pad2(n) { return (n < 10 ? '0' : '') + n; }\n  function utcTime(ts) {\n    if (!ts) return DASH;\n    var d = new Date(ts * 1000);\n    return pad2(d.getUTCHours()) + ':' + pad2(d.getUTCMinutes()) + ':' + pad2(d.getUTCSeconds()) + ' UTC';\n  }\n  function agoText(ts) {\n    if (!ts) return DASH;\n    var age = Math.max(0, Math.floor(Date.now() / 1000) - ts);\n    if (age < 60)   return age + ' s ago';\n    if (age < 3600) return Math.floor(age / 60) + ' m ago';\n    return Math.floor(age / 3600) + ' h ago';\n  }\n  function classifyRef(ref) {\n    if (ref === 'PPS' || ref === 'PPS2') return 'good';\n    if (ref === 'NMEA' || ref === 'NMEB') return 'warn';\n    return 'info';\n  }\n  function classifyStratum(s) {\n    if (s === 1) return 'good';\n    if (s >= 2 && s <= 15) return 'warn';\n    return 'bad';\n  }\n  function classifyFix(m) {\n    if (m === 3) return 'good';\n    if (m === 2) return 'warn';\n    return 'bad';\n  }\n\n  function rebuild(p) {\n    var sys = p.system_time_offset_s || 0;\n    var rms = p.rms_offset_s         || 0;\n    var rd  = p.root_dispersion_s    || 0;\n    var sk  = p.skew_ppm             || 0;\n    return {\n      title:           'GPS Time Server',\n      ts:              p.ts || 0,\n      ref_text:        p.ref_name || DASH,\n      ref_class:       classifyRef(p.ref_name),\n      stratum:         (p.stratum === undefined ? DASH : p.stratum),\n      stratum_class:   classifyStratum(p.stratum),\n      sys_off:         fmtSigned(sys),\n      sys_off_attn:    Math.abs(sys) > 1e-3,\n      rms:             fmtAbs(rms),\n      rms_attn:        rms > 1e-3,\n      root_disp:       fmtAbs(rd),\n      root_disp_attn:  rd > 5e-3,\n      skew:            sk.toFixed(3) + ' ppm',\n      skew_attn:       Math.abs(sk) > 1,\n      leap:            p.leap || DASH,\n      fix_text:        p.fix_mode === 3 ? '3D'\n                     : p.fix_mode === 2 ? '2D'\n                     : 'no fix',\n      fix_class:       classifyFix(p.fix_mode),\n      sat_used:        (p.sat_used === undefined ? DASH : p.sat_used),\n      sat_seen:        (p.sat_seen === undefined ? DASH : p.sat_seen),\n      utc_time:        utcTime(p.ts || 0),\n      ago:             agoText(p.ts || 0)\n    };\n  }\n\n  scope.$watch('msg', function(msg) {\n    if (!msg || !msg.payload) return;\n    scope.data = rebuild(msg.payload);\n  });\n\n  if (!scope._gpsntpTicker) {\n    scope._gpsntpTicker = setInterval(function() {\n      if (scope.data && scope.data.ts) {\n        scope.data.ago = agoText(scope.data.ts);\n        try { scope.$apply(); } catch (e) {}\n      }\n    }, 5000);\n    scope.$on('$destroy', function() {\n      clearInterval(scope._gpsntpTicker);\n      scope._gpsntpTicker = null;\n    });\n  }\n})(scope);\n</script>\n",
+        "format": "<style>\n  .gpsntp-card {\n    /* GitHub-dark palette — matches the rest of the VU2CPL shack dashboard */\n    --bg: #0d1117;\n    --card: #161b22;\n    --border: #30363d;\n    --text: #c9d1d9;\n    --strong: #e6edf3;\n    --muted: #8b949e;\n    --accent: #58a6ff;\n    --green: #3fb950;\n    --amber: #e3b341;\n    --red: #f85149;\n\n    background: var(--card);\n    border: 1px solid var(--border);\n    border-radius: 8px;\n    width: 100%;\n    padding: 14px 16px;\n    font-family: -apple-system, \"SF Pro Text\", system-ui, sans-serif;\n    font-size: 13px;\n    color: var(--text);\n    -webkit-font-smoothing: antialiased;\n    box-sizing: border-box;\n  }\n\n  .gpsntp-card .ttl {\n    color: var(--strong);\n    font-weight: 600;\n    font-size: 14px;\n    margin: 0 0 10px;\n    letter-spacing: 0.02em;\n  }\n\n  .gpsntp-card .sect {\n    color: var(--muted);\n    text-align: center;\n    font-size: 11px;\n    font-weight: 500;\n    letter-spacing: 0.08em;\n    margin: 12px 0 8px;\n    user-select: none;\n  }\n\n  .gpsntp-card .sect:before,\n  .gpsntp-card .sect:after {\n    content: \"\\2014\\2014\\2014\";\n    color: var(--border);\n    margin: 0 8px;\n    letter-spacing: -1px;\n  }\n\n  .gpsntp-card .row {\n    display: flex;\n    justify-content: space-between;\n    align-items: center;\n    padding: 6px 0;\n    border-bottom: 1px solid var(--border);\n    gap: 10px;\n  }\n\n  .gpsntp-card .row:last-of-type {\n    border-bottom: none;\n  }\n\n  .gpsntp-card .lab {\n    color: var(--text);\n    font-size: 12.5px;\n  }\n\n  .gpsntp-card .val {\n    color: var(--strong);\n    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;\n    font-feature-settings: \"tnum\";\n    font-size: 12.5px;\n  }\n\n  .gpsntp-card .val.attn {\n    color: var(--amber);\n  }\n\n  .gpsntp-card .chip {\n    display: inline-flex;\n    align-items: center;\n    gap: 6px;\n    padding: 1px 10px;\n    border-radius: 12px;\n    font-size: 11px;\n    font-weight: 500;\n    border: 1px solid currentColor;\n    background: transparent;\n    letter-spacing: 0.02em;\n    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;\n    font-feature-settings: \"tnum\";\n    white-space: nowrap;\n  }\n\n  .gpsntp-card .chip.good {\n    color: var(--green);\n  }\n\n  .gpsntp-card .chip.info {\n    color: var(--accent);\n  }\n\n  .gpsntp-card .chip.warn {\n    color: var(--amber);\n  }\n\n  .gpsntp-card .chip.bad {\n    color: var(--red);\n  }\n\n  .gpsntp-card .led {\n    width: 8px;\n    height: 8px;\n    border-radius: 50%;\n    display: inline-block;\n    background: currentColor;\n    box-shadow: 0 0 4px currentColor;\n  }\n\n  .gpsntp-card .gps-val {\n    display: inline-flex;\n    align-items: center;\n    gap: 8px;\n    color: var(--strong);\n    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;\n    font-feature-settings: \"tnum\";\n    font-size: 12.5px;\n  }\n\n  .gpsntp-card .ftr {\n    margin-top: 12px;\n    padding-top: 9px;\n    border-top: 1px solid var(--border);\n    display: flex;\n    justify-content: space-between;\n    color: var(--muted);\n    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;\n    font-feature-settings: \"tnum\";\n    font-size: 11.5px;\n    letter-spacing: 0.02em;\n  }\n</style>\n\n<div class=\"gpsntp-card\">\n  <h3 class=\"ttl\">🛰 <span id=\"gpsntp-title\">GPS Time Server</span></h3>\n\n  <div class=\"sect\">SYNC STATUS</div>\n\n  <div class=\"row\">\n    <span class=\"lab\">Reference</span>\n    <span class=\"chip info\" id=\"gpsntp-ref\"><span class=\"led\"></span><span class=\"t\">—</span></span>\n  </div>\n  <div class=\"row\">\n    <span class=\"lab\">Stratum</span>\n    <span class=\"chip info\" id=\"gpsntp-stratum\"><span class=\"led\"></span><span class=\"t\">—</span></span>\n  </div>\n  <div class=\"row\">\n    <span class=\"lab\">System offset</span>\n    <span class=\"val\" id=\"gpsntp-sys\">—</span>\n  </div>\n  <div class=\"row\">\n    <span class=\"lab\">RMS offset</span>\n    <span class=\"val\" id=\"gpsntp-rms\">—</span>\n  </div>\n  <div class=\"row\">\n    <span class=\"lab\">Root dispersion</span>\n    <span class=\"val\" id=\"gpsntp-rd\">—</span>\n  </div>\n  <div class=\"row\">\n    <span class=\"lab\">Skew</span>\n    <span class=\"val\" id=\"gpsntp-skew\">—</span>\n  </div>\n  <div class=\"row\">\n    <span class=\"lab\">Leap</span>\n    <span class=\"val\" id=\"gpsntp-leap\">—</span>\n  </div>\n  <div class=\"row\">\n    <span class=\"lab\">GPS</span>\n    <span class=\"gps-val\">\n      <span class=\"chip info\" id=\"gpsntp-fix\"><span class=\"led\"></span><span class=\"t\">—</span></span>\n    <span id=\"gpsntp-sats\">—</span>\n    </span>\n  </div>\n\n  <div class=\"ftr\">\n    <span id=\"gpsntp-utc\">—</span>\n    <span id=\"gpsntp-ago\">—</span>\n  </div>\n</div>\n\n<script>\n  (function(scope) {\n  var DASH = '—';\n  var lastTs = 0;\n\n  function $(id)       { return document.getElementById(id); }\n  function setText(id, txt) { var el = $(id); if (el) el.textContent = txt; }\n  function setChip(id, txt, cls) {\n    var el = $(id); if (!el) return;\n    el.className = 'chip ' + cls;\n    var t = el.querySelector('.t');\n    if (t) t.textContent = txt;\n  }\n  function setVal(id, txt, attn) {\n    var el = $(id); if (!el) return;\n    el.textContent = txt;\n    el.className = 'val' + (attn ? ' attn' : '');\n  }\n\n  function fmtSigned(v) {\n    if (v === undefined || v === null) return DASH;\n    var sign = v >= 0 ? '+' : '-';\n    var a = Math.abs(v);\n    if (a < 1e-6) return sign + Math.round(a * 1e9) + ' ns';\n    if (a < 1e-3) return sign + (a * 1e6).toFixed(1) + ' µs';\n    if (a < 1)    return sign + (a * 1e3).toFixed(2) + ' ms';\n    return sign + a.toFixed(3) + ' s';\n  }\n  function fmtAbs(v) {\n    if (v === undefined || v === null) return DASH;\n    var a = Math.abs(v);\n    if (a < 1e-6) return Math.round(a * 1e9) + ' ns';\n    if (a < 1e-3) return (a * 1e6).toFixed(1) + ' µs';\n    if (a < 1)    return (a * 1e3).toFixed(2) + ' ms';\n    return a.toFixed(3) + ' s';\n  }\n  function pad2(n) { return (n < 10 ? '0' : '') + n; }\n  function utcTime(ts) {\n    if (!ts) return DASH;\n    var d = new Date(ts * 1000);\n    return pad2(d.getUTCHours()) + ':' + pad2(d.getUTCMinutes()) + ':' + pad2(d.getUTCSeconds()) + ' UTC';\n  }\n  function agoText(ts) {\n    if (!ts) return DASH;\n    var age = Math.max(0, Math.floor(Date.now() / 1000) - ts);\n    if (age < 60)   return age + ' s ago';\n    if (age < 3600) return Math.floor(age / 60) + ' m ago';\n    return Math.floor(age / 3600) + ' h ago';\n  }\n  function classifyRef(ref) {\n    if (ref === 'PPS' || ref === 'PPS2') return 'good';\n    if (ref === 'NMEA' || ref === 'NMEB') return 'warn';\n    return 'info';\n  }\n  function classifyStratum(s) {\n    if (s === 1) return 'good';\n    if (s >= 2 && s <= 15) return 'warn';\n    return 'bad';\n  }\n  function classifyFix(m) {\n    if (m === 3) return 'good';\n    if (m === 2) return 'warn';\n    return 'bad';\n  }\n\n  function render(p) {\n    var sys = p.system_time_offset_s || 0;\n    var rms = p.rms_offset_s         || 0;\n    var rd  = p.root_dispersion_s    || 0;\n    var sk  = p.skew_ppm             || 0;\n    lastTs  = p.ts || 0;\n\n    setChip('gpsntp-ref',     p.ref_name || DASH,                       classifyRef(p.ref_name));\n    setChip('gpsntp-stratum', (p.stratum === undefined ? DASH : p.stratum), classifyStratum(p.stratum));\n    setVal ('gpsntp-sys',     fmtSigned(sys),         Math.abs(sys) > 1e-3);\n    setVal ('gpsntp-rms',     fmtAbs(rms),            rms > 1e-3);\n    setVal ('gpsntp-rd',      fmtAbs(rd),             rd  > 5e-3);\n    setVal ('gpsntp-skew',    sk.toFixed(3) + ' ppm', Math.abs(sk) > 1);\n    setText('gpsntp-leap',    p.leap || DASH);\n\n    var fixText = p.fix_mode === 3 ? '3D'\n                : p.fix_mode === 2 ? '2D'\n                : 'no fix';\n    setChip('gpsntp-fix', fixText, classifyFix(p.fix_mode));\n    setText('gpsntp-sats',\n      (p.sat_used === undefined ? DASH : p.sat_used) + ' / ' +\n      (p.sat_seen === undefined ? DASH : p.sat_seen));\n\n    setText('gpsntp-utc', utcTime(lastTs));\n    setText('gpsntp-ago', agoText(lastTs));\n  }\n\n  scope.$watch('msg', function(msg) {\n    if (!msg || !msg.payload) return;\n    render(msg.payload);\n  });\n\n  if (!scope._gpsntpTicker) {\n    scope._gpsntpTicker = setInterval(function() {\n      if (lastTs) setText('gpsntp-ago', agoText(lastTs));\n    }, 5000);\n    scope.$on('$destroy', function() {\n      clearInterval(scope._gpsntpTicker);\n      scope._gpsntpTicker = null;\n    });\n  }\n})(scope);\n</script>",
         "storeOutMessages": true,
         "fwdInMessages": false,
         "resendOnRefresh": true,
@@ -9019,5 +9046,109 @@
         "wires": [
             []
         ]
+    },
+    {
+        "id": "as3935_ctl_status_in",
+        "type": "mqtt in",
+        "z": "as3935_ctl_flow",
+        "name": "AS3935 Status",
+        "topic": "lightning/as3935/status",
+        "qos": "0",
+        "datatype": "json",
+        "broker": "f4785be9863eab08",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 160,
+        "y": 100,
+        "wires": [
+            [
+                "as3935_ctl_panel"
+            ]
+        ]
+    },
+    {
+        "id": "as3935_ctl_hb_in",
+        "type": "mqtt in",
+        "z": "as3935_ctl_flow",
+        "name": "AS3935 Heartbeat",
+        "topic": "lightning/as3935/hb",
+        "qos": "0",
+        "datatype": "json",
+        "broker": "f4785be9863eab08",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 170,
+        "y": 160,
+        "wires": [
+            [
+                "as3935_ctl_panel"
+            ]
+        ]
+    },
+    {
+        "id": "as3935_ctl_ack_in",
+        "type": "mqtt in",
+        "z": "as3935_ctl_flow",
+        "name": "AS3935 Cmd Ack",
+        "topic": "lightning/as3935/cmd/ack",
+        "qos": "0",
+        "datatype": "json",
+        "broker": "f4785be9863eab08",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 160,
+        "y": 220,
+        "wires": [
+            [
+                "as3935_ctl_panel"
+            ]
+        ]
+    },
+    {
+        "id": "as3935_ctl_panel",
+        "type": "ui_template",
+        "z": "as3935_ctl_flow",
+        "group": "as3935_ctl_grp",
+        "name": "AS3935 Control Panel",
+        "order": 1,
+        "width": 12,
+        "height": 11,
+        "format": "<style>\n:root{\n  --bg:#0d1117; --card:#161b22; --border:#21262d;\n  --accent:#238636; --danger:#da3633; --warn:#e3b341;\n  --muted:#8b949e; --text:#c9d1d9;\n  --green:#3fb950; --red:#f85149; --amber:#e3b341;\n  --font:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;\n  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;\n}\n#a35tune *{box-sizing:border-box;margin:0;padding:0}\n#a35tune{\n  font-family:var(--font); background:var(--bg); color:var(--text);\n  padding:10px; display:flex; flex-direction:column; gap:8px;\n  font-size:13px;\n}\n#a35tune .card{\n  background:var(--card); border:1px solid var(--border);\n  border-radius:8px; padding:10px 14px;\n}\n#a35tune .hdr{display:flex;align-items:center;gap:10px}\n#a35tune .led{\n  display:inline-block; width:12px; height:12px; border-radius:50%;\n  background:var(--muted); box-shadow:0 0 6px currentColor;\n}\n#a35tune .title{font-weight:700; font-size:14px; letter-spacing:.3px}\n#a35tune .meta{color:var(--muted); font-size:11px; margin-left:auto;\n  font-family:var(--mono)}\n#a35tune .counters{\n  font-family:var(--mono); font-size:13px; letter-spacing:.5px;\n}\n#a35tune .calib{color:var(--muted); font-size:11px;\n  font-family:var(--mono)}\n#a35tune .tune{display:flex; flex-direction:column; gap:6px}\n#a35tune .trow{\n  display:flex; align-items:center; gap:8px; font-size:12px;\n}\n#a35tune .lbl{width:100px; color:var(--muted)}\n#a35tune .val{\n  display:inline-block; min-width:34px; text-align:center;\n  background:var(--bg); border:1px solid var(--border);\n  border-radius:4px; padding:2px 8px;\n  font-family:var(--mono); font-weight:700;\n}\n#a35tune .rng{color:var(--muted); font-size:10px; margin-left:auto;\n  font-family:var(--mono)}\n#a35tune button{\n  font-family:var(--font); background:var(--card); color:var(--text);\n  border:1px solid var(--border); border-radius:6px;\n  padding:5px 10px; font-size:12px; cursor:pointer;\n  transition:background 100ms, border-color 100ms;\n}\n#a35tune button:hover{background:#21262d; border-color:#3a414b}\n#a35tune button:active{transform:translateY(1px)}\n#a35tune button:disabled{opacity:.35; cursor:not-allowed}\n#a35tune .trow button{padding:2px 9px; min-width:26px;\n  font-family:var(--mono); font-weight:700; font-size:14px;\n  line-height:1}\n#a35tune select{\n  font-family:var(--font); background:var(--bg); color:var(--text);\n  border:1px solid var(--border); border-radius:4px;\n  padding:3px 6px; font-size:12px;\n}\n#a35tune .actions{display:flex; flex-wrap:wrap; gap:6px}\n#a35tune button.primary{\n  background:var(--accent); border-color:var(--accent);\n  color:white; font-weight:600;\n}\n#a35tune button.primary:hover{background:#2ea043; border-color:#2ea043}\n#a35tune button.warn{\n  background:transparent; border-color:var(--warn); color:var(--warn);\n}\n#a35tune button.warn:hover{background:rgba(227,179,65,.1)}\n#a35tune button.danger{\n  background:transparent; border-color:var(--danger); color:var(--red);\n}\n#a35tune button.danger:hover{background:rgba(218,54,51,.1)}\n#a35tune .ack{\n  font-family:var(--mono); font-size:11px; color:var(--muted);\n}\n#a35tune .ack.ok{color:var(--green)}\n#a35tune .ack.bad{color:var(--red)}\n#a35tune .sect{font-size:10px; color:var(--muted);\n  text-transform:uppercase; letter-spacing:1px; margin-bottom:4px}\n</style>\n<div id=\"a35tune\">\n  <div class=\"card hdr\">\n    <span class=\"led\" id=\"a35led\"></span>\n    <span class=\"title\">AS3935 Bridge</span>\n    <span class=\"meta\" id=\"a35meta\">awaiting status...</span>\n  </div>\n\n  <div class=\"card counters\" id=\"a35counters\">awaiting heartbeat...</div>\n\n  <div class=\"card calib\" id=\"a35calib\">Calib: —</div>\n\n  <div class=\"card tune\">\n    <div class=\"sect\">Tunables</div>\n    <div class=\"trow\"><span class=\"lbl\">NF</span>\n      <span class=\"val\" id=\"a35nf\">—</span>\n      <button onclick=\"a35.nudge('nf',-1,0,7)\">−</button>\n      <button onclick=\"a35.nudge('nf',+1,0,7)\">+</button>\n      <span class=\"rng\">0..7</span></div>\n    <div class=\"trow\"><span class=\"lbl\">WDTH</span>\n      <span class=\"val\" id=\"a35wdth\">—</span>\n      <button onclick=\"a35.nudge('wdth',-1,0,15)\">−</button>\n      <button onclick=\"a35.nudge('wdth',+1,0,15)\">+</button>\n      <span class=\"rng\">0..15</span></div>\n    <div class=\"trow\"><span class=\"lbl\">SREJ</span>\n      <span class=\"val\" id=\"a35srej\">—</span>\n      <button onclick=\"a35.nudge('srej',-1,0,15)\">−</button>\n      <button onclick=\"a35.nudge('srej',+1,0,15)\">+</button>\n      <span class=\"rng\">0..15</span></div>\n    <div class=\"trow\"><span class=\"lbl\">TUN_CAP</span>\n      <span class=\"val\" id=\"a35tuncap\">—</span>\n      <button onclick=\"a35.nudge('tun_cap',-1,0,15)\">−</button>\n      <button onclick=\"a35.nudge('tun_cap',+1,0,15)\">+</button>\n      <span class=\"rng\">0..15</span></div>\n    <div class=\"trow\"><span class=\"lbl\">Mask dist</span>\n      <span class=\"val\" id=\"a35mask\">—</span>\n      <button onclick=\"a35.toggle('mask_dist')\">toggle</button>\n      <span class=\"rng\">on/off</span></div>\n    <div class=\"trow\"><span class=\"lbl\">Min strikes</span>\n      <select id=\"a35mnl\" onchange=\"a35.set('min_num_lightning', parseInt(this.value))\">\n        <option value=\"1\">1</option><option value=\"5\">5</option>\n        <option value=\"9\">9</option><option value=\"16\">16</option>\n      </select>\n      <span class=\"rng\">storm filter</span></div>\n    <div class=\"trow\"><span class=\"lbl\">Modem sleep</span>\n      <select id=\"a35ms\" onchange=\"a35.set('modem_sleep', this.value)\">\n        <option value=\"max\">max</option><option value=\"min\">min</option>\n      </select>\n      <span class=\"rng\">WiFi PS</span></div>\n  </div>\n\n  <div class=\"card actions\">\n    <div class=\"sect\" style=\"width:100%\">Actions</div>\n    <button class=\"primary\" onclick=\"a35.action('calibrate_tun_cap')\">Calibrate TUN_CAP (~35s)</button>\n    <button onclick=\"a35.action('republish_status')\">Republish Status</button>\n    <button class=\"warn\" onclick=\"a35.confirm('Reboot the ESP32?', 'reboot')\">Reboot ESP32</button>\n    <button class=\"danger\" onclick=\"a35.confirm('Erase stored WiFi creds and reboot into setup AP?', 'factory_reset_wifi')\">Factory Reset WiFi</button>\n  </div>\n\n  <div class=\"card ack\" id=\"a35ack\">No commands yet</div>\n</div>\n<script>\n(function(){\n  var scope = this;\n  var state = {};\n  var hb = {counters:{}};\n\n  function $(id){return document.getElementById(id);}\n  function fmtUptime(s){\n    if(s==null) return '?';\n    var h=Math.floor(s/3600), m=Math.floor((s%3600)/60), x=s%60;\n    return (h?h+'h ':'') + (m?m+'m ':'') + x+'s';\n  }\n\n  function render(){\n    var led = $('a35led');\n    if(led){\n      var ok = state.event==='ready'\n        && state.calib_trco==='OK' && state.calib_srco==='OK';\n      var off = state.event==='offline';\n      led.style.background = off ? 'var(--red)'\n        : ok ? 'var(--green)' : 'var(--amber)';\n      led.style.color      = off ? 'var(--red)'\n        : ok ? 'var(--green)' : 'var(--amber)';\n    }\n    var meta = $('a35meta');\n    if(meta){\n      meta.textContent =\n        'FW ' + (state.fw || '—')\n        + ' · IP ' + (state.ip || '?')\n        + ' · RSSI ' + ((hb.rssi != null ? hb.rssi : state.rssi) || '?') + ' dBm'\n        + ' · up ' + fmtUptime(hb.uptime_s);\n    }\n    var c = hb.counters || {};\n    var cn = $('a35counters');\n    if(cn){\n      cn.textContent =\n        '⚡ ' + (c.lightning || 0)\n        + '   ⚠ ' + (c.disturber || 0)\n        + '   📡 ' + (c.noise || 0)\n        + '   IRQ ' + (c.irq || 0);\n    }\n    var cal = $('a35calib');\n    if(cal){\n      cal.textContent =\n        'Calib: TRCO=' + (state.calib_trco || '?')\n        + ' · SRCO=' + (state.calib_srco || '?')\n        + ' · afe_gb=' + (state.afe_gb || '?');\n    }\n    if(state.nf      != null && $('a35nf'))     $('a35nf').textContent = state.nf;\n    if(state.wdth    != null && $('a35wdth'))   $('a35wdth').textContent = state.wdth;\n    if(state.srej    != null && $('a35srej'))   $('a35srej').textContent = state.srej;\n    if(state.tun_cap != null && $('a35tuncap')) $('a35tuncap').textContent = state.tun_cap;\n    if(state.mask_dist != null && $('a35mask')){\n      $('a35mask').textContent = state.mask_dist ? 'ON' : 'OFF';\n      $('a35mask').style.color = state.mask_dist ? 'var(--amber)' : 'var(--text)';\n    }\n    if(state.min_num_lightning != null && $('a35mnl'))\n      $('a35mnl').value = String(state.min_num_lightning);\n    if(state.modem_sleep && $('a35ms'))\n      $('a35ms').value = state.modem_sleep;\n  }\n\n  window.a35 = {\n    nudge: function(key, delta, lo, hi){\n      var v = (state[key] == null ? 0 : state[key]) + delta;\n      if(v < lo || v > hi) return;\n      this.set(key, v);\n    },\n    toggle: function(key){ this.set(key, !state[key]); },\n    set: function(key, value){\n      scope.send({ payload: { set: key, value: value } });\n    },\n    action: function(name){\n      scope.send({ payload: { action: name } });\n    },\n    confirm: function(msg, action){\n      if(confirm(msg)) this.action(action);\n    }\n  };\n\n  scope.$watch('msg', function(msg){\n    if(!msg || !msg.topic) return;\n    var p = msg.payload;\n    if(typeof p === 'string'){ try { p = JSON.parse(p); } catch(e){ return; } }\n    if(msg.topic === 'lightning/as3935/status'){ state = p || {}; }\n    else if(msg.topic === 'lightning/as3935/hb'){ hb = p || {counters:{}}; }\n    else if(msg.topic === 'lightning/as3935/cmd/ack' && $('a35ack')){\n      var t = (p && p.ts || '').slice(11);\n      $('a35ack').textContent =\n        (p.ok ? '✓ ' : '✗ ') + (p.cmd || '?')\n        + (p.error ? ' — ' + p.error : '') + (t ? '  @ ' + t : '');\n      $('a35ack').className = 'card ack ' + (p.ok ? 'ok' : 'bad');\n    }\n    render();\n  });\n\n  render();\n})();\n</script>\n",
+        "storeOutMessages": true,
+        "fwdInMessages": false,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "className": "",
+        "x": 460,
+        "y": 160,
+        "wires": [
+            [
+                "as3935_ctl_cmd_out"
+            ]
+        ]
+    },
+    {
+        "id": "as3935_ctl_cmd_out",
+        "type": "mqtt out",
+        "z": "as3935_ctl_flow",
+        "name": "AS3935 Cmd",
+        "topic": "lightning/as3935/cmd",
+        "qos": "0",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "f4785be9863eab08",
+        "x": 720,
+        "y": 160,
+        "wires": []
     }
 ]
