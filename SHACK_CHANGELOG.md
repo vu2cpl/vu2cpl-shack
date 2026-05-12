@@ -2204,6 +2204,116 @@ cost nothing at runtime).
 
 ---
 
+## 2026-05-13
+
+### SPE: stale-state lying fix — gateway-side presence-heartbeat + panel offline-wipe
+
+Operator noticed the Node-RED SPE panel + Macexpert SPE app both kept
+showing the last-known amp state after physically powering the amp
+off — only a fresh page-load / WS reconnect picked up the truth.
+Identical symptom across two independent clients, so the bug had to be
+on the gateway. Multi-hour debug session, fixed in two commits on the
+[`vu2cpl/spe-remote`](https://github.com/vu2cpl/spe-remote) repo plus
+several follow-on Node-RED panel changes here.
+
+**Diagnosed root cause** (in `spe-remote/spe/websocket_handler.py` +
+`spe/serial_handler.py`): `broadcast_state` only fires when
+`SerialHandler.on_state_update` calls it, which only fires when serial
+frames arrive and parse cleanly. When the amp powers off, no frames →
+no broadcast → connected clients never learn the amp went down.
+Macexpert's defence was to reconnect every 5 s on silence — visible in
+`journalctl -u spe-remote` as continuous connect/disconnect spam, each
+fresh client just refetching the same stale snapshot.
+
+**Gateway fix** (cross-ref [`spe-remote@248b922`](https://github.com/vu2cpl/spe-remote/commit/248b922)
+and [`spe-remote@ab6d94d`](https://github.com/vu2cpl/spe-remote/commit/ab6d94d)):
+
+- New asyncio task `presence_heartbeat_loop` emits
+  `{"heartbeat": true, "serial": "up"|"down", "ts": ..., "clients": …}`
+  every `polling.presence_heartbeat` seconds (default 5).
+- `serial` is **amp liveness**, not USB-FTDI link state. The SPE
+  Expert 1.5 KFA's FTDI cable is USB-powered from the Pi end — the
+  link stays open even when the amp's CPU is fully off. Real signal:
+  SerialHandler now tracks `_last_state_at` (monotonic timestamp of
+  last successful CSV parse); `serial: "up"` iff `last_state_age <
+  polling.amp_alive_threshold` (default 3 s).
+- New `AmplifierWebSocket.broadcast_raw` classmethod bypasses the
+  state-dedup gate so heartbeat cadence is exact.
+- Worst-case amp-off detection latency: 5 + 3 = 8 s.
+- Wire-compatible: existing state / power_result / RCU paths
+  unchanged. The Node-RED `Parse + route` function already dispatched
+  on `d.heartbeat` and `d.serial === "up"` — those keys finally exist.
+
+**Panel-side follow-ups in this repo** — drag the dashboard into
+parity with the new gateway truth:
+
+1. **Single state-aware Power button**
+   ([`b6640ea`](https://github.com/vu2cpl/vu2cpl-shack/commit/b6640ea))
+   — replaced the separate `Power Off` (primary row) and `Power On`
+   (buried in "More Details") buttons with one toggle at the top of
+   the panel. Green `ON` when amp alive, red `OFF` otherwise. Click
+   confirms then publishes `OFF_SPE` (→ existing WS `power_off`) or
+   `ON_SPE` (→ new exec node running `python3 /home/vu2cpl/power_spe_on.py`
+   — WS `power_on` can't wake an amp whose CPU is fully off). Router
+   gained a 2nd output for the script path.
+2. **Wipe stale state to em-dash when amp goes offline**
+   ([`86d4b1b`](https://github.com/vu2cpl/vu2cpl-shack/commit/86d4b1b))
+   — when `d.usb` flips false, every cached field (Mode / RX-TX /
+   Band / Input / TX Ant / PWR Lvl / Warnings / Alarms / V PA / I PA
+   / all Temps / Bank / RX Ant / Model / both SWR values) drops to
+   `—`, and all three bars reset to 0%. Real state msgs flow on
+   amp-return and repopulate every field via existing per-field
+   handlers — no "re-enable" logic needed. Panel stops lying.
+3. **Output Power gets a numeric readout** ([`2585b25`](https://github.com/vu2cpl/vu2cpl-shack/commit/2585b25),
+   reformatted in [`652f033`](https://github.com/vu2cpl/vu2cpl-shack/commit/652f033))
+   — previously the row had only a bar fill + a small "(scale …W)"
+   sublabel. Now matches the SWR rows: label on the left, live
+   `247/500W` value on the right (actual / current band-max), bar
+   underneath. Same threshold colouring (green / amber / red at 70 /
+   90 % of band-max).
+
+**Hard-earned debug lesson** — `scope` inside a Node-RED dashboard 1.x
+`ui_template` inline `<script>` is a **transient** top-level reference,
+not a free closure variable. Code at the top level of the script can
+call `scope.$watch(…)` immediately, but functions defined there that
+**later** reference `scope` (e.g. button handlers) silently break in
+Safari with `ReferenceError: can't find variable: scope`. We chased
+three wrong fixes (ng-click scope routing → `addEventListener` on the
+button → `onclick="window.X()"`) before the Safari console finally
+spelled out the failure. The working pattern (now confirmed in two
+panels — chrony card + AS3935 Control Panel — plus the SPE panel here):
+
+```js
+// 'scope' at top level is transient. Capture it via IIFE parameter
+// for any function that fires later (button handlers, async
+// callbacks, etc.).
+(function(scope){
+  window.speAmpToggle = function(){
+    /* … uses scope.send(…) here … */
+  };
+})(scope);
+```
+
+Recorded in this changelog so future-self stops re-discovering it.
+
+**Other notes:**
+- Macexpert SPE app reconnect-on-5-s-silence loop should be replaced
+  with reconnect-on-30-s-of-nothing once the Mac-side update lands.
+  Standalone debug-handover written into the Macexpert SPE repo on
+  the same date covers what the Mac client needs to consume.
+- Pi `git pull` in `spe-remote` always needs a stash dance because
+  the live `temperature_unit` toggle writes back to `config.yaml` at
+  runtime. Worth flagging in that repo's `handover.md` (already done
+  in the entries pasted from this session).
+
+**No REBUILD_PI.md / `rebuild_pi.sh` impact** — `spe-remote` isn't
+installed by either; it's a separate project with its own install
+lineage. Flows.json changes flow through `git clone` automatically.
+DXCC tab extract regenerated per rule #4 (no diff — DXCC tab not
+touched).
+
+---
+
 ## 2026-05-12
 
 ### Lightning protection: distance-graded disconnect + AS3935 runtime cmd channel
