@@ -5130,13 +5130,13 @@
         "id": "55f94d9dde0dc893",
         "type": "inject",
         "z": "75e2cac8ab96f556",
-        "name": "Clear map every 30 min",
+        "name": "Clear event log every 24 h",
         "props": [
             {
                 "p": "payload"
             }
         ],
-        "repeat": "1800",
+        "repeat": "86400",
         "crontab": "",
         "once": false,
         "topic": "",
@@ -6124,7 +6124,7 @@
         "type": "function",
         "z": "75e2cac8ab96f556",
         "name": "clear all",
-        "func": "flow.set('last_strike_km', null);\nflow.set('strikes', []);     // legacy key — clear in case anything still reads it\nflow.set('event_log', []);\nreturn { payload: { type: 'clear' } };",
+        "func": "flow.set('event_log', []);\nreturn { payload: { type: 'clear' } };",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
