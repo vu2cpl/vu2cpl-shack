@@ -2204,6 +2204,60 @@ cost nothing at runtime).
 
 ---
 
+## 2026-05-12
+
+### Chrony status card: GitHub-dark palette + vanilla JS DOM ([`d9d57e8`](https://github.com/vu2cpl/vu2cpl-shack/commit/d9d57e8))
+
+Brought the GPS NTP chrony card in line with the rest of the
+dashboard's GitHub-dark conventions. The old card used a custom
+teal-on-near-black palette (`#5cd0d6` teal section labels, `#0e151e`
+background, `#e89a4a` orange attention, etc.) that stood out
+distractingly next to everything else on `/ui`. New palette pins
+to the shared tokens:
+
+| Token | Value | Used for |
+|-------|-------|----------|
+| `--bg`     | `#0d1117` | page bg |
+| `--card`   | `#161b22` | card surface |
+| `--border` | `#30363d` | outlines + row dividers |
+| `--green`  | `#3fb950` | good (PPS, stratum 1, 3D fix) |
+| `--amber`  | `#e3b341` | attention threshold + warn chips |
+| `--red`    | `#f85149` | bad (no fix, stratum bad) |
+
+**Other changes folded into the same retheme:**
+
+- **Rendering switched** from AngularJS interpolation
+  (`{{data.foo}}` + `ng-class`) to vanilla JS DOM (`getElementById`
+  + `classList`, driven by `scope.$watch('msg', …)`). Matches the
+  convention used by other custom widgets across this dashboard;
+  avoids the whole-card re-render that AngularJS bindings trigger
+  on each `scope.data` assignment.
+- **Status chips gained color-coded LED dots** (8 px round + a
+  `box-shadow:0 0 4px currentColor` glow). Quick visual triage at a
+  glance — green LED for PPS/stratum 1/3D fix, amber for degraded,
+  red for no fix.
+- **Hosting `ui_group` flipped** to `disp: false` (the template
+  carries its own title) and `width: 10` (was width 6 inside the
+  general Network Monitor group).
+
+**Pi-side workflow:** [`pi-gps-ntp-server@6e54f14`](https://github.com/vu2cpl/pi-gps-ntp-server/commit/6e54f14)
+landed the canonical template + README upgrade guide + matching
+preview HTML upstream. Operator then opened the live
+`Chrony status card` ui_template in the Node-RED editor, pasted
+the new template body, flipped the `ui_group` properties, Deployed,
+and `nrsave`d. That commit is the merge here. `nrsave` (now a
+function — closes HANDOVER #17) handled the DXCC tab extract
+re-gen automatically; extract was a no-op since the DXCC tab
+wasn't touched, so the commit is flows.json-only.
+
+CLAUDE.md's "Chrony / GPS Time Server card (gpsntp.local)" section
+updated: architecture note now reflects vanilla-JS-DOM + the
+palette + the `disp:false`/width-10 ui_group config; attention
+thresholds row clarified that the value text renders **amber**
+(`#e3b341`) not orange when crossed.
+
+---
+
 ## 2026-05-11
 
 ### AS3935 publisher: ESP32 bridge takes over from Pi daemon (same day bench bring-up)

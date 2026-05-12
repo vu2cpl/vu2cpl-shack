@@ -444,11 +444,20 @@ empty orphan, scheduled for deletion).
 
 **Architecture note:** one `mqtt in` → one `ui_template`, no function
 node in between. All formatting + threshold logic lives in the
-template's AngularJS `<script>`. CSS is namespaced under `.gpsntp-card`
-so it doesn't bleed into other widgets. UTC-only clock in the footer
-(ham-radio convention — never `toLocaleString()`).
+template's `<script>`. As of 2026-05-12 the template uses **vanilla
+JS DOM updates** (`getElementById` + `classList`, driven by
+`scope.$watch('msg', …)`) — no AngularJS interpolation bindings —
+to match the convention used by other custom widgets in this
+dashboard. CSS is namespaced under `.gpsntp-card` so it doesn't
+bleed into other widgets. The palette uses CSS custom properties
+inside `.gpsntp-card` (GitHub-dark: `--bg #0d1117`, `--card #161b22`,
+`--border #30363d`, `--green #3fb950`, `--amber #e3b341`,
+`--red #f85149`). Hosting `ui_group` runs with `disp: false` (the
+template carries its own title) and `width: 10`. UTC-only clock in
+the footer (ham-radio convention — never `toLocaleString()`).
 
-**Attention thresholds** (rendered in orange when crossed):
+**Attention thresholds** (the value text renders amber `#e3b341`
+when crossed; status chips also shift their LED + outline colour):
 - `|system_time_offset_s|` > 1 ms
 - `rms_offset_s` > 1 ms
 - `root_dispersion_s` > 5 ms
