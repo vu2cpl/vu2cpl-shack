@@ -2377,6 +2377,27 @@ disabled tab was deleted on 2026-05-12. Note for the future:
   sluggishness while both copies were live. Deleting the disabled tab
   outright (not just `disabled:true`) is the reliable fix.
 
+#### 5. Post-map-ripout cleanup ([`f043a4d`](https://github.com/vu2cpl/vu2cpl-shack/commit/f043a4d))
+
+Spotted while re-reading the Lightning tab for the distance-graded work:
+an inject node "Clear map every 30 min" (id `55f94d9dde0dc893`) still
+firing every 1800 s. The map it referred to was ripped out on 2026-05-08
+([HANDOVER 05-08 entry](#)). The trigger wasn't fully dead though — its
+downstream `clear all` function was still wiping `flow.event_log` every
+30 min, just under a stale name. Other state it cleared
+(`last_strike_km` for the removed gauge, legacy `strikes` array for the
+removed map dots) had no consumers anymore.
+
+Tightened up:
+
+- Renamed inject to `Clear event log every 24 h`.
+- Stretched repeat from 1800 s (30 min) to 86400 s (24 h) — event-log
+  rotation goes from aggressive to daily.
+- Dropped the two dead `flow.set` lines from `clear all`; only the
+  `event_log = []` + `{type:'clear'}` emit to Master Dashboard remain.
+
+3 lines changed in flows.json; behaviour now matches the label.
+
 #### Other ops notes from today
 
 - Real lightning fired at AS3935 distance 1 km mid-session (`energy 219990`,
