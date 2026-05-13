@@ -2206,6 +2206,154 @@ cost nothing at runtime).
 
 ## 2026-05-13
 
+### Lightning audit — fix silent disconnect regression + 11 follow-up cleanups
+
+Audit pass on the Lightning Antenna Protector flow tab triggered by a
+"check if this can be optimised and check all errors" prompt. Found
+one **critical regression** introduced yesterday by [`76d60e5`](https://github.com/vu2cpl/shack/commit/76d60e5) (the
+distance-graded disconnect commit), plus ten consistency / hygiene
+issues worth fixing in one pass.
+
+#### Critical: AS3935 disconnects were silently broken
+
+`Trigger Disconnect` (`d62fb0c3c40f03b7`) yesterday gained a source
+filter:
+
+```javascript
+if (source !== 'AS3935') {
+    node.status({fill:'grey', shape:'ring',
+        text:'no-op · ' + source + ' (corroboration only)'});
+    return null;
+}
+```
+
+But `AS3935 Threshold Check` (`ad80b86a672a9ec6`) sets
+`msg.strike.source = 'AS3935 (local)'` — note the trailing `' (local)'`.
+Strict equality `'AS3935 (local)' !== 'AS3935'` is **true**, so every
+real AS3935 lightning event was getting early-rejected. The chain
+*looked* fine on the dashboard because `AS3935 within threshold?`
+(`af1b4512527ffb45`) fan-outs its output-0 to both `Trigger Disconnect`
+**and** `AS3935 Disconnect Log` in parallel — so the log + JSONL kept
+writing `"DISCONNECT triggered"` lines while the MQTT publish to the
+antenna switch was suppressed. Dashboard lied; antenna stayed connected.
+
+Why the 2026-05-12T16:00:06 real-strike disconnect cited in yesterday's
+changelog worked anyway: the strike was at 16:00; the regression
+commit landed at 16:40. The verification used pre-regression code.
+
+**Fix:** loosened the filter to reject only `Open-Meteo` (the source
+that genuinely should never directly fire DC) and let AS3935 / TEST /
+any future source fall through the matrix. AS3935-specific detection
+moved inside the function via `isAS3935 = source.indexOf('AS3935') !== -1`,
+which gates the only AS3935-specific behaviour (pushing into the
+sliding `recent_as3935` corroboration window). TEST injects now
+exercise the matrix without polluting the corroboration counter — so
+clicking "TEST ⚠ 35 km" three times can't manufacture a fake
+"2 hits in 5 min" disconnect.
+
+#### Follow-up fixes bundled into the same patch
+
+1. **Removed dead `Within threshold?` switch** (`12c029b533385153`).
+   It pre-gated `strike.distance_km <= flow.threshold_km` before
+   `Trigger Disconnect`, but the matrix already does its own zone
+   filtering (`cfg_close_km` / `cfg_medium_km`). Worse, if the user
+   slid `threshold_km` below `cfg_medium_km`, valid medium-zone
+   strikes would never reach the matrix. Haversine now wires directly
+   to Trigger Disconnect. 76 → 75 nodes (matches the count CLAUDE.md
+   already stated — we were briefly at 76).
+2. **`AS3935 Disconnect Log` is now bypass-aware.** Previously wrote
+   "DISCONNECT triggered" lines into event_log + JSONL even when the
+   bypass switch suppressed the actual disconnect (the log wire is
+   parallel to `Trigger Disconnect`, not downstream of it). Now reads
+   `flow.bypass_active` and writes `"BYPASS · disconnect suppressed"`
+   with `event_record.type = 'disconnect_suppressed'` + `bypass: true`
+   when in bypass mode. JSONL stays truthful for post-mortem analysis.
+3. **Reconnect-timer cancellation from manual paths.** Previously a
+   pending reconnect timer could keep running after the user did
+   `Manual Override`, `Force Reconnect`, or `POST /lightning/ant-on`
+   — firing later and re-toggling the antenna behind the user's back.
+   All three nodes now have an extra output wired to `Reconnect Timer`
+   with `payload: 'cancel'`. `Manual Override` outputs 1→2, `Force
+   Reconnect` outputs 1→2, `HTTP → Antenna ON` outputs 2→3. `HTTP →
+   Radio ON` does **not** cancel — the timer governs antenna, not
+   radio.
+4. **Stripped three `node.warn` debug lines.** `Stats → Dashboard`
+   had a leftover 5-line `node.warn` block firing every 30 s into
+   the debug sidebar (from filter-persistence debugging on 05-11).
+   `Reconnect Timer` had `node.warn('Reconnect Timer FIRED → ...')`.
+   `Bypass Handler` had `node.warn('Bypass Handler: action=...')`.
+   All three were leftover instrumentation.
+5. **Dropped unused `flow.recent`** push from `Haversine Distance`
+   — 100-entry rolling list nothing read. The corroboration window
+   (`flow.recent_as3935`) is maintained by Trigger Disconnect and
+   is the only history any node consumes.
+6. **Fixed stale comment in `Parse AS3935`** — `// AS3935 reports 1
+   = overhead, 40 = out of range` claimed `40` but the actual sentinel
+   the code checks (correctly) is `63` (0x3F). Comment now matches.
+7. **Cleaned `Replay AS3935 State` return form.** Was returning
+   `[out]` where `out` is an array of payloads (relies on Node-RED's
+   fan-out-on-array-output behaviour). Replaced with explicit
+   `out.forEach(m => node.send(m)); return null;` — same behaviour,
+   reads obviously.
+
+#### What did NOT change
+
+- **Decision matrix logic** — close < 10 km always fires; medium 10–25
+  km needs corroboration (2 AS3935 hits in 5 min OR OM lit); far ≥25
+  km only fires on OM severe. All seven `cfg_*` keys unchanged.
+- **Bypass behaviour** — still early-exits in Trigger Disconnect
+  (`flow.bypass_active === true`); still resets on every deploy via
+  Init Defaults; still expires after 120 min.
+- **Init Defaults clobbering `threshold_km` / `reconnect_min` on
+  every deploy** — flagged in the audit but the author's "always
+  overwrite from config" comment is intentional. Slider/HTTP changes
+  still don't survive a Deploy. Left alone; revisit if it becomes
+  irritating.
+- **TEST inject button labels vs actual haversine distance** — the
+  three test inject buttons' lat/lon coordinates produce distances
+  that don't match their labels (e.g. "TEST ⚡ 6 km" actually computes
+  to ~23 km from MK83TE). Pre-existing; tangential to this audit.
+
+#### Net node count
+
+Lightning tab: 76 → 75 nodes (one switch deleted). CLAUDE.md flow tab
+table line for Lightning Antenna Protector showed 71 — that's been
+stale since at least the 2026-05-08 bypass + Shack-tab merge; not
+touched in this commit, but worth noting if anyone audits it next.
+
+#### Diagnosis lesson
+
+When a downstream log node fan-outs in parallel with an action node
+(rather than being downstream of it), the log will lie if the action
+node short-circuits. Two design choices to prevent recurrence:
+
+- Put the disconnect log **downstream** of `Trigger Disconnect`, so
+  the log only fires when the disconnect actually fires. Tradeoff:
+  loses the "AS3935 hit but matrix said no" log entries which are
+  useful for tuning the corroboration thresholds.
+- Or keep parallel logs but always read the action-node's state
+  (bypass flag, source-filter result) into the log line, so the log
+  is honest about what actually happened. This is what (2) above
+  implements for bypass.
+
+The matrix-said-no case is now logged truthfully via the
+`AS3935 Warn Log` branch of `AS3935 within threshold?` (which fires
+when km > threshold) — the existing wiring there was already correct.
+
+#### Files touched
+
+- `flows.json` — 11 function bodies + 3 outputs/wires + 1 switch
+  deletion. Diff: +24 / −40 lines.
+- `clublog_dxcc_tracker_v7.json` — no change (DXCC tab not touched);
+  regen produces identical bytes.
+
+#### REBUILD_PI.md / `rebuild_pi.sh` impact
+
+None — flows.json is git-tracked; Pi just `git pull && sudo systemctl
+restart nodered`.
+
+---
+
 ### Repo public-prep — scrub literal API key, externalise Telegram chat ID, untrack runtime data
 
 Pre-flight audit for making `vu2cpl-shack` public. Five fixes applied:

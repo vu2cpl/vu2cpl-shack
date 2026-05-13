@@ -4914,8 +4914,8 @@
         "type": "function",
         "z": "75e2cac8ab96f556",
         "name": "Force Reconnect",
-        "func": "flow.set('antenna_off', false);\nmsg.topic     = 'cmnd/' + (flow.get('power_strip')||'powerstrip1') + '/' + (flow.get('power_ch')||'POWER5');\nmsg.payload   = 'ON';\nmsg.cmd       = 'RECONNECT';\nmsg.reason    = 'Forced reconnect via test button';\nmsg.timestamp = new Date().toLocaleString();\nnode.status({fill:'green',shape:'dot',text:'FORCED RECONNECT'});\nreturn msg;\n",
-        "outputs": 1,
+        "func": "flow.set('antenna_off', false);\nmsg.topic     = 'cmnd/' + (flow.get('power_strip')||'powerstrip1') + '/' + (flow.get('power_ch')||'POWER5');\nmsg.payload   = 'ON';\nmsg.cmd       = 'RECONNECT';\nmsg.reason    = 'Forced reconnect via test button';\nmsg.timestamp = new Date().toLocaleString();\nnode.status({fill:'green',shape:'dot',text:'FORCED RECONNECT'});\nreturn [msg, { payload: 'cancel' }];\n",
+        "outputs": 2,
         "noerr": 0,
         "x": 490,
         "y": 300,
@@ -4925,6 +4925,9 @@
                 "5bfc6db2af9dd24c",
                 "e2af4f2e46feba21",
                 "46aa290b65f66928"
+            ],
+            [
+                "dabc283d78fa8081"
             ]
         ]
     },
@@ -4953,7 +4956,7 @@
         "type": "function",
         "z": "75e2cac8ab96f556",
         "name": "Haversine Distance",
-        "func": "const HOME_LAT = flow.get('home_lat');\nconst HOME_LON = flow.get('home_lon');\nif (HOME_LAT == null || HOME_LON == null) {\n    node.error('home_lat/home_lon not set — deploy Init Defaults first');\n    return null;\n}\nconst s   = msg.strike;\nconst R   = 6371;\nconst dLat = (s.lat - HOME_LAT) * Math.PI / 180;\nconst dLon = (s.lon - HOME_LON) * Math.PI / 180;\nconst a   = Math.sin(dLat/2) * Math.sin(dLat/2)\n          + Math.cos(HOME_LAT*Math.PI/180) * Math.cos(s.lat*Math.PI/180)\n          * Math.sin(dLon/2) * Math.sin(dLon/2);\nconst km  = Math.round(6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)) * 10) / 10;\nmsg.strike.distance_km = km;\n\nconst thr = flow.get('threshold_km') || 20;\nlet st = flow.get('stats') || {total:0,near:0,mid:0,far:0,closest:9999};\nst.total++;\nif (km <= thr)       st.near++;\nelse if (km <= 50)   st.mid++;\nelse                 st.far++;\nif (km < st.closest) st.closest = km;\nflow.set('stats', st);\n\nif (km <= 200) {\n    let rec = flow.get('recent') || [];\n    rec.unshift({km, time: s.time});\n    if (rec.length > 100) rec = rec.slice(0, 100);\n    flow.set('recent', rec);\n}\nnode.status({fill: km<=thr?'red':km<=50?'yellow':'green', shape:'dot', text: km+' km'});\nreturn msg;\n",
+        "func": "const HOME_LAT = flow.get('home_lat');\nconst HOME_LON = flow.get('home_lon');\nif (HOME_LAT == null || HOME_LON == null) {\n    node.error('home_lat/home_lon not set — deploy Init Defaults first');\n    return null;\n}\nconst s   = msg.strike;\nconst R   = 6371;\nconst dLat = (s.lat - HOME_LAT) * Math.PI / 180;\nconst dLon = (s.lon - HOME_LON) * Math.PI / 180;\nconst a   = Math.sin(dLat/2) * Math.sin(dLat/2)\n          + Math.cos(HOME_LAT*Math.PI/180) * Math.cos(s.lat*Math.PI/180)\n          * Math.sin(dLon/2) * Math.sin(dLon/2);\nconst km  = Math.round(6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)) * 10) / 10;\nmsg.strike.distance_km = km;\n\nconst thr = flow.get('threshold_km') || 20;\nlet st = flow.get('stats') || {total:0,near:0,mid:0,far:0,closest:9999};\nst.total++;\nif (km <= thr)       st.near++;\nelse if (km <= 50)   st.mid++;\nelse                 st.far++;\nif (km < st.closest) st.closest = km;\nflow.set('stats', st);\n\nnode.status({fill: km<=thr?'red':km<=50?'yellow':'green', shape:'dot', text: km+' km'});\nreturn msg;\n",
         "outputs": 1,
         "noerr": 0,
         "x": 690,
@@ -4961,33 +4964,8 @@
         "wires": [
             [
                 "51367d456e71fb3e",
-                "12c029b533385153",
+                "d62fb0c3c40f03b7",
                 "light_jsonl_allstrikes_01"
-            ]
-        ]
-    },
-    {
-        "id": "12c029b533385153",
-        "type": "switch",
-        "z": "75e2cac8ab96f556",
-        "name": "Within threshold?",
-        "property": "strike.distance_km",
-        "propertyType": "msg",
-        "rules": [
-            {
-                "t": "lte",
-                "v": "threshold_km",
-                "vt": "flow"
-            }
-        ],
-        "checkall": "false",
-        "repair": false,
-        "outputs": 1,
-        "x": 390,
-        "y": 520,
-        "wires": [
-            [
-                "d62fb0c3c40f03b7"
             ]
         ]
     },
@@ -4996,7 +4974,7 @@
         "type": "function",
         "z": "75e2cac8ab96f556",
         "name": "Trigger Disconnect",
-        "func": "// ── Bypass: no-op early exit (unchanged from original) ───────\nif (flow.get('bypass_active') === true) {\n    const km0 = msg.strike ? msg.strike.distance_km : '?';\n    const src0 = (msg.strike && msg.strike.source) || 'unknown';\n    node.status({fill:'yellow', shape:'ring',\n        text:'BYPASS · ' + src0 + ' ' + km0 + 'km — skipped'});\n    return null;\n}\n\n// ── Source filter: Open-Meteo never fires DC directly ────────\n// OM is a storm-probability signal; flow.om_state corroborates\n// medium-zone AS3935 hits but does not by itself disconnect.\nconst source = (msg.strike && msg.strike.source) || 'unknown';\nif (source !== 'AS3935') {\n    node.status({fill:'grey', shape:'ring',\n        text:'no-op · ' + source + ' (corroboration only)'});\n    return null;\n}\n\nconst km = msg.strike.distance_km;\n\n// ── Config ────────────────────────────────────────────────────\nconst CLOSE_KM   = flow.get('cfg_close_km')        || 10;\nconst MEDIUM_KM  = flow.get('cfg_medium_km')       || 25;\nconst WIN_MS     = (flow.get('cfg_med_window_min') || 5) * 60 * 1000;\nconst NEED_COUNT = flow.get('cfg_med_count')       || 2;\n\n// ── OM state (expires per cfg_om_lit_window_min) ─────────────\nconst now_unix = Math.floor(Date.now() / 1000);\nconst om_state = (now_unix < (flow.get('om_state_until') || 0))\n                 ? (flow.get('om_state') || 'cold') : 'cold';\nconst om_lit    = (om_state === 'lit' || om_state === 'severe');\nconst om_severe = (om_state === 'severe');\n\n// ── Recent AS3935 history (sliding window) ───────────────────\nconst now_ms = Date.now();\nlet recent = (flow.get('recent_as3935') || []).filter(s => (now_ms - s.ts) < WIN_MS);\nrecent.push({ts: now_ms, km: km});\nflow.set('recent_as3935', recent);\n\n// ── Decision matrix ───────────────────────────────────────────\nlet should_disconnect = false;\nlet reason = '';\nif (km < CLOSE_KM) {\n    should_disconnect = true;\n    reason = 'close ' + km + 'km';\n} else if (km < MEDIUM_KM) {\n    if (recent.length >= NEED_COUNT) {\n        should_disconnect = true;\n        reason = 'medium ' + km + 'km · ' + recent.length + ' hits in ' + (WIN_MS/60000) + 'min';\n    } else if (om_lit) {\n        should_disconnect = true;\n        reason = 'medium ' + km + 'km · OM ' + om_state;\n    } else {\n        reason = 'medium ' + km + 'km · uncorroborated (1 hit, OM cold)';\n    }\n} else { // far zone\n    if (om_severe) {\n        should_disconnect = true;\n        reason = 'far ' + km + 'km · OM severe';\n    } else {\n        reason = 'far ' + km + 'km · log only';\n    }\n}\n\nif (!should_disconnect) {\n    node.status({fill:'yellow', shape:'ring', text: reason});\n    return null;\n}\n\n// ── Fire disconnect (unchanged side effects) ─────────────────\nconst already = flow.get('antenna_off') || false;\nflow.set('antenna_off', true);\nflow.set('disconnect_time', msg.strike.time || new Date().toLocaleString());\nnode.status({fill:'red', shape:'dot',\n    text: (already ? 'STILL OFF — timer reset' : 'DISCONNECTED') + ' · ' + reason});\n\nconst strip = flow.get('power_strip') || 'powerstrip1';\nconst ch    = flow.get('power_ch')    || 'POWER5';\nreturn [{\n    topic:     'cmnd/' + strip + '/' + ch,\n    payload:   'OFF',\n    cmd:       'DISCONNECT',\n    reason:    reason,\n    distance:  km,\n    timestamp: msg.strike.time || new Date().toLocaleString()\n}, { payload: 'reset' }];\n",
+        "func": "// ── Bypass: no-op early exit ─────────────────────────────────\nif (flow.get('bypass_active') === true) {\n    const km0 = msg.strike ? msg.strike.distance_km : '?';\n    const src0 = (msg.strike && msg.strike.source) || 'unknown';\n    node.status({fill:'yellow', shape:'ring',\n        text:'BYPASS · ' + src0 + ' ' + km0 + 'km — skipped'});\n    return null;\n}\n\n// ── Source filter: Open-Meteo is corroboration-only ──────────\n// OM is a storm-probability signal; flow.om_state corroborates\n// medium-zone AS3935 hits but does not by itself disconnect.\n// AS3935 / TEST / any other source falls through the matrix.\nconst source = (msg.strike && msg.strike.source) || 'unknown';\nif (source === 'Open-Meteo') {\n    node.status({fill:'grey', shape:'ring',\n        text:'no-op · ' + source + ' (corroboration only)'});\n    return null;\n}\nconst isAS3935 = source.indexOf('AS3935') !== -1;\n\nconst km = msg.strike.distance_km;\n\n// ── Config ───────────────────────────────────────────────────\nconst CLOSE_KM   = flow.get('cfg_close_km')        || 10;\nconst MEDIUM_KM  = flow.get('cfg_medium_km')       || 25;\nconst WIN_MS     = (flow.get('cfg_med_window_min') || 5) * 60 * 1000;\nconst NEED_COUNT = flow.get('cfg_med_count')       || 2;\n\n// ── OM state (expires per cfg_om_lit_window_min) ─────────────\nconst now_unix = Math.floor(Date.now() / 1000);\nconst om_state = (now_unix < (flow.get('om_state_until') || 0))\n                 ? (flow.get('om_state') || 'cold') : 'cold';\nconst om_lit    = (om_state === 'lit' || om_state === 'severe');\nconst om_severe = (om_state === 'severe');\n\n// ── Recent AS3935 history (sliding window) ───────────────────\n// Only real AS3935 events push into the corroboration window —\n// TEST injects exercise the matrix without polluting the counter.\nconst now_ms = Date.now();\nlet recent = (flow.get('recent_as3935') || []).filter(s => (now_ms - s.ts) < WIN_MS);\nif (isAS3935) {\n    recent.push({ts: now_ms, km: km});\n    flow.set('recent_as3935', recent);\n}\n\n// ── Decision matrix ──────────────────────────────────────────\nlet should_disconnect = false;\nlet reason = '';\nif (km < CLOSE_KM) {\n    should_disconnect = true;\n    reason = 'close ' + km + 'km';\n} else if (km < MEDIUM_KM) {\n    if (recent.length >= NEED_COUNT) {\n        should_disconnect = true;\n        reason = 'medium ' + km + 'km · ' + recent.length + ' hits in ' + (WIN_MS/60000) + 'min';\n    } else if (om_lit) {\n        should_disconnect = true;\n        reason = 'medium ' + km + 'km · OM ' + om_state;\n    } else {\n        reason = 'medium ' + km + 'km · uncorroborated (1 hit, OM cold)';\n    }\n} else { // far zone\n    if (om_severe) {\n        should_disconnect = true;\n        reason = 'far ' + km + 'km · OM severe';\n    } else {\n        reason = 'far ' + km + 'km · log only';\n    }\n}\n\nif (!should_disconnect) {\n    node.status({fill:'yellow', shape:'ring', text: reason});\n    return null;\n}\n\n// ── Fire disconnect ──────────────────────────────────────────\nconst already = flow.get('antenna_off') || false;\nflow.set('antenna_off', true);\nflow.set('disconnect_time', msg.strike.time || new Date().toLocaleString());\nnode.status({fill:'red', shape:'dot',\n    text: (already ? 'STILL OFF — timer reset' : 'DISCONNECTED') + ' · ' + reason});\n\nconst strip = flow.get('power_strip') || 'powerstrip1';\nconst ch    = flow.get('power_ch')    || 'POWER5';\nreturn [{\n    topic:     'cmnd/' + strip + '/' + ch,\n    payload:   'OFF',\n    cmd:       'DISCONNECT',\n    reason:    reason,\n    distance:  km,\n    timestamp: msg.strike.time || new Date().toLocaleString()\n}, { payload: 'reset' }];\n",
         "outputs": 2,
         "timeout": "",
         "noerr": 0,
@@ -5040,7 +5018,7 @@
         "type": "function",
         "z": "75e2cac8ab96f556",
         "name": "Reconnect Timer",
-        "func": "\n// Dynamic reconnect timer — resets on each new strike, fires after N min clear.\nconst minutes = flow.get('reconnect_min') || 5;\nconst ms      = minutes * 60 * 1000;\n\n// Cancel any existing timer\nconst existing = context.get('timer');\nif (existing) { clearTimeout(existing); context.set('timer', null); }\n\n// 'cancel' = hard cancel only (used by manual override ON)\nif (msg.payload === 'cancel') {\n    node.status({fill:'grey', shape:'ring', text:'Cancelled'});\n    return null;\n}\n\n// 'reset' or any other payload = restart the countdown\nnode.status({fill:'blue', shape:'ring', text:'Waiting ' + minutes + ' min…'});\nconst t = setTimeout(() => {\n    context.set('timer', null);\n    node.status({fill:'green', shape:'dot', text:'Fired — reconnecting'});\n    node.send({ payload: 'reconnect' });\n    node.warn('Reconnect Timer FIRED → sending to Execute Reconnect');\n}, ms);\ncontext.set('timer', t);\nreturn null;\n",
+        "func": "\n// Dynamic reconnect timer — resets on each new strike, fires after N min clear.\nconst minutes = flow.get('reconnect_min') || 5;\nconst ms      = minutes * 60 * 1000;\n\n// Cancel any existing timer\nconst existing = context.get('timer');\nif (existing) { clearTimeout(existing); context.set('timer', null); }\n\n// 'cancel' = hard cancel only (used by manual override / force reconnect / HTTP)\nif (msg.payload === 'cancel') {\n    node.status({fill:'grey', shape:'ring', text:'Cancelled'});\n    return null;\n}\n\n// 'reset' or any other payload = restart the countdown\nnode.status({fill:'blue', shape:'ring', text:'Waiting ' + minutes + ' min…'});\nconst t = setTimeout(() => {\n    context.set('timer', null);\n    node.status({fill:'green', shape:'dot', text:'Fired — reconnecting'});\n    node.send({ payload: 'reconnect' });\n}, ms);\ncontext.set('timer', t);\nreturn null;\n",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
@@ -5078,8 +5056,8 @@
         "type": "function",
         "z": "75e2cac8ab96f556",
         "name": "Manual Override",
-        "func": "\nif (msg.topic !== 'manual_override') return null;\nconst on = (msg.payload === true || msg.payload === 'true');\nflow.set('antenna_off', !on);\nmsg.topic     = 'cmnd/' + (flow.get('power_strip')||'powerstrip1') + '/' + (flow.get('power_ch')||'POWER5');\nmsg.payload   = on ? 'ON' : 'OFF';\nmsg.cmd       = on ? 'RECONNECT' : 'DISCONNECT';\nmsg.reason    = 'Manual override via dashboard';\nmsg.timestamp = new Date().toLocaleString();\nmsg.distance  = null;\nnode.status({fill:on?'green':'red', shape:'dot', text:on?'MANUAL ON':'MANUAL OFF'});\nreturn msg;\n",
-        "outputs": 1,
+        "func": "if (msg.topic !== 'manual_override') return null;\nconst on = (msg.payload === true || msg.payload === 'true');\nflow.set('antenna_off', !on);\nconst switchMsg = {\n    topic:     'cmnd/' + (flow.get('power_strip')||'powerstrip1') + '/' + (flow.get('power_ch')||'POWER5'),\n    payload:   on ? 'ON' : 'OFF',\n    cmd:       on ? 'RECONNECT' : 'DISCONNECT',\n    reason:    'Manual override via dashboard',\n    timestamp: new Date().toLocaleString(),\n    distance:  null\n};\nnode.status({fill:on?'green':'red', shape:'dot', text:on?'MANUAL ON':'MANUAL OFF'});\n// User has explicit control — cancel any pending reconnect timer.\nreturn [switchMsg, { payload: 'cancel' }];\n",
+        "outputs": 2,
         "noerr": 0,
         "x": 900,
         "y": 780,
@@ -5088,6 +5066,9 @@
                 "b2e2ed6a2bba24af",
                 "5bfc6db2af9dd24c",
                 "e2af4f2e46feba21"
+            ],
+            [
+                "dabc283d78fa8081"
             ]
         ],
         "outputLabels": [
@@ -5353,7 +5334,7 @@
         "type": "function",
         "z": "75e2cac8ab96f556",
         "name": "Stats → Dashboard",
-        "func": "\nconst thr = parseInt(flow.get('threshold_km'));\nconst rec = parseFloat(flow.get('reconnect_min'));\n\n// Log to debug sidebar so we can see exactly what's being read\nnode.warn('Stats→Dash: threshold_km=' + flow.get('threshold_km') \n        + ' reconnect_min=' + flow.get('reconnect_min')\n        + ' thr_parsed=' + thr + ' rec_parsed=' + rec);\n\nconst st   = flow.get('stats') || {total:0,near:0,mid:0,far:0,closest:9999};\nconst off  = flow.get('antenna_off') || false;\nconst roff = flow.get('radio_off')   || false;\n\nmsg.payload = {\n    callsign:      flow.get('callsign')     || '—',\n    grid_square:   flow.get('grid_square')  || '—',\n    threshold_km:  isNaN(thr) ? 20 : thr,\n    reconnect_min: isNaN(rec) ? 5  : rec,\n    total:    st.total,\n    near:     st.near,\n    mid:      st.mid,\n    far:      st.far,\n    closest:  st.closest,\n    antenna_off:   off,\n    radio_off:     roff,\n    radio_enabled: flow.get('radio_enabled') || false,\n    radio_label:   flow.get('radio_label')   || 'Radio'\n};\nreturn msg;\n",
+        "func": "\nconst thr  = parseInt(flow.get('threshold_km'));\nconst rec  = parseFloat(flow.get('reconnect_min'));\nconst st   = flow.get('stats') || {total:0,near:0,mid:0,far:0,closest:9999};\nconst off  = flow.get('antenna_off') || false;\nconst roff = flow.get('radio_off')   || false;\n\nmsg.payload = {\n    callsign:      flow.get('callsign')     || '—',\n    grid_square:   flow.get('grid_square')  || '—',\n    threshold_km:  isNaN(thr) ? 20 : thr,\n    reconnect_min: isNaN(rec) ? 5  : rec,\n    total:    st.total,\n    near:     st.near,\n    mid:      st.mid,\n    far:      st.far,\n    closest:  st.closest,\n    antenna_off:   off,\n    radio_off:     roff,\n    radio_enabled: flow.get('radio_enabled') || false,\n    radio_label:   flow.get('radio_label')   || 'Radio'\n};\nreturn msg;\n",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
@@ -5450,7 +5431,7 @@
         "type": "function",
         "z": "75e2cac8ab96f556",
         "name": "Parse AS3935",
-        "func": "\n// Payload from Python bridge: {event, distance, energy, timestamp}\nconst p = msg.payload;\nconst evt = (p.event || '').toLowerCase();\n\nif (evt === 'lightning') {\n    const dist   = parseInt(p.distance) || 0;\n    const energy = parseInt(p.energy)   || 0;\n    // AS3935 reports 1 = overhead, 40 = out of range\n    const dist_km = (dist === 63) ? null : dist;   // 63 = out-of-range\n    msg.source    = 'as3935';\n    msg.as3935    = { event: 'lightning', distance_km: dist_km, energy: energy, timestamp: p.timestamp };\n    msg.payload   = msg.as3935;\n    node.status({fill:'red', shape:'dot',\n        text: dist_km === null ? '⚡ Out of range' : '⚡ '+dist_km+' km  energy='+energy});\n    return [msg, null, null];\n\n} else if (evt === 'disturber') {\n    msg.source  = 'as3935';\n    msg.as3935  = { event: 'disturber', timestamp: p.timestamp };\n    msg.payload = msg.as3935;\n    node.status({fill:'yellow', shape:'ring', text:'⚠ Disturber'});\n    return [null, msg, null];\n\n} else if (evt === 'noise') {\n    msg.source  = 'as3935';\n    msg.as3935  = { event: 'noise', timestamp: p.timestamp };\n    msg.payload = msg.as3935;\n    node.status({fill:'grey', shape:'ring', text:'📡 Noise'});\n    return [null, null, msg];\n}\nreturn null;\n",
+        "func": "\n// Payload from Python bridge: {event, distance, energy, timestamp}\nconst p = msg.payload;\nconst evt = (p.event || '').toLowerCase();\n\nif (evt === 'lightning') {\n    const dist   = parseInt(p.distance) || 0;\n    const energy = parseInt(p.energy)   || 0;\n    // AS3935 reports 1 = overhead, 63 = out-of-range (0x3F sentinel)\n    const dist_km = (dist === 63) ? null : dist;\n    msg.source    = 'as3935';\n    msg.as3935    = { event: 'lightning', distance_km: dist_km, energy: energy, timestamp: p.timestamp };\n    msg.payload   = msg.as3935;\n    node.status({fill:'red', shape:'dot',\n        text: dist_km === null ? '⚡ Out of range' : '⚡ '+dist_km+' km  energy='+energy});\n    return [msg, null, null];\n\n} else if (evt === 'disturber') {\n    msg.source  = 'as3935';\n    msg.as3935  = { event: 'disturber', timestamp: p.timestamp };\n    msg.payload = msg.as3935;\n    node.status({fill:'yellow', shape:'ring', text:'⚠ Disturber'});\n    return [null, msg, null];\n\n} else if (evt === 'noise') {\n    msg.source  = 'as3935';\n    msg.as3935  = { event: 'noise', timestamp: p.timestamp };\n    msg.payload = msg.as3935;\n    node.status({fill:'grey', shape:'ring', text:'📡 Noise'});\n    return [null, null, msg];\n}\nreturn null;\n",
         "outputs": 3,
         "noerr": 0,
         "initialize": "",
@@ -5552,7 +5533,7 @@
         "type": "function",
         "z": "75e2cac8ab96f556",
         "name": "AS3935 Disconnect Log",
-        "func": "\nconst d   = msg.as3935 || {};\nconst km  = msg._as3935_km;\nconst ts  = d.timestamp || new Date().toLocaleString();\nconst line = '<div class=\"ev-row ev-err\">&#9632; '\n           + ts + ' | AS3935 ⚡ ' + km + ' km  energy=' + (d.energy||'—')\n           + ' — DISCONNECT triggered</div>';\nlet log = flow.get('event_log') || [];\nlog.unshift(line);\nif (log.length > 50) log = log.slice(0, 50);\nflow.set('event_log', log);\nmsg.payload = { type: 'log', html: log.join('') };\nmsg.event_record = {\n    ts: new Date().toISOString(),\n    source: 'AS3935',\n    type: 'disconnect',\n    km: (km != null) ? km : null,\n    energy: (d.energy != null) ? d.energy : null,\n    html: line\n};\nreturn msg;\n",
+        "func": "const bypass = (flow.get('bypass_active') === true);\nconst d   = msg.as3935 || {};\nconst km  = msg._as3935_km;\nconst ts  = d.timestamp || new Date().toLocaleString();\nconst line = bypass\n  ? '<div class=\"ev-row ev-warn\">&#9651; ' + ts + ' | AS3935 ⚡ ' + km + ' km  energy=' + (d.energy||'—') + ' — BYPASS · disconnect suppressed</div>'\n  : '<div class=\"ev-row ev-err\">&#9632; '  + ts + ' | AS3935 ⚡ ' + km + ' km  energy=' + (d.energy||'—') + ' — DISCONNECT triggered</div>';\nlet log = flow.get('event_log') || [];\nlog.unshift(line);\nif (log.length > 50) log = log.slice(0, 50);\nflow.set('event_log', log);\nmsg.payload = { type: 'log', html: log.join('') };\nmsg.event_record = {\n    ts: new Date().toISOString(),\n    source: 'AS3935',\n    type: bypass ? 'disconnect_suppressed' : 'disconnect',\n    km: (km != null) ? km : null,\n    energy: (d.energy != null) ? d.energy : null,\n    bypass: bypass,\n    html: line\n};\nreturn msg;\n",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
@@ -5776,8 +5757,8 @@
         "type": "function",
         "z": "75e2cac8ab96f556",
         "name": "HTTP → Antenna ON",
-        "func": "\nconst strip = flow.get('power_strip') || 'powerstrip1';\nconst ch    = flow.get('power_ch')    || 'POWER5';\nflow.set('antenna_off', false);\n// Send HTTP response first\nnode.send([\n    { payload: 'OK', res: msg.res },\n    { topic: 'cmnd/' + strip + '/' + ch, payload: 'ON' }\n]);\nnode.status({fill:'green', shape:'dot', text:'Antenna ON'});\nreturn null;\n",
-        "outputs": 2,
+        "func": "const strip = flow.get('power_strip') || 'powerstrip1';\nconst ch    = flow.get('power_ch')    || 'POWER5';\nflow.set('antenna_off', false);\nnode.send([\n    { payload: 'OK', res: msg.res },\n    { topic: 'cmnd/' + strip + '/' + ch, payload: 'ON' },\n    { payload: 'cancel' }\n]);\nnode.status({fill:'green', shape:'dot', text:'Antenna ON'});\nreturn null;\n",
+        "outputs": 3,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
@@ -5790,6 +5771,9 @@
             ],
             [
                 "b2e2ed6a2bba24af"
+            ],
+            [
+                "dabc283d78fa8081"
             ]
         ]
     },
@@ -6250,7 +6234,7 @@
         "type": "function",
         "z": "75e2cac8ab96f556",
         "name": "Replay AS3935 State",
-        "func": "// Triggered by Refresh Stats (every 30s). Re-emits cached status + hb so\n// the dashboard panel survives page refresh.\nconst out = [];\nconst status = flow.get('as3935_status');\nconst hb     = flow.get('as3935_hb');\nif (status) out.push({ payload: Object.assign({ type: 'as3935_ready' }, status) });\nif (hb)     out.push({ payload: Object.assign({ type: 'as3935_hb'    }, hb)     });\nif (out.length === 0) return null;\nreturn [out];\n",
+        "func": "// Triggered by Refresh Stats (every 30s). Re-emits cached status + hb so\n// the dashboard panel survives page refresh.\nconst out = [];\nconst status = flow.get('as3935_status');\nconst hb     = flow.get('as3935_hb');\nif (status) out.push({ payload: Object.assign({ type: 'as3935_ready' }, status) });\nif (hb)     out.push({ payload: Object.assign({ type: 'as3935_hb'    }, hb)     });\nif (out.length) out.forEach(m => node.send(m));\nreturn null;\n",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
@@ -6287,7 +6271,7 @@
         "type": "function",
         "z": "75e2cac8ab96f556",
         "name": "Bypass Handler",
-        "func": "// Handles POST /lightning/bypass {action: 'on'|'off'}\n// Outputs:\n//   1 → Master Dashboard (bypass_state + log entries)\n//   2 → Reconnect Timer (cancel any active timer when bypass ON)\n//   3 → Execute Reconnect (force ant + radio ON when bypass ON)\n//\n// Auto-off after 120 minutes via setTimeout (lost on Node-RED restart, fine —\n// Init Defaults clears bypass on every deploy/restart anyway).\n\nconst BYPASS_DURATION_MS = 120 * 60 * 1000;\n\n// Manual call from the dashboard\nlet payload = msg.payload;\nif (typeof payload === 'string') {\n    try { payload = JSON.parse(payload); } catch (e) { payload = {}; }\n}\nconst action = (payload && payload.action) || null;\nnode.warn('Bypass Handler: action=' + action + ' typeof payload=' + typeof msg.payload);\n\n// Helper — cancel pending auto-off\nfunction cancelAutoOff(){\n    const t = context.get('autoOffTimer');\n    if (t) { clearTimeout(t); context.set('autoOffTimer', null); }\n}\n\nif (action === 'on') {\n    const expiresAt = Date.now() + BYPASS_DURATION_MS;\n    flow.set('bypass_active', true);\n    flow.set('bypass_expires_at', expiresAt);\n    cancelAutoOff();\n    const t = setTimeout(function(){\n        flow.set('bypass_active', false);\n        flow.set('bypass_expires_at', null);\n        context.set('autoOffTimer', null);\n        node.status({fill:'grey', shape:'ring', text:'auto-off (2h expired)'});\n        node.send([[\n            { payload: { type: 'bypass_state', active: false, expiresAt: 0 } },\n            { payload: { type: 'log', html: 'BYPASS expired (2h timeout) — normal mode resumed' } }\n        ], null, null]);\n    }, BYPASS_DURATION_MS);\n    context.set('autoOffTimer', t);\n\n    node.status({fill:'yellow', shape:'dot', text:'BYPASS ON · 120 min'});\n\n    // Output 1: dashboard state + log\n    const stateMsg = { payload: { type: 'bypass_state', active: true, expiresAt: expiresAt } };\n    const logMsg   = { payload: { type: 'log', html: 'BYPASS activated — strikes alert only · expires in 120 min' } };\n    // Output 2: cancel reconnect timer (kills any pending countdown)\n    const cancelMsg = { payload: 'cancel' };\n    // Output 3: force reconnect (turns ant + radio ON immediately)\n    const reconnectMsg = { payload: 'reconnect', cmd: 'BYPASS_ON', reason: 'bypass activated' };\n\n    return [[stateMsg, logMsg], cancelMsg, reconnectMsg];\n}\n\nif (action === 'off') {\n    flow.set('bypass_active', false);\n    flow.set('bypass_expires_at', null);\n    cancelAutoOff();\n    node.status({fill:'grey', shape:'ring', text:'BYPASS OFF (manual)'});\n\n    const stateMsg = { payload: { type: 'bypass_state', active: false, expiresAt: 0 } };\n    const logMsg   = { payload: { type: 'log', html: 'BYPASS deactivated (manual) — normal mode' } };\n    return [[stateMsg, logMsg], null, null];\n}\n\nnode.warn('Bypass: unknown action: ' + action);\nreturn null;\n",
+        "func": "// Handles POST /lightning/bypass {action: 'on'|'off'}\n// Outputs:\n//   1 → Master Dashboard (bypass_state + log entries)\n//   2 → Reconnect Timer (cancel any active timer when bypass ON)\n//   3 → Execute Reconnect (force ant + radio ON when bypass ON)\n//\n// Auto-off after 120 minutes via setTimeout (lost on Node-RED restart, fine —\n// Init Defaults clears bypass on every deploy/restart anyway).\n\nconst BYPASS_DURATION_MS = 120 * 60 * 1000;\n\n// Manual call from the dashboard\nlet payload = msg.payload;\nif (typeof payload === 'string') {\n    try { payload = JSON.parse(payload); } catch (e) { payload = {}; }\n}\nconst action = (payload && payload.action) || null;\n\n// Helper — cancel pending auto-off\nfunction cancelAutoOff(){\n    const t = context.get('autoOffTimer');\n    if (t) { clearTimeout(t); context.set('autoOffTimer', null); }\n}\n\nif (action === 'on') {\n    const expiresAt = Date.now() + BYPASS_DURATION_MS;\n    flow.set('bypass_active', true);\n    flow.set('bypass_expires_at', expiresAt);\n    cancelAutoOff();\n    const t = setTimeout(function(){\n        flow.set('bypass_active', false);\n        flow.set('bypass_expires_at', null);\n        context.set('autoOffTimer', null);\n        node.status({fill:'grey', shape:'ring', text:'auto-off (2h expired)'});\n        node.send([[\n            { payload: { type: 'bypass_state', active: false, expiresAt: 0 } },\n            { payload: { type: 'log', html: 'BYPASS expired (2h timeout) — normal mode resumed' } }\n        ], null, null]);\n    }, BYPASS_DURATION_MS);\n    context.set('autoOffTimer', t);\n\n    node.status({fill:'yellow', shape:'dot', text:'BYPASS ON · 120 min'});\n\n    // Output 1: dashboard state + log\n    const stateMsg = { payload: { type: 'bypass_state', active: true, expiresAt: expiresAt } };\n    const logMsg   = { payload: { type: 'log', html: 'BYPASS activated — strikes alert only · expires in 120 min' } };\n    // Output 2: cancel reconnect timer (kills any pending countdown)\n    const cancelMsg = { payload: 'cancel' };\n    // Output 3: force reconnect (turns ant + radio ON immediately)\n    const reconnectMsg = { payload: 'reconnect', cmd: 'BYPASS_ON', reason: 'bypass activated' };\n\n    return [[stateMsg, logMsg], cancelMsg, reconnectMsg];\n}\n\nif (action === 'off') {\n    flow.set('bypass_active', false);\n    flow.set('bypass_expires_at', null);\n    cancelAutoOff();\n    node.status({fill:'grey', shape:'ring', text:'BYPASS OFF (manual)'});\n\n    const stateMsg = { payload: { type: 'bypass_state', active: false, expiresAt: 0 } };\n    const logMsg   = { payload: { type: 'log', html: 'BYPASS deactivated (manual) — normal mode' } };\n    return [[stateMsg, logMsg], null, null];\n}\n\nnode.warn('Bypass: unknown action: ' + action);\nreturn null;\n",
         "outputs": 3,
         "timeout": "",
         "noerr": 0,
