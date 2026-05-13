@@ -2354,7 +2354,43 @@ restart nodered`.
 
 ---
 
-### Repo public-prep — scrub literal API key, externalise Telegram chat ID, untrack runtime data
+### Lightning dashboard: ALL CLEAR boot state replaces "Awaiting first event"
+
+Master Dashboard `ui_template` (`557083037f168b22`) used to render
+`⏱ Awaiting first event` in muted grey on first paint and after the
+30-second event-recap timeout when no prior alert existed. Operator
+preference: the post-relaunch / no-events state should show a positive
+`✔ ALL CLEAR` in green, matching the styling used by the `> 50 km`
+strike path. Reads as reassuring rather than pending.
+
+Two surgical changes inside the `format` string:
+
+1. **Initial HTML render** — `<div id="alertBox">` now ships with
+   inline `background:#0d2818; border-color:#238636;`, `<span
+   id="alertIcon">✔</span>`, and `<span id="alertTxt"
+   style="color:var(--green);">ALL CLEAR</span>`. Boot state is
+   green from the first paint.
+2. **`clearAlert()` no-prior-event branch** — the `if (!lastAlert)`
+   path now calls `paintAlert('✔','ALL CLEAR','#0d2818','#238636',
+   '#3fb950')` instead of `paintAlert('⏱','Awaiting first event',
+   '#161b22','#21262d','#8b949e')`. Returning-to-idle after Node-RED
+   restart (no `lastAlert` cached) re-paints to green.
+
+The post-first-event recap path (`Last: <text> · Nm ago` in muted
+grey) is untouched — that one still kicks in 30 s after every real
+strike and continues to refresh its relative-time string every 30 s.
+
+Net: the dashboard reads "all clear" on every relaunch, then if a
+strike fires it goes red/amber/green per zone for 30 s, then settles
+into a muted recap line for the rest of the session.
+
+#### Files touched
+
+- `flows.json` — 1 ui_template `format` field; 1 insertion, 1
+  deletion (the HTML block became a one-line replacement inside the
+  big format string).
+- No node count change.
+- DXCC tab untouched; extract bytes-identical.
 
 Pre-flight audit for making `vu2cpl-shack` public. Five fixes applied:
 
