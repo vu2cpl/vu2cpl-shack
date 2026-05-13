@@ -5115,16 +5115,33 @@
         "type": "function",
         "z": "75e2cac8ab96f556",
         "name": "Format Log",
-        "func": "const ts   = msg.timestamp || new Date().toLocaleString();\nconst ok   = msg.cmd === 'RECONNECT';\nconst icon = ok ? '&#9679;' : '&#9632;';\nconst cls  = ok ? 'ev-ok' : 'ev-err';\nconst dist = msg.distance ? ' | ' + msg.distance + ' km' : '';\nconst line = '<div class=\"ev-row ' + cls + '\">' + icon + ' '\n           + ts + dist + ' — ' + msg.cmd + ': ' + (msg.reason||'') + '</div>';\nlet log = flow.get('event_log') || [];\nlog.unshift(line);\nif (log.length > 50) log = log.slice(0, 50);\nflow.set('event_log', log);\nmsg.payload = log.join('');\nreturn msg;\n",
+        "func": "const ts   = msg.timestamp || new Date().toLocaleString();\nconst ok   = msg.cmd === 'RECONNECT';\nconst icon = ok ? '&#9679;' : '&#9632;';\nconst cls  = ok ? 'ev-ok' : 'ev-err';\nconst dist = msg.distance ? ' | ' + msg.distance + ' km' : '';\nconst line = '<div class=\"ev-row ' + cls + '\">' + icon + ' '\n           + ts + dist + ' — ' + msg.cmd + ': ' + (msg.reason||'') + '</div>';\nlet log = flow.get('event_log') || [];\nlog.unshift(line);\nif (log.length > 50) log = log.slice(0, 50);\nflow.set('event_log', log);\nmsg.payload = log.join('');\nmsg.event_record = {\n    ts: new Date().toISOString(),\n    source: 'system',\n    type: ok ? 'reconnect' : 'disconnect',\n    cmd: msg.cmd || null,\n    reason: msg.reason || null,\n    km: (msg.distance != null) ? msg.distance : null,\n    html: line\n};\nreturn msg;\n",
         "outputs": 1,
         "noerr": 0,
         "x": 670,
         "y": 410.5797101449259,
         "wires": [
             [
-                "4238d94eb39edbf1"
+                "4238d94eb39edbf1",
+                "light_jsonl_append_01"
             ]
         ]
+    },
+    {
+        "id": "light_jsonl_append_01",
+        "type": "function",
+        "z": "75e2cac8ab96f556",
+        "name": "Append Lightning JSONL",
+        "func": "// Historic event store (one event per line, JSONL).\n// Fan-in from the three log writers; each sets msg.event_record. We\n// just serialise and append. File grows unbounded — logrotate it on\n// the Pi side when it gets large. Standard tools (jq, pandas, grep)\n// all read JSONL natively.\nconst rec = msg.event_record;\nif (!rec) return null;\nconst path = flow.get('cfg_events_jsonl');\nif (!path) { node.warn('cfg_events_jsonl not set; deploy Init Defaults'); return null; }\ntry {\n    fs.appendFileSync(path, JSON.stringify(rec) + '\\n');\n    node.status({fill:'green', shape:'dot',\n        text: rec.source + ':' + rec.type + ' @ ' + new Date().toLocaleTimeString()});\n} catch (e) {\n    node.error('JSONL append failed: ' + e.message, msg);\n}\nreturn null;\n",
+        "outputs": 0,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1280,
+        "y": 1980,
+        "wires": []
     },
     {
         "id": "55f94d9dde0dc893",
@@ -5180,7 +5197,7 @@
         "type": "function",
         "z": "75e2cac8ab96f556",
         "name": "Init Defaults  ✏️ EDIT HERE",
-        "func": "// ╔══════════════════════════════════════════════════════════════╗\n// ║  ⚙️  ALL SETTINGS DOCUMENTED IN THE CONFIG COMMENT NODE      ║\n// ╚══════════════════════════════════════════════════════════════╝\n\n// ── MQTT BROKER ────────────────────────────────────────────────\nconst MQTT_BROKER = '192.168.1.169'; // ← broker IP or hostname\n\n// ── CALLSIGN ───────────────────────────────────────────────────\nconst CALLSIGN    = 'VU2CPL';      // ← your callsign (shown on map)\n\n// ── LOCATION — ONLY EDIT THIS ─────────────────────────────────\nconst GRID_SQUARE = 'MK83TE';     // ← your Maidenhead grid square (6-char)\n\n// ── ANTENNA POWER SWITCH ───────────────────────────────────────\nconst POWER_STRIP = 'powerstrip1'; // ← Tasmota device name for antenna\nconst POWER_CH    = 'POWER5';     // ← antenna socket: POWER1–POWER5\n\n// ── RADIO SWITCH (optional secondary device) ────────────────────\nconst RADIO_ENABLED = true;        // ← false = skip radio switching entirely\nconst RADIO_LABEL   = 'Flex Radio';// ← friendly name shown in dashboard/log\nconst RADIO_STRIP   = '4relayboard'; // ← Tasmota device name for the radio\nconst RADIO_CH      = 'POWER1';   // ← radio socket: POWER1–POWER4\n\n// ── DISCONNECT DISTANCE ────────────────────────────────────────\nconst THRESHOLD_KM = 25;          // ← km — also adjustable via slider\n\n// ── RECONNECT TIMER ────────────────────────────────────────────\nconst RECONNECT_MIN = 20;          // ← minutes clear before antenna reconnects\n\n// ── Maidenhead → Lat/Lon (centre of square) ────────────────────\nfunction gridToLatLon(gs) {\n    gs = gs.toUpperCase();\n    const lon = (gs.charCodeAt(0) - 65) * 20\n              + (parseInt(gs[2]) * 2)\n              + (gs.length >= 6 ? (gs.charCodeAt(4) - 65) / 12 + 1/24 : 1)\n              - 180;\n    const lat = (gs.charCodeAt(1) - 65) * 10\n              + parseInt(gs[3])\n              + (gs.length >= 6 ? (gs.charCodeAt(5) - 65) / 24 + 1/48 : 0.5)\n              - 90;\n    return { lat: Math.round(lat * 10000) / 10000,\n             lon: Math.round(lon * 10000) / 10000 };\n}\n\nconst ll = gridToLatLon(GRID_SQUARE);\n\n// ── DO NOT EDIT BELOW ──────────────────────────────────────────\nflow.set('mqtt_broker',  MQTT_BROKER);\nflow.set('callsign',     CALLSIGN);\nflow.set('grid_square',  GRID_SQUARE);\nflow.set('home_lat',     ll.lat);\nflow.set('home_lon',     ll.lon);\nflow.set('power_strip',  POWER_STRIP);\nflow.set('power_ch',     POWER_CH);\nflow.set('radio_enabled', RADIO_ENABLED);\nflow.set('radio_label',  RADIO_LABEL);\nflow.set('radio_strip',  RADIO_STRIP);\nflow.set('radio_ch',     RADIO_CH);\nflow.set('reconnect_min', RECONNECT_MIN);\nflow.set('threshold_km',  THRESHOLD_KM);  // always overwrite from config\n\n// ── Distance-graded disconnect (2026-05-12) ────────────────────\nflow.set('cfg_close_km',             10);    // AS3935 close-zone radius\nflow.set('cfg_medium_km',            25);    // AS3935 medium-zone radius\nflow.set('cfg_med_window_min',        5);    // strike-counting window\nflow.set('cfg_med_count',             2);    // hits in window for OM-cold medium DC\nflow.set('cfg_om_lit_window_min',    20);    // OM state persistence after poll\nflow.set('cfg_om_cape_thresh',      800);    // CAPE J/kg for \"lit\"\nflow.set('cfg_om_cape_severe_thresh', 2500); // CAPE J/kg for \"severe\"\nflow.set('recent_as3935', []);               // reset strike history on deploy\nflow.set('om_state', 'cold');\nflow.set('om_state_until', 0);\n\nflow.set('antenna_off', false);   // always reset to ON at deploy\nflow.set('radio_off',   false);   // always reset to ON at deploy\nflow.set('bypass_active', false);  // bypass always off on deploy/launch\nflow.set('bypass_expires_at', null);\nif (!flow.get('stats'))         flow.set('stats',    {total:0,near:0,mid:0,far:0,closest:9999});\nif (!flow.get('recent'))        flow.set('recent',   []);\nif (!flow.get('event_log'))     flow.set('event_log',[]);\nnode.status({fill:'blue', shape:'dot',\n  text: 'broker:'+MQTT_BROKER+'  '+CALLSIGN+' '+GRID_SQUARE+' → '+ll.lat+','+ll.lon\n      +'  ant:'+POWER_STRIP+'/'+POWER_CH\n      +(RADIO_ENABLED?' radio:'+RADIO_STRIP+'/'+RADIO_CH:'')\n      +'  thr:'+THRESHOLD_KM+'km  recon:'+RECONNECT_MIN+'min'});\nreturn msg;\n",
+        "func": "// ╔══════════════════════════════════════════════════════════════╗\n// ║  ⚙️  ALL SETTINGS DOCUMENTED IN THE CONFIG COMMENT NODE      ║\n// ╚══════════════════════════════════════════════════════════════╝\n\n// ── MQTT BROKER ────────────────────────────────────────────────\nconst MQTT_BROKER = '192.168.1.169'; // ← broker IP or hostname\n\n// ── CALLSIGN ───────────────────────────────────────────────────\nconst CALLSIGN    = 'VU2CPL';      // ← your callsign (shown on map)\n\n// ── LOCATION — ONLY EDIT THIS ─────────────────────────────────\nconst GRID_SQUARE = 'MK83TE';     // ← your Maidenhead grid square (6-char)\n\n// ── ANTENNA POWER SWITCH ───────────────────────────────────────\nconst POWER_STRIP = 'powerstrip1'; // ← Tasmota device name for antenna\nconst POWER_CH    = 'POWER5';     // ← antenna socket: POWER1–POWER5\n\n// ── RADIO SWITCH (optional secondary device) ────────────────────\nconst RADIO_ENABLED = true;        // ← false = skip radio switching entirely\nconst RADIO_LABEL   = 'Flex Radio';// ← friendly name shown in dashboard/log\nconst RADIO_STRIP   = '4relayboard'; // ← Tasmota device name for the radio\nconst RADIO_CH      = 'POWER1';   // ← radio socket: POWER1–POWER4\n\n// ── DISCONNECT DISTANCE ────────────────────────────────────────\nconst THRESHOLD_KM = 25;          // ← km — also adjustable via slider\n\n// ── RECONNECT TIMER ────────────────────────────────────────────\nconst RECONNECT_MIN = 20;          // ← minutes clear before antenna reconnects\n\n// ── Maidenhead → Lat/Lon (centre of square) ────────────────────\nfunction gridToLatLon(gs) {\n    gs = gs.toUpperCase();\n    const lon = (gs.charCodeAt(0) - 65) * 20\n              + (parseInt(gs[2]) * 2)\n              + (gs.length >= 6 ? (gs.charCodeAt(4) - 65) / 12 + 1/24 : 1)\n              - 180;\n    const lat = (gs.charCodeAt(1) - 65) * 10\n              + parseInt(gs[3])\n              + (gs.length >= 6 ? (gs.charCodeAt(5) - 65) / 24 + 1/48 : 0.5)\n              - 90;\n    return { lat: Math.round(lat * 10000) / 10000,\n             lon: Math.round(lon * 10000) / 10000 };\n}\n\nconst ll = gridToLatLon(GRID_SQUARE);\n\n// ── DO NOT EDIT BELOW ──────────────────────────────────────────\nflow.set('mqtt_broker',  MQTT_BROKER);\nflow.set('callsign',     CALLSIGN);\nflow.set('grid_square',  GRID_SQUARE);\nflow.set('home_lat',     ll.lat);\nflow.set('home_lon',     ll.lon);\nflow.set('power_strip',  POWER_STRIP);\nflow.set('power_ch',     POWER_CH);\nflow.set('radio_enabled', RADIO_ENABLED);\nflow.set('radio_label',  RADIO_LABEL);\nflow.set('radio_strip',  RADIO_STRIP);\nflow.set('radio_ch',     RADIO_CH);\nflow.set('reconnect_min', RECONNECT_MIN);\nflow.set('threshold_km',  THRESHOLD_KM);  // always overwrite from config\n\n// ── Distance-graded disconnect (2026-05-12) ────────────────────\nflow.set('cfg_close_km',             10);    // AS3935 close-zone radius\nflow.set('cfg_medium_km',            25);    // AS3935 medium-zone radius\nflow.set('cfg_med_window_min',        5);    // strike-counting window\nflow.set('cfg_med_count',             2);    // hits in window for OM-cold medium DC\nflow.set('cfg_om_lit_window_min',    20);    // OM state persistence after poll\nflow.set('cfg_om_cape_thresh',      800);    // CAPE J/kg for \"lit\"\nflow.set('cfg_om_cape_severe_thresh', 2500); // CAPE J/kg for \"severe\"\nflow.set('recent_as3935', []);               // reset strike history on deploy\nflow.set('om_state', 'cold');\nflow.set('om_state_until', 0);\n\nflow.set('antenna_off', false);   // always reset to ON at deploy\nflow.set('radio_off',   false);   // always reset to ON at deploy\nflow.set('bypass_active', false);  // bypass always off on deploy/launch\nflow.set('bypass_expires_at', null);\nif (!flow.get('stats'))         flow.set('stats',    {total:0,near:0,mid:0,far:0,closest:9999});\nif (!flow.get('recent'))        flow.set('recent',   []);\nif (!flow.get('event_log'))     flow.set('event_log',[]);\n\n// JSONL historic event store (one event per line)\nflow.set('cfg_flows_dir',   os.homedir() + '/.node-red/projects/vu2cpl-shack');\nflow.set('cfg_events_jsonl', flow.get('cfg_flows_dir') + '/nr_lightning_events.jsonl');\nnode.status({fill:'blue', shape:'dot',\n  text: 'broker:'+MQTT_BROKER+'  '+CALLSIGN+' '+GRID_SQUARE+' → '+ll.lat+','+ll.lon\n      +'  ant:'+POWER_STRIP+'/'+POWER_CH\n      +(RADIO_ENABLED?' radio:'+RADIO_STRIP+'/'+RADIO_CH:'')\n      +'  thr:'+THRESHOLD_KM+'km  recon:'+RECONNECT_MIN+'min'});\nreturn msg;\n",
         "outputs": 1,
         "timeout": "",
         "noerr": 0,
@@ -5489,7 +5506,7 @@
         "type": "function",
         "z": "75e2cac8ab96f556",
         "name": "AS3935 Warn Log",
-        "func": "\nconst d   = msg.as3935 || {};\nconst km  = msg._as3935_km;\nconst ts  = d.timestamp || new Date().toLocaleString();\nconst line = '<div class=\"ev-row ev-warn\">&#9651; '\n           + ts + ' | AS3935 ⚡ ' + km + ' km  energy=' + (d.energy||'—')\n           + ' — BELOW threshold, no disconnect</div>';\nlet log = flow.get('event_log') || [];\nlog.unshift(line);\nif (log.length > 50) log = log.slice(0, 50);\nflow.set('event_log', log);\nmsg.payload = { type: 'log', html: log.join('') };\nreturn msg;\n",
+        "func": "\nconst d   = msg.as3935 || {};\nconst km  = msg._as3935_km;\nconst ts  = d.timestamp || new Date().toLocaleString();\nconst line = '<div class=\"ev-row ev-warn\">&#9651; '\n           + ts + ' | AS3935 ⚡ ' + km + ' km  energy=' + (d.energy||'—')\n           + ' — BELOW threshold, no disconnect</div>';\nlet log = flow.get('event_log') || [];\nlog.unshift(line);\nif (log.length > 50) log = log.slice(0, 50);\nflow.set('event_log', log);\nmsg.payload = { type: 'log', html: log.join('') };\nmsg.event_record = {\n    ts: new Date().toISOString(),\n    source: 'AS3935',\n    type: 'warn',\n    km: (km != null) ? km : null,\n    energy: (d.energy != null) ? d.energy : null,\n    html: line\n};\nreturn msg;\n",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
@@ -5499,7 +5516,8 @@
         "y": 520,
         "wires": [
             [
-                "557083037f168b22"
+                "557083037f168b22",
+                "light_jsonl_append_01"
             ]
         ]
     },
@@ -5508,7 +5526,7 @@
         "type": "function",
         "z": "75e2cac8ab96f556",
         "name": "AS3935 Disconnect Log",
-        "func": "\nconst d   = msg.as3935 || {};\nconst km  = msg._as3935_km;\nconst ts  = d.timestamp || new Date().toLocaleString();\nconst line = '<div class=\"ev-row ev-err\">&#9632; '\n           + ts + ' | AS3935 ⚡ ' + km + ' km  energy=' + (d.energy||'—')\n           + ' — DISCONNECT triggered</div>';\nlet log = flow.get('event_log') || [];\nlog.unshift(line);\nif (log.length > 50) log = log.slice(0, 50);\nflow.set('event_log', log);\nmsg.payload = { type: 'log', html: log.join('') };\nreturn msg;\n",
+        "func": "\nconst d   = msg.as3935 || {};\nconst km  = msg._as3935_km;\nconst ts  = d.timestamp || new Date().toLocaleString();\nconst line = '<div class=\"ev-row ev-err\">&#9632; '\n           + ts + ' | AS3935 ⚡ ' + km + ' km  energy=' + (d.energy||'—')\n           + ' — DISCONNECT triggered</div>';\nlet log = flow.get('event_log') || [];\nlog.unshift(line);\nif (log.length > 50) log = log.slice(0, 50);\nflow.set('event_log', log);\nmsg.payload = { type: 'log', html: log.join('') };\nmsg.event_record = {\n    ts: new Date().toISOString(),\n    source: 'AS3935',\n    type: 'disconnect',\n    km: (km != null) ? km : null,\n    energy: (d.energy != null) ? d.energy : null,\n    html: line\n};\nreturn msg;\n",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
@@ -5518,7 +5536,8 @@
         "y": 440,
         "wires": [
             [
-                "557083037f168b22"
+                "557083037f168b22",
+                "light_jsonl_append_01"
             ]
         ]
     },
