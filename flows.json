@@ -5139,7 +5139,12 @@
         "noerr": 0,
         "initialize": "",
         "finalize": "",
-        "libs": [],
+        "libs": [
+            {
+                "var": "fs",
+                "module": "fs"
+            }
+        ],
         "x": 1280,
         "y": 1980,
         "wires": []
