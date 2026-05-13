@@ -2206,6 +2206,102 @@ cost nothing at runtime).
 
 ## 2026-05-13
 
+### Lightning: historic event store — strikes + actions persisted to JSONL
+
+`flow.event_log` is great for the dashboard's snappy Event Log card but
+it's in-memory, capped at 50 rows, and wipes on every deploy. Operator
+wanted a long-running record for post-storm analysis, false-positive
+trend tracking, and general "what happened on the night of …" recall.
+
+**Design (C2 — separated concerns):**
+
+- Dashboard keeps its in-memory `flow.event_log` exactly as before
+  (50 rows, fast, no I/O on the render path).
+- A new function node **`Append Lightning JSONL`** ([`bf480be`](https://github.com/vu2cpl/vu2cpl-shack/commit/bf480be))
+  appends one JSON-Lines row per event to
+  `/home/vu2cpl/.node-red/projects/vu2cpl-shack/nr_lightning_events.jsonl`.
+  Append-only, no read-modify-write race, grows unbounded (logrotate
+  when it gets big).
+- File path is set by `Init Defaults` on every deploy as
+  `cfg_events_jsonl` so the append function reads it from flow context.
+
+**Coverage** (in two waves):
+
+1. **First wave** (`bf480be`) — the three existing log-writer functions
+   (`Format Log`, `AS3935 Warn Log`, `AS3935 Disconnect Log`) each now
+   also emit `msg.event_record = {ts, source, type, km, energy, …}`
+   alongside their existing dashboard output, and have a parallel wire
+   to the new append node. Captures: disconnects, reconnects, manual
+   overrides, AS3935 below-threshold warnings, AS3935 above-threshold
+   disconnects.
+
+2. **Second wave** (`a93a1e3`) — operator noticed a pre-existing gap:
+   above-threshold OM strikes and TEST injects above the 25 km
+   disconnect threshold silently drop at the `Within threshold?`
+   switch (single-output `lte` rule, anything `>` just falls off the
+   end). Added a third tap, `Log all strikes (to JSONL)`, hanging off
+   `Haversine Distance`'s output as a 3rd parallel target. Now every
+   strike — AS3935 / Open-Meteo / TEST — gets a `type:"strike"` JSONL
+   row regardless of whether it triggers a disconnect.
+
+The two waves emit different `type` values intentionally — `"strike"`
+captures the inbound event, `"disconnect"` / `"reconnect"` / `"warn"`
+capture the action. Both arrive for events that fire the chain (one
+strike, one action), only the strike row arrives for events that
+don't. Plenty of data for jq-side analysis.
+
+**Two bugs hit during bring-up — instructive enough to record:**
+
+| Bug | Symptom | Cause | Fix |
+|-----|---------|-------|-----|
+| Init Defaults silently broken | `Append Lightning JSONL` warned "cfg_events_jsonl not set" every event; file never created | `os.homedir() + …` threw `ReferenceError: os is not defined` at line 83 of Init Defaults — `os` is **not** a free global in Node-RED function nodes unless the node's `libs:` array declares it. DXCC functions all have `libs: [{var:'os', module:'os'}, …]`; Init Defaults didn't. | Hardcoded `/home/vu2cpl/.node-red/projects/vu2cpl-shack` ([`784a634`](https://github.com/vu2cpl/vu2cpl-shack/commit/784a634)) — this Pi only |
+| Append node also broken | `JSONL append failed: fs is not defined` once Init Defaults was fixed | Same root cause one layer down: `Append Lightning JSONL` referenced `fs.appendFileSync` without a `libs:` declaration. | Added `libs: [{var:'fs', module:'fs'}]` to the new function node ([`c8fbcb4`](https://github.com/vu2cpl/vu2cpl-shack/commit/c8fbcb4)) |
+
+**Mental model worth pinning** (recording so future-self stops
+re-learning this):
+
+> In Node-RED 1.3+ function nodes, `fs` / `os` / `path` / `https` /
+> etc. are **per-node libs**, not project-wide globals. If a function
+> uses one of them, its node config must include
+> `libs: [{var:"<name>", module:"<module>"}]`. Symptom of a missing
+> declaration is `ReferenceError: <name> is not defined` from the
+> first line that references it. Audit existing nodes via
+> `grep -l "libs.*[\"']fs[\"']"` in flows.json before assuming a name
+> is available.
+
+**Test injects gained `source:"TEST"`** ([`20d0b16`](https://github.com/vu2cpl/vu2cpl-shack/commit/20d0b16)) —
+the three test injects (`6 km DISCONNECT`, `35 km warning`,
+`120 km safe`) previously had no `source` field in their payload, so
+JSONL rows came out as `source:"unknown"`. Added `"source":"TEST"` to
+each so analysis filters can cleanly separate test from real:
+
+```sh
+# real events only
+jq -c 'select(.source != "TEST")' nr_lightning_events.jsonl
+# test events only
+jq -c 'select(.source == "TEST")' nr_lightning_events.jsonl
+```
+
+Once trusted, the `Log all strikes` function has a commented
+"suppress TEST entries from JSONL" guard that can be uncommented to
+stop polluting the historic record with bench tests.
+
+**Deferred** (operator's call): Open-Meteo 5-min poll cadence rows and
+Bypass switch on/off events are not yet captured — both are
+small-volume / high-value adds. Disturber / noise from AS3935 not
+captured either (high-volume — would 10× the file size with an
+indoor sensor; deferred until either someone wants the data, or the
+sensor moves outdoors and disturber rate drops).
+
+**REBUILD_PI.md impact:** none. `jq` is already in Step 2's
+`apt install` list — this Pi predates the runbook and needed a
+one-time `sudo apt install -y jq` separately, but a fresh rebuild
+gets it. `nr_lightning_events.jsonl` is runtime data (like
+`nr_dxcc_seed.json`); not in `.gitignore` but `nrsave` only stages
+`flows.json` so it doesn't accidentally land in a commit.
+
+---
+
 ### SPE: stale-state lying fix — gateway-side presence-heartbeat + panel offline-wipe
 
 Operator noticed the Node-RED SPE panel + Macexpert SPE app both kept
