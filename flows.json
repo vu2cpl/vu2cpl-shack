@@ -4961,7 +4961,8 @@
         "wires": [
             [
                 "51367d456e71fb3e",
-                "12c029b533385153"
+                "12c029b533385153",
+                "light_jsonl_allstrikes_01"
             ]
         ]
     },
@@ -5142,6 +5143,26 @@
         "x": 1280,
         "y": 1980,
         "wires": []
+    },
+    {
+        "id": "light_jsonl_allstrikes_01",
+        "type": "function",
+        "z": "75e2cac8ab96f556",
+        "name": "Log all strikes (to JSONL)",
+        "func": "// Tap on Haversine output. Catches every strike — AS3935 lightning,\n// Open-Meteo synthesised, and TEST injects — regardless of whether\n// the threshold switch fires a disconnect. Operator turned this on\n// during the validation phase; once trusted, the test-source filter\n// at the bottom of this function should be uncommented to suppress\n// the TEST entries.\nconst s = msg.strike || {};\nconst km = (s.distance_km != null) ? s.distance_km\n         : (s.km != null) ? s.km\n         : null;\n\n// Uncomment to suppress test injects from the JSONL once validated:\n// if (s.source && /^TEST/i.test(s.source)) return null;\n\nmsg.event_record = {\n    ts:     new Date().toISOString(),\n    source: s.source || 'unknown',\n    type:   'strike',\n    km:     km,\n    lat:    s.lat,\n    lon:    s.lon,\n    pol:    s.pol,\n    region: s.region,\n    raw_strike_time: s.time || null\n};\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1080,
+        "y": 1980,
+        "wires": [
+            [
+                "light_jsonl_append_01"
+            ]
+        ]
     },
     {
         "id": "55f94d9dde0dc893",
