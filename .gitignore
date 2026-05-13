@@ -1,1 +1,17 @@
+# Backups and OS noise
 *.backup
+.DS_Store
+
+# Claude Code session metadata
+.claude/
+
+# Runtime DXCC data (auto-refreshed daily by the Club Log fetch cron;
+# nrsave includes it via the rule #4 extract but flows.json restore +
+# next 02:00 cron will repopulate). Public-repo: also reveals the
+# operator's worked-DXCC matrix and personal blacklist.
+nr_dxcc_seed.json
+nr_dxcc_blacklist.json
+
+# Runtime historic event log (lightning strikes + actions, JSONL).
+# Append-only; grows unbounded. Not source-controlled — runtime only.
+nr_lightning_events.jsonl

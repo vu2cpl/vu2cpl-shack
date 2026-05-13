@@ -2206,6 +2206,98 @@ cost nothing at runtime).
 
 ## 2026-05-13
 
+### Repo public-prep — scrub literal API key, externalise Telegram chat ID, untrack runtime data
+
+Pre-flight audit for making `vu2cpl-shack` public. Five fixes applied:
+
+**1. Removed hardcoded Club Log API key.** `Build cty.xml URL`
+function had a literal `7cc2e40298a9da3f173bd06118f6cb08cc3131f3` as
+fallback when `flow.get('cfg_cl_apikey')` returned empty. Defeated the
+entire env-vars-via-systemd pattern the rest of the secrets follow.
+Replaced with `|| ''`. **Operator must rotate the key on Club Log
+side** — it's been in `origin/main` history for some time, public-OK
+only if rotated.
+
+**2. Telegram chat ID externalised.** Was inline as
+`tg_chat_id: '784711092'` in the Credentials node. Not a secret in
+the cryptographic sense (the bot token is what matters, and that's
+already env'd), but it does identify the operator's personal Telegram
+chat. Moved to `env.get('TELEGRAM_CHAT_ID')` for consistency with the
+other three credential keys. Pi-side needs a new line in
+`/etc/systemd/system/nodered.service.d/secrets.conf`:
+
+```
+Environment="TELEGRAM_CHAT_ID=784711092"
+```
+
+`REBUILD_PI.md` Step 10 updated to include this env var in its
+`secrets.conf` template.
+
+**3-4. Untracked two runtime data files.** `git rm --cached` for
+`nr_dxcc_seed.json` (306 KB, full per-band/per-mode worked-DXCC matrix,
+auto-refreshed daily by the Club Log fetch cron) and
+`nr_dxcc_blacklist.json` (operator's per-callsign mute list — small
+but socially-revealing in a public repo). Files stay on disk; the
+daily fetch repopulates the seed after any `git clone` + first cron
+tick. Blacklist starts empty on a fresh clone and gets populated by
+the `POST /dxcc/blacklist-add` HTTP endpoint as needed.
+
+**5. `.gitignore` expanded** from one line (`*.backup`) to cover:
+
+```
+*.backup
+.DS_Store
+.claude/
+nr_dxcc_seed.json
+nr_dxcc_blacklist.json
+nr_lightning_events.jsonl
+```
+
+The last one is the JSONL historic store we added today — runtime
+data, not source-controlled.
+
+**Audit findings deliberately NOT changed:**
+
+- **LAN IPs** (`192.168.1.148/158/169/170/241`) stay hardcoded.
+  RFC1918, no external risk, and most ham-shack repos ship their LAN
+  IPs so forkers see the structure. Genericising would touch dozens
+  of nodes in flows.json + four .md files for low payoff.
+- **Email address** (`vu2cpl@gmail.com` in the Credentials node)
+  stays — already in CLAUDE.md and on every QSL card. Same applies
+  to the callsign, grid, and DXpedition history.
+- **MQTT broker is plain / no-auth** (`192.168.1.169:1883`) — LAN-only,
+  documented as such. Anyone inside the LAN could already see it.
+
+**Git history pollution** — even after this scrub, the literal API
+key + chat ID sit in past commits. Accepting that; the key rotation
+makes the historical disclosure dead. `git filter-repo` to rewrite
+history would be overkill for a hobby repo with hardware-side
+secondary auth (the broker is LAN-only, the bot token is env'd, the
+API key will be rotated).
+
+**Sequence on the Pi to deploy:**
+
+```sh
+# 1. Add the new env var to secrets.conf:
+sudo nano /etc/systemd/system/nodered.service.d/secrets.conf
+# Add: Environment="TELEGRAM_CHAT_ID=784711092"
+# Also update CLUBLOG_API_KEY to the freshly-rotated value.
+
+# 2. Pull + restart:
+cd ~/.node-red/projects/vu2cpl-shack
+git pull
+sudo systemctl restart nodered
+
+# 3. Sanity-check Credentials node status badge in editor:
+#    should show: "Config loaded: VU2CPL-1 / tg:784711092"
+#    (anything red means an env var is missing)
+```
+
+**Then it's safe to flip the GitHub repo Settings → Visibility →
+Public.**
+
+---
+
 ### Lightning: historic event store — strikes + actions persisted to JSONL
 
 `flow.event_log` is great for the dashboard's snappy Event Log card but

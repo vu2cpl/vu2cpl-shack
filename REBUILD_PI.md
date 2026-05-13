@@ -398,6 +398,7 @@ sudo tee /etc/systemd/system/nodered.service.d/secrets.conf <<'EOF'
 Environment="CLUBLOG_API_KEY=<your-club-log-api-key>"
 Environment="CLUBLOG_PASSWORD=<your-club-log-password>"
 Environment="TELEGRAM_TOKEN=<your-telegram-bot-token>"
+Environment="TELEGRAM_CHAT_ID=<your-telegram-chat-id>"
 EOF
 sudo chmod 600 /etc/systemd/system/nodered.service.d/secrets.conf
 sudo chown root:root /etc/systemd/system/nodered.service.d/secrets.conf
