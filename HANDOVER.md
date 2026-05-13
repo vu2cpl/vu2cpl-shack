@@ -146,6 +146,7 @@ Critical Node-RED IDs (per CLAUDE.md):
 - `~/Documents` on this Mac is **local**, not iCloud-synced. Only `~/Desktop` symlinks to iCloud Drive. The 05-07 folder consolidation was for organizational tidiness only.
 - `/home/vu2cpl/as3935_mqtt.py` had become **owned by root** during earlier sudo edits — `cp` without sudo silently no-op'd. Always check ownership after first deploy. Fix: `sudo cp + sudo chown vu2cpl:vu2cpl`.
 - AS3935 with NF=0 fires a noise burst at startup (~209 events in 30 s) then the chip's auto-noise-track suppresses further until conditions actually change. NF=4 is the production default; NF=0 only for diagnostics.
+- **DXCC blacklist has no off-Pi backup since 2026-05-13** ([`b1fbef9`](https://github.com/vu2cpl/vu2cpl-shack/commit/b1fbef9) public-prep). `nr_dxcc_blacklist.json` is `.gitignore`d to avoid publishing the muted-callsigns list. Deliberate trade-off — accept that a Pi disk failure means the list evaporates and gets repopulated from memory. List is small (<20 entries typically), recoverable. If it ever grows large enough to be painful to lose, set up a periodic rsync to the Mac. Same `.gitignore` reasoning applies to `nr_dxcc_seed.json` and `nr_lightning_events.jsonl`, but those are runtime caches — Club Log / AS3935 events recreate them naturally, no loss.
 
 ---
 
