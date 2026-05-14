@@ -3691,6 +3691,55 @@ fires at +2 s, dashboard shows the last 50 events from JSONL within
 3 s of startup. Subsequent restarts: same, transparently. No
 behaviour change to the running flow — pure additive bootstrap.
 
+### Lightning dashboard — AS3935 card declutter (TODO #13 closed)
+
+**Tab:** Lightning Antenna Protector (`75e2cac8ab96f556`)
+**Node:** Master Dashboard ui_template (`557083037f168b22`)
+
+Two cosmetic problems on the AS3935 Local Sensor card:
+
+1. **`LAST SEEN` showed an absolute timestamp** like `14:32:05` —
+   information that decays in usefulness as time passes ("was that
+   today? yesterday?").
+2. **The right-side status chip repeated the same timestamp** during
+   the 60 s disturber/noise window: `⚠ Disturber  14:32:05` — visually
+   noisy and redundant once `LAST SEEN` had the same value.
+
+**Fix** (pure ui_template edit; no flow change):
+
+- `LAST SEEN` now shows **relative age** — `"4s ago"` / `"3m ago"` /
+  `"1h 14m ago"` / `"2d ago"` — same format used by the existing
+  `alertBox` recap line. Hovering the value reveals the absolute IST
+  timestamp via `title` tooltip, so the precise value isn't lost.
+- A 30 s ticker auto-refreshes the relative-age string while a
+  last-event timestamp is held in JS state. Ticker is started lazily
+  on the first event (no work until something happens).
+- Three call sites in the disturber / noise / strike branches all
+  funnel through a new `recordAS3935Event()` helper that captures
+  `Date.now()` and repaints. Receive-time is used, not the bridge's
+  timestamp string — avoids parsing the bridge format and the
+  relative-age display is insensitive to the small
+  bridge→broker→browser skew.
+- Chip text on disturber/noise dropped the trailing timestamp:
+  `'⚠ Disturber  ' + d.timestamp` → `'⚠ Disturber'`. Strike chip
+  (`⚡ X km (Y)`) was already clean.
+
+**What this does NOT fix.** After a Node-RED + browser restart,
+`LAST SEEN` is still blank until the next AS3935 disturber/noise/
+strike. Bootstrapping it from JSONL doesn't work cleanly because
+JSONL records are `type: warn|disconnect|reconnect` (per the log
+writers) — they don't carry the right shape to drive `a35time`.
+The proper fix is to have the AS3935 ESP32 bridge publish a
+**retained** `lightning/as3935/last_event` topic so the broker
+replays the most recent event on Node-RED reconnect. Tracked as
+TODO #15 in CLAUDE.md.
+
+**Minor immaterial leftover.** The disturber / noise / strike
+branches each still declare `var timeEl = document.getElementById('a35time');`
+even though the `recordAS3935Event()` helper now gets the element
+itself. Unused variable; harmless; left as-is to keep this diff
+focused on the visible change.
+
 ---
 
 ## Standard Commit Sequence (reminder)
