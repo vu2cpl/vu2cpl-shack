@@ -3789,6 +3789,73 @@ width. Two small fixes:
 CLAUDE.md "Master Dashboard message types" list updated with the
 new `{type:'cape', cape, om_state}` payload shape.
 
+### Lightning dashboard — AS3935 status self-heal (chip rehydrates without manual republish)
+
+**Tab:** Lightning Antenna Protector (`75e2cac8ab96f556`)
+**Modified:** `Replay AS3935 State` (`as3935_replay_state`) — outputs 1 → 2, function body augmented.
+**Added:** `AS3935 Cmd → bridge` (`as3935_cmd_mqtt_out`) — `mqtt out` to `lightning/as3935/cmd`. Node count 78 → 79.
+
+**Symptom.** After `sudo systemctl restart nodered`, the AS3935
+status chip (`✓ READY · NF=4 · TUN=9`) stayed blank until the
+operator manually triggered `republish_status` from the AS3935
+Control Panel. Heartbeats kept arriving every 30 s (chip handler is
+hb-aware) but the `as3935_hb` handler is a no-op unless
+`window._as3935Ready` is set, which only happens after the dashboard
+receives an `{type:'as3935_ready', ...}` message.
+
+**Diagnosis.** Three facts narrowed it down:
+
+1. `mosquitto_sub -h 192.168.1.169 -t 'lightning/as3935/status' -C 1 -W 3`
+   from the Pi returned the retained payload instantly — broker
+   has it correctly retained.
+2. The MQTT broker config (`f4785be9863eab08`) is plain
+   `cleansession: true`, no clientid, no birth/will — nothing
+   that would suppress retained delivery.
+3. A debug node wired to `as3935_mqtt_status` proved that when
+   the bridge does publish (republish_status, or boot), Node-RED
+   receives and processes the message cleanly end-to-end.
+
+The retained-on-subscribe delivery to Node-RED's MQTT client is
+unreliable across restarts (likely a broker-connect ↔ subscribe ↔
+retained-flush timing race that `mosquitto_sub` doesn't hit because
+it's a single fresh client). Rather than chase the exact race, the
+self-heal sidesteps it: ask the bridge to republish whenever the
+cache is empty.
+
+**Implementation.**
+
+- `Replay AS3935 State` now has 2 outputs:
+  - **Output 1** → Master Dashboard (`557083037f168b22`) —
+    unchanged: re-emits cached status + hb every 30 s (the existing
+    page-refresh-survival behaviour).
+  - **Output 2** → new `AS3935 Cmd → bridge` mqtt-out (`lightning/as3935/cmd`).
+    When `flow.as3935_status` is null, sends `{action:'republish_status'}`
+    to the bridge. Bridge replies on `/status`, Format AS3935 State
+    caches it, next tick (within 30 s) populates the dashboard.
+- **Cooldown:** 5 min, tracked in node-local `context.lastRepublishReq`.
+  Prevents flooding the bridge if the cmd path itself is broken
+  (e.g. bridge offline). Resets on Deploy — fine, by design.
+- **Node status:** yellow ring "status null → republish req" when
+  firing; grey ring "status null · cooldown Ns" when waiting; cleared
+  once the cache populates.
+
+**Effect.** Within 30 s of any Node-RED restart (or any other event
+that empties the cache), the dashboard chip rehydrates without
+manual intervention. Same self-heal trips for broker restart,
+ESP32 reconnect, or any other timing hiccup that causes the
+retained delivery to be missed.
+
+**Bridge firmware (TODO #15-adjacent, not done here).** The "right"
+fix in addition would be a retained `lightning/as3935/last_event`
+topic from the ESP32 — that solves both the chip rehydration AND the
+"Last seen" rehydration in TODO #15. The self-heal added in this
+commit is the dashboard-side complement; it works regardless of the
+firmware change.
+
+**Cleanup for operator.** If you added a temporary debug node wired
+to `as3935_mqtt_status` for diagnostics during this session, delete
+it (it's not part of the committed flow).
+
 ---
 
 ## Standard Commit Sequence (reminder)

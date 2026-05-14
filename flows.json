@@ -6234,8 +6234,8 @@
         "type": "function",
         "z": "75e2cac8ab96f556",
         "name": "Replay AS3935 State",
-        "func": "// Triggered by Refresh Stats (every 30s). Re-emits cached status + hb so\n// the dashboard panel survives page refresh.\nconst out = [];\nconst status = flow.get('as3935_status');\nconst hb     = flow.get('as3935_hb');\nif (status) out.push({ payload: Object.assign({ type: 'as3935_ready' }, status) });\nif (hb)     out.push({ payload: Object.assign({ type: 'as3935_hb'    }, hb)     });\nif (out.length) out.forEach(m => node.send(m));\nreturn null;\n",
-        "outputs": 1,
+        "func": "// Triggered by Refresh Stats (every 30s).\n// Output 1: cached status + hb -> Master Dashboard, so the AS3935 panel\n//           survives page refresh.\n// Output 2: republish_status cmd -> bridge (mqtt out -> lightning/as3935/cmd),\n//           so the cache rehydrates when retained delivery on subscribe\n//           missed it (which it does, reliably, on Node-RED restart).\n//           5-min cooldown so we don't spam the bridge if the cmd path\n//           itself is broken.\nconst status = flow.get('as3935_status');\nconst hb     = flow.get('as3935_hb');\n\nif (status) node.send([{ payload: Object.assign({ type: 'as3935_ready' }, status) }, null]);\nif (hb)     node.send([{ payload: Object.assign({ type: 'as3935_hb'    }, hb)     }, null]);\n\nif (!status) {\n    const COOLDOWN_MS = 5 * 60 * 1000;\n    const last = context.get('lastRepublishReq') || 0;\n    const now = Date.now();\n    if (now - last >= COOLDOWN_MS) {\n        context.set('lastRepublishReq', now);\n        node.status({fill:'yellow', shape:'ring', text:'status null → republish req'});\n        node.send([null, { payload: { action: 'republish_status' } }]);\n    } else {\n        const remain = Math.ceil((COOLDOWN_MS - (now - last)) / 1000);\n        node.status({fill:'grey', shape:'ring', text:'status null · cooldown ' + remain + 's'});\n    }\n}\nreturn null;\n",
+        "outputs": 2,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
@@ -6245,6 +6245,9 @@
         "wires": [
             [
                 "557083037f168b22"
+            ],
+            [
+                "as3935_cmd_mqtt_out"
             ]
         ]
     },
@@ -9252,5 +9255,23 @@
                 "557083037f168b22"
             ]
         ]
+    },
+    {
+        "id": "as3935_cmd_mqtt_out",
+        "type": "mqtt out",
+        "z": "75e2cac8ab96f556",
+        "name": "AS3935 Cmd → bridge",
+        "topic": "lightning/as3935/cmd",
+        "qos": "0",
+        "retain": false,
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "f4785be9863eab08",
+        "x": 1720,
+        "y": 500,
+        "wires": []
     }
 ]

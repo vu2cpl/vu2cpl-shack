@@ -112,7 +112,7 @@ git push
 | RBN Skimmer Monitor | `f9a0e3ad0e019052` | 32 | `1bcbc2eb8f2124aa` |
 | RPi Fleet Monitor | `d5fec2fea3dd37f4` | 27 | `f8d1f7eb7403a442` |
 | Internet and network monitor | `b05f8c028b368ae9` | 26 | `f10110e00bae2689` |
-| Lightning Antenna Protector | `75e2cac8ab96f556` | 78 | `grp_main` |
+| Lightning Antenna Protector | `75e2cac8ab96f556` | 79 | `grp_main` |
 | All Power Strips | `b76a5310767803b4` | 45 | `vu2cpl_grp_power` / `vu2cpl_grp_energy` |
 | DXCC Tracker | `d110d176c0aad308` | 70 | `grp_dxcc_stats` |
 
@@ -210,6 +210,7 @@ Agent endpoints: `POST /reboot`, `POST /shutdown`
 | `light_jsonl_append_01` | Append Lightning JSONL | Historic event store writer (`nr_lightning_events.jsonl`) |
 | `light_bootstrap_inj_01` | Bootstrap Event Log (startup) | One-shot inject, `onceDelay: 2` |
 | `light_bootstrap_fn_01` | Bootstrap Event Log from JSONL | Rehydrates `flow.event_log` from JSONL tail on restart |
+| `as3935_cmd_mqtt_out` | AS3935 Cmd → bridge | `mqtt out` to `lightning/as3935/cmd`, QoS 0, retain false. Self-heal target wired from `as3935_replay_state` output 2 (auto-requests `republish_status` when `flow.as3935_status` is null, 5-min cooldown). |
 
 ### DXCC Tracker (`d110d176c0aad308`)
 
