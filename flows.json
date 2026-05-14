@@ -9119,7 +9119,7 @@
         "y": 100,
         "wires": [
             [
-                "as3935_tuning_cache_status"
+                "223cb2ce733c5d3f"
             ]
         ]
     },
@@ -9140,7 +9140,7 @@
         "y": 160,
         "wires": [
             [
-                "as3935_tuning_cache_hb"
+                "223cb2ce733c5d3f"
             ]
         ]
     },
@@ -9161,7 +9161,7 @@
         "y": 220,
         "wires": [
             [
-                "as3935_tuning_cache_ack"
+                "223cb2ce733c5d3f"
             ]
         ]
     },
@@ -9273,113 +9273,5 @@
         "x": 1720,
         "y": 500,
         "wires": []
-    },
-    {
-        "id": "as3935_tuning_cache_status",
-        "type": "function",
-        "z": "fe70cfdcdfa19aa4",
-        "name": "Cache /status",
-        "func": "// Pass-through: cache msg.payload to flow.as3935_status so the\n// replay-on-connect function (driven by ui_control) can rehydrate\n// the Control Panel within ~100 ms of any page open.\nflow.set('as3935_status', msg.payload);\nreturn msg;\n",
-        "outputs": 1,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 320,
-        "y": 100,
-        "wires": [
-            [
-                "223cb2ce733c5d3f"
-            ]
-        ]
-    },
-    {
-        "id": "as3935_tuning_cache_hb",
-        "type": "function",
-        "z": "fe70cfdcdfa19aa4",
-        "name": "Cache /hb",
-        "func": "// Pass-through: cache msg.payload to flow.as3935_hb so the\n// replay-on-connect function (driven by ui_control) can rehydrate\n// the Control Panel within ~100 ms of any page open.\nflow.set('as3935_hb', msg.payload);\nreturn msg;\n",
-        "outputs": 1,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 320,
-        "y": 160,
-        "wires": [
-            [
-                "223cb2ce733c5d3f"
-            ]
-        ]
-    },
-    {
-        "id": "as3935_tuning_cache_ack",
-        "type": "function",
-        "z": "fe70cfdcdfa19aa4",
-        "name": "Cache /cmd_ack",
-        "func": "// Pass-through: cache msg.payload to flow.as3935_cmd_ack so the\n// replay-on-connect function (driven by ui_control) can rehydrate\n// the Control Panel within ~100 ms of any page open.\nflow.set('as3935_cmd_ack', msg.payload);\nreturn msg;\n",
-        "outputs": 1,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 320,
-        "y": 220,
-        "wires": [
-            [
-                "223cb2ce733c5d3f"
-            ]
-        ]
-    },
-    {
-        "id": "ui_control_tuning",
-        "type": "ui_control",
-        "z": "fe70cfdcdfa19aa4",
-        "name": "ui_control (tuning)",
-        "events": "all",
-        "x": 160,
-        "y": 300,
-        "wires": [
-            [
-                "as3935_tuning_replay_onconnect"
-            ]
-        ]
-    },
-    {
-        "id": "as3935_tuning_replay_onconnect",
-        "type": "function",
-        "z": "fe70cfdcdfa19aa4",
-        "name": "Replay AS3935 state (on connect)",
-        "func": "// Triggered by ui_control (events:'all'): fire replay when a dashboard\n// client connects, or when the user navigates to the 'AS3935 Tuning'\n// tab. Reads cached MQTT state from flow context and re-emits to the\n// Control Panel with the original msg.topic preserved (the Control Panel\n// dispatches on msg.topic in scope.$watch, no script change needed).\nconst event = msg.payload;\nconst tabName = msg.tab || '';\nconst tabId   = msg.name || '';\nconst ourTab  = tabName === 'AS3935 Tuning' || tabId === 'c55b930b17a24bb1';\n\n// Fire on: connect (page load / refresh) OR tab-change to our tab.\n// Skip: disconnect ('lost'), tab-change to other tabs.\nconst fire = (event === 'connect') || (event === 'change' && ourTab);\nif (!fire) return null;\n\nconst status = flow.get('as3935_status');\nconst hb     = flow.get('as3935_hb');\nconst ack    = flow.get('as3935_cmd_ack');\n\nlet emitted = 0;\nif (status) { node.send({ topic: 'lightning/as3935/status',  payload: status }); emitted++; }\nif (hb)     { node.send({ topic: 'lightning/as3935/hb',      payload: hb     }); emitted++; }\nif (ack)    { node.send({ topic: 'lightning/as3935/cmd/ack', payload: ack    }); emitted++; }\n\nnode.status({fill: emitted ? 'green' : 'grey', shape: 'dot',\n             text: 'replay on ' + event + ' · ' + emitted + ' msg(s)'});\nreturn null;\n",
-        "outputs": 1,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 380,
-        "y": 300,
-        "wires": [
-            [
-                "223cb2ce733c5d3f"
-            ]
-        ]
-    },
-    {
-        "id": "ui_control_lightning",
-        "type": "ui_control",
-        "z": "75e2cac8ab96f556",
-        "name": "ui_control (lightning)",
-        "events": "all",
-        "x": 1240,
-        "y": 540,
-        "wires": [
-            [
-                "as3935_replay_state"
-            ]
-        ]
     }
 ]

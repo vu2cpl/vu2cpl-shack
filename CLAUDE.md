@@ -112,7 +112,7 @@ git push
 | RBN Skimmer Monitor | `f9a0e3ad0e019052` | 32 | `1bcbc2eb8f2124aa` |
 | RPi Fleet Monitor | `d5fec2fea3dd37f4` | 27 | `f8d1f7eb7403a442` |
 | Internet and network monitor | `b05f8c028b368ae9` | 26 | `f10110e00bae2689` |
-| Lightning Antenna Protector | `75e2cac8ab96f556` | 80 | `grp_main` |
+| Lightning Antenna Protector | `75e2cac8ab96f556` | 79 | `grp_main` |
 | All Power Strips | `b76a5310767803b4` | 45 | `vu2cpl_grp_power` / `vu2cpl_grp_energy` |
 | DXCC Tracker | `d110d176c0aad308` | 70 | `grp_dxcc_stats` |
 
@@ -211,7 +211,6 @@ Agent endpoints: `POST /reboot`, `POST /shutdown`
 | `light_bootstrap_inj_01` | Bootstrap Event Log (startup) | One-shot inject, `onceDelay: 2` |
 | `light_bootstrap_fn_01` | Bootstrap Event Log from JSONL | Rehydrates `flow.event_log` from JSONL tail on restart |
 | `as3935_cmd_mqtt_out` | AS3935 Cmd → bridge | `mqtt out` to `lightning/as3935/cmd`, QoS 0, retain false. Self-heal target wired from `as3935_replay_state` output 2 (auto-requests `republish_status` when `flow.as3935_status` is null, 5-min cooldown). |
-| `ui_control_lightning` | ui_control (lightning) | `ui_control events:all` → `as3935_replay_state`. Fires the existing AS3935 cache replay on dashboard client connect / tab change, so the chip rehydrates within ~100 ms of opening the page (instead of waiting for the next 30 s Stats refresh tick). |
 
 ### DXCC Tracker (`d110d176c0aad308`)
 
@@ -253,21 +252,6 @@ Agent endpoints: `POST /reboot`, `POST /shutdown`
 | `a0695975fec84e2c` | Route CMD: HTTP or MQTT | Routes reboot/shutdown |
 | `9e23f3f53a585119` | RPi CMD to MQTT | MQTT fallback |
 | `e272ebba783d8b74` | RPi Fleet Panel | ui_template with confirmation modal |
-
-### AS3935 Tuning (`fe70cfdcdfa19aa4`)
-
-| ID | Name | Role |
-|----|------|------|
-| `987d699a22e8e608` | AS3935 Status | mqtt in `lightning/as3935/status` |
-| `43fb3f2a0132b42b` | AS3935 Heartbeat | mqtt in `lightning/as3935/hb` |
-| `60bafe91a9b39c13` | AS3935 Cmd Ack | mqtt in `lightning/as3935/cmd/ack` |
-| `as3935_tuning_cache_status` | Cache /status | pass-through; `flow.set('as3935_status', payload)` |
-| `as3935_tuning_cache_hb` | Cache /hb | pass-through; `flow.set('as3935_hb', payload)` |
-| `as3935_tuning_cache_ack` | Cache /cmd_ack | pass-through; `flow.set('as3935_cmd_ack', payload)` |
-| `223cb2ce733c5d3f` | AS3935 Control Panel | ui_template; dispatches on msg.topic via `scope.$watch` |
-| `82f732a0dac14945` | AS3935 Cmd | mqtt out `lightning/as3935/cmd` (button actions from panel) |
-| `ui_control_tuning` | ui_control (tuning) | `events:all` → replay-on-connect |
-| `as3935_tuning_replay_onconnect` | Replay AS3935 state (on connect) | reads 3 caches, emits to Control Panel on dashboard connect or tab-change-to-`AS3935 Tuning`. Instant-on rehydration pattern (TODO #16). |
 
 ---
 
@@ -644,7 +628,6 @@ claude
 | 13 | Lightning dashboard: AS3935 card clutter — "Last seen" + Disturber/Noise status chip both repeat the local timestamp. | **Done 2026-05-14** — Master Dashboard (`557083037f168b22`) now shows `a35time` as a relative age ("4s ago" / "1h 14m ago" / etc., auto-refreshing every 30 s) with the absolute IST timestamp moved to the hover tooltip. Disturber/Noise chip text dropped the duplicate timestamp (`'⚠ Disturber  ' + d.timestamp` → `'⚠ Disturber'`). Relative-age display still blanks on Node-RED + browser restart until the next AS3935 event — proper fix tracked as TODO #15. |
 | 14 | Verify Tasmota IST rollover happened cleanly at 00:00 IST on 2026-05-15. Check on the 16A Energy Monitor dashboard tile (or via `mosquitto_pub -h 192.168.1.169 -t cmnd/16Amasterswitch/Status -m "10"`): `ENERGY.Today` should be near zero in the early hours, `ENERGY.Yesterday` should equal whatever `Today` reached by 23:59 IST on 2026-05-14. If `Yesterday` instead matches the pre-fix late-morning value and `Today` rolled at ~05:30 IST again, the timezone setting didn't survive a reboot or the Tasmota firmware version handles rollover differently than expected. | Pending |
 | 15 | AS3935 "Last seen" survives restart. After TODO #13, `LAST SEEN` shows relative age but still blanks on Node-RED restart + browser refresh until the next disturber/noise/strike — because nothing on disk has the right shape to bootstrap from. JSONL records are `type: warn\|disconnect\|reconnect` (per the log writers), not `event: disturber\|noise\|strike`, so they can't drive `a35time` directly. **Real fix:** have the AS3935 ESP32 bridge (in [`vu2cpl-as3935-bridge`](https://github.com/vu2cpl/vu2cpl-as3935-bridge)) publish a **retained** `lightning/as3935/last_event` topic with `{event, distance, energy, ts_epoch_ms}` whenever it emits a status/strike. Master Dashboard subscribes to it; on Node-RED restart the broker replays the retained value and `LAST SEEN` rehydrates instantly. Larger fix than the dashboard-only declutter because it spans the ESP32 firmware. | Pending |
-| 16 | Dashboard rehydration audit — apply the **`ui_control` + cache + replay** pattern to all remaining tabs. Pattern established 2026-05-14 on AS3935 Tuning + Lightning chip (`ui_control_tuning`, `ui_control_lightning`). Other tabs likely need it for any widget whose data source is low-frequency / event-driven (status readouts, configs, "last X" displays — they show empty until the next event). High-frequency widgets (LP-700 SWR, FlexRadio meters, Solar polled every 5–15 min with own caching) probably need nothing — audit per tab. Goal: any dashboard page populates within ~100 ms of opening, every time, with no hard-refresh dance. | Pending |
 
 ---
 

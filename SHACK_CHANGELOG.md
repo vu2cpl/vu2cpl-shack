@@ -3856,47 +3856,6 @@ firmware change.
 to `as3935_mqtt_status` for diagnostics during this session, delete
 it (it's not part of the committed flow).
 
-### Dashboard instant-on — `ui_control` + cache + replay pattern (AS3935 Tuning + Lightning chip)
-
-**Tabs:** AS3935 Tuning (`fe70cfdcdfa19aa4`), Lightning Antenna Protector (`75e2cac8ab96f556`).
-**Added:** 6 nodes total. **Rewired:** 3 mqtt-in destinations on the Tuning tab.
-
-**Problem this fixes (broader than the AS3935 chip self-heal in the previous commit).** Until now, opening any dashboard page required either a Node-RED restart + ~30 s wait for the next `Stats refresh` tick, or a manual `Republish Status` click, or a browser hard-refresh (`Cmd+Shift+R`) — depending on the widget. The root cause is consistent across widgets:
-
-1. MQTT-in nodes deliver each message once. If the browser isn't open when the message arrives, the message goes nowhere visible.
-2. `resendOnRefresh: true` on `ui_template` widgets only stores the *last* message. When a widget has multiple message types feeding it (e.g. AS3935 Control Panel listens to `/status`, `/hb`, `/cmd_ack`), the stored message is almost always the most frequent type (`/hb` every 30 s), so refreshing replays only that — and the slow-changing payloads (`/status`: FW, IP, calib) never appear until a fresh publish.
-
-This is not a Tuning-tab-specific problem. It's a dashboard-wide pattern that needs a dashboard-wide solution.
-
-**The pattern, established here.** Three pieces, applied per widget that needs it:
-
-1. **Cache** every incoming MQTT (or HTTP) payload to flow context as it arrives. Use a tiny pass-through function inserted between the mqtt-in and the widget:
-   ```js
-   flow.set('cache_key', msg.payload);
-   return msg;
-   ```
-2. **`ui_control` node** (part of `node-red-dashboard 3.6.6`, already installed) with `events:'all'`. It emits a message on its output whenever a dashboard client connects, disconnects, or changes tab. `msg.payload` is `'connect'` / `'lost'` / `'change'`; on tab change `msg.tab` and `msg.name` carry the destination tab name/ID.
-3. **Replay function** triggered by `ui_control` — reads all relevant caches from flow context and re-emits them to the widget with the original `msg.topic` preserved. Widget's existing `scope.$watch('msg', ...)` consumes them with no script changes.
-
-**Why `ui_control` and not a fast tick.** A 5 s replay tick would also meet the "few seconds" bar, but it pumps the dashboard widget continuously (17 k messages/day per widget) even when no client is connected. `ui_control` fires only on actual user events — page open, tab switch. Result: <100 ms response when the user actually needs it, zero background work otherwise.
-
-**Implementation today.**
-
-*AS3935 Tuning tab* — full pattern, 5 new nodes:
-- `as3935_tuning_cache_status` — pass-through, caches `/status` payload to `flow.as3935_status`.
-- `as3935_tuning_cache_hb` — same for `/hb` → `flow.as3935_hb`.
-- `as3935_tuning_cache_ack` — same for `/cmd_ack` → `flow.as3935_cmd_ack`.
-- `ui_control_tuning` — `events:'all'`.
-- `as3935_tuning_replay_onconnect` — fires on `payload==='connect'` (page load/refresh) OR `payload==='change' && (msg.tab==='AS3935 Tuning' || msg.name==='c55b930b17a24bb1')`. Reads three caches, emits three messages to Control Panel with original topics preserved (`lightning/as3935/status`, `/hb`, `/cmd/ack`). Node status reports the count: `replay on connect · 3 msg(s)`. Skips on `'lost'` and tab-change-to-other-tab.
-- Wire reroute: the three mqtt-in nodes (`987d699a22e8e608`, `43fb3f2a0132b42b`, `60bafe91a9b39c13`) now wire to their cache function instead of directly to the Control Panel. The caches forward to the Control Panel — net flow is unchanged for live MQTT traffic, only the side-effect of population is added.
-
-*Lightning Antenna Protector tab* — partial pattern, 1 new node:
-- `ui_control_lightning` — wired directly to the existing `as3935_replay_state` function. That function already has the cache (`flow.as3935_status`, `flow.as3935_hb`) and replay logic (added in earlier commits), plus the self-heal added in the previous commit. The new `ui_control` just adds an instant-on trigger on top of the existing 30 s Stats tick — so the Lightning tab AS3935 chip rehydrates within ~100 ms of opening the dashboard, not within 30 s.
-
-**Net effect.** Opening any of these tabs cold (fresh browser tab, after a restart, after a long idle) now populates within ~100 ms. No hard-refresh, no `republish_status` click, no 30 s wait.
-
-**Audit follow-up.** TODO #16 in CLAUDE.md tracks rolling out the same pattern to the remaining tabs (SPE, Rotor, FlexRadio, LP-700, Solar, RBN Skimmer, RPi Fleet, Internet/network, Power Strips, DXCC Tracker). High-frequency widgets (LP-700 SWR, FlexRadio meters) probably need nothing — their data flows constantly. Low-frequency / event-driven widgets need the pattern.
-
 ---
 
 ## Standard Commit Sequence (reminder)
