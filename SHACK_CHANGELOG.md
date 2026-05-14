@@ -3952,6 +3952,35 @@ just applied to widgets that already had a replay tick and just
 needed it sped up. Worth a separate audit pass for tabs without any
 replay infrastructure yet — TODO #16.
 
+### AS3935 card: chip colour + raw distance/energy on disturber & noise
+
+**Tab:** Lightning Antenna Protector (`75e2cac8ab96f556`)
+**Node:** Master Dashboard ui_template (`557083037f168b22`).
+
+Two small follow-ups to the AS3935 card behaviour:
+
+1. **Chip text colour now matches event type.** Previously the
+   `as3935_status` disturber/noise branches set `evtEl.textContent`
+   but didn't touch `evtEl.style.color`, so the chip text inherited
+   whatever colour the last `✓ READY` paint left it (green) — even
+   when displaying `⚠ Disturber` / `📡 Noise`. Now:
+   - `⚠ Disturber` → `var(--amber)` (matches the LED colour for the same event)
+   - `📡 Noise` → `var(--muted)` (matches its LED colour)
+   The `✓ READY` / `⚠ CALIB?` paint logic was already correct and is unchanged.
+
+2. **Raw distance/energy shown on disturber/noise too.** Previously
+   forced to `—` because the AS3935 chip's distance value for
+   non-lightning events isn't physically meaningful. But the raw
+   value (which can be `63` = "out of range", or any other value
+   the chip's detection algorithm outputs) is useful for tuning
+   (`AS3935 Control Panel` calibration work) and for understanding
+   why a particular event was classified the way it was. Now both
+   branches show `d.distance` / `d.energy` if present, falling back
+   to `—` only when the bridge omits the field.
+
+Strike branch (real lightning) was already correct on both counts
+— left unchanged.
+
 ---
 
 ## Standard Commit Sequence (reminder)
