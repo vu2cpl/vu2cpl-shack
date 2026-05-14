@@ -3981,6 +3981,60 @@ Two small follow-ups to the AS3935 card behaviour:
 Strike branch (real lightning) was already correct on both counts
 — left unchanged.
 
+### AS3935 LAST SEEN: dashboard side of TODO #15 (firmware to follow)
+
+**Tab:** Lightning Antenna Protector (`75e2cac8ab96f556`)
+**Added:** 1 mqtt-in node. **Augmented:** Format AS3935 State, Replay
+AS3935 State, Master Dashboard ui_template.
+
+Wires up the Node-RED side of the "LAST SEEN survives restart" plan
+from TODO #15. The bridge firmware change in
+[`vu2cpl-as3935-bridge`](https://github.com/vu2cpl/vu2cpl-as3935-bridge)
+will publish a retained `lightning/as3935/last_event` topic with
+`{event, distance, energy, ts_epoch_ms}` on every disturber / noise /
+lightning event. This commit prepares the dashboard side; until
+firmware ships, the new mqtt-in is silent.
+
+**Changes:**
+
+- **New** `as3935_last_event_mqtt_in` — mqtt in on
+  `lightning/as3935/last_event`, QoS 1, JSON, same broker as the rest.
+  Wires into the existing `as3935_format_state` function.
+- **`as3935_format_state`** augmented with a third `else if` branch:
+  matches topics ending in `/last_event`, caches to
+  `flow.as3935_last_event`, emits
+  `{type:'as3935_last_event', event, distance, energy, ts_epoch_ms}`
+  to Master Dashboard. Node status reports `last_event: <event>`.
+- **`as3935_replay_state`** augmented to also replay the cached
+  `last_event` on every 10 s Stats refresh tick. Lives alongside the
+  existing status + hb replay and self-heal cmd logic from
+  commits `83f4b20` and earlier.
+- **Master Dashboard ui_template** — new handler for
+  `d.type === 'as3935_last_event'`. Seeds `as3935LastTs = d.ts_epoch_ms`
+  and calls `paintAS3935Age()` + starts the 30 s ticker. Inserted
+  before the existing `as3935_status` handler. Handler is no-op when
+  `d.ts_epoch_ms` is missing.
+
+**Effect (once firmware ships):**
+
+- Node-RED restart → broker replays retained last_event immediately
+  to the new mqtt-in → `as3935_format_state` caches + emits →
+  Master Dashboard seeds `as3935LastTs` and paints `LAST SEEN` with
+  correct relative age within ~100 ms of subscribe.
+- Browser refresh / new tab → either the retained payload is
+  replayed (resendOnRefresh on dashboard widget) OR the 10 s replay
+  tick re-emits within ≤10 s.
+- Combined: `LAST SEEN` is correct everywhere, always, no need to
+  wait for a live disturber/noise/strike.
+
+**Until firmware ships.** The new mqtt-in is a quiet subscriber on a
+topic nobody publishes to. `as3935_format_state` never enters the
+new branch. Behaviour unchanged from this commit's predecessor.
+
+**Master Dashboard message types** updated in CLAUDE.md with the new
+`{type:'as3935_last_event', event, distance, energy, ts_epoch_ms}`
+shape.
+
 ---
 
 ## Standard Commit Sequence (reminder)
