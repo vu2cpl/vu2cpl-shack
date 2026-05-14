@@ -9119,7 +9119,7 @@
         "y": 100,
         "wires": [
             [
-                "223cb2ce733c5d3f"
+                "as3935_tuning_cache_status"
             ]
         ]
     },
@@ -9140,7 +9140,7 @@
         "y": 160,
         "wires": [
             [
-                "223cb2ce733c5d3f"
+                "as3935_tuning_cache_hb"
             ]
         ]
     },
@@ -9161,7 +9161,7 @@
         "y": 220,
         "wires": [
             [
-                "223cb2ce733c5d3f"
+                "as3935_tuning_cache_ack"
             ]
         ]
     },
@@ -9273,5 +9273,110 @@
         "x": 1720,
         "y": 500,
         "wires": []
+    },
+    {
+        "id": "as3935_tuning_cache_status",
+        "type": "function",
+        "z": "fe70cfdcdfa19aa4",
+        "name": "Cache /status",
+        "func": "// Pass-through: cache msg.payload to flow.as3935_status so the\n// 5s replay tick can rehydrate the Control Panel within ~5s\n// of any page open (browser refresh or fresh tab).\nflow.set('as3935_status', msg.payload);\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 320,
+        "y": 100,
+        "wires": [
+            [
+                "223cb2ce733c5d3f"
+            ]
+        ]
+    },
+    {
+        "id": "as3935_tuning_cache_hb",
+        "type": "function",
+        "z": "fe70cfdcdfa19aa4",
+        "name": "Cache /hb",
+        "func": "// Pass-through: cache msg.payload to flow.as3935_hb so the\n// 5s replay tick can rehydrate the Control Panel within ~5s\n// of any page open (browser refresh or fresh tab).\nflow.set('as3935_hb', msg.payload);\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 320,
+        "y": 160,
+        "wires": [
+            [
+                "223cb2ce733c5d3f"
+            ]
+        ]
+    },
+    {
+        "id": "as3935_tuning_cache_ack",
+        "type": "function",
+        "z": "fe70cfdcdfa19aa4",
+        "name": "Cache /cmd_ack",
+        "func": "// Pass-through: cache msg.payload to flow.as3935_cmd_ack so the\n// 5s replay tick can rehydrate the Control Panel within ~5s\n// of any page open (browser refresh or fresh tab).\nflow.set('as3935_cmd_ack', msg.payload);\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 320,
+        "y": 220,
+        "wires": [
+            [
+                "223cb2ce733c5d3f"
+            ]
+        ]
+    },
+    {
+        "id": "as3935_tuning_replay_tick",
+        "type": "inject",
+        "z": "fe70cfdcdfa19aa4",
+        "name": "Replay every 5s",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "5",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 160,
+        "y": 300,
+        "wires": [
+            [
+                "as3935_tuning_replay_fn"
+            ]
+        ]
+    },
+    {
+        "id": "as3935_tuning_replay_fn",
+        "type": "function",
+        "z": "fe70cfdcdfa19aa4",
+        "name": "Replay AS3935 state (5s tick)",
+        "func": "// Fires every 5s from the replay tick inject. Reads cached MQTT state\n// from flow context and re-emits to the Control Panel with original\n// msg.topic preserved (the Control Panel dispatches on msg.topic in\n// scope.$watch, no template change needed).\n//\n// Worst-case rehydration after opening the dashboard cold: 5s.\n// Background traffic when idle (no clients connected): same 5s tick,\n// emits up to 3 small JSON messages to the ui_template -- trivial load,\n// node-red-dashboard handles fan-out efficiently.\n//\n// Why a periodic tick instead of node-red-dashboard's ui_control event\n// node: ui_control isn't shipped in node-red-dashboard 3.6.6 (confirmed\n// by --force reinstall, files genuinely absent). Tick is the workable\n// substitute until either Dashboard 1 ships ui_control again or we\n// migrate widgets to Dashboard 2 (FlowFuse).\nconst status = flow.get('as3935_status');\nconst hb     = flow.get('as3935_hb');\nconst ack    = flow.get('as3935_cmd_ack');\n\nlet emitted = 0;\nif (status) { node.send({ topic: 'lightning/as3935/status',  payload: status }); emitted++; }\nif (hb)     { node.send({ topic: 'lightning/as3935/hb',      payload: hb     }); emitted++; }\nif (ack)    { node.send({ topic: 'lightning/as3935/cmd/ack', payload: ack    }); emitted++; }\n\nnode.status({fill: emitted ? 'green' : 'grey', shape: 'dot',\n             text: 'replay tick · ' + emitted + ' msg(s)'});\nreturn null;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 380,
+        "y": 300,
+        "wires": [
+            [
+                "223cb2ce733c5d3f"
+            ]
+        ]
     }
 ]

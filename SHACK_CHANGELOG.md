@@ -3856,6 +3856,76 @@ firmware change.
 to `as3935_mqtt_status` for diagnostics during this session, delete
 it (it's not part of the committed flow).
 
+### AS3935 Tuning — Control Panel rehydrates within 5 s of opening the page
+
+**Tab:** AS3935 Tuning (`fe70cfdcdfa19aa4`)
+**Added:** 5 nodes. **Rewired:** 3 mqtt-in destinations.
+
+**Problem.** Opening the AS3935 Tuning dashboard page in a fresh
+browser tab showed empty `/status` data (`FW —`, `IP ?`, `Calib:
+TRCO=? · SRCO=?`) until the operator manually clicked `Republish
+Status`. The Control Panel's three mqtt-in nodes (`/status`, `/hb`,
+`/cmd_ack`) wired directly to the ui_template; `resendOnRefresh`
+only stores the *last* message, which is always an `/hb` (publishes
+every 30 s), so refreshes never replayed `/status` (publishes only
+on bridge boot / settings change / `republish_status`).
+
+**Why this is the 2nd attempt — and why a 5 s tick, not
+`ui_control`.** First attempt (commit `6664286`, reverted in
+`5e0f467`) used `node-red-dashboard`'s `ui_control` node, which emits
+a message on client connect / tab change. Would have given <100 ms
+rehydration. Failed because `ui_control` is **not shipped in this
+`node-red-dashboard 3.6.6` install** — confirmed by
+`npm install node-red-dashboard@3.6.6 --force`, the
+`nodes/ui_control.html` and `nodes/ui_control.js` files are genuinely
+absent from the package. Whether that's a 3.6.6 packaging regression
+or specific to this install isn't worth chasing; the fast-tick
+substitute works and stays simple.
+
+**Fix — cache + 5 s replay tick.**
+
+- Three pass-through cache functions inserted between the mqtt-ins
+  and the Control Panel:
+  - `as3935_tuning_cache_status` → `flow.as3935_status`
+  - `as3935_tuning_cache_hb` → `flow.as3935_hb`
+  - `as3935_tuning_cache_ack` → `flow.as3935_cmd_ack`
+  Each is two lines: `flow.set(key, msg.payload); return msg;`. Live
+  MQTT traffic still reaches the Control Panel unchanged.
+
+- `as3935_tuning_replay_tick` inject, `repeat: 5`, `onceDelay: 1`.
+
+- `as3935_tuning_replay_fn` reads the three caches and re-emits
+  whatever's populated to the Control Panel with original topics
+  preserved (`lightning/as3935/status`, `/hb`, `/cmd/ack`). The
+  Control Panel's existing `scope.$watch('msg', ...)` consumes them
+  with no template change. Node status reports
+  `replay tick · N msg(s)` for visibility.
+
+**Effect.** Opening the AS3935 Tuning dashboard tab cold (browser
+restart, fresh tab, new client) — Control Panel fully populates
+within ≤5 s. No `Republish Status` click. No browser hard-refresh.
+
+**Background load.** 5 s tick = ~17 k internal Node-RED messages/day
+per cache populated, each a tiny JSON object. Trivial; no measurable
+CPU on the Pi.
+
+**Audit follow-up (TODO #16 in CLAUDE.md, renumbered from the
+reverted attempt).** Same pattern applies to any other widget that
+has the same "infrequent publishes + multiple message types" shape.
+Most likely candidates are tabs with status readouts and config
+displays (e.g. RPi Fleet Monitor, FlexRadio panel — if those have
+similar gaps, treat them the same way). High-frequency widgets
+(LP-700 SWR, FlexRadio meters polled live) probably need nothing —
+their data flows constantly.
+
+**Side note.** `node-red-contrib-mdashboard 2.19.4-beta` is also
+loaded on the Pi (operator is evaluating it). Mdashboard's nodes use
+`mui_*` prefix — different namespace from Dashboard 1's `ui_*` — and
+the existing flow uses zero `mui_*` types, so the two coexist
+without conflict. Mdashboard does **not** cause the `ui_control` gap;
+that's a Dashboard 1 packaging issue independent of mdashboard's
+presence.
+
 ---
 
 ## Standard Commit Sequence (reminder)

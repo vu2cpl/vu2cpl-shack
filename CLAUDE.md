@@ -253,6 +253,21 @@ Agent endpoints: `POST /reboot`, `POST /shutdown`
 | `9e23f3f53a585119` | RPi CMD to MQTT | MQTT fallback |
 | `e272ebba783d8b74` | RPi Fleet Panel | ui_template with confirmation modal |
 
+### AS3935 Tuning (`fe70cfdcdfa19aa4`)
+
+| ID | Name | Role |
+|----|------|------|
+| `987d699a22e8e608` | AS3935 Status | mqtt in `lightning/as3935/status` |
+| `43fb3f2a0132b42b` | AS3935 Heartbeat | mqtt in `lightning/as3935/hb` |
+| `60bafe91a9b39c13` | AS3935 Cmd Ack | mqtt in `lightning/as3935/cmd/ack` |
+| `as3935_tuning_cache_status` | Cache /status | pass-through; `flow.set('as3935_status', payload)` |
+| `as3935_tuning_cache_hb` | Cache /hb | pass-through; `flow.set('as3935_hb', payload)` |
+| `as3935_tuning_cache_ack` | Cache /cmd_ack | pass-through; `flow.set('as3935_cmd_ack', payload)` |
+| `223cb2ce733c5d3f` | AS3935 Control Panel | ui_template; dispatches on msg.topic via `scope.$watch` |
+| `82f732a0dac14945` | AS3935 Cmd | mqtt out `lightning/as3935/cmd` |
+| `as3935_tuning_replay_tick` | Replay every 5s | inject `repeat:5, onceDelay:1` |
+| `as3935_tuning_replay_fn` | Replay AS3935 state (5s tick) | reads 3 caches, emits to Control Panel with original topics preserved. Worst-case page-open rehydration: 5 s. Substitute for `ui_control`-based instant-on (TODO #16) — `ui_control` is **not shipped in `node-red-dashboard 3.6.6`** (confirmed by `--force` reinstall, files genuinely absent). |
+
 ---
 
 ## HTTP ENDPOINTS
@@ -628,6 +643,7 @@ claude
 | 13 | Lightning dashboard: AS3935 card clutter — "Last seen" + Disturber/Noise status chip both repeat the local timestamp. | **Done 2026-05-14** — Master Dashboard (`557083037f168b22`) now shows `a35time` as a relative age ("4s ago" / "1h 14m ago" / etc., auto-refreshing every 30 s) with the absolute IST timestamp moved to the hover tooltip. Disturber/Noise chip text dropped the duplicate timestamp (`'⚠ Disturber  ' + d.timestamp` → `'⚠ Disturber'`). Relative-age display still blanks on Node-RED + browser restart until the next AS3935 event — proper fix tracked as TODO #15. |
 | 14 | Verify Tasmota IST rollover happened cleanly at 00:00 IST on 2026-05-15. Check on the 16A Energy Monitor dashboard tile (or via `mosquitto_pub -h 192.168.1.169 -t cmnd/16Amasterswitch/Status -m "10"`): `ENERGY.Today` should be near zero in the early hours, `ENERGY.Yesterday` should equal whatever `Today` reached by 23:59 IST on 2026-05-14. If `Yesterday` instead matches the pre-fix late-morning value and `Today` rolled at ~05:30 IST again, the timezone setting didn't survive a reboot or the Tasmota firmware version handles rollover differently than expected. | Pending |
 | 15 | AS3935 "Last seen" survives restart. After TODO #13, `LAST SEEN` shows relative age but still blanks on Node-RED restart + browser refresh until the next disturber/noise/strike — because nothing on disk has the right shape to bootstrap from. JSONL records are `type: warn\|disconnect\|reconnect` (per the log writers), not `event: disturber\|noise\|strike`, so they can't drive `a35time` directly. **Real fix:** have the AS3935 ESP32 bridge (in [`vu2cpl-as3935-bridge`](https://github.com/vu2cpl/vu2cpl-as3935-bridge)) publish a **retained** `lightning/as3935/last_event` topic with `{event, distance, energy, ts_epoch_ms}` whenever it emits a status/strike. Master Dashboard subscribes to it; on Node-RED restart the broker replays the retained value and `LAST SEEN` rehydrates instantly. Larger fix than the dashboard-only declutter because it spans the ESP32 firmware. | Pending |
+| 16 | Dashboard rehydration audit — apply cache + 5s replay tick pattern (or migrate to Dashboard 2's equivalent if/when that happens) to all remaining tabs. Pattern established 2026-05-14 on AS3935 Tuning (`as3935_tuning_cache_*` + `as3935_tuning_replay_tick` + `as3935_tuning_replay_fn`). Originally tried `ui_control` for instant-on (<100 ms) but it's not shipped in `node-red-dashboard 3.6.6` (confirmed by `--force` reinstall — files genuinely absent). Fast-tick is the practical substitute: ≤5 s rehydration, trivial load. Other tabs likely need this for any widget whose data source is low-frequency / event-driven (status readouts, configs, "last X" displays); high-frequency widgets (LP-700 SWR, FlexRadio meters) probably need nothing — audit per tab. | Pending |
 
 ---
 
