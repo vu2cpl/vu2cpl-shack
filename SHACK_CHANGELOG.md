@@ -3577,6 +3577,32 @@ No Node-RED code change in this commit. Documentation only.
 
 ---
 
+## 2026-05-14
+
+### Lightning dashboard — label Event Log times as IST
+
+**Tab:** Lightning Antenna Protector (`75e2cac8ab96f556`)
+**Node:** Master Dashboard ui_template (`557083037f168b22`)
+
+Event Log header changed from `Event Log` to
+`Event Log · times in IST (UTC+5:30)`. No code path or logging
+behaviour changed — purely a UI label so the timestamps in each
+log row (which come from the AS3935 bridge's local-formatted
+`timestamp` field, falling back to `new Date().toLocaleString()` on
+the Pi) are unambiguously read as Asia/Kolkata local time and not
+UTC.
+
+The on-disk JSONL historic store (`nr_lightning_events.jsonl`,
+added 2026-05-13) is unaffected — it stays UTC ISO-8601 via
+`new Date().toISOString()` for archival use. Dashboard = IST,
+archive = UTC.
+
+Follow-up tracked as TODO #13 in CLAUDE.md: the AS3935 Local Sensor
+card duplicates the same local timestamp in both the "Last seen"
+field and the Disturber / Noise status chip — declutter pending.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:

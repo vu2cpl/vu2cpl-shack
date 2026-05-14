@@ -611,6 +611,7 @@ claude
 | 10 | DXCC: verify Club Log API ban status + re-enable nodes if lifted | **Closed 2026-05-11** — ban lifted (confirmed by operator + verified live: `nr_dxcc_seed.json` `updated` field shows 2026-05-11T03:27:47Z, written by the daily 02:00 cron). `once: false` on the startup injects retained as defence-in-depth: flipping to `once: true` would mean +1 API call per Deploy (not just per Node-RED restart), so 10 Deploys/day = 11 calls instead of 1. Daily cron + `POST /dxcc/refresh` HTTP endpoint cover all real refresh needs. |
 | 11 | DXCC: verify daily 02:00 inject wired to Build Club Log API Request | **Verified 2026-05-10** — the cron `00 02 * * *` is correctly wired to `Build Club Log API Request`. The `once: false` on `Load Club Log on startup` + `Retry Club Log (90s)` is **intentional** (anti-ban; see TODO #10). Bootstrap-sets-dxccReady fix (also 2026-05-10) makes startup independent of any Club Log API call. |
 | 12 | Mac SwiftUI app: scaffold not yet started | Pending |
+| 13 | Lightning dashboard: AS3935 card clutter — "Last seen" + Disturber/Noise status chip both repeat the local timestamp. Declutter: keep one timestamp on the card (preferred: relative age like "12s ago" in the chip, hide raw `timestamp` from `a35time`), and label the surviving absolute time as IST to match the Event Log header convention (2026-05-14). | Pending |
 
 ---
 
