@@ -146,6 +146,15 @@ git push
 | | POWER3-4 | Spare relays |
 | `16Amasterswitch` | POWER1 | 16A mains (energy monitoring, TelePeriod=30s) |
 
+All 5 devices: `Timezone +05:30` (IST), set 2026-05-14. Required so
+`ENERGY.Today` on `16Amasterswitch` rolls over at local midnight (not
+00:00 UTC = 05:30 IST). Set per device via web Console
+(`Timezone 5:30`) or MQTT
+(`mosquitto_pub -h 192.168.1.169 -t cmnd/<device>/Timezone -m "5:30"`);
+persists across reboots. Verify with empty-payload read:
+`mosquitto_pub … -t cmnd/<device>/Timezone -n` → reply on
+`stat/<device>/RESULT`.
+
 ### USB Serial Devices (stable /dev/serial/by-id paths)
 
 | Device | Path | Baud |

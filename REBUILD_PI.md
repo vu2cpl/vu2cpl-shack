@@ -447,6 +447,30 @@ The 5 devices to check:
 `powerstrip1`, `powerstrip2`, `powerstrip3`, `4relayboard`,
 `16Amasterswitch`.
 
+**Timezone:** all 5 devices run `Timezone +05:30` (IST). If you ever
+reflash a Tasmota device, the default reverts to UTC, which makes
+`ENERGY.Today` on `16Amasterswitch` roll over at 05:30 IST (00:00
+UTC) instead of local midnight. Restore with:
+
+```bash
+for t in powerstrip1 powerstrip2 powerstrip3 4relayboard 16Amasterswitch; do
+  mosquitto_pub -h 192.168.1.169 -t "cmnd/$t/Timezone" -m "5:30"
+done
+```
+
+Verify (empty payload = read):
+
+```bash
+mosquitto_sub -h 192.168.1.169 -t 'stat/+/RESULT' -v -W 8 &
+sleep 0.3
+for t in powerstrip1 powerstrip2 powerstrip3 4relayboard 16Amasterswitch; do
+  mosquitto_pub -h 192.168.1.169 -t "cmnd/$t/Timezone" -n
+done
+wait
+```
+
+Each reply should be `{"Timezone":"+05:30"}`.
+
 ---
 
 ## Step 12 — Final verification

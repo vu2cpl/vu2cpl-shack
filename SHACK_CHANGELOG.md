@@ -3601,6 +3601,42 @@ Follow-up tracked as TODO #13 in CLAUDE.md: the AS3935 Local Sensor
 card duplicates the same local timestamp in both the "Last seen"
 field and the Disturber / Noise status chip — declutter pending.
 
+### Tasmota — set Timezone to IST (+05:30) on all 5 devices
+
+**Devices:** `powerstrip1`, `powerstrip2`, `powerstrip3`,
+`4relayboard`, `16Amasterswitch`.
+
+The 16A master switch's `ENERGY.Today` counter on the dashboard was
+resetting at 05:30 IST instead of local midnight, because the
+Tasmota device was running on the firmware default `Timezone 0`
+(UTC). `Today` is computed and rolled over inside Tasmota itself
+based on its local-clock date — Node-RED just forwards the value
+(`Parse 16Amasterswitch` → `Energy Aggregator` → `16A Energy
+Monitor`). No flow change needed; fix is per-device:
+
+```bash
+for t in powerstrip1 powerstrip2 powerstrip3 4relayboard 16Amasterswitch; do
+  mosquitto_pub -h 192.168.1.169 -t "cmnd/$t/Timezone" -m "5:30"
+done
+```
+
+Verified all 5 with empty-payload read-back — each replied
+`{"Timezone":"+05:30"}` on its `stat/<device>/RESULT` topic. Setting
+persists in Tasmota NVS across reboots.
+
+**One-time anomaly for today (2026-05-14):** the timezone change
+landed at ~15:00 IST. The current `Today` counter (1.120 kWh at the
+moment of verification) reflects accumulation since the *last*
+rollover, which happened at 00:00 UTC = 05:30 IST today — so it's
+only 9.5 h of data, not a full 24 h. The first clean IST midnight-
+to-midnight cycle begins at 00:00 IST on 2026-05-15.
+
+Documented in CLAUDE.md Hardware Map (Tasmota Power Devices section)
+and in REBUILD_PI.md Step 11 so a fresh Tasmota reflash doesn't
+silently revert to UTC. The other 4 devices don't have energy
+monitoring, but their internal `Timer` actions and log timestamps
+would have been 5.5 h off — now consistent across the shack.
+
 ---
 
 ## Standard Commit Sequence (reminder)
