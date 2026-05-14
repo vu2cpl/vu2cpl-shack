@@ -321,6 +321,7 @@ All data to Master Dashboard (`557083037f168b22`) uses typed payloads:
 {type: 'stat_ant',     on: bool}
 {type: 'stat_radio',   on: bool}
 {type: 'as3935_status', event, timestamp}
+{type: 'cape',         cape: <J/kg>, om_state: 'cold'|'lit'|'severe'}
 {type: 'clear'}
 {type: 'log',          html: '...'}
 // Stats: no type field, has threshold_km

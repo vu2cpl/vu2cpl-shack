@@ -3740,6 +3740,55 @@ even though the `recordAS3935Event()` helper now gets the element
 itself. Unused variable; harmless; left as-is to keep this diff
 focused on the visible change.
 
+### Lightning dashboard — Atmospheric CAPE tile + AS3935 chip one-liner
+
+**Tab:** Lightning Antenna Protector (`75e2cac8ab96f556`)
+**Nodes:** Master Dashboard ui_template (`557083037f168b22`),
+Parse Open-Meteo → Strike (`593f22a507b46335`).
+
+**Atmospheric CAPE tile.** The OM parser already computed `cape` and
+derived `om_state` (`cold` / `lit` / `severe`) for the
+distance-graded disconnect matrix, but nothing on the dashboard
+showed the actual number. New tile under the Reconnect Timer in
+`#threshBox`:
+
+- Title: `Atmospheric CAPE`
+- Value: `<rounded J/kg>` (e.g. `1842 J/kg`), font-size 28 px
+  (matches Disconnect Threshold styling)
+- Colour mapping driven by `om_state`, not raw CAPE — because
+  `om_state` already accounts for the WMO-thunderstorm gate
+  (CAPE ≥ 800 alone isn't "lit" without a thunderstorm WMO code):
+  - `cold`   → green (`--green`)
+  - `lit`    → amber (`--amber`)
+  - `severe` → red   (`--red`)
+
+Plumbing: Parse Open-Meteo's output 2 (the "always emit" dashboard
+log path) now sends two messages instead of one — `[logMsg, capeMsg]`
+where `capeMsg.payload = {type:'cape', cape, om_state}`. Node-RED
+dispatches both sequentially to the Master Dashboard. New
+`paintCape(cape, state)` helper + `{type:'cape'}` handler in
+`scope.$watch`. Updates every 5 min (OM poll cadence). On boot,
+tile shows `— J/kg` muted until first OM response (~5 s after Init
+Defaults).
+
+**AS3935 chip one-line + title rename.** The status chip
+(`✓ READY · NF=4 · UP 6H 50M · IRQ=24`) wrapped to two lines because
+the chip span allowed text wrapping and the header title
+(`AS3935 LOCAL LIGHTNING SENSOR`) ate too much of the residual flex
+width. Two small fixes:
+
+- `white-space: nowrap` on `#as3935Evt` inline style — chip text now
+  stays on one line.
+- Header title text changed: `AS3935 Local Lightning Sensor` →
+  `AS3935 Sensor`. The parent CSS `text-transform: uppercase`
+  renders it `AS3935 SENSOR`, freeing ~16 chars of horizontal
+  space for the chip. No CSS changes — the title change alone
+  combined with the chip nowrap is enough at the current card
+  width.
+
+CLAUDE.md "Master Dashboard message types" list updated with the
+new `{type:'cape', cape, om_state}` payload shape.
+
 ---
 
 ## Standard Commit Sequence (reminder)
