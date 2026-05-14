@@ -5225,13 +5225,13 @@
         "id": "77ec1b216f0c061b",
         "type": "inject",
         "z": "75e2cac8ab96f556",
-        "name": "Stats refresh every 30s",
+        "name": "Stats refresh every 10s",
         "props": [
             {
                 "p": "payload"
             }
         ],
-        "repeat": "30",
+        "repeat": "10",
         "crontab": "",
         "once": true,
         "onceDelay": 3,

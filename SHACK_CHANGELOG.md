@@ -3926,6 +3926,32 @@ without conflict. Mdashboard does **not** cause the `ui_control` gap;
 that's a Dashboard 1 packaging issue independent of mdashboard's
 presence.
 
+### Lightning tab — Stats refresh tick: 30 s → 10 s
+
+**Tab:** Lightning Antenna Protector (`75e2cac8ab96f556`)
+**Node:** Stats refresh inject (`77ec1b216f0c061b`).
+
+Renamed `Stats refresh every 30s` → `Stats refresh every 10s` and
+`repeat: 30` → `repeat: 10`. One inject config change.
+
+This inject fans out to 5 dashboard-replay functions:
+`Replay Bypass State`, `Stats → Dashboard`, `Sync Switch State`,
+`Log → Dashboard`, and `Replay AS3935 State`. All five now refresh
+3× faster, so the Lightning chip, bypass state, stats counts,
+antenna/radio switch indicators, and Event Log all rehydrate within
+≤10 s of opening or refreshing the dashboard (instead of ≤30 s).
+
+Background load: each replay reads flow context and emits 1–2 small
+JSON messages to a ui_template. Three of those (bypass, switch, log)
+are no-ops most of the time (only emit if there's something to
+replay). `Replay AS3935 State` self-heal (5-min cooldown) is
+unaffected — fires no more frequently than before.
+
+Same instant-on philosophy as the AS3935 Tuning fix earlier today,
+just applied to widgets that already had a replay tick and just
+needed it sped up. Worth a separate audit pass for tabs without any
+replay infrastructure yet — TODO #16.
+
 ---
 
 ## Standard Commit Sequence (reminder)
