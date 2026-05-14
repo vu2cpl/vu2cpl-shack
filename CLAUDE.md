@@ -621,6 +621,7 @@ claude
 | 11 | DXCC: verify daily 02:00 inject wired to Build Club Log API Request | **Verified 2026-05-10** — the cron `00 02 * * *` is correctly wired to `Build Club Log API Request`. The `once: false` on `Load Club Log on startup` + `Retry Club Log (90s)` is **intentional** (anti-ban; see TODO #10). Bootstrap-sets-dxccReady fix (also 2026-05-10) makes startup independent of any Club Log API call. |
 | 12 | Mac SwiftUI app: scaffold not yet started | Pending |
 | 13 | Lightning dashboard: AS3935 card clutter — "Last seen" + Disturber/Noise status chip both repeat the local timestamp. Declutter: keep one timestamp on the card (preferred: relative age like "12s ago" in the chip, hide raw `timestamp` from `a35time`), and label the surviving absolute time as IST to match the Event Log header convention (2026-05-14). | Pending |
+| 14 | Verify Tasmota IST rollover happened cleanly at 00:00 IST on 2026-05-15. Check on the 16A Energy Monitor dashboard tile (or via `mosquitto_pub -h 192.168.1.169 -t cmnd/16Amasterswitch/Status -m "10"`): `ENERGY.Today` should be near zero in the early hours, `ENERGY.Yesterday` should equal whatever `Today` reached by 23:59 IST on 2026-05-14. If `Yesterday` instead matches the pre-fix late-morning value and `Today` rolled at ~05:30 IST again, the timezone setting didn't survive a reboot or the Tasmota firmware version handles rollover differently than expected. | Pending |
 
 ---
 
