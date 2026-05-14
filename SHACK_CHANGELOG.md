@@ -3637,6 +3637,60 @@ silently revert to UTC. The other 4 devices don't have energy
 monitoring, but their internal `Timer` actions and log timestamps
 would have been 5.5 h off — now consistent across the shack.
 
+### Lightning dashboard — Event Log survives Node-RED restart
+
+**Tab:** Lightning Antenna Protector (`75e2cac8ab96f556`)
+**New nodes:** `light_bootstrap_inj_01` (inject) +
+`light_bootstrap_fn_01` (function). Node count 76 → 78.
+
+**Problem.** After every `sudo systemctl restart nodered`, both the
+Event Log widget and the AS3935 card's "Last seen" field showed
+blank. Root cause is two-fold:
+
+1. `flow.event_log` lives in **memory** context (no `'file'` scope on
+   any `flow.get`/`flow.set` call), so restart wipes it. The
+   `Stats refresh every 30s` inject then sends `{type:'log', html:''}`
+   every 30 s, painting `logLines.innerHTML = ''` → blank.
+2. The on-disk JSONL store (`nr_lightning_events.jsonl`, added
+   2026-05-13 in commit `bf480be`) had all the history, but no
+   startup node read it back into `flow.event_log`.
+
+**Fix.** New inject `Bootstrap Event Log (startup)` fires once at
+`onceDelay: 2 s` (after Init Defaults at 0.5 s, before Stats refresh
+at 3 s) into a new function `Bootstrap Event Log from JSONL`. The
+function:
+
+- Reads `flow.cfg_events_jsonl` (set by Init Defaults).
+- Loads the file, splits by newline, takes the last 50 records
+  (mirrors the in-memory cap in `AS3935 Warn Log` /
+  `AS3935 Disconnect Log`).
+- Reverses to match the live unshift-built order (newest first).
+- Extracts the pre-rendered `rec.html` field from each line
+  (already present — every existing JSONL writer includes the
+  full HTML row alongside the structured fields).
+- Sets `flow.event_log` to the result and emits one
+  `{type:'log', html:…}` to Master Dashboard for immediate paint.
+- ENOENT (no JSONL yet) → silent grey status; malformed JSON lines
+  skipped silently; other I/O errors → red status + `node.error`.
+
+`libs: [{var:'fs', module:'fs'}]` declared on the function (same
+pattern as `Append Lightning JSONL`) — function nodes need explicit
+module imports per the lesson from commit `c8fbcb4`.
+
+**What this does not fix.** "Last seen" (`a35time`) still blanks on
+restart until the next AS3935 disturber/noise/strike event. The
+JSONL records lack the right shape to synthesise a clean
+`as3935_status` replay (records are `type: warn|disconnect|reconnect`,
+not `event: disturber|noise`), so bootstrapping it properly needs
+the AS3935 ESP32 bridge to publish a retained "last event"
+message — separate larger fix, folded into TODO #13 (AS3935 card
+declutter) when we tackle it.
+
+**Behaviour summary.** First Deploy after this commit: bootstrap
+fires at +2 s, dashboard shows the last 50 events from JSONL within
+3 s of startup. Subsequent restarts: same, transparently. No
+behaviour change to the running flow — pure additive bootstrap.
+
 ---
 
 ## Standard Commit Sequence (reminder)

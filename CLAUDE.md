@@ -112,7 +112,7 @@ git push
 | RBN Skimmer Monitor | `f9a0e3ad0e019052` | 32 | `1bcbc2eb8f2124aa` |
 | RPi Fleet Monitor | `d5fec2fea3dd37f4` | 27 | `f8d1f7eb7403a442` |
 | Internet and network monitor | `b05f8c028b368ae9` | 26 | `f10110e00bae2689` |
-| Lightning Antenna Protector | `75e2cac8ab96f556` | 76 | `grp_main` |
+| Lightning Antenna Protector | `75e2cac8ab96f556` | 78 | `grp_main` |
 | All Power Strips | `b76a5310767803b4` | 45 | `vu2cpl_grp_power` / `vu2cpl_grp_energy` |
 | DXCC Tracker | `d110d176c0aad308` | 70 | `grp_dxcc_stats` |
 
@@ -207,6 +207,9 @@ Agent endpoints: `POST /reboot`, `POST /shutdown`
 | `d1dca3df391cdfb8` | Stats → Dashboard | Flow state → dashboard |
 | `f2092c6e0d932c7b` | HTTP → Antenna ON | Handles /lightning/ant-on |
 | `f5b66018bf5eedd9` | HTTP → Radio ON | Handles /lightning/radio-on |
+| `light_jsonl_append_01` | Append Lightning JSONL | Historic event store writer (`nr_lightning_events.jsonl`) |
+| `light_bootstrap_inj_01` | Bootstrap Event Log (startup) | One-shot inject, `onceDelay: 2` |
+| `light_bootstrap_fn_01` | Bootstrap Event Log from JSONL | Rehydrates `flow.event_log` from JSONL tail on restart |
 
 ### DXCC Tracker (`d110d176c0aad308`)
 

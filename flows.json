@@ -9202,5 +9202,55 @@
         "x": 720,
         "y": 160,
         "wires": []
+    },
+    {
+        "id": "light_bootstrap_inj_01",
+        "type": "inject",
+        "z": "75e2cac8ab96f556",
+        "name": "Bootstrap Event Log (startup)",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 2,
+        "topic": "",
+        "payload": "{}",
+        "payloadType": "json",
+        "x": 200,
+        "y": 1140,
+        "wires": [
+            [
+                "light_bootstrap_fn_01"
+            ]
+        ]
+    },
+    {
+        "id": "light_bootstrap_fn_01",
+        "type": "function",
+        "z": "75e2cac8ab96f556",
+        "name": "Bootstrap Event Log from JSONL",
+        "func": "// Bootstrap Event Log from JSONL — one-shot on Node-RED startup.\n// flow.event_log lives in memory context, so restart wipes it. The\n// JSONL historic store (cfg_events_jsonl) is the source of truth;\n// rehydrate the most recent rows so the dashboard shows history\n// immediately instead of staying blank until the next real event.\n\nconst path = flow.get('cfg_events_jsonl');\nif (!path) {\n    node.warn('cfg_events_jsonl not set; Init Defaults must run first');\n    node.status({fill:'red', shape:'dot', text:'no path'});\n    return null;\n}\n\nconst CAP = 50;  // mirror the cap in AS3935 Warn/Disconnect Log writers\n\ntry {\n    const raw = fs.readFileSync(path, 'utf8');\n    const lines = raw.split('\\n').filter(Boolean);\n    // JSONL is append-only (oldest first). flow.event_log is unshift-built\n    // (newest first). Take the last CAP records, reverse to match.\n    const recent = lines.slice(-CAP).reverse();\n    const html = [];\n    for (const line of recent) {\n        try {\n            const rec = JSON.parse(line);\n            if (rec && rec.html) html.push(rec.html);\n        } catch (e) { /* skip malformed line */ }\n    }\n    flow.set('event_log', html);\n    node.status({fill:'green', shape:'dot',\n        text: html.length + ' rows from JSONL'});\n    return { payload: { type: 'log', html: html.join('') } };\n} catch (e) {\n    if (e.code === 'ENOENT') {\n        node.status({fill:'grey', shape:'ring', text:'no JSONL yet'});\n    } else {\n        node.error('Bootstrap event_log: ' + e.message);\n        node.status({fill:'red', shape:'dot', text:'error'});\n    }\n    return null;\n}\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [
+            {
+                "var": "fs",
+                "module": "fs"
+            }
+        ],
+        "x": 540,
+        "y": 1140,
+        "wires": [
+            [
+                "557083037f168b22"
+            ]
+        ]
     }
 ]
