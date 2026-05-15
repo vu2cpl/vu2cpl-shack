@@ -8993,8 +8993,8 @@
         "type": "function",
         "z": "spe_ws_tab_01",
         "name": "Button → WS command",
-        "func": "// Two outputs:\n//   1 (top) → WS out (commands)        — mapped WS command string\n//   2 (bot) → SPE power-on script exec — Pi-side FTDI DTR/RTS pulse\n// Why: WS power_on can't wake a powered-off amp (the chip's CPU is fully\n// off, so the spe-remote serial link is dead). The Pi-side script\n// power_spe_on.py drives the FTDI lines directly to cold-start.\nconst map = {\n  MODE: 'oper',\n  TUNE: 'tune',\n  INPUT: 'input',\n  ANTENNA: 'antenna',\n  PWRLVL: 'power_level',\n  BL_ON: 'backlight_on',\n  BL_OFF: 'backlight_off',\n  L_MINUS: 'l_minus',\n  L_PLUS: 'l_plus',\n  C_MINUS: 'c_minus',\n  C_PLUS: 'c_plus',\n  LEFT: 'left',\n  RIGHT: 'right',\n  SET: 'set',\n  DISPLAY: 'display',\n  BAND_MINUS: 'band_dn',\n  BAND_PLUS: 'band_up',\n  OFF_SPE: 'power_off'\n};\nif (msg.payload === 'ON_SPE') {\n  return [null, msg];   // route to exec\n}\nconst cmd = map[msg.payload];\nif (!cmd) return null;\nmsg.payload = cmd;\nreturn [msg, null];     // route to WS out\n",
-        "outputs": 2,
+        "func": "// Maps dashboard button payloads to spe-remote WebSocket command\n// strings. All buttons (including ON_SPE) go through the WS now —\n// the spe-remote server handles 'power_on' internally via a DTR/RTS\n// toggle on the open serial port (see spe/power_control.py\n// _power_on_sync()). The DTR lines on the host FTDI remain\n// controllable regardless of whether the amp's CPU is powered up,\n// so the previous Pi-side exec detour was redundant.\nconst map = {\n  ON_SPE: 'power_on',\n  MODE: 'oper',\n  TUNE: 'tune',\n  INPUT: 'input',\n  ANTENNA: 'antenna',\n  PWRLVL: 'power_level',\n  BL_ON: 'backlight_on',\n  BL_OFF: 'backlight_off',\n  L_MINUS: 'l_minus',\n  L_PLUS: 'l_plus',\n  C_MINUS: 'c_minus',\n  C_PLUS: 'c_plus',\n  LEFT: 'left',\n  RIGHT: 'right',\n  SET: 'set',\n  DISPLAY: 'display',\n  BAND_MINUS: 'band_dn',\n  BAND_PLUS: 'band_up',\n  OFF_SPE: 'power_off'\n};\nconst cmd = map[msg.payload];\nif (!cmd) return null;\nmsg.payload = cmd;\nreturn msg;\n",
+        "outputs": 1,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
@@ -9004,30 +9004,7 @@
         "wires": [
             [
                 "ws_out_node"
-            ],
-            [
-                "ws_spe_power_on_exec"
             ]
-        ]
-    },
-    {
-        "id": "ws_spe_power_on_exec",
-        "type": "exec",
-        "z": "spe_ws_tab_01",
-        "name": "SPE power-on script",
-        "command": "python3",
-        "addpay": "",
-        "append": "/home/vu2cpl/power_spe_on.py",
-        "useSpawn": "false",
-        "timer": "10",
-        "winHide": false,
-        "oldrc": false,
-        "x": 1010,
-        "y": 360,
-        "wires": [
-            [],
-            [],
-            []
         ]
     },
     {

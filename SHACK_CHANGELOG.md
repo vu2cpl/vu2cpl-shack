@@ -4037,6 +4037,55 @@ shape.
 
 ## 2026-05-15
 
+### SPE (WS) — ON_SPE routes through WebSocket, exec node removed
+
+**Tab:** SPE (WS) (`spe_ws_tab_01`)
+**Modified:** `Button → WS command` (`ws_btn_router`).
+**Removed:** `SPE power-on script` exec node (`ws_spe_power_on_exec`).
+
+The dashboard's `ON_SPE` button was the only one taking a different
+code path: a Node-RED `exec` node ran `python3 /home/vu2cpl/power_spe_on.py`
+on the Pi, which toggled the FTDI's DTR/RTS to cold-start the amp.
+Every other button (MODE, TUNE, INPUT, …, OFF_SPE) sent a command
+string over the WebSocket to the `spe-remote` server.
+
+Reviewing the `spe-remote` source revealed that the WebSocket server
+**already handles `power_on` internally** via the same DTR/RTS toggle
+— `spe/power_control.py` `_power_on_sync()` does exactly the
+sequence `DTR=1 → DTR=0 → RTS=1 → wait 1 s → DTR=1 → RTS=0`, the
+same one in `power_spe_on.py`. The amp's CPU being off doesn't
+matter because the FTDI hardware lines are controlled at the host
+end via ioctl, independent of whatever's on the other end of the
+serial cable.
+
+The old `ws_btn_router` comment justifying the exec detour was
+wrong: it conflated the *serial data link* (which is dead when the
+amp is off — no CPU on the other end) with the *FTDI hardware
+lines* (which remain controllable regardless). Cleaned up.
+
+**Changes:**
+
+- `ws_btn_router` simplified: `outputs: 2 → 1`, special-case `if
+  (msg.payload === 'ON_SPE') return [null, msg]` removed,
+  `ON_SPE: 'power_on'` added as a regular entry in the command map.
+  Function now mirrors every other button.
+- `ws_spe_power_on_exec` exec node deleted entirely.
+- `ws_pwr_result_dbg` debug node **kept** — `ws_parse_node` still
+  routes `power_result` responses (the structured ack from
+  `spe-remote` on `power_on` / `power_off`) to it, which is actually
+  *more* useful than the script's stdout was. Provides visible
+  confirmation in the editor sidebar that the DTR sequence ran.
+
+**`power_spe_on.py` stays on the Pi as a standalone fallback** if
+the `spe-remote.service` is down (Pi-side cron / manual script could
+still hit the FTDI directly). Just not in the dashboard's runtime
+path anymore.
+
+Sister-repo handover: see `spe-remote/handover.md` for the
+canonical documentation of this consolidation from the server
+side — clarifies that clients should use `power_on` over WS, not
+spawn the standalone script.
+
 ### Dashboard rehydration audit (TODO #16 closed)
 
 **Tabs touched:** Solar (`590e889d44815afb`),

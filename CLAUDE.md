@@ -418,7 +418,7 @@ Sliding strike history lives in `flow.recent_as3935 = [{ts, km}, …]`. Pushed o
 
 ### SPE Amplifier
 - 250ms poll cycle, 76-byte fixed frame, checksum + wraparound validation
-- Power-on requires external Python: `python3 ~/power_spe_on.py`
+- **Power-on path** (as of 2026-05-15): dashboard's `ON_SPE` button sends `power_on` over the WebSocket like every other button. The `spe-remote` Python server on the Pi handles it internally — toggles DTR/RTS on the open serial port via ioctl (`spe/power_control.py` `_power_on_sync()`), which works even with the amp's CPU unpowered because the FTDI hardware lines are controlled at the host end. Earlier design had a Node-RED `exec` node calling `python3 ~/power_spe_on.py` as a side path; removed because it duplicated the same DTR sequence at a layer above. `power_spe_on.py` stays on the Pi as a standalone fallback if `spe-remote.service` is down.
 - CSV logging enabled
 
 ### RPi Fleet Monitor
