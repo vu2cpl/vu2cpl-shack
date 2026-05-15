@@ -4037,6 +4037,77 @@ shape.
 
 ## 2026-05-15
 
+### Dashboard rehydration audit (TODO #16 closed)
+
+**Tabs touched:** Solar (`590e889d44815afb`),
+RBN Skimmer (`f9a0e3ad0e019052`), RPi Fleet (`d5fec2fea3dd37f4`).
+**Modified:** 3 function nodes (the state aggregators on each tab).
+
+The audit walked all 10 remaining dashboard tabs after yesterday's
+AS3935 Tuning + Lightning chip fixes. Encouraging finding: 11 of 12
+widgets already have `storeOutMessages: true` + `resendOnRefresh: true`
+AND are fed by a single "State Aggregator" function pattern that
+emits the **full state object** on every update (not partial diffs).
+On browser refresh, Node-RED dashboard replays the last full-state
+message → widget paints completely. The pattern just works without
+any of the cache + replay-tick scaffolding we built for AS3935 Tuning.
+
+(The AS3935 Tuning Control Panel was the exception precisely because
+its widget dispatched on `msg.topic` with three separate input topics —
+`resendOnRefresh` could only store one. Aggregator widgets bypass that
+limitation.)
+
+**Real gaps found — 3 aggregators on slow-poll sources** that lose
+state on Node-RED restart because their `flow.set` was on memory
+context:
+
+- `Solar State Aggregator` — 5–15 min HTTP polls (NOAA, Open-Meteo,
+  prop.kc2g.com)
+- `RBN State Aggregator` — RBN spots, event-driven and bursty
+- `RPi State Aggregator` — 60 s MQTT telemetry from each Pi
+
+If you restart Node-RED between polls, the dashboard sits
+half-populated until the next poll cycle. For Solar that's up to 15
+min of stale display.
+
+**Fix:** swap both the `flow.get` and the `flow.set` to use `'file'`
+scope. State persists to disk (via the `localfilesystem` context
+store enabled by `enable_file_context.sh` per TODO #6), survives
+Node-RED restart, and the dashboard paints from the last-saved state
+within seconds.
+
+```js
+// Before:
+var st = flow.get('solarState') || {};
+...
+flow.set('solarState', st);
+
+// After:
+var st = flow.get('solarState', 'file') || {};
+...
+flow.set('solarState', st, 'file');
+```
+
+Each aggregator's state object is plain JSON (no circular refs, no
+non-serializable types), so the file-store serialisation Just Works.
+Write frequency is low — Solar writes ≤ once per 5 min, RBN on each
+spot batch, RPi every 60 s. No perf concern.
+
+**Verified no key conflicts.** Each of `solarState`, `rbn_dash`,
+`rpi_dash` is touched ONLY by its respective aggregator (no other
+node reads or writes them), so the scope swap is self-contained and
+can't desync with another reader.
+
+**Power Strips checked but not modified.** The
+`Poll Tasmota state every 10s` inject re-queries every device every
+10 s, so `flow.power_states` and `flow.energy_state` stay fresh
+continuously regardless of restart. Worst-case rehydration ≤10 s,
+meets the bar without changes.
+
+**Tabs already fine (no changes):** Rotor, FlexRadio, LP-700 (WS),
+SPE (WS), DXCC Tracker (bootstraps from disk), GPS NTP (retained
+MQTT), Internet/network (30 s pings), Power Strips (10 s poll).
+
 ### FlexRadio — split-mode slice coloring (TODO #2 closed)
 
 **Tab:** FlexRadio (`a0a882f85c89cffc`)
