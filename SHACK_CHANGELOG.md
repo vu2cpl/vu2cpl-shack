@@ -4035,6 +4035,58 @@ new branch. Behaviour unchanged from this commit's predecessor.
 `{type:'as3935_last_event', event, distance, energy, ts_epoch_ms}`
 shape.
 
+## 2026-05-15
+
+### FlexRadio — split-mode slice coloring (TODO #2 closed)
+
+**Tab:** FlexRadio (`a0a882f85c89cffc`)
+**Nodes:** `Flex State Aggregator` (`de6b988cbc7182ca`),
+`FlexRadio Panel` (`bf129ed26ea2ca5f`).
+
+**Problem.** In FlexRadio split mode, both the RX and TX slices
+report `tx==1` (because both are "transmit-capable"). The
+discriminator is the `active` field: the RX slice (currently
+focused for listening) has `active==1` and the TX slice (where the
+mic + key go) has `active==0`. The dashboard's previous condition
+`tx==1 && active==1` therefore picked the RX as the "TX slice" —
+painted colours backwards on every split-mode operation.
+
+**Fix.** Pre-compute a per-slice `isTx` boolean in the aggregator,
+where we have visibility across all slices, then have the dashboard
+consume just that boolean.
+
+`Flex State Aggregator`: new block before the existing
+`activeSlices` loop counts `tx==1 && in_use==1` slices, then sets
+`sl.isTx` on each:
+
+- `tx != 1`           → `isTx = 0`
+- multiple `tx==1`    → `isTx = 1` only if `active == 0` (split mode)
+- single `tx==1`      → `isTx = 1` (normal mode)
+
+`isTx` is propagated into each `activeSlices` push so the
+dashboard's `ng-repeat` sees it.
+
+`FlexRadio Panel`: two `ng-class` expressions updated:
+
+- `activeSlices` loop:
+  `s.tx==1 && s.active==1` → `s.isTx==1`
+- `slices[s]` grid (the `['A','B','C','D']` loop, appearing twice
+  in the same ng-class ladder for "transmitting" + "active"
+  states): `msg.payload.slices[s].tx==1 && msg.payload.slices[s].active==1`
+  → `msg.payload.slices[s].isTx==1`
+
+**Single source of truth.** The aggregator owns the "which slice is
+actually transmitting" decision. If FlexRadio changes split-mode
+semantics in the future, only the aggregator needs touching — the
+dashboard just reads the boolean.
+
+**Verified by inspection of the aggregator + panel logic.** Live
+verification: next time you split-tune (e.g. listen on the DX
+station's frequency, transmit on the split — common during pile-ups),
+the RX-side slice should be the green one and the TX-side slice
+should be the yellow/amber one. Previously the colours would have
+been swapped.
+
 ---
 
 ## Standard Commit Sequence (reminder)

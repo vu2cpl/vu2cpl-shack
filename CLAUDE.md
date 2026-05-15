@@ -413,7 +413,7 @@ Sliding strike history lives in `flow.recent_as3935 = [{ts, km}, …]`. Pushed o
 
 ### FlexRadio
 - All slice state in `flexState` flow context
-- Split mode known issue: both slices report `tx:1` in split mode. RX slice has `active:1`, TX has `active:0`. Coloring for split mode **deferred**.
+- Split mode coloring (fixed 2026-05-15): both slices report `tx:1` in split mode (RX has `active:1`, actual TX has `active:0`). `Flex State Aggregator` (`de6b988cbc7182ca`) now pre-computes a per-slice `isTx` boolean — counts `tx==1 && in_use==1` slices; if more than one (split), picks the one with `active==0` as the true TX; else the single `tx==1` slice. Both `ng-class` expressions in `FlexRadio Panel` (`bf129ed26ea2ca5f`) consume `isTx` instead of the old `tx==1 && active==1` rule.
 - `clientHandleMap` built from discovery message (`gui_client_handles` + `gui_client_stations`)
 
 ### SPE Amplifier
@@ -631,7 +631,7 @@ claude
 | # | Item | Status |
 |---|------|--------|
 | 1 | AetherSDR v0.8.11 MQTT bug — TLS reset on plain port 1883 | **Closed 2026-05-11** — upstream fix shipped. Tracked at [ten9876/AetherSDR#1348](https://github.com/ten9876/AetherSDR/issues/1348), fixed in [PR #1349](https://github.com/ten9876/AetherSDR/pull/1349), released in [v0.8.15](https://github.com/ten9876/AetherSDR/releases/tag/v0.8.15) on 2026-04-15. Root cause: macOS-specific libmosquitto race on non-blocking connect + immediate packet write. Subsequent MQTT polish (incl. proper OpenSSL 3.5+ TLS support) landed across v0.8.16 and 0.9.x. Mac-side action: upgrade to current AetherSDR (`v26.5.1` as of today) — separate from this repo. |
-| 2 | FlexRadio split mode coloring (both slices tx:1, use active field) | Deferred |
+| 2 | FlexRadio split mode coloring (both slices tx:1, use active field) | **Done 2026-05-15** — `Flex State Aggregator` (`de6b988cbc7182ca`) now pre-computes `isTx` per slice based on a count of `tx==1` slices: if >1 (split), TX is the `active==0` slice; if ==1 (normal), TX is the only `tx==1` slice. Two `ng-class` expressions in `FlexRadio Panel` (`bf129ed26ea2ca5f`) consume `s.isTx==1` / `msg.payload.slices[s].isTx==1`. Previously the check was `tx==1 && active==1` which painted split-mode slices backwards (RX coloured as TX, TX coloured as RX). |
 | 3 | Rotator timer: change `60 * 1000` → `5 * 60 * 1000` in Rotator Auto-Off Timer | **Done 2026-05-10** (`971f4b4`) |
 | 4 | RPi agent deploy on 2 remaining Pis + HA Pi (Bearer token) | **Done 2026-05-10** |
 | 5 | Website: upload shack.jpg, VU7MS/VU7T PDFs | **Closed 2026-05-11 (already done)** — `~/projects/vu2cpl.github.io/` already has `shack-desk.jpg`, `shack-workbench.jpg`, `vu7ms_writeup.pdf`, `vu7t_writeup.pdf` (all committed, in sync with `origin/main`, referenced by `index.html`). Original TODO said `shack.jpg` singular; design evolved to two images. |
