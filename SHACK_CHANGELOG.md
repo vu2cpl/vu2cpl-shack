@@ -4291,6 +4291,34 @@ been swapped.
 
 ## 2026-05-17
 
+### Telegram alerts — stop misleading "ANTENNA DISCONNECT" for near-miss strikes + show actual state
+
+**Tab:** Lightning Antenna Protector (`75e2cac8ab96f556`)
+**Nodes modified:** `AS3935 Disconnect Log` (`611667d11de744ed`), `Telegram Alert Router` (`tg_lightning_router`).
+
+**Problem reported:** operator received a Telegram alert reading "⚡ VU2CPL: ANTENNA DISCONNECT · Source: AS3935 · Distance: 31 km" — but the antenna was NOT actually disconnected. The distance-graded matrix (medium-zone 10–25 km, OM=cold, no corroboration in 5-min window) decided not to fire the disconnect. Two issues compounded:
+
+1. **`AS3935 Disconnect Log` was claiming `type:'disconnect'` for every within-threshold strike** — it runs in parallel with `Trigger Disconnect` off the same switch output, so it doesn't know whether the matrix downstream will actually fire. Logging a `disconnect` event_record before the matrix has run = false-positive Telegram alerts.
+2. **The Telegram message text never mentioned the actual antenna state** — operator couldn't tell from the message whether the antenna was really off or not.
+
+**Fixes:**
+
+1. **`AS3935 Disconnect Log` is now observational.** Event_record `type` renamed from `'disconnect'` to `'as3935_observed'` (non-bypass case). `'as3935_observed'` is not in the Telegram allow-list → no false alerts. The dashboard log line is also updated: `'DISCONNECT triggered'` (ev-err / red) → `'within disconnect zone (matrix runs)'` (ev-warn / amber). Reflects what this node actually knows — the chip saw a strike within range, downstream matrix decides outcome. Bypass branch unchanged (already correctly labelled `'disconnect_suppressed'`).
+2. **`Telegram Alert Router` now reads actual state at send time.** New `stateLine()` helper inside the router reads `flow.antenna_off` / `flow.radio_off` / `flow.radio_enabled` and emits a line like `Antenna: OFF\nRadio: OFF` (radio only included when enabled). Injected into both `disconnect` and `reconnect` message templates. By the time the event_record reaches the router, `Trigger Disconnect` / `Execute Reconnect` / `Send Radio Command` have already updated the flow flags, so the state read is post-action.
+
+**Single source of truth for actual disconnects:** `Format Log` (source=`'system'`, type=`'disconnect'`), which is fed only by `Trigger Disconnect`'s output. Real disconnects → Format Log → event_record → JSONL → Telegram fires (correctly). Within-threshold observations → AS3935 Disconnect Log → event_record `'as3935_observed'` → JSONL (still persisted for analysis) → Telegram skips (not in allow-list).
+
+**Telegram message shape now:**
+
+> ⚡ **VU2CPL: ANTENNA DISCONNECT**
+> Source: system
+> Distance: 5 km
+> Antenna: **OFF**
+> Radio: **ON** _(only shown when `radio_enabled=true`)_
+> Time: 02:18:42
+
+…where `Antenna:` line reflects `flow.antenna_off` reality, not just the event's intent.
+
 ### AS3935 dashboard — merge IRQ counters + session counters into one row
 
 After the Control + Events merge (one ui_template, one card), there were still **two counter rows visible**: the compact text counter near the top (driven by bridge `/hb` `counters: {lightning, disturber, noise, irq}` — lifetime counts since ESP32 boot) and the verbose-styled session counters near the bottom (JS-incremented per browser tab, reset on refresh).
