@@ -425,7 +425,7 @@ Sliding strike history lives in `flow.recent_as3935 = [{ts, km}, …]`. Pushed o
   - `nr_dxcc_blacklist.json` — blocked callsigns
   - (cty.xml — prefix → DXCC entity map; fetched on startup, not persisted as a file)
 - Context store must be configured with `file` module in settings.js
-- DX Clusters: N2WQ (`cluster.n2wq.com:8300`), VU2OY (`vu2oy.ddns.net:7550`), VU2CPL (`vu2cpl.ddns.net:7550`), VE7CC (`ve7cc.net:23`)
+- DX Clusters: N2WQ (`cluster.n2wq.com:8300`), VU2OY (`vu2oy.ddns.net:7550`), VU2CPL (`vu2cpl.ddns.net:7300`), VE7CC (`ve7cc.net:23`) — VU2CPL moved 7550 → 7300 on 2026-05-17 (commit `4b1fabb`)
 
 ### All Power Strips (Rotator)
 - Rotator timer node (`05f0ddeb566a90fc`): currently `60 * 1000` (1 min) — **change to `5 * 60 * 1000` for production**
