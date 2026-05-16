@@ -229,8 +229,22 @@ Agent endpoints: `POST /reboot`, `POST /shutdown`
 | `6e60f619acad462e` | Build Club Log API Request | Builds API URL |
 | `bf47f506a324b481` | Blacklist Manager | Manages blocked callsigns |
 | `2286f0a512733e92` | Format Alert for Dashboard Table | Alert HTML formatting |
-| `login-parse-dedup-v2` | Login + Parse + Dedup | 3 outputs: spot/cluster_status/dedup |
+| `login-parse-dedup-v2` | Login + Parse + Dedup | 3 outputs: login-reply/spot/cluster_status. Login uses `cfg_cl_callsign + cfg_cl_login_ssid` = `VU2CPL-1`. Prompt-detection runs on the **last line** of the chunk (2026-05-17 fix) so CwSkimmer's concatenated banner+prompt no longer trips the <40-char safety guard. Output 0 wires to `2a20b140b97c35b0` (`Reply to Cluster (login)`, `beserver:reply`). |
+| `2a20b140b97c35b0` | Reply to Cluster (login) | `tcp out` with `beserver:reply`, replies on the same `_session` for all 4 clusters. |
 | `c68f81fda8c7f015` | Cluster Watchdog | Monitors cluster last-seen |
+
+### RBN Skimmer Monitor (`f9a0e3ad0e019052`)
+
+| ID | Name | Role |
+|----|------|------|
+| `df7d1786eab4d5a2` | Telnet VU2CPL :7300 | `tcp in` client to `vu2cpl.ddns.net:7300` — CwSkimmer telnet cluster port (auth-required). **`newline: ""`** (raw chunks) is mandatory: CwSkimmer's `Please enter your callsign:` has no trailing `\n`, so a `newline:"\n"` tcp-in buffers the prompt forever and login never fires. |
+| `57819fd9ea5bbf11` | Telnet VU2OY :7550 | `tcp in` to VU2OY's open-access port (no auth, no login needed). `newline:"\n"` is fine here. |
+| `fa367f22588d17bc` | Login Handler VU2CPL | 2 outputs. Splits incoming chunk on `\r?\n`. Trailing line matched against prompt fragments (`login:`, `callsign:`, etc.) → emit `VU2CPL-1\r\n` with `_session` preserved on output 0. Then loops over all lines, emits one msg per `DX de …` to output 1 (so the parser sees clean single-line input). Mirrors `login-parse-dedup-v2` on the DXCC tab. **Hardcoded login = `VU2CPL-1`** (no Credentials node on this tab). |
+| `rbn_vu2cpl_tcp_reply` | Reply to VU2CPL (login) | `tcp out` with `beserver:reply`. Added 2026-05-17 — there was no tcp-out on this tab before because port 7550 needed no login. |
+| `8c890a1e62738c18` | Login Handler VU2OY | Pure spot filter — no login code (VU2OY port 7550 doesn't ask). |
+| `7d2c70d8935ef86f` | Parse DX Spot | Regex-parses single `DX de …` lines into `msg.spot`. Fed by both Login Handlers (output 1 for VU2CPL). |
+| `713be21e706f5f9c` | RBN State Aggregator | Builds flow.skimmerState from spots. |
+| `1edeb9703cae2fcb` | RBN Skimmer Panel | ui_template — live spot stream + per-skimmer status. |
 
 ### All Power Strips (`b76a5310767803b4`)
 
@@ -425,7 +439,7 @@ Sliding strike history lives in `flow.recent_as3935 = [{ts, km}, …]`. Pushed o
   - `nr_dxcc_blacklist.json` — blocked callsigns
   - (cty.xml — prefix → DXCC entity map; fetched on startup, not persisted as a file)
 - Context store must be configured with `file` module in settings.js
-- DX Clusters: N2WQ (`cluster.n2wq.com:8300`), VU2OY (`vu2oy.ddns.net:7550`), VU2CPL (`vu2cpl.ddns.net:7300`), VE7CC (`ve7cc.net:23`) — VU2CPL moved 7550 → 7300 on 2026-05-17 (commit `4b1fabb`)
+- DX Clusters: N2WQ (`cluster.n2wq.com:8300`), VU2OY (`vu2oy.ddns.net:7550`), VU2CPL (`vu2cpl.ddns.net:7300`), VE7CC (`ve7cc.net:23`) — VU2CPL moved 7550 → 7300 on 2026-05-17 (commit `4b1fabb`). **Port 7300 is CwSkimmer's telnet cluster port (auth required)** — both DXCC Tracker (`login-parse-dedup-v2`) and RBN Skimmer Monitor (`Login Handler VU2CPL`) send `VU2CPL-1\r\n` on the `Please enter your callsign:` prompt; tcp-out reply nodes use `beserver:reply` + `_session` to write back on the same socket. Old port 7550 was CwSkimmer's "raw" local-telnet (no auth, no prompt). See SHACK_CHANGELOG.md 2026-05-17 "VU2CPL skimmer — login handlers" for the full story and gotchas (notably `newline:""` on the tcp-in being mandatory because CwSkimmer's prompt has no trailing `\n`).
 
 ### All Power Strips (Rotator)
 - Rotator timer node (`05f0ddeb566a90fc`): currently `60 * 1000` (1 min) — **change to `5 * 60 * 1000` for production**

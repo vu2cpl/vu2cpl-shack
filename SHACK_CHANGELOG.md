@@ -4474,6 +4474,33 @@ background. So flipping `radio_enabled = true` back at runtime
 shows the row immediately with current Tasmota state on the next
 10 s tick — no stale flash.
 
+### VU2CPL skimmer — login handlers send `VU2CPL-1` on port 7300
+
+**Tabs:** RBN Skimmer Monitor (`f9a0e3ad0e019052`), DXCC Tracker (`d110d176c0aad308`)
+**Nodes:** `Telnet VU2CPL :7300` tcp-in (`df7d1786eab4d5a2`), `Login Handler VU2CPL` (`fa367f22588d17bc`), new tcp-out `rbn_vu2cpl_tcp_reply`, `Login + Parse + Dedup` (`login-parse-dedup-v2`).
+
+**Trigger.** VU2CPL skimmer's TCP port moved from **7550** (CwSkimmer's local "raw" telnet, no auth, streams spots on connect) → **7300** (the proper telnet cluster port with `Please enter your callsign:` prompt + login). Connection still TCP-succeeded so both tcp-in nodes showed green "connected", but no spots flowed — the cluster was silently waiting for a login that Node-RED never sent. Symptom: RBN Skimmer Panel showed 0 spots; DXCC Tracker had stopped getting VU2CPL spots (other clusters unaffected).
+
+**Diagnosis.** `nc -v vu2cpl.ddns.net 7300` confirmed the cluster is fully operational — banner + prompt + spots after manual `vu2cpl-1` login. So the upstream is fine; the issue is each tab's login-handling pipeline.
+
+**Fix 1 — DXCC Tracker (`login-parse-dedup-v2`):** the existing login code already had prompt-detection wired into a `tcp out` reply node (`2a20b140b97c35b0`), but a `lc.length < 40` safety guard (added to avoid false-matching N2WQ's long "Last login: …" welcome banner) was rejecting CwSkimmer's prompt. CwSkimmer sends the banner + prompt **concatenated as one TCP chunk** (~150 chars) because the tcp-in there uses `newline: ""` (raw chunks). Trimmed chunk ends in `…callsign:` so `endsWith('callsign:')` matched — but length > 40 → safety guard blocked the send. Fix: apply the length check to **just the trailing line of the chunk**, by splitting on `\r?\n` and taking the last segment. False-positive guard against `Last login: … from <ip>` still holds (that line ends with an IP, not `login:`).
+
+**Fix 2 — RBN Skimmer Monitor:** three separate problems on this tab.
+
+- **No login code existed at all.** The function ironically named "Login Handler VU2CPL" only filtered DX spot lines — never sent a callsign. Worked previously because port 7550 never asked for one.
+- **No tcp-out reply node existed on this tab.** Added a new one (`rbn_vu2cpl_tcp_reply`, `beserver: "reply"`) wired from output 0 of the Login Handler.
+- **Login Handler upgraded** to 2 outputs:
+  - Output 0 → tcp-reply with `VU2CPL-1\r\n` and `_session` preserved (so the reply rides the same TCP socket).
+  - Output 1 → existing `Parse DX Spot` (`7d2c70d8935ef86f`).
+  Function now splits the incoming chunk on `\r?\n`, runs prompt-detection on the trailing line, and emits one msg per `DX de` line so the downstream parser still sees clean single-line input.
+- **`tcp-in` `newline` setting flipped from `"\n"` to `""` (raw chunks).** This was the silent killer — CwSkimmer's prompt has **no trailing newline** (it's waiting for input), so a tcp-in configured to split on `\n` buffers it forever. Login Handler never saw a message; login never fired; no spots. Switching to raw chunks lets the prompt arrive immediately, at the cost of the Login Handler having to split chunks into lines internally (which it now does). The DXCC tab's tcp-in was already configured `newline: ""` — that's why DXCC was rescuable with just Fix 1.
+
+**Login SSID = `-1` on both tabs.** Two parallel sessions to the same CwSkimmer use the same callsign. `nc` testing confirms CwSkimmer's telnet port doesn't enforce per-callsign uniqueness — both sessions accepted, both stream spots. The DXCC tab loads its SSID from `cfg_cl_login_ssid` (set to `-1` in the Credentials node). The RBN tab hardcodes `VU2CPL-1` inline (RBN has no credentials node).
+
+**Effect.** Both DXCC Tracker's VU2CPL feed and the RBN Skimmer Monitor panel show live spots again, with the same Login Handler architecture mirrored on both tabs. Login-fire shows as a blue `… → login sent` flash on the node status, followed by green `… +N spots` ticks as spots flow (need `Show node status` ticked under hamburger → User Settings → View).
+
+**Future-proofing:** if a fourth/fifth cluster gets added with a CwSkimmer-style un-terminated prompt, the lastLine-split + endsWith approach handles it without further changes. The prompt-fragment list inside both handlers covers `login:`, `please login`, `please login:`, `callsign:`, `callsign please:`, `your callsign:`, `enter your callsign:` — extend as needed.
+
 ---
 
 ## 2026-05-16
