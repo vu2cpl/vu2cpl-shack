@@ -3311,7 +3311,7 @@
         "type": "function",
         "z": "f9a0e3ad0e019052",
         "name": "Skimmer Config (VU2CPL + VU2OY)",
-        "func": "flow.set('sk1_call','VU2CPL');\nflow.set('sk1_host','vu2cpl.ddns.net');\nflow.set('sk1_port',7550);\nflow.set('sk2_call','VU2OY');\nflow.set('sk2_host','vu2oy.ddns.net');\nflow.set('sk2_port',7550);\nreturn msg;",
+        "func": "flow.set('sk1_call','VU2CPL');\nflow.set('sk1_host','vu2cpl.ddns.net');\nflow.set('sk1_port',7300);\nflow.set('sk2_call','VU2OY');\nflow.set('sk2_host','vu2oy.ddns.net');\nflow.set('sk2_port',7550);\nreturn msg;",
         "outputs": 1,
         "timeout": "",
         "noerr": 0,
@@ -3328,10 +3328,10 @@
         "id": "df7d1786eab4d5a2",
         "type": "tcp in",
         "z": "f9a0e3ad0e019052",
-        "name": "Telnet VU2CPL :7550",
+        "name": "Telnet VU2CPL :7300",
         "server": "client",
         "host": "vu2cpl.ddns.net",
-        "port": "7550",
+        "port": "7300",
         "datatype": "utf8",
         "newline": "\\n",
         "topic": "",
@@ -3677,6 +3677,7 @@
         "name": "Update Spot Counters",
         "func": "var now=Date.now();\nvar spots=flow.get('spots_all')||[];\nvar sk1=flow.get('sk1_call')||'VU2CPL';\nvar sk2=flow.get('sk2_call')||'VU2OY';\nvar skimmers=[sk1,sk2];\nvar windows={h1:3600000,h12:43200000,h24:86400000};\nvar stats=flow.get('skimmer_stats')||{};\nskimmers.forEach(function(sk){\nvar skSpots=spots.filter(function(s){return s.skimmer===sk;});\nif(!stats[sk])stats[sk]={};\nObject.keys(windows).forEach(function(w){\nvar cutoff=now-windows[w];\nvar recent=skSpots.filter(function(s){return s.ts>=cutoff;});\nstats[sk][w+'_total']=recent.length;\nstats[sk][w+'_cw']=recent.filter(function(s){return s.mode==='CW';}).length;\nstats[sk][w+'_ft8']=recent.filter(function(s){return s.mode.indexOf('FT')!==-1;}).length;\n});\nif(skSpots.length>0){stats[sk].lastSpot=new Date(skSpots[0].ts).toISOString().slice(11,19)+'Z';\nstats[sk].lastFreq=skSpots[0].freq;stats[sk].status='online';}\n});\nflow.set('skimmer_stats',stats);\nvar buckets=flow.get('hourly_buckets')||{};\nvar bucketKey=new Date().toISOString().slice(0,13);\nif(!buckets[bucketKey])buckets[bucketKey]={cw:0,ft8:0};\nif(msg.spot.mode==='CW')buckets[bucketKey].cw++;\nelse if(msg.spot.mode.indexOf('FT')!==-1)buckets[bucketKey].ft8++;\nvar keys=Object.keys(buckets).sort();\nif(keys.length>240)keys.slice(0,keys.length-240).forEach(function(k){delete buckets[k];});\nflow.set('hourly_buckets',buckets);\nreturn msg;",
         "outputs": 1,
+        "timeout": "",
         "noerr": 0,
         "initialize": "",
         "finalize": "",
@@ -4340,8 +4341,8 @@
         "z": "b05f8c028b368ae9",
         "g": "0cffa681c4abed74",
         "mode": null,
-        "name": "RBN PC",
-        "host": "192.168.1.170",
+        "name": "Mac RBN ",
+        "host": "192.168.1.245",
         "timer": "10",
         "inputs": 0,
         "x": 120,
@@ -4697,7 +4698,7 @@
         "order": 1,
         "width": 6,
         "height": 7,
-        "format": "<style>\n.nm{background:#0d1117;color:#c9d1d9;font-family:monospace;font-size:12px;border-radius:6px;padding:10px;}\n.nm-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;border-bottom:1px solid #21262d;padding-bottom:6px;}\n.nm-title{color:#58a6ff;font-weight:bold;font-size:14px;}\n.nm-sec{color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;margin-top:8px;}\n.nm-host-row{display:flex;align-items:center;padding:5px 0;border-bottom:1px solid #21262d;}\n.nm-host-row:last-child{border-bottom:none;}\n.nm-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-right:8px;}\n.nm-dot.up{background:#3fb950;box-shadow:0 0 4px #3fb950;}\n.nm-dot.down{background:#f85149;}\n.nm-name{flex:1;font-size:11px;font-weight:bold;}\n.nm-ms{font-size:11px;font-family:monospace;text-align:right;width:60px;}\n.nm-bar-wrap{flex:1;background:#21262d;border-radius:2px;height:4px;margin:0 8px;max-width:80px;overflow:hidden;}\n.nm-bar{height:4px;border-radius:2px;transition:width 0.3s;}\n.nm-status-box{border-radius:4px;padding:6px 10px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}\n.nm-status-box.up{background:#0d2818;border:1px solid #238636;}\n.nm-status-box.down{background:#2d0808;border:1px solid #a82020;}\n.nm-fail-item{font-size:10px;color:#8b949e;padding:3px 0;border-bottom:1px solid #21262d;}\n.nm-fail-item:last-child{border-bottom:none;}\n.nm-grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:6px;}\n.nm-box{background:#161b22;border:1px solid #21262d;border-radius:4px;padding:5px 7px;text-align:center;}\n.nm-box-lbl{font-size:9px;color:#8b949e;}\n.nm-box-val{font-size:13px;font-weight:bold;margin-top:2px;}\n</style>\n<div class=\"nm\">\n  <div class=\"nm-hdr\">\n    <span class=\"nm-title\">&#127760; Network Monitor</span>\n  </div>\n\n  <div class=\"nm-sec\">Internet Status</div>\n  <div id=\"nm-inet-box\" class=\"nm-status-box up\">\n    <div>\n      <div style=\"font-size:10px;color:#8b949e;\">Status</div>\n      <div id=\"nm-inet-status\" style=\"font-size:14px;font-weight:bold;color:#3fb950;\">&#9679; UP</div>\n    </div>\n    <div style=\"text-align:right;\">\n      <div style=\"font-size:10px;color:#8b949e;\">Total Fails</div>\n      <div id=\"nm-fails\" style=\"font-size:14px;font-weight:bold;color:#58a6ff;\">0</div>\n    </div>\n  </div>\n  <div style=\"font-size:10px;color:#8b949e;margin-bottom:6px;\" id=\"nm-lastfail\">Last fail: —</div>\n\n  <div class=\"nm-sec\">Host Ping Status</div>\n  <div id=\"nm-hosts\"></div>\n\n  <div class=\"nm-sec\">Fail History</div>\n  <div id=\"nm-history\" style=\"background:#161b22;border:1px solid #21262d;border-radius:4px;padding:6px 8px;max-height:120px;overflow-y:auto;\"></div>\n  <div style=\"font-size:9px;color:#8b949e;margin-top:3px;\">Last 10 outages</div>\n</div>\n\n<script>\n(function(){\n  var HOSTS=[\n    {key:'Internet', label:'Internet (8.8.8.8)', maxMs:100},\n    {key:'Flex',     label:'Flex 6600',          maxMs:5},\n    {key:'OpenwebRX',label:'OpenwebRX+',         maxMs:5},\n    {key:'RBN_PC',   label:'RBN PC',             maxMs:5},\n    {key:'RBN_SDR',  label:'RBN SDR',            maxMs:5}\n  ];\n\n  function msColor(ms, maxMs){\n    if(ms===null) return '#f85149';\n    var pct=ms/maxMs;\n    return pct>0.8?'#f85149':pct>0.5?'#e3b341':'#3fb950';\n  }\n\n  scope.$watch('msg', function(msg){\n    if(!msg||!msg.payload) return;\n    var d=msg.payload;\n\n    // Internet status bar\n    var ibox=document.getElementById('nm-inet-box');\n    var istat=document.getElementById('nm-inet-status');\n    var isUp=(d.status==='up'||d.status===undefined);\n    if(ibox){ ibox.className='nm-status-box '+(isUp?'up':'down'); }\n    if(istat){ istat.textContent='\\u25CF '+(isUp?'UP':'DOWN'); istat.style.color=isUp?'#3fb950':'#f85149'; }\n    if(d.totalFails!==undefined){ var fe=document.getElementById('nm-fails'); if(fe) fe.textContent=d.totalFails; }\n    if(d.lastFail){ var lf=document.getElementById('nm-lastfail'); if(lf) lf.textContent='Last fail: '+d.lastFail; }\n\n    // Host rows\n    if(d.pings){\n      var html='';\n      HOSTS.forEach(function(h){\n        var p=d.pings[h.key];\n        var up=p&&p.up;\n        var ms=p?p.ms:null;\n        var msStr=ms===null?'—':ms+'ms';\n        var col=msColor(ms,h.maxMs);\n        var barW=ms===null?0:Math.min(100,ms/h.maxMs*100);\n        html+='<div class=\"nm-host-row\">'\n            +'<div class=\"nm-dot '+(up?'up':'down')+'\"></div>'\n            +'<div class=\"nm-name\">'+h.label+'</div>'\n            +'<div class=\"nm-bar-wrap\"><div class=\"nm-bar\" style=\"width:'+barW.toFixed(0)+'%;background:'+col+';\"></div></div>'\n            +'<div class=\"nm-ms\" style=\"color:'+col+'\">'+msStr+'</div>'\n            +'</div>';\n      });\n      var he=document.getElementById('nm-hosts');\n      if(he) he.innerHTML=html||'<div style=\"color:#8b949e;font-size:10px;\">Waiting for ping data...</div>';\n    }\n\n    // Fail history\n    if(d.failHistory!==undefined){\n      var fh=d.failHistory;\n      var fhtml=fh.length?fh.map(function(f){ return '<div class=\"nm-fail-item\">'+f+'</div>'; }).join('')\n                        :'<div style=\"color:#8b949e;font-size:10px;padding:4px;\">No outages recorded</div>';\n      var fhe=document.getElementById('nm-history');\n      if(fhe) fhe.innerHTML=fhtml;\n    }\n  });\n})();\n</script>",
+        "format": "<style>\n.nm{background:#0d1117;color:#c9d1d9;font-family:monospace;font-size:12px;border-radius:6px;padding:10px;}\n.nm-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;border-bottom:1px solid #21262d;padding-bottom:6px;}\n.nm-title{color:#58a6ff;font-weight:bold;font-size:14px;}\n.nm-sec{color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;margin-top:8px;}\n.nm-host-row{display:flex;align-items:center;padding:5px 0;border-bottom:1px solid #21262d;}\n.nm-host-row:last-child{border-bottom:none;}\n.nm-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-right:8px;}\n.nm-dot.up{background:#3fb950;box-shadow:0 0 4px #3fb950;}\n.nm-dot.down{background:#f85149;}\n.nm-name{flex:1;font-size:11px;font-weight:bold;}\n.nm-ms{font-size:11px;font-family:monospace;text-align:right;width:60px;}\n.nm-bar-wrap{flex:1;background:#21262d;border-radius:2px;height:4px;margin:0 8px;max-width:80px;overflow:hidden;}\n.nm-bar{height:4px;border-radius:2px;transition:width 0.3s;}\n.nm-status-box{border-radius:4px;padding:6px 10px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}\n.nm-status-box.up{background:#0d2818;border:1px solid #238636;}\n.nm-status-box.down{background:#2d0808;border:1px solid #a82020;}\n.nm-fail-item{font-size:10px;color:#8b949e;padding:3px 0;border-bottom:1px solid #21262d;}\n.nm-fail-item:last-child{border-bottom:none;}\n.nm-grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:6px;}\n.nm-box{background:#161b22;border:1px solid #21262d;border-radius:4px;padding:5px 7px;text-align:center;}\n.nm-box-lbl{font-size:9px;color:#8b949e;}\n.nm-box-val{font-size:13px;font-weight:bold;margin-top:2px;}\n</style>\n<div class=\"nm\">\n  <div class=\"nm-hdr\">\n    <span class=\"nm-title\">&#127760; Network Monitor</span>\n  </div>\n\n  <div class=\"nm-sec\">Internet Status</div>\n  <div id=\"nm-inet-box\" class=\"nm-status-box up\">\n    <div>\n      <div style=\"font-size:10px;color:#8b949e;\">Status</div>\n      <div id=\"nm-inet-status\" style=\"font-size:14px;font-weight:bold;color:#3fb950;\">&#9679; UP</div>\n    </div>\n    <div style=\"text-align:right;\">\n      <div style=\"font-size:10px;color:#8b949e;\">Total Fails</div>\n      <div id=\"nm-fails\" style=\"font-size:14px;font-weight:bold;color:#58a6ff;\">0</div>\n    </div>\n  </div>\n  <div style=\"font-size:10px;color:#8b949e;margin-bottom:6px;\" id=\"nm-lastfail\">Last fail: —</div>\n\n  <div class=\"nm-sec\">Host Ping Status</div>\n  <div id=\"nm-hosts\"></div>\n\n  <div class=\"nm-sec\">Fail History</div>\n  <div id=\"nm-history\" style=\"background:#161b22;border:1px solid #21262d;border-radius:4px;padding:6px 8px;max-height:120px;overflow-y:auto;\"></div>\n  <div style=\"font-size:9px;color:#8b949e;margin-top:3px;\">Last 10 outages</div>\n</div>\n\n<script>\n(function(){\n  var HOSTS=[\n    {key:'Internet', label:'Internet (8.8.8.8)', maxMs:100},\n    {key:'Flex',     label:'Flex 6600',          maxMs:5},\n    {key:'OpenwebRX',label:'OpenwebRX+',         maxMs:5},\n    {key:'RBN_PC',   label:'Mac RBN',             maxMs:5},\n    {key:'RBN_SDR',  label:'RBN SDR',            maxMs:5}\n  ];\n\n  function msColor(ms, maxMs){\n    if(ms===null) return '#f85149';\n    var pct=ms/maxMs;\n    return pct>0.8?'#f85149':pct>0.5?'#e3b341':'#3fb950';\n  }\n\n  scope.$watch('msg', function(msg){\n    if(!msg||!msg.payload) return;\n    var d=msg.payload;\n\n    // Internet status bar\n    var ibox=document.getElementById('nm-inet-box');\n    var istat=document.getElementById('nm-inet-status');\n    var isUp=(d.status==='up'||d.status===undefined);\n    if(ibox){ ibox.className='nm-status-box '+(isUp?'up':'down'); }\n    if(istat){ istat.textContent='\\u25CF '+(isUp?'UP':'DOWN'); istat.style.color=isUp?'#3fb950':'#f85149'; }\n    if(d.totalFails!==undefined){ var fe=document.getElementById('nm-fails'); if(fe) fe.textContent=d.totalFails; }\n    if(d.lastFail){ var lf=document.getElementById('nm-lastfail'); if(lf) lf.textContent='Last fail: '+d.lastFail; }\n\n    // Host rows\n    if(d.pings){\n      var html='';\n      HOSTS.forEach(function(h){\n        var p=d.pings[h.key];\n        var up=p&&p.up;\n        var ms=p?p.ms:null;\n        var msStr=ms===null?'—':ms+'ms';\n        var col=msColor(ms,h.maxMs);\n        var barW=ms===null?0:Math.min(100,ms/h.maxMs*100);\n        html+='<div class=\"nm-host-row\">'\n            +'<div class=\"nm-dot '+(up?'up':'down')+'\"></div>'\n            +'<div class=\"nm-name\">'+h.label+'</div>'\n            +'<div class=\"nm-bar-wrap\"><div class=\"nm-bar\" style=\"width:'+barW.toFixed(0)+'%;background:'+col+';\"></div></div>'\n            +'<div class=\"nm-ms\" style=\"color:'+col+'\">'+msStr+'</div>'\n            +'</div>';\n      });\n      var he=document.getElementById('nm-hosts');\n      if(he) he.innerHTML=html||'<div style=\"color:#8b949e;font-size:10px;\">Waiting for ping data...</div>';\n    }\n\n    // Fail history\n    if(d.failHistory!==undefined){\n      var fh=d.failHistory;\n      var fhtml=fh.length?fh.map(function(f){ return '<div class=\"nm-fail-item\">'+f+'</div>'; }).join('')\n                        :'<div style=\"color:#8b949e;font-size:10px;padding:4px;\">No outages recorded</div>';\n      var fhe=document.getElementById('nm-history');\n      if(fhe) fhe.innerHTML=fhtml;\n    }\n  });\n})();\n</script>",
         "storeOutMessages": true,
         "fwdInMessages": false,
         "resendOnRefresh": true,
@@ -6308,9 +6309,198 @@
         "name": "200 OK",
         "statusCode": "200",
         "headers": {},
-        "x": 280,
-        "y": 420,
+        "x": 240,
+        "y": 520,
         "wires": []
+    },
+    {
+        "id": "light_bootstrap_inj_01",
+        "type": "inject",
+        "z": "75e2cac8ab96f556",
+        "name": "Bootstrap Event Log (startup)",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 2,
+        "topic": "",
+        "payload": "{}",
+        "payloadType": "json",
+        "x": 200,
+        "y": 1140,
+        "wires": [
+            [
+                "light_bootstrap_fn_01"
+            ]
+        ]
+    },
+    {
+        "id": "light_bootstrap_fn_01",
+        "type": "function",
+        "z": "75e2cac8ab96f556",
+        "name": "Bootstrap Event Log from JSONL",
+        "func": "// Bootstrap Event Log from JSONL — one-shot on Node-RED startup.\n// flow.event_log lives in memory context, so restart wipes it. The\n// JSONL historic store (cfg_events_jsonl) is the source of truth;\n// rehydrate the most recent rows so the dashboard shows history\n// immediately instead of staying blank until the next real event.\n\nconst path = flow.get('cfg_events_jsonl');\nif (!path) {\n    node.warn('cfg_events_jsonl not set; Init Defaults must run first');\n    node.status({fill:'red', shape:'dot', text:'no path'});\n    return null;\n}\n\nconst CAP = 50;  // mirror the cap in AS3935 Warn/Disconnect Log writers\n\ntry {\n    const raw = fs.readFileSync(path, 'utf8');\n    const lines = raw.split('\\n').filter(Boolean);\n    // JSONL is append-only (oldest first). flow.event_log is unshift-built\n    // (newest first). Take the last CAP records, reverse to match.\n    const recent = lines.slice(-CAP).reverse();\n    const html = [];\n    for (const line of recent) {\n        try {\n            const rec = JSON.parse(line);\n            if (rec && rec.html) html.push(rec.html);\n        } catch (e) { /* skip malformed line */ }\n    }\n    flow.set('event_log', html);\n    node.status({fill:'green', shape:'dot',\n        text: html.length + ' rows from JSONL'});\n    return { payload: { type: 'log', html: html.join('') } };\n} catch (e) {\n    if (e.code === 'ENOENT') {\n        node.status({fill:'grey', shape:'ring', text:'no JSONL yet'});\n    } else {\n        node.error('Bootstrap event_log: ' + e.message);\n        node.status({fill:'red', shape:'dot', text:'error'});\n    }\n    return null;\n}\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [
+            {
+                "var": "fs",
+                "module": "fs"
+            }
+        ],
+        "x": 540,
+        "y": 1140,
+        "wires": [
+            [
+                "557083037f168b22"
+            ]
+        ]
+    },
+    {
+        "id": "as3935_cmd_mqtt_out",
+        "type": "mqtt out",
+        "z": "75e2cac8ab96f556",
+        "name": "AS3935 Cmd → bridge",
+        "topic": "lightning/as3935/cmd",
+        "qos": "0",
+        "retain": false,
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "f4785be9863eab08",
+        "x": 1720,
+        "y": 500,
+        "wires": []
+    },
+    {
+        "id": "as3935_last_event_mqtt_in",
+        "type": "mqtt in",
+        "z": "75e2cac8ab96f556",
+        "name": "AS3935 Last Event (retained)",
+        "topic": "lightning/as3935/last_event",
+        "qos": "1",
+        "datatype": "json",
+        "broker": "f4785be9863eab08",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 1210,
+        "y": 480,
+        "wires": [
+            [
+                "as3935_format_state"
+            ]
+        ]
+    },
+    {
+        "id": "tg_lightning_router",
+        "type": "function",
+        "z": "75e2cac8ab96f556",
+        "name": "Telegram Alert Router",
+        "func": "// Lightning Telegram alerts — Standard scope.\n// Allowed event types: disconnect, reconnect, bypass_on, bypass_off,\n// sensor_offline, sensor_online. Filters out TEST events. Rate-limits\n// to 5-per-60s per type to keep storms from flooding the channel.\n\nconst rec = msg.event_record;\nif (!rec || !rec.type) return null;\n\n// Skip TEST injects\nconst src = (rec.source || '').toString();\nif (src.indexOf('TEST') !== -1) return null;\n\nconst ALLOW = new Set([\n  'disconnect', 'reconnect',\n  'bypass_on', 'bypass_off',\n  'sensor_offline', 'sensor_online'\n]);\nif (!ALLOW.has(rec.type)) return null;\n\n// Rate-limit per type — 5 in 60s, then a single suppression notice\nconst WIN_MS = 60 * 1000;\nconst LIMIT  = 5;\nconst hist = context.get('rateHist') || {};\nconst now = Date.now();\nconst key = rec.type;\nhist[key] = (hist[key] || []).filter(t => now - t < WIN_MS);\nhist[key].push(now);\ncontext.set('rateHist', hist);\n\nconst overLimit = hist[key].length > LIMIT;\nconst justCrossedLimit = hist[key].length === LIMIT + 1;\nif (overLimit && !justCrossedLimit) return null;   // already sent the notice once, stay quiet\n\n// Credentials\nconst token  = flow.get('cfg_tg_token');\nconst chatId = flow.get('cfg_tg_chat_id');\nif (!token || !chatId) {\n    node.warn('Telegram creds missing — set TELEGRAM_TOKEN/_CHAT_ID in systemd secrets.conf, redeploy Init Defaults');\n    node.status({fill:'red', shape:'ring', text:'no creds'});\n    return null;\n}\n\nconst callsign = flow.get('callsign') || 'shack';\nconst tsStr = (rec.ts ? new Date(rec.ts) : new Date()).toLocaleTimeString();\n\nlet text;\nif (justCrossedLimit) {\n    text = `🤫 <i>${callsign}: ${LIMIT} <b>${key}</b> events in ${WIN_MS/1000}s — further duplicates suppressed until activity slows.</i>`;\n} else {\n    switch (rec.type) {\n        case 'disconnect':\n            text = `⚡ <b>${callsign}: ANTENNA DISCONNECT</b>\\n`\n                 + `Source: ${rec.source || '?'}\\n`\n                 + (rec.km != null ? `Distance: ${rec.km} km\\n` : '')\n                 + `Time: ${tsStr}`;\n            break;\n        case 'reconnect':\n            text = `✅ <b>${callsign}: ANTENNA RECONNECT</b>\\n`\n                 + `Reason: ${rec.reason || rec.cmd || '—'}\\n`\n                 + `Time: ${tsStr}`;\n            break;\n        case 'bypass_on':\n            text = `🔕 <b>${callsign}: BYPASS ON</b>\\n`\n                 + `Auto-disconnect suppressed; strikes alert only.\\n`\n                 + (rec.expires_min ? `Auto-off in ${rec.expires_min} min.\\n` : '')\n                 + `Time: ${tsStr}`;\n            break;\n        case 'bypass_off':\n            text = `🔔 <b>${callsign}: BYPASS OFF</b>\\n`\n                 + `Normal mode resumed.\\n`\n                 + `Time: ${tsStr}`;\n            break;\n        case 'sensor_offline':\n            text = `⚠ <b>${callsign}: AS3935 SENSOR OFFLINE</b>\\n`\n                 + `Lightning detection unavailable.\\n`\n                 + `Time: ${tsStr}`;\n            break;\n        case 'sensor_online':\n            text = `✓ <b>${callsign}: AS3935 SENSOR ONLINE</b>\\n`\n                 + `Lightning detection resumed.\\n`\n                 + `Time: ${tsStr}`;\n            break;\n        default:\n            return null;\n    }\n}\n\n// http-request node expects msg.url + msg.method + msg.headers + msg.payload\nmsg.url     = 'https://api.telegram.org/bot' + token + '/sendMessage';\nmsg.method  = 'POST';\nmsg.headers = { 'Content-Type': 'application/json' };\nmsg.payload = {\n    chat_id: chatId,\n    text: text,\n    parse_mode: 'HTML',\n    disable_web_page_preview: true\n};\nnode.status({fill:'green', shape:'dot', text: rec.type + ' @ ' + new Date().toLocaleTimeString()});\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1500,
+        "y": 2080,
+        "wires": [
+            [
+                "tg_lightning_http"
+            ]
+        ]
+    },
+    {
+        "id": "tg_lightning_http",
+        "type": "http request",
+        "z": "75e2cac8ab96f556",
+        "name": "Telegram → sendMessage",
+        "method": "use",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 1740,
+        "y": 2080,
+        "wires": [
+            [
+                "tg_lightning_debug"
+            ]
+        ]
+    },
+    {
+        "id": "tg_lightning_debug",
+        "type": "debug",
+        "z": "75e2cac8ab96f556",
+        "name": "Telegram response",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1960,
+        "y": 2080,
+        "wires": []
+    },
+    {
+        "id": "bypass_xition_detector",
+        "type": "function",
+        "z": "75e2cac8ab96f556",
+        "name": "Bypass Transition → event_record",
+        "func": "// Bypass Handler output 1 sends multiple messages: a {type:'bypass_state',\n// active, expiresAt} status message and {type:'log', html:'...'} log msgs.\n// We only care about state. Detect ON<->OFF transitions and emit a\n// structured event_record so the JSONL store + Telegram alert path see it.\n\nconst p = msg.payload;\nif (!p || p.type !== 'bypass_state') return null;\n\nconst isOn = !!p.active;\nconst prev = context.get('lastBypassOn');\nif (prev === isOn) return null;   // no state change\ncontext.set('lastBypassOn', isOn);\n\n// Suppress the very first sample (we don't know if it's a \"transition\" or\n// just initial state on flow restart).\nif (prev === undefined) return null;\n\nconst newMsg = { event_record: {\n    ts: new Date().toISOString(),\n    source: 'operator',\n    type: isOn ? 'bypass_on' : 'bypass_off',\n    expires_min: (isOn && p.expiresAt) ? Math.round((p.expiresAt - Date.now()) / 60000) : null,\n    html: '<div class=\"ev-row\">' + (isOn ? '🔕 BYPASS ON' : '🔔 BYPASS OFF') + '</div>'\n}};\nnode.status({fill:'blue', shape:'dot', text: (isOn ? 'ON' : 'OFF') + ' @ ' + new Date().toLocaleTimeString()});\nreturn newMsg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 700,
+        "y": 520,
+        "wires": [
+            [
+                "light_jsonl_append_01"
+            ]
+        ]
+    },
+    {
+        "id": "as3935_health_xition",
+        "type": "function",
+        "z": "75e2cac8ab96f556",
+        "name": "AS3935 Health Transition → event_record",
+        "func": "// Taps AS3935 Status (retained) mqtt-in (parallel wire alongside Format\n// AS3935 State). Detects offline <-> online transitions with a grace\n// period so brief flaps (WiFi blip, MQTT reconnect, ESP32 brief reboot)\n// don't spam alerts.\n//\n// Asymmetric debounce:\n//   - Offline transition → schedule a delayed alert (cfg_sensor_offline_grace_min,\n//     default 3 min). If we recover before the timer fires, cancel; no alert.\n//   - Online transition → only fire the recovery alert if the offline alert\n//     was actually sent. Flap that didn't trigger offline alert is just noise.\n//\n// First-sample-after-restart suppressed (can't distinguish a \"transition\"\n// from initial steady state on a fresh subscribe to the retained topic).\n\nlet raw;\ntry { raw = (typeof msg.payload === 'string') ? JSON.parse(msg.payload) : msg.payload; }\ncatch (e) { return null; }\nif (!raw || !raw.event) return null;\n\nconst isOffline = (raw.event === 'offline');\nconst prev = context.get('lastOffline');\nif (prev === isOffline) return null;   // no transition\ncontext.set('lastOffline', isOffline);\n\n// First-ever sample after Node-RED restart: don't emit. Also reset any\n// in-flight state from a previous Node-RED session (timer + alerted flag\n// are cleared automatically since context is in-memory and wiped on restart).\nif (prev === undefined) return null;\n\nconst graceMin = flow.get('cfg_sensor_offline_grace_min') || 3;\nconst GRACE_MS = graceMin * 60 * 1000;\n\nif (isOffline) {\n    // Offline transition → schedule a delayed alert.\n    const existing = context.get('offlineTimer');\n    if (existing) clearTimeout(existing);  // safety; shouldn't happen given the prev-check guard\n\n    const t = setTimeout(() => {\n        // Re-check current state at fire time\n        if (context.get('lastOffline') !== true) {\n            // Recovered between transition and fire; suppress\n            return;\n        }\n        node.send({ event_record: {\n            ts: new Date().toISOString(),\n            source: 'AS3935',\n            type: 'sensor_offline',\n            grace_min: graceMin,\n            html: '<div class=\"ev-row\">⚠ AS3935 OFFLINE (' + graceMin + ' min grace exceeded)</div>'\n        }});\n        context.set('alertedOffline', true);\n        context.set('offlineTimer', null);\n        node.status({fill:'red', shape:'dot', text:'offline alert sent'});\n    }, GRACE_MS);\n    context.set('offlineTimer', t);\n    node.status({fill:'yellow', shape:'ring',\n                 text:'offline · pending ' + graceMin + 'm grace'});\n    return null;\n}\n\n// Online transition → cancel any pending offline alert.\nconst t = context.get('offlineTimer');\nif (t) {\n    clearTimeout(t);\n    context.set('offlineTimer', null);\n}\n\n// Only fire recovery alert if offline alert was actually sent.\nconst alerted = context.get('alertedOffline');\nif (!alerted) {\n    node.status({fill:'grey', shape:'ring',\n                 text:'flap recovered · no alert (offline never sent)'});\n    return null;\n}\ncontext.set('alertedOffline', false);\nnode.status({fill:'green', shape:'dot', text:'online recovery alert sent'});\nreturn { event_record: {\n    ts: new Date().toISOString(),\n    source: 'AS3935',\n    type: 'sensor_online',\n    html: '<div class=\"ev-row\">✓ AS3935 ONLINE</div>'\n}};\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1470,
+        "y": 460,
+        "wires": [
+            [
+                "light_jsonl_append_01"
+            ]
+        ]
     },
     {
         "id": "fa472f4b461b6b2b",
@@ -7344,10 +7534,10 @@
         "id": "cf2f9b095d6f1624",
         "type": "tcp in",
         "z": "d110d176c0aad308",
-        "name": "vu2cpl.ddns.net:7550",
+        "name": "vu2cpl.ddns.net:7300",
         "server": "client",
         "host": "vu2cpl.ddns.net",
-        "port": "7550",
+        "port": "7300",
         "datatype": "utf8",
         "newline": "",
         "topic": "cluster3",
@@ -9155,8 +9345,8 @@
         "group": "as3935_ctl_grp",
         "name": "AS3935 Control Panel",
         "order": 1,
-        "width": "12",
-        "height": 22,
+        "width": 12,
+        "height": 18,
         "format": "<style>\n\n:root{\n  --bg:#0d1117; --card:#161b22; --border:#21262d;\n  --accent:#238636; --danger:#da3633; --warn:#e3b341;\n  --muted:#8b949e; --text:#c9d1d9;\n  --green:#3fb950; --red:#f85149; --amber:#e3b341;\n  --font:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;\n  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;\n}\n#a35tune *{box-sizing:border-box;margin:0;padding:0}\n#a35tune{\n  font-family:var(--font); background:var(--bg); color:var(--text);\n  padding:10px; display:flex; flex-direction:column; gap:8px;\n  font-size:13px;\n}\n#a35tune .card{\n  background:var(--card); border:1px solid var(--border);\n  border-radius:8px; padding:10px 14px;\n}\n#a35tune .hdr{display:flex;align-items:center;gap:10px}\n#a35tune .led{\n  display:inline-block; width:12px; height:12px; border-radius:50%;\n  background:var(--muted); box-shadow:0 0 6px currentColor;\n}\n#a35tune .title{font-weight:700; font-size:14px; letter-spacing:.3px}\n#a35tune .meta{color:var(--text); font-size:11px; margin-left:auto;\n  font-family:var(--mono)}\n#a35tune .counters{\n  font-family:var(--mono); font-size:13px; letter-spacing:.5px;\n}\n#a35tune .calib{color:var(--muted); font-size:11px;\n  font-family:var(--mono)}\n#a35tune .vbat{\n  font-family:var(--mono); font-size:13px;\n  display:flex; gap:10px; align-items:baseline;\n}\n#a35tune .vbat #a35vbat{font-weight:700}\n#a35tune .vbat.good #a35vbat{color:var(--green)}\n#a35tune .vbat.warn #a35vbat{color:var(--amber)}\n#a35tune .vbat.bad  #a35vbat{color:var(--red)}\n#a35tune .vbat.absent #a35vbat{color:var(--muted)}\n#a35tune .vbat .vbatpct{color:var(--text); font-size:11px}\n#a35tune .vbat .vbatoffset{color:var(--muted); font-size:10px;\n  margin-left:auto}\n#a35tune .tune{display:flex; flex-direction:column; gap:6px}\n#a35tune .trow{\n  display:flex; align-items:center; gap:8px; font-size:12px;\n}\n#a35tune .lbl{width:100px; color:var(--muted)}\n#a35tune .val{\n  display:inline-block; min-width:34px; text-align:center;\n  background:var(--bg); border:1px solid var(--border);\n  border-radius:4px; padding:2px 8px;\n  font-family:var(--mono); font-weight:700;\n}\n#a35tune .rng{color:var(--muted); font-size:10px; margin-left:auto;\n  font-family:var(--mono)}\n#a35tune button{\n  font-family:var(--font); background:var(--card); color:var(--text);\n  border:1px solid var(--border); border-radius:6px;\n  padding:5px 10px; font-size:12px; cursor:pointer;\n  transition:background 100ms, border-color 100ms;\n}\n#a35tune button:hover{background:#21262d; border-color:#3a414b}\n#a35tune button:active{transform:translateY(1px)}\n#a35tune button:disabled{opacity:.35; cursor:not-allowed}\n#a35tune .trow button{padding:2px 9px; min-width:26px;\n  font-family:var(--mono); font-weight:700; font-size:14px;\n  line-height:1}\n#a35tune select{\n  font-family:var(--font); background:var(--bg); color:var(--text);\n  border:1px solid var(--border); border-radius:4px;\n  padding:3px 6px; font-size:12px;\n}\n#a35tune .actions{display:flex; flex-wrap:nowrap; gap:6px; overflow-x:auto}\n#a35tune button.primary{\n  background:var(--accent); border-color:var(--accent);\n  color:white; font-weight:600;\n}\n#a35tune button.primary:hover{background:#2ea043; border-color:#2ea043}\n#a35tune button.warn{\n  background:transparent; border-color:var(--warn); color:var(--warn);\n}\n#a35tune button.warn:hover{background:rgba(227,179,65,.1)}\n#a35tune button.danger{\n  background:transparent; border-color:var(--danger); color:var(--red);\n}\n#a35tune button.danger:hover{background:rgba(218,54,51,.1)}\n#a35tune .ack{\n  font-family:var(--mono); font-size:11px; color:var(--muted);\n}\n#a35tune .ack.ok{color:var(--green)}\n#a35tune .ack.bad{color:var(--red)}\n#a35tune .sect{font-size:10px; color:var(--muted);\n  text-transform:uppercase; letter-spacing:1px; margin-bottom:4px}\n\n/* ── Events panel CSS (merged 2026-05-17) ───────────────────── */\n#a35ev *{box-sizing:border-box;margin:0;padding:0}\n#a35ev{\n  font-family:var(--font); background:var(--bg); color:var(--text);\n  padding:10px; display:flex; flex-direction:column; gap:8px;\n  font-size:13px;\n}\n#a35ev .card{\n  background:var(--card); border:1px solid var(--border);\n  border-radius:8px; padding:10px 14px;\n}\n#a35ev .lastev{display:flex; align-items:center; gap:14px}\n#a35ev .icon{font-size:30px; line-height:1; min-width:34px;\n  text-align:center}\n#a35ev .lastev .body{flex:1; display:flex; flex-direction:column; gap:3px}\n#a35ev .lastev .label{\n  font-size:10px; color:var(--muted);\n  text-transform:uppercase; letter-spacing:1px;\n}\n#a35ev .lastev .summary{\n  font-size:15px; font-weight:600; color:var(--text);\n}\n#a35ev .lastev .summary.lightning{color:var(--red)}\n#a35ev .lastev .summary.disturber{color:var(--amber)}\n#a35ev .lastev .summary.noise{color:var(--muted)}\n#a35ev .lastev .when{\n  font-family:var(--mono); font-size:11px; color:var(--muted);\n}\n.countstrip{display:flex; gap:18px;\n  font-family:var(--mono); font-size:13px}\n.cnt{display:flex; align-items:center; gap:5px}\n.cnt .v{font-weight:700; color:var(--text)}\n.cnt.lightning .v{color:var(--red)}\n.cnt.disturber .v{color:var(--amber)}\n.cnt.noise .v{color:var(--muted)}\n#a35ev .log{\n  font-family:var(--mono); font-size:11px;\n  max-height:280px; overflow-y:auto;\n  display:flex; flex-direction:column;\n}\n#a35ev .row{\n  display:flex; gap:10px; padding:4px 0;\n  border-bottom:1px solid var(--border);\n}\n#a35ev .row:last-of-type{border-bottom:none}\n#a35ev .row.lightning .ev{color:var(--red)}\n#a35ev .row.disturber .ev{color:var(--amber)}\n#a35ev .row.noise .ev{color:var(--muted)}\n#a35ev .ts{color:var(--muted); flex-shrink:0; width:78px}\n#a35ev .ev{flex:1}\n#a35ev .empty{color:var(--muted); text-align:center; padding:14px;\n  font-family:var(--font); font-size:12px}\n#a35ev .sect{\n  font-size:10px; color:var(--muted);\n  text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;\n}\n\n</style>\n\n<div id=\"a35tune\">\n  <div class=\"card hdr\">\n    <span class=\"led\" id=\"a35led\"></span>\n    <span class=\"title\">AS3935 Bridge</span>\n    <span class=\"meta\" id=\"a35meta\">awaiting status...</span>\n  </div>\n\n  <div class=\"card\" id=\"a35counters\">\n    <div class=\"countstrip\">\n      <span class=\"cnt lightning\"><span>⚡ lightning</span><span class=\"v\" id=\"a35cnt-l\">0</span></span>\n      <span class=\"cnt disturber\"><span>⚠ disturber</span><span class=\"v\" id=\"a35cnt-d\">0</span></span>\n      <span class=\"cnt noise\"><span>📡 noise</span><span class=\"v\" id=\"a35cnt-n\">0</span></span>\n      <span class=\"cnt\"><span>IRQ</span><span class=\"v\" id=\"a35cnt-i\">0</span></span>\n    </div>\n  </div>\n\n  <div class=\"card calib\" id=\"a35calib\">Calib: —</div>\n\n  <div class=\"card vbat\" id=\"a35vbatcard\">\n    <span id=\"a35vbat\">🔋 —</span>\n    <span class=\"vbatpct\" id=\"a35vbatpct\"></span>\n    <span class=\"vbatoffset\" id=\"a35vbatoff\"></span>\n  </div>\n\n  <div class=\"card tune\">\n    <div class=\"sect\">Tunables</div>\n    <div class=\"trow\"><span class=\"lbl\">NF</span>\n      <span class=\"val\" id=\"a35nf\">—</span>\n      <button onclick=\"a35.nudge('nf',-1,0,7)\">−</button>\n      <button onclick=\"a35.nudge('nf',+1,0,7)\">+</button>\n      <span class=\"rng\">0..7</span></div>\n    <div class=\"trow\"><span class=\"lbl\">WDTH</span>\n      <span class=\"val\" id=\"a35wdth\">—</span>\n      <button onclick=\"a35.nudge('wdth',-1,0,15)\">−</button>\n      <button onclick=\"a35.nudge('wdth',+1,0,15)\">+</button>\n      <span class=\"rng\">0..15</span></div>\n    <div class=\"trow\"><span class=\"lbl\">SREJ</span>\n      <span class=\"val\" id=\"a35srej\">—</span>\n      <button onclick=\"a35.nudge('srej',-1,0,15)\">−</button>\n      <button onclick=\"a35.nudge('srej',+1,0,15)\">+</button>\n      <span class=\"rng\">0..15</span></div>\n    <div class=\"trow\"><span class=\"lbl\">TUN_CAP</span>\n      <span class=\"val\" id=\"a35tuncap\">—</span>\n      <button onclick=\"a35.nudge('tun_cap',-1,0,15)\">−</button>\n      <button onclick=\"a35.nudge('tun_cap',+1,0,15)\">+</button>\n      <span class=\"rng\">0..15</span></div>\n    <div class=\"trow\"><span class=\"lbl\">Mask dist</span>\n      <span class=\"val\" id=\"a35mask\">—</span>\n      <button onclick=\"a35.toggle('mask_dist')\">toggle</button>\n      <span class=\"rng\">on/off</span></div>\n    <div class=\"trow\"><span class=\"lbl\">AFE GB</span>\n      <span class=\"val\" id=\"a35afe\">—</span>\n      <button onclick=\"a35.toggleAfe()\">toggle</button>\n      <span class=\"rng\">indoor/outdoor</span></div>\n    <div class=\"trow\"><span class=\"lbl\">Min strikes</span>\n      <select id=\"a35mnl\" onchange=\"a35.set('min_num_lightning', parseInt(this.value))\">\n        <option value=\"1\">1</option><option value=\"5\">5</option>\n        <option value=\"9\">9</option><option value=\"16\">16</option>\n      </select>\n      <span class=\"rng\">storm filter</span></div>\n    <div class=\"trow\"><span class=\"lbl\">Modem sleep</span>\n      <select id=\"a35ms\" onchange=\"a35.set('modem_sleep', this.value)\">\n        <option value=\"max\">max</option><option value=\"min\">min</option>\n      </select>\n      <span class=\"rng\">WiFi PS</span></div>\n  </div>\n\n  <div class=\"card actions\">\n    <div class=\"sect\" style=\"width:100%\">Actions</div>\n    <button class=\"primary\" onclick=\"a35.action('calibrate_tun_cap')\">Tune Cap (35 secs)</button>\n    <button onclick=\"a35.action('republish_status')\">Republish Status</button>\n    <button onclick=\"a35.action('query_vbat')\">Query Battery</button>\n    <button class=\"warn\" onclick=\"a35.confirm('Reboot the ESP32?', 'reboot')\">Reboot ESP32</button>\n    <button class=\"danger\" onclick=\"a35.confirm('Erase stored WiFi creds and reboot into setup AP?', 'factory_reset_wifi')\">Factory Reset WiFi</button>\n  </div>\n\n  <div class=\"card ack\" id=\"a35ack\">No commands yet</div>\n</div>\n\n<!-- ── Events panel HTML (merged 2026-05-17) ──────────────── -->\n<div id=\"a35ev\">\n  <div class=\"card lastev\">\n    <span class=\"icon\" id=\"a35ev-icon\">—</span>\n    <div class=\"body\">\n      <span class=\"label\">Last Event  (retained — survives restart)</span>\n      <span class=\"summary\" id=\"a35ev-summary\">awaiting first event...</span>\n      <span class=\"when\" id=\"a35ev-when\"></span>\n    </div>\n  </div>\n\n  \n\n  <div class=\"card\">\n    <div class=\"sect\">Recent events  (newest first · capped at 30)</div>\n    <div class=\"log\" id=\"a35ev-log\">\n      <div class=\"empty\">no events yet</div>\n    </div>\n  </div>\n</div>\n\n<script>\n\n(function(scope){\n  // Pattern B (matches chrony card): IIFE takes scope as parameter,\n  // captured from the top-level closure where node-red-dashboard exposes\n  // it. Don't rely on `this` — IIFE's this is window, not the directive's\n  // scope, so `var scope = this;` would silently set scope=window.\n  var state = {};\n  var hb = {counters:{}};\n\n  function $(id){return document.getElementById(id);}\n  function fmtUptime(s){\n    if(s==null) return '?';\n    var h=Math.floor(s/3600), m=Math.floor((s%3600)/60), x=s%60;\n    return (h?h+'h ':'') + (m?m+'m ':'') + x+'s';\n  }\n\n  function render(){\n    var led = $('a35led');\n    if(led){\n      var ok = state.event==='ready'\n        && state.calib_trco==='OK' && state.calib_srco==='OK';\n      var off = state.event==='offline';\n      led.style.background = off ? 'var(--red)'\n        : ok ? 'var(--green)' : 'var(--amber)';\n      led.style.color      = off ? 'var(--red)'\n        : ok ? 'var(--green)' : 'var(--amber)';\n    }\n    var meta = $('a35meta');\n    if(meta){\n      meta.textContent =\n        'FW ' + (state.fw || '—')\n        + ' · IP ' + (state.ip || '?')\n        + ' · RSSI ' + ((hb.rssi != null ? hb.rssi : state.rssi) || '?') + ' dBm'\n        + ' · up ' + fmtUptime(hb.uptime_s);\n    }\n    var c = hb.counters || {};\n    var ll=$('a35cnt-l'), dd=$('a35cnt-d'), nn=$('a35cnt-n'), ii=$('a35cnt-i');\n    if(ll) ll.textContent = c.lightning || 0;\n    if(dd) dd.textContent = c.disturber || 0;\n    if(nn) nn.textContent = c.noise || 0;\n    if(ii) ii.textContent = c.irq || 0;\n    var cal = $('a35calib');\n    if(cal){\n      cal.textContent =\n        'Calib: TRCO=' + (state.calib_trco || '?')\n        + ' · SRCO=' + (state.calib_srco || '?');\n    }\n\n    // Battery row. hb.vbat_mv lands every 30s (faster than the 5-min\n    // status republish); status.vbat_mv fills in on connect/republish.\n    // Prefer hb when both exist — it's fresher.\n    var mv = (hb && hb.vbat_mv != null) ? hb.vbat_mv : state.vbat_mv;\n    var vbcard = $('a35vbatcard');\n    var vbel   = $('a35vbat');\n    var vbpct  = $('a35vbatpct');\n    var vboff  = $('a35vbatoff');\n    if(vbcard && vbel){\n      if(mv == null){\n        vbel.textContent = '🔋 awaiting telemetry...';\n        vbcard.className = 'card vbat absent';\n        if(vbpct) vbpct.textContent = '';\n      } else if(mv < 500){\n        // Divider not wired (or no battery) — float read is <0.5 V.\n        vbel.textContent = '🔋 — (divider not wired?)';\n        vbcard.className = 'card vbat absent';\n        if(vbpct) vbpct.textContent = '';\n      } else {\n        var v = (mv / 1000).toFixed(2);\n        // Piecewise-linear SOC for an 18650.\n        // 4.20→100, 3.95→80, 3.85→60, 3.75→40, 3.65→20, 3.50→10, 3.30→0.\n        var pts = [[3300,0],[3500,10],[3650,20],[3750,40],\n                   [3850,60],[3950,80],[4200,100]];\n        var pct;\n        if(mv <= pts[0][0])               pct = 0;\n        else if(mv >= pts[pts.length-1][0]) pct = 100;\n        else {\n          for(var i=1;i<pts.length;i++){\n            if(mv <= pts[i][0]){\n              var a = pts[i-1], b = pts[i];\n              pct = a[1] + (b[1]-a[1]) * (mv-a[0]) / (b[0]-a[0]);\n              break;\n            }\n          }\n        }\n        vbel.textContent = '🔋 ' + v + ' V';\n        if(vbpct) vbpct.textContent = '(≈ ' + Math.round(pct) + ' %)';\n        // Colour thresholds: green ≥ 3.90 V, amber 3.70–3.90 V, red < 3.70 V.\n        var cls = (mv >= 3900) ? 'good'\n                : (mv >= 3700) ? 'warn'\n                : 'bad';\n        vbcard.className = 'card vbat ' + cls;\n      }\n    }\n    if(vboff){\n      vboff.textContent = (state.vbat_offset_mv != null\n        && state.vbat_offset_mv !== 0)\n        ? 'offset ' + (state.vbat_offset_mv>0?'+':'') + state.vbat_offset_mv + ' mV'\n        : '';\n    }\n    if(state.nf      != null && $('a35nf'))     $('a35nf').textContent = state.nf;\n    if(state.wdth    != null && $('a35wdth'))   $('a35wdth').textContent = state.wdth;\n    if(state.srej    != null && $('a35srej'))   $('a35srej').textContent = state.srej;\n    if(state.tun_cap != null && $('a35tuncap')) $('a35tuncap').textContent = state.tun_cap;\n    if(state.mask_dist != null && $('a35mask')){\n      $('a35mask').textContent = state.mask_dist ? 'ON' : 'OFF';\n      $('a35mask').style.color = state.mask_dist ? 'var(--amber)' : 'var(--text)';\n    }\n    if(state.afe_gb && $('a35afe')){\n      $('a35afe').textContent = state.afe_gb.toUpperCase();\n      $('a35afe').style.color = state.afe_gb === 'outdoor' ? 'var(--green)' : 'var(--amber)';\n    }\n    if(state.min_num_lightning != null && $('a35mnl'))\n      $('a35mnl').value = String(state.min_num_lightning);\n    if(state.modem_sleep && $('a35ms'))\n      $('a35ms').value = state.modem_sleep;\n  }\n\n  window.a35 = {\n    nudge: function(key, delta, lo, hi){\n      var v = (state[key] == null ? 0 : state[key]) + delta;\n      if(v < lo || v > hi) return;\n      this.set(key, v);\n    },\n    toggle: function(key){ this.set(key, !state[key]); },\n    toggleAfe: function(){ this.set('afe_gb', state.afe_gb === 'outdoor' ? 'indoor' : 'outdoor'); },\n    set: function(key, value){\n      scope.send({ payload: { set: key, value: value } });\n    },\n    action: function(name){\n      scope.send({ payload: { action: name } });\n    },\n    confirm: function(msg, action){\n      if(confirm(msg)) this.action(action);\n    }\n  };\n\n  scope.$watch('msg', function(msg){\n    if(!msg || !msg.topic) return;\n    var p = msg.payload;\n    if(typeof p === 'string'){ try { p = JSON.parse(p); } catch(e){ return; } }\n    if(msg.topic === 'lightning/as3935/status'){ state = p || {}; }\n    else if(msg.topic === 'lightning/as3935/hb'){ hb = p || {counters:{}}; }\n    else if(msg.topic === 'lightning/as3935/cmd/ack' && $('a35ack')){\n      var t = (p && p.ts || '').slice(11);\n      $('a35ack').textContent =\n        (p.ok ? '✓ ' : '✗ ') + (p.cmd || '?')\n        + (p.error ? ' — ' + p.error : '') + (t ? '  @ ' + t : '');\n      $('a35ack').className = 'card ack ' + (p.ok ? 'ok' : 'bad');\n    }\n    render();\n  });\n\n  render();\n})(scope);\n\n/* ── Events panel JS (merged 2026-05-17) ─────────────────── */\n(function(scope){\n  // Pattern B (matches tuning panel + chrony card): IIFE takes scope as\n  // parameter from the top-level Angular controller. Don't shadow scope\n  // with `var scope = this;` — IIFE's `this` is window.\n  var log = [];                                // newest-first, cap 30\n  var lastEv = null;\n  var lastEvWallMs = 0;\n\n  function $(id){ return document.getElementById(id); }\n\n  function fmtClock(ts){\n    if(!ts) return '—';\n    var s = String(ts);\n    var i = s.indexOf('T');\n    if(i >= 0) return s.slice(i+1).split('.')[0];   // ISO 8601 → HH:MM:SS\n    return s;\n  }\n  function agoText(ms){\n    if(!ms) return '';\n    var age = Math.max(0, Math.floor((Date.now()-ms)/1000));\n    if(age < 60)    return age + 's ago';\n    if(age < 3600)  return Math.floor(age/60) + 'm ago';\n    if(age < 86400) return Math.floor(age/3600) + 'h ago';\n    return Math.floor(age/86400) + 'd ago';\n  }\n  function iconFor(ev){\n    return ev === 'lightning' ? '⚡'\n         : ev === 'disturber' ? '⚠'\n         : ev === 'noise'     ? '📡'\n         : '—';\n  }\n  function distText(p){\n    // AS3935 reports distance 63 (0x3F) as the out-of-range sentinel.\n    if(p.distance === 63) return 'out of range';\n    if(p.distance == null) return '?';\n    if(p.distance === 0)   return 'overhead';\n    return p.distance + ' km';\n  }\n\n  function renderLast(){\n    if(!lastEv){ return; }\n    $('a35ev-icon').textContent = iconFor(lastEv.event);\n    var line;\n    if(lastEv.event === 'lightning'){\n      line = '⚡ Lightning · ' + distText(lastEv) + ' · energy ' + (lastEv.energy||0);\n    } else if(lastEv.event === 'disturber'){\n      line = '⚠ Disturber  (man-made interference rejected by the chip)';\n    } else if(lastEv.event === 'noise'){\n      line = '📡 Noise floor too high  (raise NF if persistent)';\n    } else {\n      line = String(lastEv.event || 'unknown');\n    }\n    var sum = $('a35ev-summary');\n    sum.textContent = line;\n    sum.className = 'summary ' + (lastEv.event || '');\n    $('a35ev-when').textContent =\n      fmtClock(lastEv.timestamp) + '  ·  ' + agoText(lastEvWallMs);\n  }\n  function renderLog(){\n    var el = $('a35ev-log');\n    if(!log.length){\n      el.innerHTML = '<div class=\"empty\">no events yet</div>';\n      return;\n    }\n    var out = '';\n    for(var i=0; i<log.length; i++){\n      var r = log[i];\n      var detail = (r.event === 'lightning')\n        ? '⚡ ' + distText(r) + '  ·  e=' + (r.energy||0)\n        : (r.event === 'disturber') ? '⚠ disturber'\n        : (r.event === 'noise')     ? '📡 noise'\n        : r.event;\n      out += '<div class=\"row ' + r.event + '\">'\n           + '<span class=\"ts\">' + fmtClock(r.timestamp) + '</span>'\n           + '<span class=\"ev\">' + detail + '</span>'\n           + '</div>';\n    }\n    el.innerHTML = out;\n  }\n\n  // Live event from lightning/as3935 — append to log, bump counters,\n  // promote to Last Event card.\n  function ingestLive(p){\n    if(!p || !p.event) return;\n    log.unshift(p);\n    if(log.length > 30) log.length = 30;\n    lastEv = p;\n    lastEvWallMs = Date.now();\n    renderLast(); renderLog();\n  }\n\n  // Retained last_event — rehydrate Last Event card only.\n  // Do NOT touch the log (retained replay would conflict with live ingest).\n  function ingestRetained(p){\n    if(!p || !p.event) return;\n    lastEv = p;\n    lastEvWallMs = p.ts_epoch_ms || Date.now();\n    renderLast();\n  }\n\n  scope.$watch('msg', function(msg){\n    if(!msg || !msg.topic) return;\n    var p = msg.payload;\n    if(typeof p === 'string'){ try { p = JSON.parse(p); } catch(e){ return; } }\n    if(msg.topic === 'lightning/as3935')                ingestLive(p);\n    else if(msg.topic === 'lightning/as3935/last_event') ingestRetained(p);\n  });\n\n  // 1Hz tick — keep the \"Xs ago\" label fresh without server traffic.\n  if(!scope._a35evTicker){\n    scope._a35evTicker = setInterval(function(){\n      if(lastEv) $('a35ev-when').textContent =\n        fmtClock(lastEv.timestamp) + '  ·  ' + agoText(lastEvWallMs);\n    }, 1000);\n    scope.$on('$destroy', function(){\n      clearInterval(scope._a35evTicker);\n      scope._a35evTicker = null;\n    });\n  }\n\n  renderLast(); renderLog();\n})(scope);\n\n</script>",
         "storeOutMessages": true,
         "fwdInMessages": false,
@@ -9187,74 +9377,6 @@
         "broker": "f4785be9863eab08",
         "x": 720,
         "y": 160,
-        "wires": []
-    },
-    {
-        "id": "light_bootstrap_inj_01",
-        "type": "inject",
-        "z": "75e2cac8ab96f556",
-        "name": "Bootstrap Event Log (startup)",
-        "props": [
-            {
-                "p": "payload"
-            }
-        ],
-        "repeat": "",
-        "crontab": "",
-        "once": true,
-        "onceDelay": 2,
-        "topic": "",
-        "payload": "{}",
-        "payloadType": "json",
-        "x": 200,
-        "y": 1140,
-        "wires": [
-            [
-                "light_bootstrap_fn_01"
-            ]
-        ]
-    },
-    {
-        "id": "light_bootstrap_fn_01",
-        "type": "function",
-        "z": "75e2cac8ab96f556",
-        "name": "Bootstrap Event Log from JSONL",
-        "func": "// Bootstrap Event Log from JSONL — one-shot on Node-RED startup.\n// flow.event_log lives in memory context, so restart wipes it. The\n// JSONL historic store (cfg_events_jsonl) is the source of truth;\n// rehydrate the most recent rows so the dashboard shows history\n// immediately instead of staying blank until the next real event.\n\nconst path = flow.get('cfg_events_jsonl');\nif (!path) {\n    node.warn('cfg_events_jsonl not set; Init Defaults must run first');\n    node.status({fill:'red', shape:'dot', text:'no path'});\n    return null;\n}\n\nconst CAP = 50;  // mirror the cap in AS3935 Warn/Disconnect Log writers\n\ntry {\n    const raw = fs.readFileSync(path, 'utf8');\n    const lines = raw.split('\\n').filter(Boolean);\n    // JSONL is append-only (oldest first). flow.event_log is unshift-built\n    // (newest first). Take the last CAP records, reverse to match.\n    const recent = lines.slice(-CAP).reverse();\n    const html = [];\n    for (const line of recent) {\n        try {\n            const rec = JSON.parse(line);\n            if (rec && rec.html) html.push(rec.html);\n        } catch (e) { /* skip malformed line */ }\n    }\n    flow.set('event_log', html);\n    node.status({fill:'green', shape:'dot',\n        text: html.length + ' rows from JSONL'});\n    return { payload: { type: 'log', html: html.join('') } };\n} catch (e) {\n    if (e.code === 'ENOENT') {\n        node.status({fill:'grey', shape:'ring', text:'no JSONL yet'});\n    } else {\n        node.error('Bootstrap event_log: ' + e.message);\n        node.status({fill:'red', shape:'dot', text:'error'});\n    }\n    return null;\n}\n",
-        "outputs": 1,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [
-            {
-                "var": "fs",
-                "module": "fs"
-            }
-        ],
-        "x": 540,
-        "y": 1140,
-        "wires": [
-            [
-                "557083037f168b22"
-            ]
-        ]
-    },
-    {
-        "id": "as3935_cmd_mqtt_out",
-        "type": "mqtt out",
-        "z": "75e2cac8ab96f556",
-        "name": "AS3935 Cmd → bridge",
-        "topic": "lightning/as3935/cmd",
-        "qos": "0",
-        "retain": false,
-        "respTopic": "",
-        "contentType": "",
-        "userProps": "",
-        "correl": "",
-        "expiry": "",
-        "broker": "f4785be9863eab08",
-        "x": 1720,
-        "y": 500,
         "wires": []
     },
     {
@@ -9360,127 +9482,6 @@
         "wires": [
             [
                 "223cb2ce733c5d3f"
-            ]
-        ]
-    },
-    {
-        "id": "as3935_last_event_mqtt_in",
-        "type": "mqtt in",
-        "z": "75e2cac8ab96f556",
-        "name": "AS3935 Last Event (retained)",
-        "topic": "lightning/as3935/last_event",
-        "qos": "1",
-        "datatype": "json",
-        "broker": "f4785be9863eab08",
-        "nl": false,
-        "rap": true,
-        "rh": 0,
-        "inputs": 0,
-        "x": 1210,
-        "y": 480,
-        "wires": [
-            [
-                "as3935_format_state"
-            ]
-        ]
-    },
-    {
-        "id": "tg_lightning_router",
-        "type": "function",
-        "z": "75e2cac8ab96f556",
-        "name": "Telegram Alert Router",
-        "func": "// Lightning Telegram alerts — Standard scope.\n// Allowed event types: disconnect, reconnect, bypass_on, bypass_off,\n// sensor_offline, sensor_online. Filters out TEST events. Rate-limits\n// to 5-per-60s per type to keep storms from flooding the channel.\n\nconst rec = msg.event_record;\nif (!rec || !rec.type) return null;\n\n// Skip TEST injects\nconst src = (rec.source || '').toString();\nif (src.indexOf('TEST') !== -1) return null;\n\nconst ALLOW = new Set([\n  'disconnect', 'reconnect',\n  'bypass_on', 'bypass_off',\n  'sensor_offline', 'sensor_online'\n]);\nif (!ALLOW.has(rec.type)) return null;\n\n// Rate-limit per type — 5 in 60s, then a single suppression notice\nconst WIN_MS = 60 * 1000;\nconst LIMIT  = 5;\nconst hist = context.get('rateHist') || {};\nconst now = Date.now();\nconst key = rec.type;\nhist[key] = (hist[key] || []).filter(t => now - t < WIN_MS);\nhist[key].push(now);\ncontext.set('rateHist', hist);\n\nconst overLimit = hist[key].length > LIMIT;\nconst justCrossedLimit = hist[key].length === LIMIT + 1;\nif (overLimit && !justCrossedLimit) return null;   // already sent the notice once, stay quiet\n\n// Credentials\nconst token  = flow.get('cfg_tg_token');\nconst chatId = flow.get('cfg_tg_chat_id');\nif (!token || !chatId) {\n    node.warn('Telegram creds missing — set TELEGRAM_TOKEN/_CHAT_ID in systemd secrets.conf, redeploy Init Defaults');\n    node.status({fill:'red', shape:'ring', text:'no creds'});\n    return null;\n}\n\nconst callsign = flow.get('callsign') || 'shack';\nconst tsStr = (rec.ts ? new Date(rec.ts) : new Date()).toLocaleTimeString();\n\nlet text;\nif (justCrossedLimit) {\n    text = `🤫 <i>${callsign}: ${LIMIT} <b>${key}</b> events in ${WIN_MS/1000}s — further duplicates suppressed until activity slows.</i>`;\n} else {\n    switch (rec.type) {\n        case 'disconnect':\n            text = `⚡ <b>${callsign}: ANTENNA DISCONNECT</b>\\n`\n                 + `Source: ${rec.source || '?'}\\n`\n                 + (rec.km != null ? `Distance: ${rec.km} km\\n` : '')\n                 + `Time: ${tsStr}`;\n            break;\n        case 'reconnect':\n            text = `✅ <b>${callsign}: ANTENNA RECONNECT</b>\\n`\n                 + `Reason: ${rec.reason || rec.cmd || '—'}\\n`\n                 + `Time: ${tsStr}`;\n            break;\n        case 'bypass_on':\n            text = `🔕 <b>${callsign}: BYPASS ON</b>\\n`\n                 + `Auto-disconnect suppressed; strikes alert only.\\n`\n                 + (rec.expires_min ? `Auto-off in ${rec.expires_min} min.\\n` : '')\n                 + `Time: ${tsStr}`;\n            break;\n        case 'bypass_off':\n            text = `🔔 <b>${callsign}: BYPASS OFF</b>\\n`\n                 + `Normal mode resumed.\\n`\n                 + `Time: ${tsStr}`;\n            break;\n        case 'sensor_offline':\n            text = `⚠ <b>${callsign}: AS3935 SENSOR OFFLINE</b>\\n`\n                 + `Lightning detection unavailable.\\n`\n                 + `Time: ${tsStr}`;\n            break;\n        case 'sensor_online':\n            text = `✓ <b>${callsign}: AS3935 SENSOR ONLINE</b>\\n`\n                 + `Lightning detection resumed.\\n`\n                 + `Time: ${tsStr}`;\n            break;\n        default:\n            return null;\n    }\n}\n\n// http-request node expects msg.url + msg.method + msg.headers + msg.payload\nmsg.url     = 'https://api.telegram.org/bot' + token + '/sendMessage';\nmsg.method  = 'POST';\nmsg.headers = { 'Content-Type': 'application/json' };\nmsg.payload = {\n    chat_id: chatId,\n    text: text,\n    parse_mode: 'HTML',\n    disable_web_page_preview: true\n};\nnode.status({fill:'green', shape:'dot', text: rec.type + ' @ ' + new Date().toLocaleTimeString()});\nreturn msg;\n",
-        "outputs": 1,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 1500,
-        "y": 2080,
-        "wires": [
-            [
-                "tg_lightning_http"
-            ]
-        ]
-    },
-    {
-        "id": "tg_lightning_http",
-        "type": "http request",
-        "z": "75e2cac8ab96f556",
-        "name": "Telegram → sendMessage",
-        "method": "use",
-        "ret": "obj",
-        "paytoqs": "ignore",
-        "url": "",
-        "tls": "",
-        "persist": false,
-        "proxy": "",
-        "authType": "",
-        "senderr": false,
-        "headers": [],
-        "x": 1740,
-        "y": 2080,
-        "wires": [
-            [
-                "tg_lightning_debug"
-            ]
-        ]
-    },
-    {
-        "id": "tg_lightning_debug",
-        "type": "debug",
-        "z": "75e2cac8ab96f556",
-        "name": "Telegram response",
-        "active": true,
-        "tosidebar": true,
-        "console": false,
-        "tostatus": false,
-        "complete": "payload",
-        "targetType": "msg",
-        "statusVal": "",
-        "statusType": "auto",
-        "x": 1960,
-        "y": 2080,
-        "wires": []
-    },
-    {
-        "id": "bypass_xition_detector",
-        "type": "function",
-        "z": "75e2cac8ab96f556",
-        "name": "Bypass Transition → event_record",
-        "func": "// Bypass Handler output 1 sends multiple messages: a {type:'bypass_state',\n// active, expiresAt} status message and {type:'log', html:'...'} log msgs.\n// We only care about state. Detect ON<->OFF transitions and emit a\n// structured event_record so the JSONL store + Telegram alert path see it.\n\nconst p = msg.payload;\nif (!p || p.type !== 'bypass_state') return null;\n\nconst isOn = !!p.active;\nconst prev = context.get('lastBypassOn');\nif (prev === isOn) return null;   // no state change\ncontext.set('lastBypassOn', isOn);\n\n// Suppress the very first sample (we don't know if it's a \"transition\" or\n// just initial state on flow restart).\nif (prev === undefined) return null;\n\nconst newMsg = { event_record: {\n    ts: new Date().toISOString(),\n    source: 'operator',\n    type: isOn ? 'bypass_on' : 'bypass_off',\n    expires_min: (isOn && p.expiresAt) ? Math.round((p.expiresAt - Date.now()) / 60000) : null,\n    html: '<div class=\"ev-row\">' + (isOn ? '🔕 BYPASS ON' : '🔔 BYPASS OFF') + '</div>'\n}};\nnode.status({fill:'blue', shape:'dot', text: (isOn ? 'ON' : 'OFF') + ' @ ' + new Date().toLocaleTimeString()});\nreturn newMsg;\n",
-        "outputs": 1,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 700,
-        "y": 520,
-        "wires": [
-            [
-                "light_jsonl_append_01"
-            ]
-        ]
-    },
-    {
-        "id": "as3935_health_xition",
-        "type": "function",
-        "z": "75e2cac8ab96f556",
-        "name": "AS3935 Health Transition → event_record",
-        "func": "// Taps AS3935 Status (retained) mqtt-in (parallel wire alongside Format\n// AS3935 State). Detects offline <-> online transitions with a grace\n// period so brief flaps (WiFi blip, MQTT reconnect, ESP32 brief reboot)\n// don't spam alerts.\n//\n// Asymmetric debounce:\n//   - Offline transition → schedule a delayed alert (cfg_sensor_offline_grace_min,\n//     default 3 min). If we recover before the timer fires, cancel; no alert.\n//   - Online transition → only fire the recovery alert if the offline alert\n//     was actually sent. Flap that didn't trigger offline alert is just noise.\n//\n// First-sample-after-restart suppressed (can't distinguish a \"transition\"\n// from initial steady state on a fresh subscribe to the retained topic).\n\nlet raw;\ntry { raw = (typeof msg.payload === 'string') ? JSON.parse(msg.payload) : msg.payload; }\ncatch (e) { return null; }\nif (!raw || !raw.event) return null;\n\nconst isOffline = (raw.event === 'offline');\nconst prev = context.get('lastOffline');\nif (prev === isOffline) return null;   // no transition\ncontext.set('lastOffline', isOffline);\n\n// First-ever sample after Node-RED restart: don't emit. Also reset any\n// in-flight state from a previous Node-RED session (timer + alerted flag\n// are cleared automatically since context is in-memory and wiped on restart).\nif (prev === undefined) return null;\n\nconst graceMin = flow.get('cfg_sensor_offline_grace_min') || 3;\nconst GRACE_MS = graceMin * 60 * 1000;\n\nif (isOffline) {\n    // Offline transition → schedule a delayed alert.\n    const existing = context.get('offlineTimer');\n    if (existing) clearTimeout(existing);  // safety; shouldn't happen given the prev-check guard\n\n    const t = setTimeout(() => {\n        // Re-check current state at fire time\n        if (context.get('lastOffline') !== true) {\n            // Recovered between transition and fire; suppress\n            return;\n        }\n        node.send({ event_record: {\n            ts: new Date().toISOString(),\n            source: 'AS3935',\n            type: 'sensor_offline',\n            grace_min: graceMin,\n            html: '<div class=\"ev-row\">⚠ AS3935 OFFLINE (' + graceMin + ' min grace exceeded)</div>'\n        }});\n        context.set('alertedOffline', true);\n        context.set('offlineTimer', null);\n        node.status({fill:'red', shape:'dot', text:'offline alert sent'});\n    }, GRACE_MS);\n    context.set('offlineTimer', t);\n    node.status({fill:'yellow', shape:'ring',\n                 text:'offline · pending ' + graceMin + 'm grace'});\n    return null;\n}\n\n// Online transition → cancel any pending offline alert.\nconst t = context.get('offlineTimer');\nif (t) {\n    clearTimeout(t);\n    context.set('offlineTimer', null);\n}\n\n// Only fire recovery alert if offline alert was actually sent.\nconst alerted = context.get('alertedOffline');\nif (!alerted) {\n    node.status({fill:'grey', shape:'ring',\n                 text:'flap recovered · no alert (offline never sent)'});\n    return null;\n}\ncontext.set('alertedOffline', false);\nnode.status({fill:'green', shape:'dot', text:'online recovery alert sent'});\nreturn { event_record: {\n    ts: new Date().toISOString(),\n    source: 'AS3935',\n    type: 'sensor_online',\n    html: '<div class=\"ev-row\">✓ AS3935 ONLINE</div>'\n}};\n",
-        "outputs": 1,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 1470,
-        "y": 460,
-        "wires": [
-            [
-                "light_jsonl_append_01"
             ]
         ]
     },
