@@ -4289,6 +4289,118 @@ been swapped.
 
 ---
 
+## 2026-05-16
+
+### Init Defaults — `RADIO_ENABLED = false`, `THRESHOLD_KM = 40` (operator preferences)
+
+**Tab:** Lightning Antenna Protector (`75e2cac8ab96f556`)
+**Node:** Init Defaults (`ec1fd4dece8c4dc0`)
+**Commits:** `41c1708` (RADIO_ENABLED), `81ad69e` (THRESHOLD_KM)
+
+Operator wanted only the antenna plug to be auto-disconnected on
+lightning events (radio plug left alone), and the disconnect
+threshold bumped from the 25 km default to 40 km. Two one-line edits.
+
+**The road to `false` — a JavaScript-typing gotcha worth memorialising.**
+First attempt was `const RADIO_ENABLED = 'false';` — the **string**
+`'false'`, not the boolean `false`. Any non-empty string is truthy in
+JavaScript, so:
+
+```js
+if (!flow.get('radio_enabled')) return null;
+```
+
+…evaluated `!'false'` → `false` → the gate stayed open and the radio
+relay still got switched off on every disconnect. Audited every code
+path; this was the only failure mode (no other node in the flow
+publishes to the radio Tasmota's cmd topic). Fix: drop the quotes —
+boolean literal. The Init Defaults blue-dot status text also relies
+on truthy evaluation (`+(RADIO_ENABLED ? ' radio:'+... : '')`), so
+with the string `'false'` the status text would still show the
+`radio:...` segment — a useful diagnostic signal that the bug exists.
+
+Hardening considered but skipped: tighter coercion in Init Defaults
+(`flow.set('radio_enabled', RADIO_ENABLED === true)`) would have
+caught the typo at compile time. Decided against it because the
+existing call sites are clear, and the cost of strict coercion is
+that future-Manoj typing `RADIO_ENABLED = 'true'` (string) would
+*silently* disable the radio — same class of bug, different
+direction. Better: rely on operator awareness + the
+"how-to-edit-Init-Defaults" mental model.
+
+### AS3935 sensor health alerts — 3-minute grace period before firing
+
+**Tab:** Lightning Antenna Protector (`75e2cac8ab96f556`)
+**Node:** `as3935_health_xition` (transition detector added 2026-05-15)
+**Commit:** `ed260fe`
+
+Operator was receiving paired Telegram alerts (`⚠ OFFLINE`,
+`✓ ONLINE`) within a minute on routine network blips — WiFi
+re-association, MQTT keepalive timeout + reconnect, brief ESP32
+reboot. Real outages need alerts; brief flaps are noise.
+
+**Asymmetric debounce** added to the transition detector:
+
+- **Offline transition** → `setTimeout(graceMin × 60_000)` to fire
+  the alert. If the sensor comes back online before the timer
+  expires, `clearTimeout` and no alert fires.
+- **Online transition** → cancels any pending offline timer. Only
+  fires the recovery alert *if* the offline alert was actually sent
+  (tracked via `context.alertedOffline`). Recovery from a non-
+  reported outage is just noise.
+
+Net effect:
+
+| Outage duration | Alerts sent |
+|---|---|
+| < 3 min flap | 0 (silent) |
+| 3 min and up | 1 OFFLINE at the 3-min mark, 1 ONLINE on recovery |
+
+The grace period is **3 min** by default (`cfg_sensor_offline_grace_min`
+in Init Defaults). Rationale: WiFi reconnect / MQTT keepalive
+(60 s) + reconnect / ESP32 reboot + DHCP all complete in ≤ 2 min in
+this shack. 3 min covers the common false-positive cases without
+delaying real-outage notification beyond actionable time. Easy to
+tune later if real-world experience shifts the optimal value.
+
+Node statuses surface what's happening visually:
+
+- Yellow ring `offline · pending 3m grace` → timer running, no alert
+  sent yet
+- Grey ring `flap recovered · no alert` → returned before timer
+- Red dot `offline alert sent` → timer fired with sensor still down
+- Green dot `online recovery alert sent` → paired recovery sent
+  after a real outage
+
+In-memory timer state (kept in `context.set('offlineTimer', t)`) is
+wiped on Node-RED restart, which is fine: the `lastOffline === undefined`
+first-sample guard at the top of the function suppresses the first
+post-restart transition. No spurious alerts on flow restart.
+
+### Operational lessons captured
+
+Two recurring causes of confusion in this session, both written into
+docs for next time:
+
+1. **Editor view vs disk truth.** After a `git pull` while Node-RED
+   is running, the editor reflects in-memory flow state, not the
+   file on disk. New nodes pulled from origin don't appear in the
+   editor until `sudo systemctl restart nodered`. Caught us today
+   when the Telegram nodes were "missing" from the editor view even
+   though grep confirmed they were on disk.
+
+2. **Safari ≠ Chrome/Firefox shortcuts.** Wrote `Cmd+Shift+F` as a
+   fit-to-view suggestion — that's Safari's fullscreen, not Node-
+   RED's view-all. Added a universal rule to `~/.claude/CLAUDE.md`
+   ("Browser + keyboard environment") to default to mouse/menu
+   actions over keyboard shortcuts, and to verify any suggested
+   shortcut against Safari on macOS specifically. The Node-RED
+   navigation that always works: scroll the canvas with the
+   trackpad. The minimap is via hamburger → View, when the version
+   exposes it.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:

@@ -384,14 +384,17 @@ OM state is derived in `Parse Open-Meteo → Strike` from the 5-min poll and hel
 All seven thresholds live-tunable from `Init Defaults`:
 
 ```
-cfg_close_km             = 10    // AS3935 close-zone radius (km)
-cfg_medium_km            = 25    // AS3935 medium-zone radius (km)
-cfg_med_window_min       = 5     // sliding window for strike counting
-cfg_med_count            = 2     // hits needed in window for OM-cold medium DC
-cfg_om_lit_window_min    = 20    // OM state persistence after each poll
-cfg_om_cape_thresh       = 800   // "lit" CAPE threshold (J/kg)
-cfg_om_cape_severe_thresh= 2500  // "severe" CAPE threshold (J/kg)
+cfg_close_km                = 10    // AS3935 close-zone radius (km)
+cfg_medium_km               = 25    // AS3935 medium-zone radius (km)
+cfg_med_window_min          = 5     // sliding window for strike counting
+cfg_med_count               = 2     // hits needed in window for OM-cold medium DC
+cfg_om_lit_window_min       = 20    // OM state persistence after each poll
+cfg_om_cape_thresh          = 800   // "lit" CAPE threshold (J/kg)
+cfg_om_cape_severe_thresh   = 2500  // "severe" CAPE threshold (J/kg)
+cfg_sensor_offline_grace_min= 3     // AS3935 sensor-offline alert debounce (min)
 ```
+
+Sensor-offline alert debounce (added 2026-05-16, `as3935_health_xition`): brief network blips (WiFi reconnect, MQTT keepalive timeout, ESP32 reboot) commonly produce offline→online flaps within 1–2 min. `cfg_sensor_offline_grace_min` is the minimum continuous offline time before a Telegram alert fires. Recovery (`sensor_online`) alert only fires if the matching offline alert was actually sent — silent flaps stay silent. Tune up (5–10 min) if real-world false-positives still slip through; tune down (1–2 min) if you want faster real-outage notification.
 
 Sliding strike history lives in `flow.recent_as3935 = [{ts, km}, …]`. Pushed only when `msg.strike.source` contains `AS3935` (real sensor hits); TEST injects run the matrix without pushing, so they cannot manufacture corroboration. Filtered to the trailing `cfg_med_window_min`-minute window on every call. Persists across deploys only via memory (resets on Init Defaults run / Node-RED restart). Bypass switch still wins over everything (early-exit at top of Trigger Disconnect).
 
