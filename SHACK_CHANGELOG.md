@@ -4291,6 +4291,28 @@ been swapped.
 
 ## 2026-05-17
 
+### AS3935 SENSOR card — Distance / Energy / Event tiles persist across refresh
+
+**Tab:** Lightning Antenna Protector (`75e2cac8ab96f556`)
+**Node:** Master Dashboard ui_template (`557083037f168b22`).
+
+The AS3935 SENSOR card's `DISTANCE KM` / `ENERGY` / `EVENT` tiles were only updated by live event handlers (`as3935_status` for disturber/noise, `strike` for lightning). On Node-RED restart or browser refresh, they reverted to `—` / `⏳` and stayed blank until the chip fired the next event — which could be hours.
+
+The bridge's retained `lightning/as3935/last_event` topic already carries `{event, distance, energy, ts_epoch_ms}` (it's used to rehydrate `LAST SEEN`). The fix: have the same handler that seeds `LAST SEEN` also populate Distance / Energy / Event icon from the same payload.
+
+**Change:** extended the `as3935_last_event` handler in the Master Dashboard ui_template. After setting `as3935LastTs`, the handler now reads `d.event` / `d.distance` / `d.energy` and updates the three DOM elements:
+
+- `iconEl`: ⚡ (lightning) / ⚠ (disturber) / 📡 (noise) / ⏳ (default)
+- `distEl`: `d.distance` if present, else `—`; colour scoped by event type (blue / amber / muted)
+- `engEl`: `d.energy` if present, else `—`
+
+**Effect:**
+- Browser refresh / fresh tab / Node-RED restart → broker replays retained `last_event` within ~100 ms → mqtt-in → `Format AS3935 State` → handler runs → tiles populate from the most recent event the bridge ever published. Stay populated until a live event arrives.
+- Live event handlers (`as3935_status`, `strike`) unchanged — they still overwrite the tiles on fresh events.
+- 5 s replay tick on the AS3935 Tuning tab also re-emits `as3935_last_event` via `as3935_evt_replay_fn` → reinforces persistence.
+
+**Unchanged:** chip header (`a35Evt`) and LED colour. Those reflect *current sensor health* (driven by `/status` + `/hb`), not last event. Showing stale last-event text in the chip after a refresh would be misleading — current health is the right semantic there.
+
 ### Telegram alerts — stop misleading "ANTENNA DISCONNECT" for near-miss strikes + show actual state
 
 **Tab:** Lightning Antenna Protector (`75e2cac8ab96f556`)
