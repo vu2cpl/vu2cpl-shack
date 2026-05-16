@@ -5114,8 +5114,8 @@
         "type": "function",
         "z": "75e2cac8ab96f556",
         "name": "Append Lightning JSONL",
-        "func": "// Historic event store (one event per line, JSONL).\n// Fan-in from the three log writers; each sets msg.event_record. We\n// just serialise and append. File grows unbounded — logrotate it on\n// the Pi side when it gets large. Standard tools (jq, pandas, grep)\n// all read JSONL natively.\nconst rec = msg.event_record;\nif (!rec) return null;\nconst path = flow.get('cfg_events_jsonl');\nif (!path) { node.warn('cfg_events_jsonl not set; deploy Init Defaults'); return null; }\ntry {\n    fs.appendFileSync(path, JSON.stringify(rec) + '\\n');\n    node.status({fill:'green', shape:'dot',\n        text: rec.source + ':' + rec.type + ' @ ' + new Date().toLocaleTimeString()});\n} catch (e) {\n    node.error('JSONL append failed: ' + e.message, msg);\n}\nreturn null;\n",
-        "outputs": 0,
+        "func": "// Historic event store (one event per line, JSONL).\n// Fan-in from the three log writers and the two transition detectors;\n// each sets msg.event_record. We serialise + append, then pass the msg\n// through so the Telegram Alert Router (wired downstream) can dispatch\n// alerts based on event type.\nconst rec = msg.event_record;\nif (!rec) return null;\nconst path = flow.get('cfg_events_jsonl');\nif (!path) { node.warn('cfg_events_jsonl not set; deploy Init Defaults'); return null; }\ntry {\n    fs.appendFileSync(path, JSON.stringify(rec) + '\\n');\n    node.status({fill:'green', shape:'dot',\n        text: rec.source + ':' + rec.type + ' @ ' + new Date().toLocaleTimeString()});\n} catch (e) {\n    node.error('JSONL append failed: ' + e.message, msg);\n}\nreturn msg;\n",
+        "outputs": 1,
         "timeout": "",
         "noerr": 0,
         "initialize": "",
@@ -5128,7 +5128,11 @@
         ],
         "x": 1280,
         "y": 1980,
-        "wires": []
+        "wires": [
+            [
+                "tg_lightning_router"
+            ]
+        ]
     },
     {
         "id": "light_jsonl_allstrikes_01",
@@ -5204,7 +5208,7 @@
         "type": "function",
         "z": "75e2cac8ab96f556",
         "name": "Init Defaults  ✏️ EDIT HERE",
-        "func": "// ╔══════════════════════════════════════════════════════════════╗\n// ║  ⚙️  ALL SETTINGS DOCUMENTED IN THE CONFIG COMMENT NODE      ║\n// ╚══════════════════════════════════════════════════════════════╝\n\n// ── MQTT BROKER ────────────────────────────────────────────────\nconst MQTT_BROKER = '192.168.1.169'; // ← broker IP or hostname\n\n// ── CALLSIGN ───────────────────────────────────────────────────\nconst CALLSIGN    = 'VU2CPL';      // ← your callsign (shown on map)\n\n// ── LOCATION — ONLY EDIT THIS ─────────────────────────────────\nconst GRID_SQUARE = 'MK83TE';     // ← your Maidenhead grid square (6-char)\n\n// ── ANTENNA POWER SWITCH ───────────────────────────────────────\nconst POWER_STRIP = 'powerstrip1'; // ← Tasmota device name for antenna\nconst POWER_CH    = 'POWER5';     // ← antenna socket: POWER1–POWER5\n\n// ── RADIO SWITCH (optional secondary device) ────────────────────\nconst RADIO_ENABLED = true;        // ← false = skip radio switching entirely\nconst RADIO_LABEL   = 'Flex Radio';// ← friendly name shown in dashboard/log\nconst RADIO_STRIP   = '4relayboard'; // ← Tasmota device name for the radio\nconst RADIO_CH      = 'POWER1';   // ← radio socket: POWER1–POWER4\n\n// ── DISCONNECT DISTANCE ────────────────────────────────────────\nconst THRESHOLD_KM = 25;          // ← km — also adjustable via slider\n\n// ── RECONNECT TIMER ────────────────────────────────────────────\nconst RECONNECT_MIN = 20;          // ← minutes clear before antenna reconnects\n\n// ── Maidenhead → Lat/Lon (centre of square) ────────────────────\nfunction gridToLatLon(gs) {\n    gs = gs.toUpperCase();\n    const lon = (gs.charCodeAt(0) - 65) * 20\n              + (parseInt(gs[2]) * 2)\n              + (gs.length >= 6 ? (gs.charCodeAt(4) - 65) / 12 + 1/24 : 1)\n              - 180;\n    const lat = (gs.charCodeAt(1) - 65) * 10\n              + parseInt(gs[3])\n              + (gs.length >= 6 ? (gs.charCodeAt(5) - 65) / 24 + 1/48 : 0.5)\n              - 90;\n    return { lat: Math.round(lat * 10000) / 10000,\n             lon: Math.round(lon * 10000) / 10000 };\n}\n\nconst ll = gridToLatLon(GRID_SQUARE);\n\n// ── DO NOT EDIT BELOW ──────────────────────────────────────────\nflow.set('mqtt_broker',  MQTT_BROKER);\nflow.set('callsign',     CALLSIGN);\nflow.set('grid_square',  GRID_SQUARE);\nflow.set('home_lat',     ll.lat);\nflow.set('home_lon',     ll.lon);\nflow.set('power_strip',  POWER_STRIP);\nflow.set('power_ch',     POWER_CH);\nflow.set('radio_enabled', RADIO_ENABLED);\nflow.set('radio_label',  RADIO_LABEL);\nflow.set('radio_strip',  RADIO_STRIP);\nflow.set('radio_ch',     RADIO_CH);\nflow.set('reconnect_min', RECONNECT_MIN);\nflow.set('threshold_km',  THRESHOLD_KM);  // always overwrite from config\n\n// ── Distance-graded disconnect (2026-05-12) ────────────────────\nflow.set('cfg_close_km',             10);    // AS3935 close-zone radius\nflow.set('cfg_medium_km',            25);    // AS3935 medium-zone radius\nflow.set('cfg_med_window_min',        5);    // strike-counting window\nflow.set('cfg_med_count',             2);    // hits in window for OM-cold medium DC\nflow.set('cfg_om_lit_window_min',    20);    // OM state persistence after poll\nflow.set('cfg_om_cape_thresh',      800);    // CAPE J/kg for \"lit\"\nflow.set('cfg_om_cape_severe_thresh', 2500); // CAPE J/kg for \"severe\"\nflow.set('recent_as3935', []);               // reset strike history on deploy\nflow.set('om_state', 'cold');\nflow.set('om_state_until', 0);\n\nflow.set('antenna_off', false);   // always reset to ON at deploy\nflow.set('radio_off',   false);   // always reset to ON at deploy\nflow.set('bypass_active', false);  // bypass always off on deploy/launch\nflow.set('bypass_expires_at', null);\nif (!flow.get('stats'))         flow.set('stats',    {total:0,near:0,mid:0,far:0,closest:9999});\nif (!flow.get('recent'))        flow.set('recent',   []);\nif (!flow.get('event_log'))     flow.set('event_log',[]);\n\n// JSONL historic event store (one event per line)\n// Path hardcoded — `os` isn't a free global in this function node\n// (DXCC nodes declare it via libs:, this one doesn't). Hardcoding is\n// fine: this flow only runs on noderedpi4.\nflow.set('cfg_flows_dir',    '/home/vu2cpl/.node-red/projects/vu2cpl-shack');\nflow.set('cfg_events_jsonl', '/home/vu2cpl/.node-red/projects/vu2cpl-shack/nr_lightning_events.jsonl');\nnode.status({fill:'blue', shape:'dot',\n  text: 'broker:'+MQTT_BROKER+'  '+CALLSIGN+' '+GRID_SQUARE+' → '+ll.lat+','+ll.lon\n      +'  ant:'+POWER_STRIP+'/'+POWER_CH\n      +(RADIO_ENABLED?' radio:'+RADIO_STRIP+'/'+RADIO_CH:'')\n      +'  thr:'+THRESHOLD_KM+'km  recon:'+RECONNECT_MIN+'min'});\nreturn msg;\n",
+        "func": "// ╔══════════════════════════════════════════════════════════════╗\n// ║  ⚙️  ALL SETTINGS DOCUMENTED IN THE CONFIG COMMENT NODE      ║\n// ╚══════════════════════════════════════════════════════════════╝\n\n// ── MQTT BROKER ────────────────────────────────────────────────\nconst MQTT_BROKER = '192.168.1.169'; // ← broker IP or hostname\n\n// ── TELEGRAM (for alerts) ──────────────────────────────────────\n// Reads from systemd env vars (set in\n// /etc/systemd/system/nodered.service.d/secrets.conf — same source\n// as DXCC Credentials node 08dcd5378a79bb18). Operator never touches\n// the values in this file. If missing, Telegram Alert Router will\n// log a warning and skip sending.\n\n// ── CALLSIGN ───────────────────────────────────────────────────\nconst CALLSIGN    = 'VU2CPL';      // ← your callsign (shown on map)\n\n// ── LOCATION — ONLY EDIT THIS ─────────────────────────────────\nconst GRID_SQUARE = 'MK83TE';     // ← your Maidenhead grid square (6-char)\n\n// ── ANTENNA POWER SWITCH ───────────────────────────────────────\nconst POWER_STRIP = 'powerstrip1'; // ← Tasmota device name for antenna\nconst POWER_CH    = 'POWER5';     // ← antenna socket: POWER1–POWER5\n\n// ── RADIO SWITCH (optional secondary device) ────────────────────\nconst RADIO_ENABLED = true;        // ← false = skip radio switching entirely\nconst RADIO_LABEL   = 'Flex Radio';// ← friendly name shown in dashboard/log\nconst RADIO_STRIP   = '4relayboard'; // ← Tasmota device name for the radio\nconst RADIO_CH      = 'POWER1';   // ← radio socket: POWER1–POWER4\n\n// ── DISCONNECT DISTANCE ────────────────────────────────────────\nconst THRESHOLD_KM = 25;          // ← km — also adjustable via slider\n\n// ── RECONNECT TIMER ────────────────────────────────────────────\nconst RECONNECT_MIN = 20;          // ← minutes clear before antenna reconnects\n\n// ── Maidenhead → Lat/Lon (centre of square) ────────────────────\nfunction gridToLatLon(gs) {\n    gs = gs.toUpperCase();\n    const lon = (gs.charCodeAt(0) - 65) * 20\n              + (parseInt(gs[2]) * 2)\n              + (gs.length >= 6 ? (gs.charCodeAt(4) - 65) / 12 + 1/24 : 1)\n              - 180;\n    const lat = (gs.charCodeAt(1) - 65) * 10\n              + parseInt(gs[3])\n              + (gs.length >= 6 ? (gs.charCodeAt(5) - 65) / 24 + 1/48 : 0.5)\n              - 90;\n    return { lat: Math.round(lat * 10000) / 10000,\n             lon: Math.round(lon * 10000) / 10000 };\n}\n\nconst ll = gridToLatLon(GRID_SQUARE);\n\n// ── DO NOT EDIT BELOW ──────────────────────────────────────────\nflow.set('mqtt_broker',  MQTT_BROKER);\nflow.set('cfg_tg_token',   env.get('TELEGRAM_TOKEN')   || '');\nflow.set('cfg_tg_chat_id', env.get('TELEGRAM_CHAT_ID') || '');\nflow.set('callsign',     CALLSIGN);\nflow.set('grid_square',  GRID_SQUARE);\nflow.set('home_lat',     ll.lat);\nflow.set('home_lon',     ll.lon);\nflow.set('power_strip',  POWER_STRIP);\nflow.set('power_ch',     POWER_CH);\nflow.set('radio_enabled', RADIO_ENABLED);\nflow.set('radio_label',  RADIO_LABEL);\nflow.set('radio_strip',  RADIO_STRIP);\nflow.set('radio_ch',     RADIO_CH);\nflow.set('reconnect_min', RECONNECT_MIN);\nflow.set('threshold_km',  THRESHOLD_KM);  // always overwrite from config\n\n// ── Distance-graded disconnect (2026-05-12) ────────────────────\nflow.set('cfg_close_km',             10);    // AS3935 close-zone radius\nflow.set('cfg_medium_km',            25);    // AS3935 medium-zone radius\nflow.set('cfg_med_window_min',        5);    // strike-counting window\nflow.set('cfg_med_count',             2);    // hits in window for OM-cold medium DC\nflow.set('cfg_om_lit_window_min',    20);    // OM state persistence after poll\nflow.set('cfg_om_cape_thresh',      800);    // CAPE J/kg for \"lit\"\nflow.set('cfg_om_cape_severe_thresh', 2500); // CAPE J/kg for \"severe\"\nflow.set('recent_as3935', []);               // reset strike history on deploy\nflow.set('om_state', 'cold');\nflow.set('om_state_until', 0);\n\nflow.set('antenna_off', false);   // always reset to ON at deploy\nflow.set('radio_off',   false);   // always reset to ON at deploy\nflow.set('bypass_active', false);  // bypass always off on deploy/launch\nflow.set('bypass_expires_at', null);\nif (!flow.get('stats'))         flow.set('stats',    {total:0,near:0,mid:0,far:0,closest:9999});\nif (!flow.get('recent'))        flow.set('recent',   []);\nif (!flow.get('event_log'))     flow.set('event_log',[]);\n\n// JSONL historic event store (one event per line)\n// Path hardcoded — `os` isn't a free global in this function node\n// (DXCC nodes declare it via libs:, this one doesn't). Hardcoding is\n// fine: this flow only runs on noderedpi4.\nflow.set('cfg_flows_dir',    '/home/vu2cpl/.node-red/projects/vu2cpl-shack');\nflow.set('cfg_events_jsonl', '/home/vu2cpl/.node-red/projects/vu2cpl-shack/nr_lightning_events.jsonl');\nnode.status({fill:'blue', shape:'dot',\n  text: 'broker:'+MQTT_BROKER+'  '+CALLSIGN+' '+GRID_SQUARE+' → '+ll.lat+','+ll.lon\n      +'  ant:'+POWER_STRIP+'/'+POWER_CH\n      +(RADIO_ENABLED?' radio:'+RADIO_STRIP+'/'+RADIO_CH:'')\n      +'  thr:'+THRESHOLD_KM+'km  recon:'+RECONNECT_MIN+'min'});\nreturn msg;\n",
         "outputs": 1,
         "timeout": "",
         "noerr": 0,
@@ -6185,7 +6189,8 @@
         "y": 360,
         "wires": [
             [
-                "as3935_format_state"
+                "as3935_format_state",
+                "as3935_health_xition"
             ]
         ]
     },
@@ -6285,7 +6290,8 @@
         "y": 460,
         "wires": [
             [
-                "557083037f168b22"
+                "557083037f168b22",
+                "bypass_xition_detector"
             ],
             [
                 "dabc283d78fa8081"
@@ -9374,6 +9380,106 @@
         "wires": [
             [
                 "as3935_format_state"
+            ]
+        ]
+    },
+    {
+        "id": "tg_lightning_router",
+        "type": "function",
+        "z": "75e2cac8ab96f556",
+        "name": "Telegram Alert Router",
+        "func": "// Lightning Telegram alerts — Standard scope.\n// Allowed event types: disconnect, reconnect, bypass_on, bypass_off,\n// sensor_offline, sensor_online. Filters out TEST events. Rate-limits\n// to 5-per-60s per type to keep storms from flooding the channel.\n\nconst rec = msg.event_record;\nif (!rec || !rec.type) return null;\n\n// Skip TEST injects\nconst src = (rec.source || '').toString();\nif (src.indexOf('TEST') !== -1) return null;\n\nconst ALLOW = new Set([\n  'disconnect', 'reconnect',\n  'bypass_on', 'bypass_off',\n  'sensor_offline', 'sensor_online'\n]);\nif (!ALLOW.has(rec.type)) return null;\n\n// Rate-limit per type — 5 in 60s, then a single suppression notice\nconst WIN_MS = 60 * 1000;\nconst LIMIT  = 5;\nconst hist = context.get('rateHist') || {};\nconst now = Date.now();\nconst key = rec.type;\nhist[key] = (hist[key] || []).filter(t => now - t < WIN_MS);\nhist[key].push(now);\ncontext.set('rateHist', hist);\n\nconst overLimit = hist[key].length > LIMIT;\nconst justCrossedLimit = hist[key].length === LIMIT + 1;\nif (overLimit && !justCrossedLimit) return null;   // already sent the notice once, stay quiet\n\n// Credentials\nconst token  = flow.get('cfg_tg_token');\nconst chatId = flow.get('cfg_tg_chat_id');\nif (!token || !chatId) {\n    node.warn('Telegram creds missing — set TELEGRAM_TOKEN/_CHAT_ID in systemd secrets.conf, redeploy Init Defaults');\n    node.status({fill:'red', shape:'ring', text:'no creds'});\n    return null;\n}\n\nconst callsign = flow.get('callsign') || 'shack';\nconst tsStr = (rec.ts ? new Date(rec.ts) : new Date()).toLocaleTimeString();\n\nlet text;\nif (justCrossedLimit) {\n    text = `🤫 <i>${callsign}: ${LIMIT} <b>${key}</b> events in ${WIN_MS/1000}s — further duplicates suppressed until activity slows.</i>`;\n} else {\n    switch (rec.type) {\n        case 'disconnect':\n            text = `⚡ <b>${callsign}: ANTENNA DISCONNECT</b>\\n`\n                 + `Source: ${rec.source || '?'}\\n`\n                 + (rec.km != null ? `Distance: ${rec.km} km\\n` : '')\n                 + `Time: ${tsStr}`;\n            break;\n        case 'reconnect':\n            text = `✅ <b>${callsign}: ANTENNA RECONNECT</b>\\n`\n                 + `Reason: ${rec.reason || rec.cmd || '—'}\\n`\n                 + `Time: ${tsStr}`;\n            break;\n        case 'bypass_on':\n            text = `🔕 <b>${callsign}: BYPASS ON</b>\\n`\n                 + `Auto-disconnect suppressed; strikes alert only.\\n`\n                 + (rec.expires_min ? `Auto-off in ${rec.expires_min} min.\\n` : '')\n                 + `Time: ${tsStr}`;\n            break;\n        case 'bypass_off':\n            text = `🔔 <b>${callsign}: BYPASS OFF</b>\\n`\n                 + `Normal mode resumed.\\n`\n                 + `Time: ${tsStr}`;\n            break;\n        case 'sensor_offline':\n            text = `⚠ <b>${callsign}: AS3935 SENSOR OFFLINE</b>\\n`\n                 + `Lightning detection unavailable.\\n`\n                 + `Time: ${tsStr}`;\n            break;\n        case 'sensor_online':\n            text = `✓ <b>${callsign}: AS3935 SENSOR ONLINE</b>\\n`\n                 + `Lightning detection resumed.\\n`\n                 + `Time: ${tsStr}`;\n            break;\n        default:\n            return null;\n    }\n}\n\n// http-request node expects msg.url + msg.method + msg.headers + msg.payload\nmsg.url     = 'https://api.telegram.org/bot' + token + '/sendMessage';\nmsg.method  = 'POST';\nmsg.headers = { 'Content-Type': 'application/json' };\nmsg.payload = {\n    chat_id: chatId,\n    text: text,\n    parse_mode: 'HTML',\n    disable_web_page_preview: true\n};\nnode.status({fill:'green', shape:'dot', text: rec.type + ' @ ' + new Date().toLocaleTimeString()});\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1500,
+        "y": 2080,
+        "wires": [
+            [
+                "tg_lightning_http"
+            ]
+        ]
+    },
+    {
+        "id": "tg_lightning_http",
+        "type": "http request",
+        "z": "75e2cac8ab96f556",
+        "name": "Telegram → sendMessage",
+        "method": "use",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 1740,
+        "y": 2080,
+        "wires": [
+            [
+                "tg_lightning_debug"
+            ]
+        ]
+    },
+    {
+        "id": "tg_lightning_debug",
+        "type": "debug",
+        "z": "75e2cac8ab96f556",
+        "name": "Telegram response",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1960,
+        "y": 2080,
+        "wires": []
+    },
+    {
+        "id": "bypass_xition_detector",
+        "type": "function",
+        "z": "75e2cac8ab96f556",
+        "name": "Bypass Transition → event_record",
+        "func": "// Bypass Handler output 1 sends multiple messages: a {type:'bypass_state',\n// active, expiresAt} status message and {type:'log', html:'...'} log msgs.\n// We only care about state. Detect ON<->OFF transitions and emit a\n// structured event_record so the JSONL store + Telegram alert path see it.\n\nconst p = msg.payload;\nif (!p || p.type !== 'bypass_state') return null;\n\nconst isOn = !!p.active;\nconst prev = context.get('lastBypassOn');\nif (prev === isOn) return null;   // no state change\ncontext.set('lastBypassOn', isOn);\n\n// Suppress the very first sample (we don't know if it's a \"transition\" or\n// just initial state on flow restart).\nif (prev === undefined) return null;\n\nconst newMsg = { event_record: {\n    ts: new Date().toISOString(),\n    source: 'operator',\n    type: isOn ? 'bypass_on' : 'bypass_off',\n    expires_min: (isOn && p.expiresAt) ? Math.round((p.expiresAt - Date.now()) / 60000) : null,\n    html: '<div class=\"ev-row\">' + (isOn ? '🔕 BYPASS ON' : '🔔 BYPASS OFF') + '</div>'\n}};\nnode.status({fill:'blue', shape:'dot', text: (isOn ? 'ON' : 'OFF') + ' @ ' + new Date().toLocaleTimeString()});\nreturn newMsg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 700,
+        "y": 520,
+        "wires": [
+            [
+                "light_jsonl_append_01"
+            ]
+        ]
+    },
+    {
+        "id": "as3935_health_xition",
+        "type": "function",
+        "z": "75e2cac8ab96f556",
+        "name": "AS3935 Health Transition → event_record",
+        "func": "// Taps AS3935 Status (retained) mqtt-in (parallel wire alongside Format\n// AS3935 State). Detects offline <-> online (ready) transitions and emits\n// event_record so the JSONL store + Telegram alert path see them. The\n// suppression of the very-first sample avoids firing on flow restart.\n\nlet raw;\ntry { raw = (typeof msg.payload === 'string') ? JSON.parse(msg.payload) : msg.payload; }\ncatch (e) { return null; }\nif (!raw || !raw.event) return null;\n\nconst isOffline = (raw.event === 'offline');\nconst prev = context.get('lastOffline');\nif (prev === isOffline) return null;   // no change\ncontext.set('lastOffline', isOffline);\n\n// First-ever sample: don't emit (can't tell if this is a 'transition')\nif (prev === undefined) return null;\n\nconst newMsg = { event_record: {\n    ts: new Date().toISOString(),\n    source: 'AS3935',\n    type: isOffline ? 'sensor_offline' : 'sensor_online',\n    html: '<div class=\"ev-row\">' + (isOffline ? '⚠ AS3935 OFFLINE' : '✓ AS3935 ONLINE') + '</div>'\n}};\nnode.status({fill: isOffline ? 'red' : 'green', shape:'dot',\n             text: (isOffline ? 'offline' : 'online') + ' @ ' + new Date().toLocaleTimeString()});\nreturn newMsg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1470,
+        "y": 460,
+        "wires": [
+            [
+                "light_jsonl_append_01"
             ]
         ]
     }

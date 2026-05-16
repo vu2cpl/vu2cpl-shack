@@ -112,7 +112,7 @@ git push
 | RBN Skimmer Monitor | `f9a0e3ad0e019052` | 32 | `1bcbc2eb8f2124aa` |
 | RPi Fleet Monitor | `d5fec2fea3dd37f4` | 27 | `f8d1f7eb7403a442` |
 | Internet and network monitor | `b05f8c028b368ae9` | 26 | `f10110e00bae2689` |
-| Lightning Antenna Protector | `75e2cac8ab96f556` | 80 | `grp_main` |
+| Lightning Antenna Protector | `75e2cac8ab96f556` | 85 | `grp_main` |
 | All Power Strips | `b76a5310767803b4` | 45 | `vu2cpl_grp_power` / `vu2cpl_grp_energy` |
 | DXCC Tracker | `d110d176c0aad308` | 70 | `grp_dxcc_stats` |
 
@@ -212,6 +212,10 @@ Agent endpoints: `POST /reboot`, `POST /shutdown`
 | `light_bootstrap_fn_01` | Bootstrap Event Log from JSONL | Rehydrates `flow.event_log` from JSONL tail on restart |
 | `as3935_cmd_mqtt_out` | AS3935 Cmd → bridge | `mqtt out` to `lightning/as3935/cmd`, QoS 0, retain false. Self-heal target wired from `as3935_replay_state` output 2 (auto-requests `republish_status` when `flow.as3935_status` is null, 5-min cooldown). |
 | `as3935_last_event_mqtt_in` | AS3935 Last Event (retained) | `mqtt in` `lightning/as3935/last_event`. Published retained by bridge firmware (TODO #15) on every disturber/noise/lightning event. Flows into `as3935_format_state` which emits `{type:'as3935_last_event', ts_epoch_ms, event, distance, energy}` to Master Dashboard, seeding `as3935LastTs` so `LAST SEEN` is correct on Node-RED restart. |
+| `tg_lightning_router` | Telegram Alert Router | Function consuming `msg.event_record` from `light_jsonl_append_01` output. Filters event types (allow-list: disconnect, reconnect, bypass_on, bypass_off, sensor_offline, sensor_online), rate-limits 5-per-60s per type, formats HTML message, sets http-request fields. Reads `flow.cfg_tg_token` + `flow.cfg_tg_chat_id` set by Init Defaults from systemd env. |
+| `tg_lightning_http` | Telegram → sendMessage | `http request` POST to `api.telegram.org/bot<TOKEN>/sendMessage`. URL blank in node config — set via `msg.url` (per the Telegram HTTP request convention below). |
+| `bypass_xition_detector` | Bypass Transition → event_record | Taps Bypass Handler output 1, filters on `payload.type === 'bypass_state'`, detects ON↔OFF transitions, emits `event_record` with type `bypass_on` / `bypass_off`. First sample after flow start suppressed (can't tell if it's a transition). Wires to `light_jsonl_append_01`. |
+| `as3935_health_xition` | AS3935 Health Transition → event_record | Taps AS3935 Status (retained) mqtt-in (parallel wire alongside `as3935_format_state`). Detects offline↔ready transitions, emits `event_record` with type `sensor_offline` / `sensor_online`. First sample after flow start suppressed. Wires to `light_jsonl_append_01`. |
 
 ### DXCC Tracker (`d110d176c0aad308`)
 

@@ -4037,6 +4037,86 @@ shape.
 
 ## 2026-05-15
 
+### Lightning — Telegram alerts (Standard scope: disconnect, reconnect, bypass, sensor health)
+
+**Tab:** Lightning Antenna Protector (`75e2cac8ab96f556`)
+**Added:** 5 nodes. **Modified:** Init Defaults, Append Lightning JSONL,
+Bypass Handler wires, AS3935 Status mqtt-in wires. Node count 80 → 85.
+
+Sends Telegram messages on the 6 most operator-relevant lightning
+events:
+
+| Type | Trigger | Message |
+|------|---------|---------|
+| `disconnect` | `Trigger Disconnect` fires, antenna goes OFF | ⚡ ANTENNA DISCONNECT + source + km + time |
+| `reconnect` | `Execute Reconnect` fires, antenna back ON | ✅ ANTENNA RECONNECT + reason + time |
+| `bypass_on` | Operator clicks BYPASS on dashboard, mode enters ON | 🔕 BYPASS ON + auto-off timer + time |
+| `bypass_off` | Operator clicks BYPASS again or 2-h timer expires | 🔔 BYPASS OFF + time |
+| `sensor_offline` | AS3935 ESP32 bridge LWT fires (`event:"offline"` retained on `/status`) | ⚠ AS3935 OFFLINE + time |
+| `sensor_online` | Bridge re-publishes `/status` with `event:"ready"` after offline | ✓ AS3935 ONLINE + time |
+
+**Excluded** (would spam): disturber + noise events, Open-Meteo polls,
+heartbeats, TEST injects (filtered on `source` containing `'TEST'`).
+
+**Credentials.** Reads `TELEGRAM_TOKEN` + `TELEGRAM_CHAT_ID` from the
+existing systemd env (`/etc/systemd/system/nodered.service.d/secrets.conf` —
+same source DXCC Credentials uses). Init Defaults reads and sets
+`flow.cfg_tg_token` + `flow.cfg_tg_chat_id`. No new secret storage,
+no duplication.
+
+**Architecture.**
+
+- `Append Lightning JSONL` now has 1 output instead of 0: still
+  appends to `nr_lightning_events.jsonl` first, then forwards the
+  msg downstream to `tg_lightning_router`. JSONL store and Telegram
+  see the same `event_record`s.
+- `tg_lightning_router` filters by allow-list, rate-limits per type
+  (5 events in 60 s → one suppression notice → silence until activity
+  slows), formats HTML message with shack callsign + event-specific
+  fields, sets `msg.url` / `msg.method` / `msg.headers` / `msg.payload`
+  for the http-request node. Status surfaces what was last sent.
+- `tg_lightning_http` is a stock `http request` node — URL blank
+  (per the Telegram HTTP request convention in CLAUDE.md), POST,
+  JSON body, 8 s timeout. Wires to `tg_lightning_debug` for response
+  visibility in the editor sidebar.
+
+**Transition detectors** added to surface events that don't currently
+emit `event_record`:
+
+- `bypass_xition_detector` — tapped off Bypass Handler output 1
+  (which fans out `bypass_state` + `log` messages to Master Dashboard).
+  Filters on `bypass_state`, detects ON↔OFF via `context.lastBypassOn`,
+  emits `event_record { type: 'bypass_on' | 'bypass_off', expires_min,
+  source: 'operator', html }`. First sample after flow start
+  suppressed (can't distinguish "transition" from "initial state").
+- `as3935_health_xition` — tapped off AS3935 Status (retained)
+  mqtt-in (parallel wire alongside `as3935_format_state`). Watches
+  the `event` field (`ready` vs `offline`), detects transitions via
+  `context.lastOffline`, emits `event_record { type: 'sensor_offline'
+  | 'sensor_online', source: 'AS3935', html }`. First sample
+  suppressed. Note: the retained payload always replays on subscribe,
+  so the suppression is essential — otherwise every Node-RED restart
+  would falsely "transition" to whatever the current state is.
+
+Both transition detectors wire to `light_jsonl_append_01`, which
+both persists to JSONL and forwards to the Telegram Router. So
+bypass + sensor-health events now also live in the historic store —
+useful for retrospective analysis.
+
+**Rate-limit semantics.** Per `rec.type`, a sliding 60 s window
+allows up to 5 events. The 6th arrival within the window emits one
+suppression notice (`"5 disconnect events in 60s — further duplicates
+suppressed until activity slows"`) and then stays quiet. Once the
+window drains below 5, the counter resets and normal sending
+resumes. Prevents storm-day noise; the operator still gets the
+first 5 disconnects of a cluster and a clear marker that more are
+happening.
+
+**Sister-channel cross-ref.** DXCC Tracker has its own Telegram path
+for NEW DXCC alerts; same bot, same chat, same shack signature
+prefix. Both channels coexist — no plumbing collision because they
+use separate routers + separate http-request nodes.
+
 ### SPE (WS) — ON_SPE routes through WebSocket, exec node removed
 
 **Tab:** SPE (WS) (`spe_ws_tab_01`)
