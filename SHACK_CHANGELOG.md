@@ -4291,6 +4291,25 @@ been swapped.
 
 ## 2026-05-17
 
+### AS3935 dashboard — merge Control + Events panels into one ui_template
+
+**Tab:** AS3935 Tuning (`fe70cfdcdfa19aa4`)
+**Commits:** `abdd424` (re-parent into shared ui_group — visually didn't fuse), `43da30e` (height tweak), and today's merge.
+
+`node-red-dashboard` wraps every `ui_template` in its own card frame regardless of `group` membership — so just dropping both into the same `as3935_ctl_grp` still rendered them as two visually-separate cards with a gap. Operator wanted one continuous card. The only structural fix: **one widget = one card**, so the two `ui_template` `format` strings got merged into one.
+
+**Merge details:**
+
+- `<style>` blocks concatenated. Class-name collisions audited beforehand: only `.card` (identical between the two) and `.sect` (differs by 4 px vs 6 px `margin-bottom` — imperceptible). The Control Panel's `:root{}` block defines the `--card`, `--border`, etc. custom properties; the Events Panel's CSS references them via `var(--…)` and the cascade keeps them in scope after merge.
+- HTML body: Control Panel's `<div id="a35tune">…</div>` first, then the Events Panel's `<div id="a35ev">…</div>` second — each retains its own root container so the JS handlers (which use `document.getElementById` to find their elements) keep working unchanged.
+- `<script>` block: two IIFEs in series, each registers its own `scope.$watch('msg', …)`. Both fire on every message; each filters by `msg.topic` (topics are disjoint between the two panels — `/status`, `/hb`, `/cmd/ack` for the Control side; `lightning/as3935`, `/last_event` for the Events side).
+- 3 nodes that wired to `as3935_evt_panel` (the now-deleted Events ui_template) were rewired to `223cb2ce733c5d3f` (the surviving Control Panel, which now owns the merged content). Deleted: `as3935_evt_panel` ui_template.
+- Control Panel height bumped 12 → 22 to accommodate the combined content. Tunable later if needed.
+
+**Effect:** AS3935 Tuning dashboard tab now shows **one continuous card** containing (top-to-bottom): AS3935 Bridge header, ⚡△📡 IRQ counters, Calib, 🔋 Battery, Tunables, Actions row, ack box, Last Event card, Session Counters, Recent Events log. No inter-card gap. Same data, same MQTT inputs, same buttons.
+
+**Why not CSS-trick the inter-widget gap:** considered but rejected. `md-card { margin: 0 !important; box-shadow: none !important }` would fight `node-red-dashboard`'s baseline styling globally and risk affecting unrelated widgets on a dashboard version bump. Merging templates is the structural fix: one widget, one card, by design.
+
 ### AS3935 dashboard — import v0.3.0 (battery telemetry + Events panel + TEST injects)
 
 **Tab:** AS3935 Tuning (`fe70cfdcdfa19aa4`)
