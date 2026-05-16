@@ -4291,6 +4291,52 @@ been swapped.
 
 ## 2026-05-17
 
+### AS3935 dashboard — import v0.3.0 (battery telemetry + Events panel + TEST injects)
+
+**Tab:** AS3935 Tuning (`fe70cfdcdfa19aa4`)
+**Source:** `vu2cpl-as3935-bridge/nodered/as3935-control-flow.json` (built from the bridge repo's `nodered/build-flow.py`, commit `8084ad9`).
+**Added:** 13 nodes. **Updated:** Control Panel format, `as3935_tuning_replay_tick` wires.
+
+Two pieces from the bridge's v0.3.0 build artifact ported into the
+shack's actual flows.json:
+
+1. **`AS3935 Control Panel` (`223cb2ce733c5d3f`) format updated** —
+   picks up the new 🔋 battery row (mV reading + derived %SOC from a
+   piecewise-linear LUT, green ≥ 3.90 V / amber 3.70–3.90 V / red <
+   3.70 V, plus `(divider not wired?)` hint when reading < 500 mV),
+   the new **Query Battery** action button, and the `vbat_offset_mv`
+   tunable (±500 mV per-chip Vref trim). Existing node ID + position
+   + wires preserved; only `format` field swapped.
+
+2. **New `AS3935 Events` panel** alongside the Control Panel on the
+   same dashboard tab (`c55b930b17a24bb1`, AS3935 Tuning). Shows a
+   30-row rolling event log (from `lightning/as3935`) plus session
+   counters (lightning / disturber / noise) plus a "Last Event"
+   card backed by retained `lightning/as3935/last_event` (rehydrates
+   on Node-RED restart within ~5 s). 5 TEST inject buttons publish
+   synthetic events directly to `lightning/as3935` so the panel can
+   be exercised end-to-end without involving the ESP32 — useful for
+   styling tweaks, debouncing, etc.
+
+**Dedupe handled by the importer.** Bridge build artifact also
+contains the cache + replay infrastructure on the Tuning side
+(`as3935_tuning_cache_status/hb/ack` + `as3935_tuning_replay_tick/fn`)
+— these have identical IDs and contents to what's been in the shack
+since 2026-05-14. Importer skipped them. Same for the Tuning-side
+mqtt-in/out nodes which the shack has with its own pre-existing
+IDs.
+
+**Tick fan-out extended:** `as3935_tuning_replay_tick` now wires to
+both `as3935_tuning_replay_fn` (existing, Control Panel) AND the new
+`as3935_evt_replay_fn` (Events panel). One 5 s tick keeps both
+panels populated.
+
+**Operator action remaining** (not in this commit): the bridge's
+ESP32 firmware needs the v0.3.0 binary flashed for `vbat_mv` to
+actually arrive. **Done by the operator on 2026-05-17** before this
+import. Battery row should populate within 30 s of dashboard load
+(first `/hb` after restart) or immediately on Query Battery click.
+
 ### Lightning dashboard — hide RADIO tile when `radio_enabled` is false
 
 **Tab:** Lightning Antenna Protector (`75e2cac8ab96f556`)

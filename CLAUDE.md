@@ -268,10 +268,25 @@ Agent endpoints: `POST /reboot`, `POST /shutdown`
 | `as3935_tuning_cache_status` | Cache /status | pass-through; `flow.set('as3935_status', payload)` |
 | `as3935_tuning_cache_hb` | Cache /hb | pass-through; `flow.set('as3935_hb', payload)` |
 | `as3935_tuning_cache_ack` | Cache /cmd_ack | pass-through; `flow.set('as3935_cmd_ack', payload)` |
-| `223cb2ce733c5d3f` | AS3935 Control Panel | ui_template; dispatches on msg.topic via `scope.$watch` |
+| `223cb2ce733c5d3f` | AS3935 Control Panel | ui_template; dispatches on msg.topic via `scope.$watch`. **v0.3.0** (2026-05-17): adds 🔋 battery row (`vbat_mv` from `/hb` + `/status`), Query Battery action button, `vbat_offset_mv` tunable. |
 | `82f732a0dac14945` | AS3935 Cmd | mqtt out `lightning/as3935/cmd` |
-| `as3935_tuning_replay_tick` | Replay every 5s | inject `repeat:5, onceDelay:1` |
+| `as3935_tuning_replay_tick` | Replay every 5s | inject `repeat:5, onceDelay:1`. Fans out to both `as3935_tuning_replay_fn` (Control Panel) and `as3935_evt_replay_fn` (Events panel). |
 | `as3935_tuning_replay_fn` | Replay AS3935 state (5s tick) | reads 3 caches, emits to Control Panel with original topics preserved. Worst-case page-open rehydration: 5 s. Substitute for `ui_control`-based instant-on (TODO #16) — `ui_control` is **not shipped in `node-red-dashboard 3.6.6`** (confirmed by `--force` reinstall, files genuinely absent). |
+
+**AS3935 Events panel (v0.3.0, 2026-05-17):** second `ui_template` panel on the same AS3935 Tuning dashboard tab. Event log + counters + 5 TEST inject buttons (lightning near/far/oor, disturber, noise) for exercising the Events panel without real chip events.
+
+| ID | Name | Role |
+|----|------|------|
+| `as3935_evt_grp` | (ui_group) `AS3935 Events` | dashboard group below `as3935_ctl_grp` on the AS3935 Tuning ui_tab (`c55b930b17a24bb1`) |
+| `as3935_evt_in` | AS3935 Event | mqtt in `lightning/as3935` (parallel subscriber to the one on Lightning tab; broker fans out) |
+| `as3935_evt_last_in` | AS3935 Last Event (retained) | mqtt in `lightning/as3935/last_event` (parallel to `as3935_last_event_mqtt_in` on Lightning tab) |
+| `as3935_evt_cache_last` | Cache /last_event | pass-through; `flow.set('as3935_evt_last', payload)` |
+| `as3935_evt_replay_fn` | Replay last_event (5s tick) | fires from `as3935_tuning_replay_tick`; re-emits cached last_event to Events panel |
+| `as3935_evt_panel` | AS3935 Events Panel | ui_template; rolling event log + session counters |
+| `as3935_test_lightning_near` / `_far` / `_oor` | TEST inject buttons | publish synthetic `{event:"lightning", distance:5/25/63, energy:…}` to `lightning/as3935` for end-to-end test without the ESP32 |
+| `as3935_test_disturber` / `as3935_test_noise` | TEST inject buttons | publish synthetic `{event:"disturber"\|"noise", …}` |
+| `as3935_evt_test_out` | TEST publish → lightning/as3935 | mqtt out target of the 5 TEST injects |
+| `as3935_test_comment` | (comment) | header above the test buttons |
 
 ---
 
