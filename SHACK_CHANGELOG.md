@@ -4291,6 +4291,23 @@ been swapped.
 
 ## 2026-05-17
 
+### AS3935 dashboard — merge IRQ counters + session counters into one row
+
+After the Control + Events merge (one ui_template, one card), there were still **two counter rows visible**: the compact text counter near the top (driven by bridge `/hb` `counters: {lightning, disturber, noise, irq}` — lifetime counts since ESP32 boot) and the verbose-styled session counters near the bottom (JS-incremented per browser tab, reset on refresh).
+
+Operator wanted one row in the session-counter visual style.
+
+**Merge details:**
+
+- CSS: `#a35ev` prefix stripped from the 6 countstrip-related selectors (`.countstrip`, `.cnt`, `.cnt .v`, `.cnt.lightning .v`, `.cnt.disturber .v`, `.cnt.noise .v`) so they apply in either parent container.
+- Top HTML: the placeholder `<div class="card counters" id="a35counters">awaiting heartbeat...</div>` replaced with a full `.countstrip` row containing **four** `.cnt` spans — lightning, disturber, noise, IRQ. Same word-label + coloured-value style as the deleted session counter row.
+- JS: the `cn.textContent = '⚡ … ⚠ … 📡 … IRQ …'` string-build replaced with four `setSpanContent` calls that write `c.lightning`, `c.disturber`, `c.noise`, `c.irq` into their individual `.v` spans.
+- Events section: the `Session counters (since this browser opened)` `.card` HTML block removed entirely; the JS that backed it (`var counts = {…}` declaration, the `counts[p.event]++` increment inside the event handler, the `renderCounts()` function, and its two call sites — `renderLast(); renderCounts(); renderLog();` → `renderLast(); renderLog();`) all removed.
+
+**Effect:** one counter row at the top of the AS3935 card, driven by the bridge's lifetime counters (more authoritative than browser session counts — survives browser refresh, matches the IRQ count which the chip reports independently), styled exactly like the deleted session counter row.
+
+**Source of truth:** bridge `/hb` `counters` object. Updated every 30 s.
+
 ### AS3935 dashboard — merge Control + Events panels into one ui_template
 
 **Tab:** AS3935 Tuning (`fe70cfdcdfa19aa4`)
