@@ -4289,6 +4289,61 @@ been swapped.
 
 ---
 
+## 2026-05-17
+
+### Lightning dashboard — hide RADIO tile when `radio_enabled` is false
+
+**Tab:** Lightning Antenna Protector (`75e2cac8ab96f556`)
+**Node:** Master Dashboard ui_template (`557083037f168b22`)
+**Commit:** `df8ea41`
+
+After yesterday's `RADIO_ENABLED = false` fix, the auto-disconnect
+logic correctly stops touching the radio plug — but the Master
+Dashboard's top switchBox still showed the **RADIO ON/OFF tile +
+its RECONNECT button**. Misleading: the visible tile suggested the
+radio was still being managed by lightning logic when it wasn't.
+
+**Fix.** Two surgical edits to the dashboard ui_template:
+
+1. HTML: the radio `<div class="sw-row">` (containing
+   `#radioStatus` + the RECONNECT button) gets `id="radioRow"`.
+2. JS: in `setStats(d)` (called every 10 s from the Stats refresh
+   tick), prepend a display toggle:
+   ```js
+   var rr = document.getElementById('radioRow');
+   if (rr) rr.style.display = d.radio_enabled ? '' : 'none';
+   ```
+
+`d.radio_enabled` is already populated by `Stats → Dashboard`
+(`d1dca3df391cdfb8`), which reads `flow.get('radio_enabled')` set by
+Init Defaults. No new wiring, no new nodes — just an HTML id + 2
+lines of JS.
+
+**Net effect when `RADIO_ENABLED = false`:**
+- Top switchBox: only ANTENNA OFF/ON tile visible. RADIO tile +
+  its RECONNECT button hidden. Bypass button stays — flex layout
+  collapses the gap.
+- Stats panel "Flex Radio" row was already gated by
+  `if (d.radio_enabled) rows.push(...)` — also hidden. No change
+  needed there.
+
+**Net effect when `RADIO_ENABLED = true`:** unchanged from before.
+
+**Worst-case rehydration** after a Deploy or browser refresh: up to
+10 s (the Stats refresh tick interval). The row may briefly flash
+visible at page load before the first tick runs. Acceptable; if it
+ever becomes annoying, the toggle can be moved into the static
+inline `<style>` block driven by a body class set on first message
+arrival.
+
+**`setRadio()` still runs on MQTT events** even when the row is
+hidden — it updates the DOM element's class + text in the
+background. So flipping `radio_enabled = true` back at runtime
+shows the row immediately with current Tasmota state on the next
+10 s tick — no stale flash.
+
+---
+
 ## 2026-05-16
 
 ### Init Defaults — `RADIO_ENABLED = false`, `THRESHOLD_KM = 40` (operator preferences)
