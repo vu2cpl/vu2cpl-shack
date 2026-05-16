@@ -2,7 +2,14 @@
     "name": "vu2cpl-shack",
     "description": "Shack control nodered project",
     "version": "0.0.1",
-    "dependencies": {},
+    "dependencies": {
+        "node-red-configurable-ping": "1.0.1",
+        "node-red-contrib-flexradio": "1.2.5",
+        "node-red-contrib-ui-svg": "2.3.3",
+        "node-red-node-ping": "0.3.3",
+        "node-red-node-serialport": "2.0.3",
+        "node-red-dashboard": "3.6.6"
+    },
     "node-red": {
         "settings": {
             "flowFile": "flows.json",
