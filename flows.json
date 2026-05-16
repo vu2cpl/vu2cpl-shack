@@ -3352,6 +3352,7 @@
         "name": "Login Handler VU2CPL",
         "func": "var line=(msg.payload||'').trim();\nif(!line)return null;\nif(line.indexOf('DX de')===-1)return null;\nmsg.skimmer='VU2CPL';\nreturn msg;",
         "outputs": 1,
+        "timeout": "",
         "noerr": 0,
         "initialize": "",
         "finalize": "",
@@ -5944,7 +5945,7 @@
                 "p": "payload"
             }
         ],
-        "repeat": "300",
+        "repeat": "60",
         "crontab": "",
         "once": true,
         "onceDelay": 3,
