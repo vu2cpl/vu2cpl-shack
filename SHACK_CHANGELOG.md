@@ -4501,6 +4501,34 @@ shows the row immediately with current Tasmota state on the next
 
 **Future-proofing:** if a fourth/fifth cluster gets added with a CwSkimmer-style un-terminated prompt, the lastLine-split + endsWith approach handles it without further changes. The prompt-fragment list inside both handlers covers `login:`, `please login`, `please login:`, `callsign:`, `callsign please:`, `your callsign:`, `enter your callsign:` — extend as needed.
 
+### AS3935 Bridge UI — Tune Cap 30 s countdown + Query Battery instant update
+
+**Tab:** AS3935 Tuning (`fe70cfdcdfa19aa4`)
+**Node:** AS3935 Control Panel ui_template (`223cb2ce733c5d3f`).
+
+Two operator-affordance polish fixes shipped together (one commit `4dd4bab`).
+
+**1. Tune Cap button — live 30 s countdown.**
+
+Previously the action button rendered as `Tune Cap (35 secs)` — a static hint telling the operator the calibration sweep takes ~35 s, with no feedback once pressed. Replaced with a live countdown:
+
+- Default label: `Tune Cap`.
+- On click: fires `a35.action('calibrate_tun_cap')` (unchanged), then disables the button and starts a `setInterval` ticker. Label updates each second: `Tune Cap (30s)` → `Tune Cap (29s)` → … → `Tune Cap (1s)`. At zero the interval is cleared, button re-enabled, label restored to `Tune Cap`.
+- Re-clicks during the countdown are ignored (`button.disabled` guard) — protects against a fat-finger firing two simultaneous calibrate cycles.
+- HTML: button gains `id="a35tunebtn"` so the JS can grab it. New `a35.calibrate()` method on the window object wraps the existing action call.
+
+Visible timer is 30 s; firmware sweep is ~35 s. The 5 s gap is intentional — the cmd/ack badge below still shows the real `calibrate_tun_cap` result when the bridge finishes, so the operator knows the chip is actually done. Lengthening the visual timer to match the firmware would force the operator to wait pointlessly if the chip finishes early.
+
+**2. Query Battery — 🔋 row refreshes instantly (was up to 30 s lag).**
+
+The bridge firmware's `query_vbat` action publishes the fresh reading two ways: embedded in the ack's `cmd` string (`action:query_vbat vbat_mv=NNNN`) AND as a structured `vbat_mv` field in a republished `/status`. Both arrive within ~100 ms of the cmd.
+
+Bug: the dashboard's render logic preferred `hb.vbat_mv` (from the 30 s heartbeat) over `state.vbat_mv` (from `/status`), to keep the display tracking the freshest cadence under normal operation. But this meant the just-arrived fresh `/status` value was shadowed by the still-cached heartbeat value from up to 29 s ago. Display only updated when the next `/hb` tick came in — earlier 2026-05-17 changelog entry that claimed *"immediately on Query Battery click"* was aspirational, not actually realised.
+
+Fix: `cmd/ack` handler now regex-extracts `vbat_mv=(\d+)` from the ack's `cmd` string and assigns the parsed integer directly to `hb.vbat_mv`. The `render()` call that runs right after the watcher fires picks up the fresh value within the same tick (~50 ms total).
+
+Touch-up only on the dashboard — no firmware change. Updated SHACK_CHANGELOG entry from 2026-05-17 (above) corrected indirectly: it's now correctly *immediate* on Query Battery click, finally.
+
 ---
 
 ## 2026-05-16
