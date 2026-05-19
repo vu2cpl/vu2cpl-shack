@@ -4529,6 +4529,21 @@ Fix: `cmd/ack` handler now regex-extracts `vbat_mv=(\d+)` from the ack's `cmd` s
 
 Touch-up only on the dashboard — no firmware change. Updated SHACK_CHANGELOG entry from 2026-05-17 (above) corrected indirectly: it's now correctly *immediate* on Query Battery click, finally.
 
+### DXCC Telegram alerts — decode HTML entities in country names
+
+**Tab:** DXCC Tracker (`d110d176c0aad308`)
+**Nodes:** `Format Telegram Alert Dedup 10 minute` (`94b77826079bad57`, live) + `Format Telegram Alert` (`d5eca40d3503035d`, disabled — patched for consistency).
+
+Telegram alert for V49B on 30M Data arrived rendering the entity name as `SAINT KITTS &amp; NEVIS` instead of `Saint Kitts & Nevis`.
+
+Root cause: cty.xml stores ampersands as `&amp;` per XML spec (also `&lt;`, `&gt;` etc. for any other reserved characters). `seedNames` therefore carries the HTML-entity-encoded form, which is fine for the dashboard alert table (rendered via innerHTML, browser auto-decodes), but the Telegram message uses `parse_mode: 'Markdown'` — Markdown does NOT decode HTML entities, so the literal `&amp;` lands in the user's chat.
+
+**Fix:** added a local `htmlDecode()` helper inside the Telegram formatter functions. Decodes `&amp;`, `&lt;`, `&gt;`, `&quot;`, `&#39;`, `&apos;` back to their literal characters just before composing the Markdown text. Applied to `a.entity` only — `a.call` / `a.spotter` aren't HTML-encoded in any realistic path. seedNames left untouched in memory so the dashboard HTML table behaviour is unchanged.
+
+**Other DXCC entities the same fix now covers** (any ampersand-bearing country): Trinidad & Tobago, Antigua & Barbuda, Turks & Caicos Is., St. Vincent & the Grenadines, São Tomé & Príncipe, St. Pierre & Miquelon, St. Helena, Ascension & Tristan da Cunha, etc.
+
+**Doc note added to CLAUDE.md** ("Entity names from cty.xml are HTML-entity-encoded…") so future maintainers adding a new Telegram-bound formatter mirror the `htmlDecode()` pattern instead of re-tripping over this.
+
 ---
 
 ## 2026-05-16
