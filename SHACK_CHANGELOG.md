@@ -4544,6 +4544,30 @@ Root cause: cty.xml stores ampersands as `&amp;` per XML spec (also `&lt;`, `&gt
 
 **Doc note added to CLAUDE.md** ("Entity names from cty.xml are HTML-entity-encoded…") so future maintainers adding a new Telegram-bound formatter mirror the `htmlDecode()` pattern instead of re-tripping over this.
 
+### DXCC Telegram alerts — 🔵 / 🟡 icons for `? BAND` and `? MODE` unconfirmed
+
+**Tab:** DXCC Tracker (`d110d176c0aad308`)
+**Nodes:** `Format Telegram Alert Dedup 10 minute` (`94b77826079bad57`, live) + `Format Telegram Alert` (`d5eca40d3503035d`, disabled — kept in sync).
+
+The dashboard's alert table distinguishes confirmed vs unconfirmed band/mode alerts via dim colour variants: `NEW_BAND` = `#58a6ff` (bright blue) → `NEW_BAND_UNCONF` = `#2d6aad` (dim blue); `NEW_MODE` = `#e3b341` (amber) → `NEW_MODE_UNCONF` = `#9a7030` (dim amber). The colour-coding is the at-a-glance visual cue.
+
+Telegram had no equivalent: the icons map only covered `NEW_DXCC` / `NEW_BAND` / `NEW_MODE` / `NEED_QSL`, so the two `_UNCONF` variants fell through to the default `📻` (generic radio fallback). Operator received `📻 ? MODE … EH90ALL — Ceuta & Melilla` instead of a colour-tagged message — losing the band/mode dimension at a glance.
+
+**Fix:** extended the icons map in both formatter functions:
+
+```js
+var icons = {
+    NEW_DXCC: '🔴',
+    NEW_BAND: '🔵', NEW_BAND_UNCONF: '🔵',
+    NEW_MODE: '🟡', NEW_MODE_UNCONF: '🟡',
+    NEED_QSL: '🟣'
+};
+```
+
+**Design choice — option 1 of two discussed:** reuse the *same* emoji as the confirmed variant. The text label (`? BAND` / `? MODE`) already carries the unconfirmed signal — adding a second visual indicator (orange, light blue, etc.) would over-encode the same fact in two ways. The emoji's job is the band/mode/DXCC dimension; the `?` prefix is the confirmed/unconfirmed dimension. Two orthogonal signals, kept that way.
+
+**Future:** if a `NEED_QSL_UNCONF` or similar variant gets added, extend the map with `NEED_QSL_UNCONF: '🟣'` for consistency.
+
 ---
 
 ## 2026-05-16
