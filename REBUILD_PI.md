@@ -475,7 +475,7 @@ Each reply should be `{"Timezone":"+05:30"}`.
 
 ## Step 12 — Final verification
 
-A 12-point checklist. Hit each one.
+A 14-point checklist. Hit each one.
 
 | # | Check | Pass criterion |
 |---|-------|----------------|
@@ -491,11 +491,13 @@ A 12-point checklist. Hit each one.
 | 10 | Tasmota state sync | Toggle a power outlet from dashboard → relay clicks → state syncs back |
 | 11 | DXCC alerts firing | DXCC tab status badges green; spots arriving in the table. `Login + Parse + Dedup` shows recent activity (`[cluster1] DX de ...`); `DXCC Prefix Lookup + Alert Classify` shows per-spot status (`worked` / `NEW DXCC` / etc.) |
 | 12 | Lightning auto-disconnect | Click `TEST ⚡ 6 km DISCONNECT` inject → antenna + radio go OFF |
-| 13 | Chrony / GPS card live | Dashboard tab `Shack Monitoring tools` → `Network Monitor` group shows `Chrony status card` updating every minute. Requires `gpsntp.local` to be up + its publisher cron firing (`/usr/local/bin/gpsntp-mqtt-publish.sh`). If silent: `mosquitto_sub -h localhost -t shack/gpsntp/chrony -v` should print one retained payload immediately + a fresh one each minute |
+| 13 | Lightning event log file | File `~/.node-red/projects/vu2cpl-shack/nr_lightning_events.jsonl` exists and contains recent events: `tail -f ~/.node-red/projects/vu2cpl-shack/nr_lightning_events.jsonl` should show JSON event records. The path is hardcoded in the **Init Defaults** node on the Lightning tab. This JSONL file persists across Node-RED restarts |
+| 14 | Chrony / GPS card live | Dashboard tab `Shack Monitoring tools` → `Network Monitor` group shows `Chrony status card` updating every minute. Requires `gpsntp.local` to be up + its publisher cron firing (`/usr/local/bin/gpsntp-mqtt-publish.sh`). If silent: `mosquitto_sub -h localhost -t shack/gpsntp/chrony -v` should print one retained payload immediately + a fresh one each minute |
 
 If 1–7 pass but 8 fails: re-check Step 9 (lp700-server install).
 If 11 fails: re-check Step 10 (credentials node) and the file context store.
-If 13 fails but other cards are fine: not a noderedpi4 problem — it's gpsntp.local. See `pi-gps-ntp-server` repo.
+If 13 fails (JSONL file missing or empty): The Lightning tab is working but events aren't being persisted. Verify the **Init Defaults** node (`ec1fd4dece8c4dc0`) on the Lightning tab has correctly set `flow.set('cfg_events_jsonl', ...)`. Trigger a test event via `TEST ⚡ 6 km DISCONNECT` inject and watch for the file to be created/updated. If still missing, the file-context store from Step 6 may not be properly enabled — re-run `enable_file_context.sh` and restart Node-RED.
+If 14 fails but other cards are fine: not a noderedpi4 problem — it's gpsntp.local. See `pi-gps-ntp-server` repo.
 
 ---
 

@@ -74,6 +74,11 @@ state with a muted "Last: …" recap after 30 s of silence. Reconnect
 fires automatically after a configurable clear period (default 20 min)
 once the storm passes.
 
+**Event logging:** Strike events (including disconnect/reconnect transitions
+and sensor status changes) are persisted to `nr_lightning_events.jsonl` in
+the flows directory. The path is configured in the **Init Defaults** node
+(`ec1fd4dece8c4dc0`) on the Lightning tab and survives Node-RED restarts.
+
 UI lives on the main Shack tab as the *Lightning Protection* group
 (width 12, order 9).
 
