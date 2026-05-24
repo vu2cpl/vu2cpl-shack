@@ -9904,8 +9904,8 @@
     "type": "function",
     "z": "590e889d44815afb",
     "name": "Solar State \u2192 D2 widgets",
-    "func": "// DIAGNOSTIC: emit a hardcoded SFI value to see if the wire works at all\nvar s = flow.get('solarState', 'file') || {};\nnode.warn('Fanout fired. solarState.sfi = ' + JSON.stringify(s.sfi) + '; full state keys = ' + JSON.stringify(Object.keys(s)));\nreturn { payload: s.sfi || 99 };  // 99 = \"I fired but solarState was empty\"\n",
-    "outputs": 1,
+    "func": "// Read latest cached state, emit one value per output (1 output per widget)\n// Outputs (in order):\n//   0: SFI  1: K  2: A  3: MUF  4: foF2  5: X-ray now  6: X-ray 24h max\n//   7: RSG bundle  8: Band conditions matrix\nvar s = flow.get('solarState', 'file') || {};\n\nreturn [\n    { payload: s.sfi },\n    { payload: s.k },\n    { payload: s.a },\n    { payload: s.muf },\n    { payload: s.fof2 },\n    { payload: s.xray2 },\n    { payload: s.xray24 },\n    { payload: { cur: s.rsgCur, h24: s.rsg24, pred: s.rsgPred } },\n    { payload: s.bands || s.bandMatrix || null }\n];",
+    "outputs": 9,
     "noerr": 0,
     "initialize": "",
     "finalize": "",
@@ -9915,6 +9915,30 @@
     "wires": [
       [
         "d2_sfi_gauge_01"
+      ],
+      [
+        "d2_k_gauge_01"
+      ],
+      [
+        "d2_a_gauge_01"
+      ],
+      [
+        "d2_muf_text_01"
+      ],
+      [
+        "d2_fof2_text_01"
+      ],
+      [
+        "d2_xnow_text_01"
+      ],
+      [
+        "d2_x24_text_01"
+      ],
+      [
+        "d2_rsg_tpl_01"
+      ],
+      [
+        "d2_band_tpl_01"
       ]
     ]
   },
@@ -9992,5 +10016,227 @@
         "d2_solar_fanout_01"
       ]
     ]
+  },
+  {
+    "id": "d2_k_gauge_01",
+    "type": "ui-gauge",
+    "z": "590e889d44815afb",
+    "group": "d2_ui_grp_solar_01",
+    "name": "K-Index Gauge",
+    "order": 2,
+    "width": 3,
+    "height": 3,
+    "label": "K-Index",
+    "units": "",
+    "gtype": "gauge",
+    "gstyle": "needle",
+    "min": 0,
+    "max": 9,
+    "icon": "",
+    "prefix": "",
+    "suffix": "",
+    "segments": [
+      {
+        "from": "0",
+        "color": "#3fb950",
+        "text": "Quiet",
+        "textType": "label"
+      },
+      {
+        "from": "4",
+        "color": "#e3b341",
+        "text": "Unsettled",
+        "textType": "label"
+      },
+      {
+        "from": "6",
+        "color": "#f85149",
+        "text": "Storm",
+        "textType": "label"
+      }
+    ],
+    "value": "payload",
+    "valueType": "msg",
+    "sizeThickness": 6,
+    "sizeGap": 4,
+    "sizeKeyThickness": 6,
+    "className": "",
+    "topic": "",
+    "topicType": "msg",
+    "x": 600,
+    "y": 160,
+    "wires": []
+  },
+  {
+    "id": "d2_a_gauge_01",
+    "type": "ui-gauge",
+    "z": "590e889d44815afb",
+    "group": "d2_ui_grp_solar_01",
+    "name": "A-Index Gauge",
+    "order": 3,
+    "width": 2,
+    "height": 3,
+    "label": "A-Index",
+    "units": "",
+    "gtype": "gauge",
+    "gstyle": "needle",
+    "min": 0,
+    "max": 100,
+    "icon": "",
+    "prefix": "",
+    "suffix": "",
+    "segments": [
+      {
+        "from": "0",
+        "color": "#3fb950",
+        "text": "Quiet",
+        "textType": "label"
+      },
+      {
+        "from": "15",
+        "color": "#e3b341",
+        "text": "Unsettled",
+        "textType": "label"
+      },
+      {
+        "from": "30",
+        "color": "#f85149",
+        "text": "Storm",
+        "textType": "label"
+      }
+    ],
+    "value": "payload",
+    "valueType": "msg",
+    "sizeThickness": 6,
+    "sizeGap": 4,
+    "sizeKeyThickness": 6,
+    "className": "",
+    "topic": "",
+    "topicType": "msg",
+    "x": 600,
+    "y": 240,
+    "wires": []
+  },
+  {
+    "id": "d2_muf_text_01",
+    "type": "ui-text",
+    "z": "590e889d44815afb",
+    "group": "d2_ui_grp_solar_01",
+    "name": "MUF",
+    "order": 4,
+    "width": 4,
+    "height": 1,
+    "label": "MUF",
+    "format": "{{value}} MHz",
+    "layout": "row-spread",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#58a6ff",
+    "className": "",
+    "x": 600,
+    "y": 320,
+    "wires": []
+  },
+  {
+    "id": "d2_fof2_text_01",
+    "type": "ui-text",
+    "z": "590e889d44815afb",
+    "group": "d2_ui_grp_solar_01",
+    "name": "foF2",
+    "order": 5,
+    "width": 4,
+    "height": 1,
+    "label": "foF2",
+    "format": "{{value}} MHz",
+    "layout": "row-spread",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#58a6ff",
+    "className": "",
+    "x": 600,
+    "y": 380,
+    "wires": []
+  },
+  {
+    "id": "d2_xnow_text_01",
+    "type": "ui-text",
+    "z": "590e889d44815afb",
+    "group": "d2_ui_grp_solar_01",
+    "name": "X-ray now",
+    "order": 6,
+    "width": 4,
+    "height": 1,
+    "label": "X-ray now",
+    "format": "{{value}}",
+    "layout": "row-spread",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#58a6ff",
+    "className": "",
+    "x": 600,
+    "y": 440,
+    "wires": []
+  },
+  {
+    "id": "d2_x24_text_01",
+    "type": "ui-text",
+    "z": "590e889d44815afb",
+    "group": "d2_ui_grp_solar_01",
+    "name": "X-ray 24h max",
+    "order": 7,
+    "width": 4,
+    "height": 1,
+    "label": "X-ray 24h max",
+    "format": "{{value}}",
+    "layout": "row-spread",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#58a6ff",
+    "className": "",
+    "x": 600,
+    "y": 500,
+    "wires": []
+  },
+  {
+    "id": "d2_rsg_tpl_01",
+    "type": "ui-template",
+    "z": "590e889d44815afb",
+    "group": "d2_ui_grp_solar_01",
+    "name": "RSG Badges",
+    "order": 8,
+    "width": 8,
+    "height": 2,
+    "head": "",
+    "format": "<div style=\"display:flex;gap:8px;justify-content:space-around;padding:4px 0;font-family:monospace;\">\n  <div v-for=\"(scale, k) in [{lbl:'R', key:'cur', sub:'Now'}, {lbl:'R', key:'h24', sub:'24h'}, {lbl:'R', key:'pred', sub:'Pred'}]\" :key=\"k\"\n       style=\"text-align:center;flex:1;background:#161b22;border:1px solid #30363d;border-radius:4px;padding:6px 4px;\">\n    <div style=\"font-size:10px;color:#8b949e;text-transform:uppercase;\">{{ scale.sub }} R/S/G</div>\n    <div style=\"font-size:13px;font-weight:bold;margin-top:4px;\">\n      <span :style=\"{color: rsgColor((msg.payload || {})[scale.key]?.R)}\">R{{ ((msg.payload || {})[scale.key]?.R) ?? '\u2014' }}</span>\n      <span style=\"color:#8b949e;\"> \u00b7 </span>\n      <span :style=\"{color: rsgColor((msg.payload || {})[scale.key]?.S)}\">S{{ ((msg.payload || {})[scale.key]?.S) ?? '\u2014' }}</span>\n      <span style=\"color:#8b949e;\"> \u00b7 </span>\n      <span :style=\"{color: rsgColor((msg.payload || {})[scale.key]?.G)}\">G{{ ((msg.payload || {})[scale.key]?.G) ?? '\u2014' }}</span>\n    </div>\n  </div>\n</div>\n<script>\nexport default {\n  methods: {\n    rsgColor(v) {\n      if (v == null || v === 0) return '#3fb950';\n      if (v <= 2) return '#e3b341';\n      return '#f85149';\n    }\n  }\n}\n</script>",
+    "storeOutMessages": true,
+    "passthru": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 600,
+    "y": 580,
+    "wires": []
+  },
+  {
+    "id": "d2_band_tpl_01",
+    "type": "ui-template",
+    "z": "590e889d44815afb",
+    "group": "d2_ui_grp_solar_01",
+    "name": "Band Conditions",
+    "order": 9,
+    "width": 8,
+    "height": 6,
+    "head": "",
+    "format": "<div style=\"font-family:monospace;padding:4px;\">\n  <div v-if=\"!msg.payload\" style=\"color:#8b949e;text-align:center;padding:12px;font-size:11px;\">\n    Band conditions data not yet available\n  </div>\n  <div v-else>\n    <div v-for=\"band in Object.keys(msg.payload).sort()\" :key=\"band\"\n         style=\"display:flex;align-items:center;padding:3px 4px;border-bottom:1px solid #21262d;\">\n      <div style=\"font-size:10px;color:#8b949e;width:38px;flex-shrink:0;\">{{ band }}</div>\n      <div style=\"flex:1;background:#21262d;border-radius:2px;height:6px;margin:0 6px;overflow:hidden;\">\n        <div :style=\"{ height: '6px', width: barWidth(msg.payload[band]) + '%', background: barColor(msg.payload[band]), borderRadius: '2px' }\"></div>\n      </div>\n      <div style=\"font-size:10px;width:48px;text-align:right;\" :style=\"{color: barColor(msg.payload[band])}\">\n        {{ labelFor(msg.payload[band]) }}\n      </div>\n    </div>\n  </div>\n</div>\n<script>\nexport default {\n  methods: {\n    barWidth(v) {\n      const map = {poor:20, fair:50, good:80, 'very good':100};\n      if (typeof v === 'number') return Math.min(100, Math.max(0, v));\n      return map[(v||'').toLowerCase()] ?? 0;\n    },\n    barColor(v) {\n      const w = this.barWidth(v);\n      if (w < 30) return '#f85149';\n      if (w < 70) return '#e3b341';\n      return '#3fb950';\n    },\n    labelFor(v) {\n      if (typeof v === 'number') return v + '%';\n      return v || '\u2014';\n    }\n  }\n}\n</script>",
+    "storeOutMessages": true,
+    "passthru": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 600,
+    "y": 700,
+    "wires": []
   }
 ]
