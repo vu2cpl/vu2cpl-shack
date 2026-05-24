@@ -9921,7 +9921,7 @@
   {
     "id": "d2_sfi_gauge_01",
     "type": "ui-gauge",
-    "z": "d2_tab_solar_01",
+    "z": "590e889d44815afb",
     "group": "d2_ui_grp_solar_01",
     "name": "SFI Gauge",
     "order": 1,
@@ -9971,7 +9971,7 @@
   {
     "id": "d2_solar_tick_01",
     "type": "inject",
-    "z": "d2_tab_solar_01",
+    "z": "590e889d44815afb",
     "name": "Refresh D2 every 30s",
     "props": [
       {
