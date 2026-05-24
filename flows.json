@@ -9902,7 +9902,7 @@
   {
     "id": "d2_solar_fanout_01",
     "type": "function",
-    "z": "d2_tab_solar_01",
+    "z": "590e889d44815afb",
     "name": "Solar State \u2192 D2 widgets",
     "func": "// Always read latest cached state. Triggered by:\n//   (a) Solar State Aggregator after each poll (msg.payload has fresh state)\n//   (b) 30s tick (msg.payload empty \u2014 read from flow context)\nvar s = flow.get('solarState', 'file') || {};\n\nreturn [[\n    { topic: 'sfi',    payload: s.sfi    },\n    { topic: 'k',      payload: s.k      },\n    { topic: 'a',      payload: s.a      },\n    { topic: 'muf',    payload: s.muf    },\n    { topic: 'fof2',   payload: s.fof2   },\n    { topic: 'xray',   payload: s.xrayClass || s.xray2 },\n    { topic: 'xray24', payload: s.xrayClass24 || s.xray24 },\n    { topic: 'rsg',    payload: { r: s.rsgCur, p: s.rsgPred, h: s.rsg24 } },\n    { topic: 'bands',  payload: s.bands || s.bandMatrix }\n]];",
     "outputs": 1,
