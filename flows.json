@@ -710,19 +710,10 @@
     "willPayload": ""
   },
   {
-    "id": "c55b930b17a24bb1",
-    "type": "ui_tab",
-    "name": "AS3935 Tuning",
-    "icon": "dashboard",
-    "order": 4,
-    "disabled": false,
-    "hidden": false
-  },
-  {
     "id": "as3935_ctl_grp",
     "type": "ui_group",
     "name": "AS3935 Tuning",
-    "tab": "c55b930b17a24bb1",
+    "tab": "bcce4e07ac31b882",
     "order": 30,
     "disp": false,
     "width": 8,
