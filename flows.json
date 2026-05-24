@@ -527,7 +527,7 @@
     "tab": "vu2cpl_ui_tab_shack",
     "order": 1,
     "disp": false,
-    "width": 18,
+    "width": 8,
     "collapse": false,
     "className": ""
   },
@@ -538,7 +538,7 @@
     "tab": "vu2cpl_ui_tab_shack",
     "order": 4,
     "disp": true,
-    "width": 6,
+    "width": 8,
     "collapse": true,
     "className": ""
   },
@@ -549,7 +549,7 @@
     "tab": "vu2cpl_ui_tab_shack",
     "order": 6,
     "disp": true,
-    "width": 6,
+    "width": 8,
     "collapse": true
   },
   {
@@ -559,7 +559,7 @@
     "tab": "vu2cpl_ui_tab_shack",
     "order": 7,
     "disp": true,
-    "width": 7,
+    "width": 8,
     "collapse": true
   },
   {
@@ -569,7 +569,7 @@
     "tab": "vu2cpl_ui_tab_shack",
     "order": 3,
     "disp": true,
-    "width": 6,
+    "width": 8,
     "collapse": true,
     "className": ""
   },
@@ -589,7 +589,7 @@
     "tab": "bcce4e07ac31b882",
     "order": 24,
     "disp": true,
-    "width": 18,
+    "width": 8,
     "collapse": true,
     "className": ""
   },
@@ -600,7 +600,7 @@
     "tab": "bcce4e07ac31b882",
     "order": 15,
     "disp": true,
-    "width": 6,
+    "width": 8,
     "collapse": true,
     "className": ""
   },
@@ -611,7 +611,7 @@
     "tab": "bcce4e07ac31b882",
     "order": 21,
     "disp": true,
-    "width": 6,
+    "width": 8,
     "collapse": true,
     "className": ""
   },
@@ -631,7 +631,7 @@
     "tab": "tab_ui_dxcc",
     "order": 1,
     "disp": false,
-    "width": 18,
+    "width": 8,
     "collapse": false,
     "className": ""
   },
@@ -651,7 +651,7 @@
     "tab": "vu2cpl_ui_tab_shack",
     "order": 3,
     "disp": true,
-    "width": 6,
+    "width": 8,
     "collapse": true,
     "className": ""
   },
@@ -662,7 +662,7 @@
     "tab": "vu2cpl_ui_tab_shack",
     "order": 10,
     "disp": false,
-    "width": 7,
+    "width": 8,
     "collapse": false,
     "className": ""
   },
@@ -673,7 +673,7 @@
     "tab": "bcce4e07ac31b882",
     "order": 5,
     "disp": true,
-    "width": 6,
+    "width": 8,
     "collapse": true,
     "className": ""
   },
@@ -725,7 +725,7 @@
     "tab": "c55b930b17a24bb1",
     "order": 30,
     "disp": false,
-    "width": 12,
+    "width": 8,
     "collapse": false,
     "className": ""
   },
