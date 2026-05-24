@@ -9585,7 +9585,7 @@
     "type": "function",
     "z": "3d26c2c5270bdb37",
     "name": "Build ON msg",
-    "func": "node.warn('ROTATOR PWR ON triggered');\nreturn {payload: 'ON', topic: 'cmnd/powerstrip1/POWER2'};",
+    "func": "return {payload: 'ON', topic: 'cmnd/powerstrip1/POWER2'};",
     "outputs": 1,
     "noerr": 0,
     "initialize": "",
