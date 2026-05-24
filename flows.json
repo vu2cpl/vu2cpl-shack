@@ -9904,8 +9904,8 @@
     "type": "function",
     "z": "590e889d44815afb",
     "name": "Solar State \u2192 D2 widgets",
-    "func": "// Outputs: 0:indices_bundle 1:values 2:RSG 3:bands\nvar s = flow.get('solarState', 'file') || {};\n\nvar BANDS = [\n    {name:'6M',   minSFI:200, maxSFI:300, kW:0.20},\n    {name:'10M',  minSFI:130, maxSFI:280, kW:0.25},\n    {name:'12M',  minSFI:115, maxSFI:270, kW:0.30},\n    {name:'15M',  minSFI:100, maxSFI:260, kW:0.35},\n    {name:'17M',  minSFI:90,  maxSFI:250, kW:0.40},\n    {name:'20M',  minSFI:70,  maxSFI:240, kW:0.45},\n    {name:'30M',  minSFI:65,  maxSFI:230, kW:0.55},\n    {name:'40M',  minSFI:60,  maxSFI:220, kW:0.65},\n    {name:'60M',  minSFI:60,  maxSFI:210, kW:0.70},\n    {name:'80M',  minSFI:55,  maxSFI:200, kW:0.80},\n    {name:'160M', minSFI:50,  maxSFI:180, kW:0.90}\n];\nfunction info(sc){\n    if (sc>=80) return {label:'Excellent', color:'#3fb950'};\n    if (sc>=60) return {label:'Good',      color:'#3fb950'};\n    if (sc>=40) return {label:'Fair',      color:'#e3b341'};\n    if (sc>=20) return {label:'Poor',      color:'#e3b341'};\n    return       {label:'Bad',             color:'#f85149'};\n}\nvar sfi = s.sfi || 0, k = s.k || 0;\nvar bands = BANDS.map(function(b){\n    var sfiScore = Math.min(100, Math.max(0, (sfi - b.minSFI) / (b.maxSFI - b.minSFI) * 100));\n    var kPen = (k / 9) * b.kW * 100;\n    var sc = Math.max(0, Math.min(100, sfiScore - kPen));\n    var i = info(sc);\n    return { name: b.name, score: Math.round(sc), label: i.label, color: i.color };\n});\n\nfunction rnd(v, n) { return (typeof v === 'number') ? Number(v.toFixed(n)) : v; }\n\nreturn [\n    { payload: {\n        sfi:    s.sfi,    sfiLbl: s.sfiLabel,\n        k:      s.k != null ? Number(s.k.toFixed(2)) : null,\n        kLbl:   s.kLabel,\n        a:      s.a,      aLbl:   s.aLabel\n    }},\n    { payload: {\n        muf:  rnd(s.muf,  1),\n        fof2: rnd(s.fof2, 1),\n        xnow: s.xray2,\n        x24:  s.xray24\n    }},\n    { payload: { cur: s.rsgCur, h24: s.rsg24, pred: s.rsgPred } },\n    { payload: bands }\n];",
-    "outputs": 4,
+    "func": "// Single bundled payload \u2192 unified Solar template\nvar s = flow.get('solarState', 'file') || {};\nvar BANDS = [\n    {name:'6M',   minSFI:200, maxSFI:300, kW:0.20},\n    {name:'10M',  minSFI:130, maxSFI:280, kW:0.25},\n    {name:'12M',  minSFI:115, maxSFI:270, kW:0.30},\n    {name:'15M',  minSFI:100, maxSFI:260, kW:0.35},\n    {name:'17M',  minSFI:90,  maxSFI:250, kW:0.40},\n    {name:'20M',  minSFI:70,  maxSFI:240, kW:0.45},\n    {name:'30M',  minSFI:65,  maxSFI:230, kW:0.55},\n    {name:'40M',  minSFI:60,  maxSFI:220, kW:0.65},\n    {name:'60M',  minSFI:60,  maxSFI:210, kW:0.70},\n    {name:'80M',  minSFI:55,  maxSFI:200, kW:0.80},\n    {name:'160M', minSFI:50,  maxSFI:180, kW:0.90}\n];\nfunction info(sc){\n    if (sc>=80) return {l:'Excellent', c:'#3fb950'};\n    if (sc>=60) return {l:'Good',      c:'#3fb950'};\n    if (sc>=40) return {l:'Fair',      c:'#e3b341'};\n    if (sc>=20) return {l:'Poor',      c:'#e3b341'};\n    return       {l:'Bad',             c:'#f85149'};\n}\nfunction rnd(v, n) { return (typeof v === 'number') ? Number(v.toFixed(n)) : v; }\nvar sfi = s.sfi || 0, k = s.k || 0;\nvar bands = BANDS.map(function(b){\n    var sfiScore = Math.min(100, Math.max(0, (sfi - b.minSFI) / (b.maxSFI - b.minSFI) * 100));\n    var kPen = (k / 9) * b.kW * 100;\n    var sc = Math.max(0, Math.min(100, sfiScore - kPen));\n    var i = info(sc);\n    return { name: b.name, score: Math.round(sc), label: i.l, color: i.c };\n});\nreturn {\n    payload: {\n        sfi:    s.sfi,    sfiLbl: s.sfiLabel,\n        k:      s.k != null ? Number(s.k.toFixed(2)) : null,\n        kLbl:   s.kLabel,\n        a:      s.a,      aLbl:   s.aLabel,\n        muf:    rnd(s.muf,  1),\n        fof2:   rnd(s.fof2, 1),\n        xnow:   s.xray2,\n        x24:    s.xray24,\n        rsg:    { cur: s.rsgCur, h24: s.rsg24, pred: s.rsgPred },\n        bandList: bands\n    }\n};",
+    "outputs": 1,
     "noerr": 0,
     "initialize": "",
     "finalize": "",
@@ -9914,16 +9914,7 @@
     "y": 100,
     "wires": [
       [
-        "d2_indices_tpl_01"
-      ],
-      [
-        "d2_values_tpl_01"
-      ],
-      [
-        "d2_rsg_tpl_01"
-      ],
-      [
-        "d2_band_tpl_01"
+        "d2_solar_unified_01"
       ]
     ]
   },
@@ -9953,73 +9944,16 @@
     ]
   },
   {
-    "id": "d2_rsg_tpl_01",
+    "id": "d2_solar_unified_01",
     "type": "ui-template",
     "z": "590e889d44815afb",
     "group": "d2_ui_grp_solar_01",
-    "name": "RSG Badges",
-    "order": 8,
-    "width": 3,
-    "height": 3,
-    "head": "",
-    "format": "<div style=\"font-family:monospace;padding:2px 4px;\">\n  <div v-for=\"scale in scales\" :key=\"scale.key\"\n       style=\"display:flex;align-items:center;background:#161b22;border:1px solid #30363d;border-radius:4px;padding:5px 7px;margin-bottom:4px;\">\n    <span style=\"font-size:12px;color:#8b949e;text-transform:uppercase;width:48px;flex-shrink:0;font-weight:bold;\">{{ scale.sub }}</span>\n    <div style=\"flex:1;display:flex;justify-content:space-around;gap:4px;\">\n      <div v-for=\"c in ['R','S','G']\" :key=\"c\"\n           :style=\"badge(scaleVal(scale.key, c))\">{{ c }}{{ scaleVal(scale.key, c) ?? '\u2014' }}</div>\n    </div>\n  </div>\n</div>\n<script>\nexport default {\n  data() { return {\n    scales: [\n      { key: 'h24',  sub: '24h' },\n      { key: 'cur',  sub: 'Now' },\n      { key: 'pred', sub: 'Pred' }\n    ]\n  }},\n  methods: {\n    scaleVal(k, c) { const p = this.msg && this.msg.payload && this.msg.payload[k]; return p ? p[c] : null; },\n    badge(v) {\n      let color = '#3fb950', bg = '#0d2818', border = '#238636';\n      if (v != null && v > 0) {\n        if (v <= 2) { color = '#e3b341'; bg = '#2d1800'; border = '#a87300'; }\n        else        { color = '#f85149'; bg = '#2d0808'; border = '#a82020'; }\n      }\n      return {\n        flex: '1', textAlign: 'center', padding: '3px 0', borderRadius: '4px',\n        border: `1px solid ${border}`, background: bg, color: color,\n        fontWeight: 'bold', fontSize: '14px'\n      };\n    }\n  }\n}\n</script>",
-    "storeOutMessages": true,
-    "passthru": true,
-    "templateScope": "local",
-    "className": "",
-    "x": 600,
-    "y": 580,
-    "wires": []
-  },
-  {
-    "id": "d2_band_tpl_01",
-    "type": "ui-template",
-    "z": "590e889d44815afb",
-    "group": "d2_ui_grp_solar_01",
-    "name": "Band Conditions",
-    "order": 9,
-    "width": 3,
-    "height": 7,
-    "head": "",
-    "format": "<div style=\"font-family:monospace;font-size:14px;padding:3px 6px;\">\n  <div v-if=\"!msg.payload || !msg.payload.length\" style=\"color:#8b949e;text-align:center;padding:6px;\">No band data yet</div>\n  <div v-else>\n    <div v-for=\"b in msg.payload\" :key=\"b.name\"\n         style=\"display:flex;align-items:center;padding:2px 0;\">\n      <span style=\"color:#8b949e;width:40px;flex-shrink:0;font-weight:bold;\">{{ b.name }}</span>\n      <div style=\"flex:1;background:#21262d;border-radius:2px;height:8px;margin:0 6px;overflow:hidden;\">\n        <div :style=\"{ height: '8px', width: b.score + '%', background: b.color, transition: 'width 0.4s' }\"></div>\n      </div>\n      <span :style=\"{color: b.color, width: '68px', textAlign: 'right', fontWeight: 'bold'}\">{{ b.label }}</span>\n    </div>\n    <div style=\"font-size:11px;color:#8b949e;text-align:center;margin-top:5px;border-top:1px solid #21262d;padding-top:4px;\">\n      \u226580 Excellent \u00b7 \u226560 Good \u00b7 \u226540 Fair \u00b7 \u226520 Poor \u00b7 &lt;20 Bad\n    </div>\n  </div>\n</div>",
-    "storeOutMessages": true,
-    "passthru": true,
-    "templateScope": "local",
-    "className": "",
-    "x": 600,
-    "y": 700,
-    "wires": []
-  },
-  {
-    "id": "d2_values_tpl_01",
-    "type": "ui-template",
-    "z": "590e889d44815afb",
-    "group": "d2_ui_grp_solar_01",
-    "name": "Solar Values (MUF/foF2/X-ray)",
-    "order": 4,
-    "width": 3,
-    "height": 3,
-    "head": "",
-    "format": "<div style=\"display:grid;grid-template-columns:repeat(2,1fr);gap:3px;padding:2px;font-family:monospace;\">\n  <div v-for=\"t in tiles\" :key=\"t.k\"\n       style=\"background:#161b22;border:1px solid #21262d;border-radius:4px;padding:6px 4px;text-align:center;\">\n    <div style=\"font-size:12px;color:#8b949e;text-transform:uppercase;letter-spacing:0.3px;\">{{ t.lbl }}</div>\n    <div style=\"font-size:20px;font-weight:bold;color:#58a6ff;margin-top:3px;line-height:1.1;\">{{ t.val ?? '\u2014' }}<span v-if=\"t.unit\" style=\"font-size:11px;color:#8b949e;margin-left:2px;\">{{ t.unit }}</span></div>\n  </div>\n</div>\n<script>\nexport default {\n  data() { return { state: {} } },\n  computed: {\n    tiles() {\n      return [\n        { k:'muf',  lbl:'MUF',       val: this.state.muf,  unit:'MHz' },\n        { k:'fof2', lbl:'foF2',      val: this.state.fof2, unit:'MHz' },\n        { k:'xnow', lbl:'X-ray Now', val: this.state.xnow, unit:'' },\n        { k:'x24',  lbl:'X-ray 24h', val: this.state.x24,  unit:'' }\n      ]\n    }\n  },\n  watch: { msg(m) { if (m && m.payload) Object.assign(this.state, m.payload); } }\n}\n</script>",
-    "storeOutMessages": true,
-    "passthru": true,
-    "templateScope": "local",
-    "className": "",
-    "x": 600,
-    "y": 320,
-    "wires": []
-  },
-  {
-    "id": "d2_indices_tpl_01",
-    "type": "ui-template",
-    "z": "590e889d44815afb",
-    "group": "d2_ui_grp_solar_01",
-    "name": "Solar Indices (mini gauges)",
+    "name": "Solar \u2014 Unified Compact",
     "order": 1,
     "width": 3,
-    "height": 3,
+    "height": 10,
     "head": "",
-    "format": "<div style=\"display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;font-family:monospace;\">\n  <div v-for=\"g in gauges\" :key=\"g.k\"\n       style=\"background:#161b22;border:1px solid #21262d;border-radius:4px;padding:4px 2px;text-align:center;\">\n    <div style=\"font-size:11px;color:#8b949e;text-transform:uppercase;letter-spacing:0.3px;\">{{ g.title }}</div>\n    <svg viewBox=\"0 0 80 44\" width=\"100%\" style=\"overflow:visible;margin-top:1px;\">\n      <path d=\"M8 40 A32 32 0 0 1 72 40\" fill=\"none\" stroke=\"#21262d\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n      <path d=\"M8 40 A32 32 0 0 1 72 40\" fill=\"none\" :stroke=\"color(g)\" stroke-width=\"6\" stroke-linecap=\"round\"\n            :stroke-dasharray=\"arcLen\" :stroke-dashoffset=\"offset(g)\"/>\n      <text x=\"40\" y=\"35\" text-anchor=\"middle\" :fill=\"color(g)\" font-size=\"14\" font-weight=\"bold\" font-family=\"monospace\">{{ display(g) }}</text>\n    </svg>\n    <div style=\"font-size:10px;color:#8b949e;margin-top:1px;\">{{ labelFor(g) }}</div>\n  </div>\n</div>\n<script>\nexport default {\n  data() { return {\n    state: { sfi: null, sfiLbl: null, k: null, kLbl: null, a: null, aLbl: null },\n    arcLen: 101\n  }},\n  computed: {\n    gauges() {\n      return [\n        { k:'sfi', title:'SFI',     v: this.state.sfi, lbl: this.state.sfiLbl, min: 50, max: 250 },\n        { k:'k',   title:'K-Index', v: this.state.k,   lbl: this.state.kLbl,   min:  0, max:   9 },\n        { k:'a',   title:'A-Index', v: this.state.a,   lbl: this.state.aLbl,   min:  0, max: 100 }\n      ];\n    }\n  },\n  methods: {\n    display(g) { if (g.v == null) return '\u2014'; return g.k === 'k' ? Number(g.v).toFixed(1) : String(g.v); },\n    pct(g) { if (g.v == null) return 0; return Math.max(0, Math.min(1, (g.v - g.min) / (g.max - g.min))); },\n    offset(g) { return (this.arcLen * (1 - this.pct(g))).toFixed(1); },\n    color(g) {\n      if (g.k === 'sfi') return g.v >= 130 ? '#3fb950' : g.v >= 90 ? '#e3b341' : '#f85149';\n      if (g.k === 'k')   return g.v < 4.5  ? '#3fb950' : g.v < 6    ? '#e3b341' : '#f85149';\n      return g.v < 36 ? '#3fb950' : g.v < 103 ? '#e3b341' : '#f85149';\n    },\n    labelFor(g) { return g.lbl || '\u2014'; }\n  },\n  watch: {\n    msg(m) { if (m && m.payload) Object.assign(this.state, m.payload); }\n  }\n}\n</script>",
+    "format": "<div style=\"font-family:monospace;font-size:11px;color:#c9d1d9;padding:4px 6px;background:#0d1117;\">\n  <!-- 3 mini gauges -->\n  <div style=\"display:grid;grid-template-columns:repeat(3,1fr);gap:3px;\">\n    <div v-for=\"g in gauges\" :key=\"g.k\" style=\"background:#161b22;border:1px solid #21262d;border-radius:3px;padding:2px;text-align:center;\">\n      <div style=\"font-size:9px;color:#8b949e;text-transform:uppercase;line-height:1;\">{{ g.title }}</div>\n      <svg viewBox=\"0 0 80 44\" width=\"100%\" style=\"display:block;margin:1px auto 0;\">\n        <path d=\"M8 40 A32 32 0 0 1 72 40\" fill=\"none\" stroke=\"#21262d\" stroke-width=\"5\" stroke-linecap=\"round\"/>\n        <path d=\"M8 40 A32 32 0 0 1 72 40\" fill=\"none\" :stroke=\"gColor(g)\" stroke-width=\"5\" stroke-linecap=\"round\"\n              stroke-dasharray=\"101\" :stroke-dashoffset=\"(101*(1-pct(g))).toFixed(1)\"/>\n        <text x=\"40\" y=\"36\" text-anchor=\"middle\" :fill=\"gColor(g)\" font-size=\"14\" font-weight=\"bold\" font-family=\"monospace\">{{ display(g) }}</text>\n      </svg>\n      <div style=\"font-size:9px;color:#8b949e;line-height:1;\">{{ g.lbl || '\u2014' }}</div>\n    </div>\n  </div>\n\n  <!-- Section: Values -->\n  <div style=\"font-size:9px;color:#8b949e;text-transform:uppercase;letter-spacing:0.3px;margin:5px 0 2px;\">Space Weather</div>\n  <div style=\"display:grid;grid-template-columns:repeat(3,1fr);gap:3px;\">\n    <div v-for=\"s in scales\" :key=\"s.key\" style=\"background:#161b22;border:1px solid #30363d;border-radius:3px;padding:3px;text-align:center;\">\n      <div style=\"font-size:9px;color:#8b949e;text-transform:uppercase;line-height:1;margin-bottom:2px;\">{{ s.lbl }}</div>\n      <div style=\"display:flex;gap:2px;\">\n        <span v-for=\"c in ['R','S','G']\" :key=\"c\" :style=\"badge(scaleVal(s.key, c))\">{{ c }}{{ scaleVal(s.key, c) ?? '\u2014' }}</span>\n      </div>\n    </div>\n  </div>\n\n  <!-- Section: MUF/foF2/X-ray -->\n  <div style=\"display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;margin-top:4px;\">\n    <div v-for=\"t in tiles\" :key=\"t.k\" style=\"background:#161b22;border:1px solid #21262d;border-radius:3px;padding:3px 4px;text-align:center;\">\n      <div style=\"font-size:9px;color:#8b949e;text-transform:uppercase;line-height:1;\">{{ t.lbl }}</div>\n      <div style=\"font-size:13px;font-weight:bold;color:#58a6ff;line-height:1.1;\">{{ t.val ?? '\u2014' }}<span v-if=\"t.unit\" style=\"font-size:9px;color:#8b949e;margin-left:1px;\">{{ t.unit }}</span></div>\n    </div>\n  </div>\n\n  <!-- Section: Band conditions -->\n  <div style=\"font-size:9px;color:#8b949e;text-transform:uppercase;letter-spacing:0.3px;margin:5px 0 1px;\">HF Bands \u00b7 SFI \u2212 K</div>\n  <div v-for=\"b in bands\" :key=\"b.name\"\n       style=\"display:flex;align-items:center;font-size:11px;line-height:1.2;\">\n    <span style=\"color:#8b949e;width:30px;flex-shrink:0;font-weight:bold;\">{{ b.name }}</span>\n    <div style=\"flex:1;background:#21262d;border-radius:1px;height:5px;margin:0 4px;overflow:hidden;\">\n      <div :style=\"{ height: '5px', width: b.score + '%', background: b.color }\"></div>\n    </div>\n    <span :style=\"{color: b.color, width: '54px', textAlign: 'right', fontWeight: 'bold'}\">{{ b.label }}</span>\n  </div>\n  <div style=\"font-size:9px;color:#8b949e;text-align:center;margin-top:2px;\">\n    \u226580 Excl \u00b7 \u226560 Good \u00b7 \u226540 Fair \u00b7 \u226520 Poor \u00b7 &lt;20 Bad\n  </div>\n</div>\n<script>\nexport default {\n  data() { return {\n    state: { sfi:null, sfiLbl:null, k:null, kLbl:null, a:null, aLbl:null,\n             muf:null, fof2:null, xnow:null, x24:null,\n             rsg:{}, bandList:[] }\n  }},\n  computed: {\n    gauges() {\n      const s = this.state;\n      return [\n        { k:'sfi', title:'SFI',     v: s.sfi, lbl: s.sfiLbl, min: 50, max: 250 },\n        { k:'k',   title:'K-Idx',   v: s.k,   lbl: s.kLbl,   min:  0, max:   9 },\n        { k:'a',   title:'A-Idx',   v: s.a,   lbl: s.aLbl,   min:  0, max: 100 }\n      ];\n    },\n    scales() { return [\n      { key:'h24',  lbl:'24h' },\n      { key:'cur',  lbl:'Now' },\n      { key:'pred', lbl:'Pred' }\n    ]},\n    tiles() {\n      const s = this.state;\n      return [\n        { k:'muf',  lbl:'MUF',  val: s.muf,  unit:'MHz' },\n        { k:'fof2', lbl:'foF2', val: s.fof2, unit:'MHz' },\n        { k:'xray', lbl:'X-ray now / 24h', val: (s.xnow||'\u2014')+' / '+(s.x24||'\u2014'), unit:'' }\n      ];\n    },\n    bands() { return this.state.bandList || []; }\n  },\n  methods: {\n    display(g) { if (g.v == null) return '\u2014'; return g.k === 'k' ? Number(g.v).toFixed(1) : String(g.v); },\n    pct(g) { if (g.v == null) return 0; return Math.max(0, Math.min(1, (g.v - g.min) / (g.max - g.min))); },\n    gColor(g) {\n      if (g.k === 'sfi') return g.v >= 130 ? '#3fb950' : g.v >= 90 ? '#e3b341' : '#f85149';\n      if (g.k === 'k')   return g.v < 4.5  ? '#3fb950' : g.v < 6    ? '#e3b341' : '#f85149';\n      return g.v < 36 ? '#3fb950' : g.v < 103 ? '#e3b341' : '#f85149';\n    },\n    scaleVal(k, c) { const p = this.state.rsg[k]; return p ? p[c] : null; },\n    badge(v) {\n      let color = '#3fb950', bg = '#0d2818', border = '#238636';\n      if (v != null && v > 0) {\n        if (v <= 2) { color = '#e3b341'; bg = '#2d1800'; border = '#a87300'; }\n        else        { color = '#f85149'; bg = '#2d0808'; border = '#a82020'; }\n      }\n      return { flex:'1', textAlign:'center', padding:'2px 0', borderRadius:'3px',\n               border:`1px solid ${border}`, background:bg, color:color,\n               fontWeight:'bold', fontSize:'11px', lineHeight:'1.1' };\n    }\n  },\n  watch: {\n    msg(m) {\n      if (!m || !m.payload) return;\n      Object.assign(this.state, m.payload);\n    }\n  }\n}\n</script>",
     "storeOutMessages": true,
     "passthru": true,
     "templateScope": "local",
