@@ -469,7 +469,7 @@
         "py": 0
       }
     },
-    "css": "\n/* ============================================\n   RESPONSIVE DASHBOARD (Pure CSS, 2026-05-24)\n   Dashboard uses masonry layout in .masonry-container\n   with .ui-card-panel children that have JS-set widths\n   ============================================ */\n\n/* TABLET (max 1024px): force 2 columns */\n@media (max-width: 1024px) {\n  ui-card-panel {\n    width: calc(50vw - 16px) !important;\n    max-width: calc(50vw - 16px) !important;\n  }\n  .masonry-container {\n    width: 100% !important;\n  }\n}\n\n/* MOBILE (max 600px): force 1 column */\n@media (max-width: 600px) {\n  ui-card-panel {\n    width: calc(100vw - 16px) !important;\n    max-width: calc(100vw - 16px) !important;\n    left: 8px !important;\n  }\n  body { font-size: 13px; }\n  md-content { overflow-x: hidden !important; }\n}\n"
+    "css": "\n/* Minimal mobile-only optimization (2026-05-24) */\n@media (max-width: 600px) {\n  body { font-size: 13px; }\n  md-content { overflow-x: hidden !important; }\n}\n"
   },
   {
     "id": "94d0df28ae5cccfc",
