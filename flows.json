@@ -956,27 +956,25 @@
     "wires": []
   },
   {
-    "id": "a42d36b2c410bb13",
-    "type": "ui_text_input",
+    "id": "b0753ec5-7c3b-429e-98f5-853a7d12b334",
+    "type": "ui_template",
     "z": "3d26c2c5270bdb37",
-    "name": "Manual Heading",
-    "label": "Manual HDG",
-    "tooltip": "Enter 0-359 and press Enter",
     "group": "84143f78d088f01d",
+    "name": "Manual HDG + GO",
     "order": 12,
-    "width": 9,
-    "height": 2,
+    "width": 12,
+    "height": 1,
+    "format": "<div style=\"display:flex;gap:8px;align-items:center;width:100%;\">\n  <input id=\"hdg-input\" type=\"number\" placeholder=\"0-359\" min=\"0\" max=\"359\" style=\"flex:1;padding:6px;border:1px solid #30363d;background:#0d1117;color:white;border-radius:4px;font-size:14px;\" />\n  <button id=\"go-btn\" style=\"padding:6px 12px;background:#238636;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:bold;\">GO</button>\n</div>\n<script>\ndocument.getElementById('go-btn').onclick = function(){\n  var hdg = document.getElementById('hdg-input').value;\n  if(hdg !== '' && hdg >= 0 && hdg <= 359){\n    scope.$emit('msg', {payload: hdg});\n  }\n};\n</script>",
+    "storeOutMessages": false,
     "passthru": false,
-    "mode": "number",
-    "delay": 0,
-    "topic": "",
-    "sendOnBlur": false,
-    "x": 120,
-    "y": 660,
+    "resendOnRefresh": false,
+    "fwdInMessages": false,
+    "templateScope": "local",
+    "className": "",
+    "x": 0,
+    "y": 0,
     "wires": [
-      [
-        "40ef419559a726ff"
-      ]
+      []
     ]
   },
   {
@@ -9756,30 +9754,6 @@
     "className": "",
     "icon": "",
     "payload": "toggle_180",
-    "payloadType": "str",
-    "topic": "topic",
-    "topicType": "msg",
-    "wires": [
-      []
-    ]
-  },
-  {
-    "id": "95ae3e14-b930-4a1f-bd32-6858fd1604dd",
-    "type": "ui_button",
-    "z": "3d26c2c5270bdb37",
-    "group": "84143f78d088f01d",
-    "name": "GO",
-    "order": 12,
-    "width": 3,
-    "height": 1,
-    "passthru": false,
-    "label": "GO",
-    "tooltip": "Start antenna rotation",
-    "color": "white",
-    "bgcolor": "#238636",
-    "className": "",
-    "icon": "",
-    "payload": "send_heading",
     "payloadType": "str",
     "topic": "topic",
     "topicType": "msg",
