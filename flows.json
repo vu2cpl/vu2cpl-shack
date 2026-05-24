@@ -9904,7 +9904,7 @@
     "type": "function",
     "z": "d2_tab_solar_01",
     "name": "Solar State \u2192 D2 widgets",
-    "func": "// Receives the same payload Solar State Aggregator sends to D1.\n// Fans out individual values to each D2 widget with topic-based routing.\nvar s = msg.payload || flow.get('solarState', 'file') || {};\n\nreturn [[\n    { topic: 'sfi',    payload: s.sfi    },\n    { topic: 'k',      payload: s.k      },\n    { topic: 'a',      payload: s.a      },\n    { topic: 'muf',    payload: s.muf    },\n    { topic: 'fof2',   payload: s.fof2   },\n    { topic: 'xray',   payload: s.xrayClass || s.xray2  },\n    { topic: 'xray24', payload: s.xrayClass24 || s.xray24 },\n    { topic: 'rsg',    payload: { r: s.rNum, s: s.sNum, g: s.gNum } },\n    { topic: 'bands',  payload: s.bands || s.bandMatrix }\n]];",
+    "func": "// Always read latest cached state. Triggered by:\n//   (a) Solar State Aggregator after each poll (msg.payload has fresh state)\n//   (b) 30s tick (msg.payload empty \u2014 read from flow context)\nvar s = flow.get('solarState', 'file') || {};\n\nreturn [[\n    { topic: 'sfi',    payload: s.sfi    },\n    { topic: 'k',      payload: s.k      },\n    { topic: 'a',      payload: s.a      },\n    { topic: 'muf',    payload: s.muf    },\n    { topic: 'fof2',   payload: s.fof2   },\n    { topic: 'xray',   payload: s.xrayClass || s.xray2 },\n    { topic: 'xray24', payload: s.xrayClass24 || s.xray24 },\n    { topic: 'rsg',    payload: { r: s.rsgCur, p: s.rsgPred, h: s.rsg24 } },\n    { topic: 'bands',  payload: s.bands || s.bandMatrix }\n]];",
     "outputs": 1,
     "noerr": 0,
     "initialize": "",
@@ -9967,5 +9967,30 @@
     "x": 600,
     "y": 80,
     "wires": []
+  },
+  {
+    "id": "d2_solar_tick_01",
+    "type": "inject",
+    "z": "d2_tab_solar_01",
+    "name": "Refresh D2 every 30s",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "30",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "2",
+    "topic": "tick",
+    "payload": "",
+    "payloadType": "str",
+    "x": 110,
+    "y": 100,
+    "wires": [
+      [
+        "d2_solar_fanout_01"
+      ]
+    ]
   }
 ]
