@@ -9514,27 +9514,6 @@
     "wires": []
   },
   {
-    "id": "rotor_controls_combined_01",
-    "type": "ui_template",
-    "z": "3d26c2c5270bdb37",
-    "group": "84143f78d088f01d",
-    "name": "Rotor Controls (LP/SP + HDG + GO + STOP)",
-    "order": 2,
-    "width": 8,
-    "height": 1,
-    "format": "<div style=\"display:flex;gap:6px;align-items:center;width:100%;\">\n  <button id=\"lpsp-btn\" title=\"Toggle \u00b1180\u00b0 (long path / short path)\" style=\"padding:8px 8px;border:1.5px solid #00a5c9;background:#000510;color:#00e5ff;border-radius:3px;cursor:pointer;font-weight:bold;font-size:11px;flex-shrink:0;font-family:Consolas,monospace;\">LP/SP</button>\n  <input id=\"hdg-input\" type=\"number\" placeholder=\"0-359\" min=\"0\" max=\"359\" style=\"flex:1;min-width:0;width:60px;padding:8px 4px;border:1.5px solid #005c70;background:#000510;color:#00e5ff;border-radius:3px;font-size:13px;text-align:center;font-family:Consolas,monospace;\" />\n  <button id=\"go-btn\" style=\"padding:8px 10px;border:1.5px solid #00e5ff;background:#000510;color:#00e5ff;border-radius:3px;cursor:pointer;font-weight:bold;font-size:12px;flex-shrink:0;font-family:Consolas,monospace;\">GO</button>\n  <button id=\"stop-btn\" style=\"padding:8px 8px;border:1.5px solid #f85149;background:#1a0808;color:#f85149;border-radius:3px;cursor:pointer;font-weight:bold;font-size:11px;flex-shrink:0;font-family:Consolas,monospace;\">\u25a0 STOP</button>\n</div>\n<script>\n(function(){\n  var lpsp = document.getElementById('lpsp-btn');\n  var go = document.getElementById('go-btn');\n  var stop = document.getElementById('stop-btn');\n  var inp = document.getElementById('hdg-input');\n  lpsp.onclick = function(){ scope.send({payload: 'toggle_180'}); };\n  go.onclick = function(){\n    var v = inp.value;\n    if(v !== '' && v >= 0 && v <= 359){ scope.send({payload: parseInt(v)}); inp.value = ''; }\n  };\n  stop.onclick = function(){ scope.send({payload: 'stop'}); };\n  inp.addEventListener('keypress', function(e){\n    if(e.key === 'Enter') go.click();\n  });\n  \n  // Global handler for compass aviation knob (called from SVG onclick)\n  window._rotatorPowerToggle = function(){\n    fetch('/rotator/power-toggle', {method: 'POST'})\n      .catch(function(e){ console.warn('rotator power-on failed:', e); });\n  };\n})();\n</script>",
-    "storeOutMessages": true,
-    "fwdInMessages": false,
-    "resendOnRefresh": false,
-    "templateScope": "local",
-    "className": "",
-    "wires": [
-      [
-        "40ef419559a726ff"
-      ]
-    ]
-  },
-  {
     "id": "rotator_pwr_http_in",
     "type": "http in",
     "z": "3d26c2c5270bdb37",
@@ -9639,5 +9618,170 @@
         "cae633df9457557f"
       ]
     ]
+  },
+  {
+    "id": "rotor_lpsp_http_in",
+    "type": "http in",
+    "z": "3d26c2c5270bdb37",
+    "name": "POST /rotor/lpsp",
+    "url": "/rotor/lpsp",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 150,
+    "y": 250,
+    "wires": [
+      [
+        "rotor_lpsp_response",
+        "rotor_lpsp_fn"
+      ]
+    ]
+  },
+  {
+    "id": "rotor_lpsp_response",
+    "type": "http response",
+    "z": "3d26c2c5270bdb37",
+    "name": "200 OK",
+    "statusCode": "200",
+    "headers": {},
+    "x": 400,
+    "y": 220,
+    "wires": []
+  },
+  {
+    "id": "rotor_lpsp_fn",
+    "type": "function",
+    "z": "3d26c2c5270bdb37",
+    "name": "LP/SP \u2192 toggle_180",
+    "func": "return {payload: 'toggle_180'};",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 400,
+    "y": 280,
+    "wires": [
+      [
+        "40ef419559a726ff"
+      ]
+    ]
+  },
+  {
+    "id": "rotor_go_http_in",
+    "type": "http in",
+    "z": "3d26c2c5270bdb37",
+    "name": "POST /rotor/go",
+    "url": "/rotor/go",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 150,
+    "y": 350,
+    "wires": [
+      [
+        "rotor_go_response",
+        "rotor_go_fn"
+      ]
+    ]
+  },
+  {
+    "id": "rotor_go_response",
+    "type": "http response",
+    "z": "3d26c2c5270bdb37",
+    "name": "200 OK",
+    "statusCode": "200",
+    "headers": {},
+    "x": 400,
+    "y": 320,
+    "wires": []
+  },
+  {
+    "id": "rotor_go_fn",
+    "type": "function",
+    "z": "3d26c2c5270bdb37",
+    "name": "GO + ensure power on",
+    "func": "// Get heading from request body\nvar hdg = msg.payload && msg.payload.hdg;\nif(hdg === undefined || isNaN(hdg)) return null;\n\n// Output 1: Power ON (idempotent \u2014 Tasmota ignores if already on)\nnode.send([null, {payload: 'ON'}]);\n\n// Output 0: Send heading after 200ms so power has time to engage if it was off\nsetTimeout(function(){\n    node.send([{payload: hdg}, null]);\n}, 200);\nreturn null;\n",
+    "outputs": 2,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 400,
+    "y": 380,
+    "wires": [
+      [
+        "40ef419559a726ff"
+      ],
+      [
+        "rotor_go_pwr_mqtt"
+      ]
+    ]
+  },
+  {
+    "id": "rotor_stop_http_in",
+    "type": "http in",
+    "z": "3d26c2c5270bdb37",
+    "name": "POST /rotor/stop",
+    "url": "/rotor/stop",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 150,
+    "y": 450,
+    "wires": [
+      [
+        "rotor_stop_response",
+        "rotor_stop_fn"
+      ]
+    ]
+  },
+  {
+    "id": "rotor_stop_response",
+    "type": "http response",
+    "z": "3d26c2c5270bdb37",
+    "name": "200 OK",
+    "statusCode": "200",
+    "headers": {},
+    "x": 400,
+    "y": 420,
+    "wires": []
+  },
+  {
+    "id": "rotor_stop_fn",
+    "type": "function",
+    "z": "3d26c2c5270bdb37",
+    "name": "STOP \u2192 stop",
+    "func": "return {payload: 'stop'};",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 400,
+    "y": 480,
+    "wires": [
+      [
+        "40ef419559a726ff"
+      ]
+    ]
+  },
+  {
+    "id": "rotor_go_pwr_mqtt",
+    "type": "mqtt out",
+    "z": "3d26c2c5270bdb37",
+    "name": "GO Power \u2192 MQTT",
+    "topic": "cmnd/powerstrip1/POWER2",
+    "qos": "1",
+    "retain": false,
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "f4785be9863eab08",
+    "x": 700,
+    "y": 380,
+    "wires": []
   }
 ]
