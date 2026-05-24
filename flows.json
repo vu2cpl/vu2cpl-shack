@@ -9604,7 +9604,7 @@
     "type": "mqtt out",
     "z": "3d26c2c5270bdb37",
     "name": "Rotator Power \u2192 MQTT",
-    "topic": "",
+    "topic": "cmnd/powerstrip1/POWER2",
     "qos": "1",
     "retain": false,
     "respTopic": "",
