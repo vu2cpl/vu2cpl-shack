@@ -3054,7 +3054,8 @@
     "y": 260,
     "wires": [
       [
-        "f4863bc257215ff2"
+        "f4863bc257215ff2",
+        "d2_solar_fanout_01"
       ]
     ]
   },
@@ -9802,5 +9803,169 @@
     "wires": [
       []
     ]
+  },
+  {
+    "id": "d2_tab_solar_01",
+    "type": "tab",
+    "label": "D2 Solar",
+    "disabled": false,
+    "info": "Dashboard 2 (FlowFuse) Solar widgets. POC for migration. D1 /ui untouched."
+  },
+  {
+    "id": "d2_ui_base_01",
+    "type": "ui-base",
+    "name": "Shack D2",
+    "path": "/dashboard",
+    "appIcon": "",
+    "includeClientData": true,
+    "acceptsClientConfig": [
+      "ui-notification",
+      "ui-control"
+    ],
+    "showPathInSidebar": false,
+    "headerContent": "page",
+    "navigationStyle": "default",
+    "titleBarStyle": "default",
+    "showReconnectNotification": true,
+    "notificationDisplayTime": 1,
+    "showDisconnectNotification": true,
+    "allowInstall": false
+  },
+  {
+    "id": "d2_ui_page_shack_01",
+    "type": "ui-page",
+    "name": "Shack",
+    "ui": "d2_ui_base_01",
+    "path": "/shack",
+    "icon": "home",
+    "layout": "grid",
+    "theme": "d2_ui_theme_01",
+    "breakpoints": [
+      {
+        "name": "Default",
+        "px": "0",
+        "cols": "3"
+      },
+      {
+        "name": "Tablet",
+        "px": "576",
+        "cols": "6"
+      },
+      {
+        "name": "Small Desktop",
+        "px": "768",
+        "cols": "9"
+      },
+      {
+        "name": "Desktop",
+        "px": "1024",
+        "cols": "12"
+      }
+    ],
+    "order": 1,
+    "className": "",
+    "visible": "true",
+    "disabled": "false"
+  },
+  {
+    "id": "d2_ui_theme_01",
+    "type": "ui-theme",
+    "name": "Shack Dark",
+    "colors": {
+      "surface": "#161b22",
+      "primary": "#097479",
+      "bgPage": "#0d1117",
+      "groupBg": "#161b22",
+      "groupOutline": "#30363d"
+    },
+    "sizes": {
+      "pagePadding": "12px",
+      "groupGap": "12px",
+      "groupBorderRadius": "6px",
+      "widgetGap": "8px"
+    }
+  },
+  {
+    "id": "d2_ui_grp_solar_01",
+    "type": "ui-group",
+    "name": "Solar Conditions",
+    "page": "d2_ui_page_shack_01",
+    "width": "8",
+    "height": "1",
+    "order": 1,
+    "showTitle": true,
+    "className": "",
+    "visible": "true",
+    "disabled": "false",
+    "groupType": "default"
+  },
+  {
+    "id": "d2_solar_fanout_01",
+    "type": "function",
+    "z": "d2_tab_solar_01",
+    "name": "Solar State \u2192 D2 widgets",
+    "func": "// Receives the same payload Solar State Aggregator sends to D1.\n// Fans out individual values to each D2 widget with topic-based routing.\nvar s = msg.payload || flow.get('solarState', 'file') || {};\n\nreturn [[\n    { topic: 'sfi',    payload: s.sfi    },\n    { topic: 'k',      payload: s.k      },\n    { topic: 'a',      payload: s.a      },\n    { topic: 'muf',    payload: s.muf    },\n    { topic: 'fof2',   payload: s.fof2   },\n    { topic: 'xray',   payload: s.xrayClass || s.xray2  },\n    { topic: 'xray24', payload: s.xrayClass24 || s.xray24 },\n    { topic: 'rsg',    payload: { r: s.rNum, s: s.sNum, g: s.gNum } },\n    { topic: 'bands',  payload: s.bands || s.bandMatrix }\n]];",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 300,
+    "y": 100,
+    "wires": [
+      [
+        "d2_sfi_gauge_01"
+      ]
+    ]
+  },
+  {
+    "id": "d2_sfi_gauge_01",
+    "type": "ui-gauge",
+    "z": "d2_tab_solar_01",
+    "group": "d2_ui_grp_solar_01",
+    "name": "SFI Gauge",
+    "order": 1,
+    "width": 3,
+    "height": 3,
+    "label": "SFI",
+    "units": "",
+    "gtype": "gauge",
+    "gstyle": "needle",
+    "min": 50,
+    "max": 300,
+    "icon": "",
+    "prefix": "",
+    "suffix": "",
+    "segments": [
+      {
+        "from": "50",
+        "color": "#f85149",
+        "text": "Low",
+        "textType": "label"
+      },
+      {
+        "from": "100",
+        "color": "#e3b341",
+        "text": "Moderate",
+        "textType": "label"
+      },
+      {
+        "from": "150",
+        "color": "#3fb950",
+        "text": "Good",
+        "textType": "label"
+      }
+    ],
+    "value": "payload",
+    "valueType": "msg",
+    "sizeThickness": 6,
+    "sizeGap": 4,
+    "sizeKeyThickness": 6,
+    "className": "",
+    "topic": "sfi",
+    "topicType": "msg",
+    "x": 600,
+    "y": 80,
+    "wires": []
   }
 ]
