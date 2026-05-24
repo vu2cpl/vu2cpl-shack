@@ -616,19 +616,10 @@
     "className": ""
   },
   {
-    "id": "tab_ui_dxcc",
-    "type": "ui_tab",
-    "name": "DXCC Tracker",
-    "icon": "radio",
-    "order": 5,
-    "disabled": false,
-    "hidden": false
-  },
-  {
     "id": "grp_dxcc_stats",
     "type": "ui_group",
     "name": "\ud83d\udce1 DXCC Alerts",
-    "tab": "tab_ui_dxcc",
+    "tab": "vu2cpl_ui_tab_shack",
     "order": 1,
     "disp": false,
     "width": 8,
