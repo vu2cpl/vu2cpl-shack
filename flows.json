@@ -468,7 +468,8 @@
         "px": 0,
         "py": 0
       }
-    }
+    },
+    "css": "\n/* ============================================\n   RESPONSIVE DASHBOARD (Pure CSS, 2026-05-24)\n   Targets node-red-dashboard standard classes\n   ============================================ */\n\n/* TABLET (iPad portrait + small laptop): 2 columns side-by-side */\n@media (max-width: 1024px) {\n  md-card.ui-card {\n    width: calc(50% - 12px) !important;\n    margin: 4px !important;\n  }\n}\n\n/* MOBILE (iPhone + iPad portrait narrow): 1 column stacked */\n@media (max-width: 600px) {\n  md-card.ui-card {\n    width: calc(100% - 8px) !important;\n    margin: 4px !important;\n  }\n  /* Slightly smaller font on mobile */\n  body { font-size: 13px; }\n}\n\n/* ULTRA-WIDE DESKTOP (>2000px): 4 columns */\n@media (min-width: 2000px) {\n  md-card.ui-card {\n    max-width: 480px;\n  }\n}\n\n/* Ensure dashboard root allows wrapping at all sizes */\n.nr-dashboard-cardpanel,\nmd-grid-list {\n  flex-wrap: wrap !important;\n}\n\n/* Hide vertical scrollbar artifacts on mobile */\n@media (max-width: 600px) {\n  md-content {\n    overflow-x: hidden !important;\n  }\n}\n"
   },
   {
     "id": "94d0df28ae5cccfc",
