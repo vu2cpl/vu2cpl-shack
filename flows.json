@@ -620,7 +620,7 @@
     "type": "ui_group",
     "name": "\ud83d\udce1 DXCC Alerts",
     "tab": "vu2cpl_ui_tab_shack",
-    "order": 1,
+    "order": 11,
     "disp": false,
     "width": 8,
     "collapse": false,
