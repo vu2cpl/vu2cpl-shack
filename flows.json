@@ -9941,10 +9941,9 @@
     "name": "SFI Gauge",
     "order": 1,
     "width": 1,
-    "height": 2,
-    "label": "SFI",
+    "height": 3,
     "units": "",
-    "gtype": "gauge",
+    "gtype": "gauge-half",
     "gstyle": "needle",
     "min": 50,
     "max": 300,
@@ -9954,34 +9953,33 @@
     "segments": [
       {
         "from": "50",
-        "color": "#f85149",
-        "text": "Low",
-        "textType": "label"
+        "color": "#f85149"
       },
       {
         "from": "100",
-        "color": "#e3b341",
-        "text": "Moderate",
-        "textType": "label"
+        "color": "#e3b341"
       },
       {
         "from": "150",
-        "color": "#3fb950",
-        "text": "Good",
-        "textType": "label"
+        "color": "#3fb950"
       }
     ],
     "value": "payload",
     "valueType": "msg",
-    "sizeThickness": 6,
-    "sizeGap": 4,
+    "sizeThickness": 10,
+    "sizeGap": 3,
     "sizeKeyThickness": 6,
     "className": "",
     "topic": "sfi",
     "topicType": "msg",
     "x": 600,
     "y": 80,
-    "wires": []
+    "wires": [],
+    "title": "SFI",
+    "alwaysShowTitle": true,
+    "floatingTitlePosition": "top-center",
+    "styleRounded": true,
+    "styleGlow": false
   },
   {
     "id": "d2_solar_tick_01",
@@ -10016,10 +10014,9 @@
     "name": "K-Index Gauge",
     "order": 2,
     "width": 1,
-    "height": 2,
-    "label": "K-Index",
+    "height": 3,
     "units": "",
-    "gtype": "gauge",
+    "gtype": "gauge-half",
     "gstyle": "needle",
     "min": 0,
     "max": 9,
@@ -10029,34 +10026,33 @@
     "segments": [
       {
         "from": "0",
-        "color": "#3fb950",
-        "text": "Quiet",
-        "textType": "label"
+        "color": "#3fb950"
       },
       {
         "from": "4",
-        "color": "#e3b341",
-        "text": "Unsettled",
-        "textType": "label"
+        "color": "#e3b341"
       },
       {
         "from": "6",
-        "color": "#f85149",
-        "text": "Storm",
-        "textType": "label"
+        "color": "#f85149"
       }
     ],
     "value": "payload",
     "valueType": "msg",
-    "sizeThickness": 6,
-    "sizeGap": 4,
+    "sizeThickness": 10,
+    "sizeGap": 3,
     "sizeKeyThickness": 6,
     "className": "",
     "topic": "",
     "topicType": "msg",
     "x": 600,
     "y": 160,
-    "wires": []
+    "wires": [],
+    "title": "K-Index",
+    "alwaysShowTitle": true,
+    "floatingTitlePosition": "top-center",
+    "styleRounded": true,
+    "styleGlow": false
   },
   {
     "id": "d2_a_gauge_01",
@@ -10066,10 +10062,9 @@
     "name": "A-Index Gauge",
     "order": 3,
     "width": 1,
-    "height": 2,
-    "label": "A-Index",
+    "height": 3,
     "units": "",
-    "gtype": "gauge",
+    "gtype": "gauge-half",
     "gstyle": "needle",
     "min": 0,
     "max": 100,
@@ -10079,34 +10074,33 @@
     "segments": [
       {
         "from": "0",
-        "color": "#3fb950",
-        "text": "Quiet",
-        "textType": "label"
+        "color": "#3fb950"
       },
       {
         "from": "15",
-        "color": "#e3b341",
-        "text": "Unsettled",
-        "textType": "label"
+        "color": "#e3b341"
       },
       {
         "from": "30",
-        "color": "#f85149",
-        "text": "Storm",
-        "textType": "label"
+        "color": "#f85149"
       }
     ],
     "value": "payload",
     "valueType": "msg",
-    "sizeThickness": 6,
-    "sizeGap": 4,
+    "sizeThickness": 10,
+    "sizeGap": 3,
     "sizeKeyThickness": 6,
     "className": "",
     "topic": "",
     "topicType": "msg",
     "x": 600,
     "y": 240,
-    "wires": []
+    "wires": [],
+    "title": "A-Index",
+    "alwaysShowTitle": true,
+    "floatingTitlePosition": "top-center",
+    "styleRounded": true,
+    "styleGlow": false
   },
   {
     "id": "d2_rsg_tpl_01",
@@ -10116,7 +10110,7 @@
     "name": "RSG Badges",
     "order": 8,
     "width": 3,
-    "height": 2,
+    "height": 3,
     "head": "",
     "format": "<div style=\"font-family:monospace;padding:2px 4px;\">\n  <div v-for=\"scale in scales\" :key=\"scale.key\"\n       style=\"display:flex;align-items:center;background:#161b22;border:1px solid #30363d;border-radius:4px;padding:5px 8px;margin-bottom:3px;\">\n    <span style=\"font-size:13px;color:#8b949e;text-transform:uppercase;width:46px;flex-shrink:0;\">{{ scale.sub }}</span>\n    <div style=\"flex:1;text-align:center;font-size:16px;font-weight:bold;\">\n      <span :style=\"{color: rsgColor(scaleVal(scale.key, 'R'))}\">R{{ scaleVal(scale.key, 'R') ?? '\u2014' }}</span>\n      <span style=\"color:#8b949e\"> \u00b7 </span>\n      <span :style=\"{color: rsgColor(scaleVal(scale.key, 'S'))}\">S{{ scaleVal(scale.key, 'S') ?? '\u2014' }}</span>\n      <span style=\"color:#8b949e\"> \u00b7 </span>\n      <span :style=\"{color: rsgColor(scaleVal(scale.key, 'G'))}\">G{{ scaleVal(scale.key, 'G') ?? '\u2014' }}</span>\n    </div>\n  </div>\n</div>\n<script>\nexport default {\n  data() { return {\n    scales: [\n      { key: 'h24',  sub: '24h' },\n      { key: 'cur',  sub: 'Now' },\n      { key: 'pred', sub: 'Pred' }\n    ]\n  }},\n  methods: {\n    scaleVal(k, c) { const p = this.msg && this.msg.payload && this.msg.payload[k]; return p ? p[c] : null; },\n    rsgColor(v) {\n      if (v == null || v === 0) return '#3fb950';\n      if (v <= 2) return '#e3b341';\n      return '#f85149';\n    }\n  }\n}\n</script>",
     "storeOutMessages": true,
@@ -10135,7 +10129,7 @@
     "name": "Band Conditions",
     "order": 9,
     "width": 3,
-    "height": 5,
+    "height": 7,
     "head": "",
     "format": "<div style=\"font-family:monospace;font-size:14px;padding:3px 6px;\">\n  <div v-if=\"!msg.payload || !msg.payload.length\" style=\"color:#8b949e;text-align:center;padding:6px;\">No band data yet</div>\n  <div v-else>\n    <div v-for=\"b in msg.payload\" :key=\"b.name\"\n         style=\"display:flex;align-items:center;padding:2px 0;\">\n      <span style=\"color:#8b949e;width:40px;flex-shrink:0;font-weight:bold;\">{{ b.name }}</span>\n      <div style=\"flex:1;background:#21262d;border-radius:2px;height:8px;margin:0 6px;overflow:hidden;\">\n        <div :style=\"{ height: '8px', width: b.score + '%', background: b.color, transition: 'width 0.4s' }\"></div>\n      </div>\n      <span :style=\"{color: b.color, width: '68px', textAlign: 'right', fontWeight: 'bold'}\">{{ b.label }}</span>\n    </div>\n    <div style=\"font-size:11px;color:#8b949e;text-align:center;margin-top:5px;border-top:1px solid #21262d;padding-top:4px;\">\n      \u226580 Excellent \u00b7 \u226560 Good \u00b7 \u226540 Fair \u00b7 \u226520 Poor \u00b7 &lt;20 Bad\n    </div>\n  </div>\n</div>",
     "storeOutMessages": true,
@@ -10154,7 +10148,7 @@
     "name": "Solar Values (MUF/foF2/X-ray)",
     "order": 4,
     "width": 3,
-    "height": 2,
+    "height": 3,
     "head": "",
     "format": "<div style=\"display:grid;grid-template-columns:repeat(2,1fr);gap:3px;padding:2px;font-family:monospace;\">\n  <div v-for=\"t in tiles\" :key=\"t.k\"\n       style=\"background:#161b22;border:1px solid #21262d;border-radius:4px;padding:6px 4px;text-align:center;\">\n    <div style=\"font-size:12px;color:#8b949e;text-transform:uppercase;letter-spacing:0.3px;\">{{ t.lbl }}</div>\n    <div style=\"font-size:20px;font-weight:bold;color:#58a6ff;margin-top:3px;line-height:1.1;\">{{ t.val ?? '\u2014' }}<span v-if=\"t.unit\" style=\"font-size:11px;color:#8b949e;margin-left:2px;\">{{ t.unit }}</span></div>\n  </div>\n</div>\n<script>\nexport default {\n  data() { return { state: {} } },\n  computed: {\n    tiles() {\n      return [\n        { k:'muf',  lbl:'MUF',       val: this.state.muf,  unit:'MHz' },\n        { k:'fof2', lbl:'foF2',      val: this.state.fof2, unit:'MHz' },\n        { k:'xnow', lbl:'X-ray Now', val: this.state.xnow, unit:'' },\n        { k:'x24',  lbl:'X-ray 24h', val: this.state.x24,  unit:'' }\n      ]\n    }\n  },\n  watch: { msg(m) { if (m && m.payload) Object.assign(this.state, m.payload); } }\n}\n</script>",
     "storeOutMessages": true,
