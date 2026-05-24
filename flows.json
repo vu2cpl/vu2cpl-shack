@@ -974,6 +974,83 @@
         "payload": "",
         "payloadType": "str",
         "topic": "click"
+      },
+      {
+        "targetId": "#btn-eu",
+        "action": "click",
+        "payload": "",
+        "payloadType": "str",
+        "topic": "click"
+      },
+      {
+        "targetId": "#btn-n",
+        "action": "click",
+        "payload": "",
+        "payloadType": "str",
+        "topic": "click"
+      },
+      {
+        "targetId": "#btn-us",
+        "action": "click",
+        "payload": "",
+        "payloadType": "str",
+        "topic": "click"
+      },
+      {
+        "targetId": "#btn-ja",
+        "action": "click",
+        "payload": "",
+        "payloadType": "str",
+        "topic": "click"
+      },
+      {
+        "targetId": "#btn-e",
+        "action": "click",
+        "payload": "",
+        "payloadType": "str",
+        "topic": "click"
+      },
+      {
+        "targetId": "#btn-vk",
+        "action": "click",
+        "payload": "",
+        "payloadType": "str",
+        "topic": "click"
+      },
+      {
+        "targetId": "#btn-zl",
+        "action": "click",
+        "payload": "",
+        "payloadType": "str",
+        "topic": "click"
+      },
+      {
+        "targetId": "#btn-s",
+        "action": "click",
+        "payload": "",
+        "payloadType": "str",
+        "topic": "click"
+      },
+      {
+        "targetId": "#btn-sa",
+        "action": "click",
+        "payload": "",
+        "payloadType": "str",
+        "topic": "click"
+      },
+      {
+        "targetId": "#btn-w",
+        "action": "click",
+        "payload": "",
+        "payloadType": "str",
+        "topic": "click"
+      },
+      {
+        "targetId": "#btn-stop",
+        "action": "click",
+        "payload": "",
+        "payloadType": "str",
+        "topic": "click"
       }
     ],
     "javascriptHandlers": [],
