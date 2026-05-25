@@ -38,6 +38,13 @@ const LightningCard = {
           <span>expires in {{ bypassRemain }}</span>
         </div>
 
+        <!-- AS3935 rebooting banner -->
+        <div v-if="rebooting" class="banner banner--blue">
+          <span class="ico">⟳</span>
+          <span style="flex:1;">AS3935 REBOOTING — bridge will be back online in a few seconds</span>
+          <span>{{ rebootElapsed }}s</span>
+        </div>
+
         <!-- Action buttons -->
         <div style="display:flex;gap:6px;">
           <button class="btn btn--green" style="flex:1;" @click="action('antennaOn')">ANTENNA ON</button>
@@ -354,10 +361,28 @@ const LightningCard = {
         if (calibCountdown.value <= 0) clearInterval(tickId);
       }, 1000);
     }
+    // Rebooting banner state — tracks the reboot lifecycle for visual feedback
+    const rebooting = ref(false);
+    const rebootElapsed = ref(0);
+    let rebootTimer = null;
+
+    function startRebootBanner() {
+      rebooting.value = true;
+      rebootElapsed.value = 0;
+      if (rebootTimer) clearInterval(rebootTimer);
+      rebootTimer = setInterval(() => {
+        rebootElapsed.value++;
+        // Auto-clear: when status flips back to ready AND uptime > 0, or safety timeout 45s
+        if ((state.as3935Status === 'ready' && state.uptime != null) || rebootElapsed.value > 45) {
+          clearInterval(rebootTimer); rebootTimer = null;
+          rebooting.value = false;
+        }
+      }, 1000);
+    }
+
     function doReboot() {
       if (!confirm('Reboot the AS3935 ESP32 bridge?\\n\\nIt will be offline for ~10–20 seconds.')) return;
       action('as3935Reboot');
-      showAck('reboot', 'Rebooting…', 8000);
       // Optimistic: blank the live fields so the UI doesn't keep showing pre-reboot stats
       state.as3935Status = 'offline';
       state.uptime = null;
@@ -365,6 +390,7 @@ const LightningCard = {
       state.vbat = null;
       state.nf = null;
       state.irq = null;
+      startRebootBanner();
     }
     function doFactoryReset() {
       if (!confirm('FACTORY RESET WiFi credentials?\\n\\nThe bridge will lose its WiFi config and require captive-portal re-onboarding. This cannot be undone.')) return;
@@ -422,6 +448,7 @@ const LightningCard = {
       expanded, sec, state, bypassRemain, lastSeen, as3935EventIcon, capeColor, summary, action,
       numericTunables, enumTunables, step,
       ackLabel, calibCountdown,
+      rebooting, rebootElapsed,
       doRepublish, doCalibrate, doQueryBattery, doReboot, doFactoryReset, testInject
     };
   }

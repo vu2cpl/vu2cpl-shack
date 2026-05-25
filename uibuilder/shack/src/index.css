@@ -168,6 +168,16 @@ html, body {
   font-size: var(--fs-sm);
 }
 .banner .ico { font-size: var(--fs-md); }
+.banner--blue {
+  background: #0d2238;
+  border-color: #1f6feb;
+  color: #79c0ff;
+}
+.banner--blue .ico {
+  display: inline-block;
+  animation: spin 1.4s linear infinite;
+}
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
 /* === Stats grid (dense info display) === */
 .stats {
