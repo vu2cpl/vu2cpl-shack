@@ -1612,11 +1612,10 @@ const FlexCard = {
         <span class="chev">{{ expanded ? '▼' : '▶' }}</span>
         <span>FlexRadio {{ state.model || '6600' }}</span>
         <span v-if="!expanded" class="summary">
-          <span :style="{color: summaryColor, fontWeight:600}">{{ summaryLabel }}</span>
-          <span v-if="primarySlice">·</span>
-          <span v-if="primarySlice" :style="{color:'var(--accent)', fontWeight:600}">
+          <span v-if="primarySlice" :style="{color: summaryColor, fontWeight:700}">
             {{ primarySlice.freq }} {{ primarySlice.mode }}
           </span>
+          <span v-else :style="{color:'var(--muted)'}">—</span>
         </span>
       </div>
 
