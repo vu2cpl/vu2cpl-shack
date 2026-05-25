@@ -1877,10 +1877,10 @@ const App = {
   template: `
     <TopBar :connected="connected" />
     <div class="dash-grid">
-      <LightningCard />
       <FlexCard />
-      <SPECard />
       <LP700Card />
+      <SPECard />
+      <LightningCard />
       <PowerCard />
       <SolarCard />
       <DXCCCard />
