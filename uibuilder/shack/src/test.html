@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Shack /shack websocket test</title>
+<style>
+  body { background:#0d1117; color:#c9d1d9; font-family:monospace; padding:12px; font-size:13px; }
+  .row { padding:4px 0; border-bottom:1px solid #21262d; }
+  .lbl { color:#8b949e; }
+  .ok { color:#3fb950; font-weight:bold; }
+  .bad { color:#f85149; font-weight:bold; }
+  pre { background:#161b22; padding:8px; border:1px solid #30363d; border-radius:4px; max-height:60vh; overflow:auto; font-size:11px; }
+</style>
+<script defer src="../uibuilder/uibuilder.iife.min.js"></script>
+</head>
+<body>
+  <h2>Shack uibuilder test</h2>
+  <div class="row"><span class="lbl">uibuilder global available:</span> <span id="uib-avail">…</span></div>
+  <div class="row"><span class="lbl">uibuilder.start() called:</span> <span id="uib-start">…</span></div>
+  <div class="row"><span class="lbl">Socket connected:</span> <span id="uib-conn" class="bad">NOT YET</span></div>
+  <div class="row"><span class="lbl">Messages received:</span> <span id="uib-cnt">0</span></div>
+  <h3>Log:</h3>
+  <pre id="log"></pre>
+
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+  const $ = id => document.getElementById(id);
+  const log = (m) => {
+    const t = new Date().toLocaleTimeString();
+    $('log').textContent = '[' + t + '] ' + m + '\n' + $('log').textContent;
+  };
+  let cnt = 0;
+
+  $('uib-avail').textContent = (typeof uibuilder !== 'undefined' ? 'YES (v' + (uibuilder.version || '?') + ')' : 'NO');
+  $('uib-avail').className = (typeof uibuilder !== 'undefined' ? 'ok' : 'bad');
+  log('Script ran. uibuilder=' + typeof uibuilder);
+
+  if (typeof uibuilder === 'undefined') return;
+
+  try {
+    uibuilder.start();
+    $('uib-start').textContent = 'YES';
+    $('uib-start').className = 'ok';
+    log('uibuilder.start() ok');
+  } catch (e) {
+    $('uib-start').textContent = 'FAILED: ' + e.message;
+    $('uib-start').className = 'bad';
+    log('start() error: ' + e.message);
+    return;
+  }
+
+  // Try every property that might signal connection
+  ['ioConnected','socketConnected','connected','isConnected'].forEach(p => {
+    try {
+      uibuilder.onChange(p, (v) => {
+        log('onChange[' + p + '] = ' + JSON.stringify(v));
+        if (v === true) { $('uib-conn').textContent = 'YES (' + p + ')'; $('uib-conn').className = 'ok'; }
+      });
+    } catch (e) { log('onChange[' + p + '] not supported: ' + e.message); }
+  });
+
+  // Any incoming message
+  uibuilder.onChange('msg', (msg) => {
+    cnt++;
+    $('uib-cnt').textContent = cnt;
+    $('uib-conn').textContent = 'YES (got msgs)';
+    $('uib-conn').className = 'ok';
+    log('msg: topic=' + (msg && msg.topic) + ' payload-keys=' + (msg && msg.payload ? Object.keys(msg.payload).join(',') : '∅'));
+  });
+
+  uibuilder.onTopic('lightning', (msg) => {
+    log('onTopic[lightning] payload-keys=' + (msg && msg.payload ? Object.keys(msg.payload).join(',') : '∅'));
+  });
+
+  log('All handlers registered. Waiting for messages...');
+});
+</script>
+</body>
+</html>
