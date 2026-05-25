@@ -260,8 +260,36 @@ const LightningCard = {
       });
     });
 
+    // Operational actions use the same HTTP endpoints D1 uses (proven path).
+    // AS3935 maintenance + test injects go via uibuilder → cmd_router.
     function action(type, value) {
-      // Send back to Node-RED via the uibuilder node
+      // --- HTTP-direct (operational) ---
+      if (type === 'antennaOn') {
+        return fetch('/lightning/ant-on', { method: 'POST' }).catch(e => console.warn(e));
+      }
+      if (type === 'bypassToggle') {
+        const next = state.bypassActive ? 'off' : 'on';
+        return fetch('/lightning/bypass', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: next })
+        }).catch(e => console.warn(e));
+      }
+      if (type === 'setThreshold') {
+        return fetch('/lightning/threshold', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ value })
+        }).catch(e => console.warn(e));
+      }
+      if (type === 'setReconnect') {
+        return fetch('/lightning/reconnect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ value })
+        }).catch(e => console.warn(e));
+      }
+      // --- uibuilder (AS3935 maintenance + tests) ---
       uibuilder.send({ topic: 'lightning/cmd', payload: { type, value } });
     }
 
