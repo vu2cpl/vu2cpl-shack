@@ -473,12 +473,14 @@ html, body {
 }
 .dxcc-alert {
   display: grid;
-  grid-template-columns: 44px 56px 32px 1fr auto auto;
+  grid-template-columns: 68px 60px 40px 1fr auto auto;
   gap: 6px;
   align-items: center;
   padding: 3px 8px;
   border-bottom: 1px dashed var(--border-2);
+  white-space: nowrap;
 }
+.dxcc-alert > span { overflow: hidden; text-overflow: ellipsis; }
 .dxcc-alert:last-child { border-bottom: none; }
 .dxcc-alert__time { color: var(--muted); }
 .dxcc-alert__freq { color: var(--accent); }
