@@ -551,26 +551,19 @@ html, body {
 .dxcc-alert--amber { border-left: 3px solid var(--amber); }
 .dxcc-alert--ghost { border-left: 3px solid var(--border);}
 
-/* === Rotor compass + preset buttons around it === */
+/* === Rotor compass with SVG-embedded preset buttons === */
 .rotor-stage {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: var(--sp-3);
   align-items: center;
 }
-.rotor-compass-wrap {
-  position: relative;
-  width: 100%;
-  max-width: 280px;
-  aspect-ratio: 1;
-  margin: 0 auto;
-}
 .rotor-compass {
-  position: absolute;
-  inset: 18%;             /* leave a ring of room around the SVG for preset buttons */
-  width: 64%;
-  height: 64%;
+  width: 100%;
+  max-width: 320px;
+  height: auto;
   display: block;
+  margin: 0 auto;
 }
 .rotor-aside {
   display: flex;
@@ -591,42 +584,11 @@ html, body {
   font-weight: 700;
 }
 
-/* Preset button positioned by compass angle */
-.rotor-around {
-  position: absolute;
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0;
-  min-width: 42px;
-  padding: 3px 6px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--surface);
-  color: var(--text);
-  cursor: pointer;
-  font-family: var(--font-sans);
-  white-space: nowrap;
-  line-height: 1;
-  transition: filter 0.12s, transform 0.08s;
-}
-.rotor-around:hover:not(:disabled) {
-  filter: brightness(1.2);
-  border-color: var(--accent);
-}
-.rotor-around:active:not(:disabled) { transform: translate(-50%, -50%) scale(0.95) !important; }
-.rotor-around:disabled { opacity: 0.4; cursor: not-allowed; }
-.rotor-around__lbl {
-  font-size: var(--fs-xs);
-  font-weight: 700;
-  color: var(--accent);
-}
-.rotor-around__deg {
-  font-size: 9px;
-  font-family: var(--font-mono);
-  color: var(--text-dim);
-  margin-top: 1px;
-}
+/* SVG preset button — uses :hover via CSS on SVG groups */
+.svg-preset { cursor: pointer; transition: filter 0.12s; }
+.svg-preset:hover rect { fill: var(--accent-bg); }
+.svg-preset--disabled { cursor: not-allowed; opacity: 0.4; }
+.svg-preset--disabled:hover rect { fill: var(--surface); }
 
 .rotor-manual {
   display: flex;
