@@ -50,10 +50,16 @@ const LightningCard = {
           <span :style="{ color: state.as3935Status === 'ready' ? 'var(--green)' : 'var(--red)' }">●</span>
           <strong>AS3935</strong>
           <span>{{ state.as3935Status === 'ready' ? '✓ READY' : 'OFFLINE' }}</span>
-          <span v-if="state.nf != null">NF=<strong>{{ state.nf }}</strong></span>
           <span v-if="state.uptime">UP <strong>{{ state.uptime }}</strong></span>
-          <span v-if="state.irq != null">IRQ=<strong>{{ state.irq }}</strong></span>
           <span v-if="state.vbat != null">🔋 <strong>{{ (state.vbat/1000).toFixed(2) }}V</strong></span>
+        </div>
+
+        <!-- AS3935 counters row -->
+        <div class="statusline">
+          <span>⚡ Lightning <strong style="color:var(--blue)">{{ state.counters?.lightning ?? '—' }}</strong></span>
+          <span>⚠ Disturber <strong style="color:var(--amber)">{{ state.counters?.disturber ?? '—' }}</strong></span>
+          <span>📡 Noise <strong>{{ state.counters?.noise ?? '—' }}</strong></span>
+          <span>IRQ <strong>{{ state.counters?.irq ?? '—' }}</strong></span>
         </div>
 
         <!-- Stats grid -->
@@ -153,7 +159,7 @@ const LightningCard = {
           </div>
         </div>
 
-        <!-- Collapsible: Maintenance -->
+        <!-- Collapsible: Maintenance (with confirms + countdown) -->
         <div class="section">
           <div class="section__header" @click="sec.maint = !sec.maint">
             <span class="chev">{{ sec.maint ? '▼' : '▶' }}</span>
@@ -161,12 +167,13 @@ const LightningCard = {
           </div>
           <div class="section__body" :class="{ 'is-collapsed': !sec.maint }">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
-              <button class="btn btn--ghost" @click="action('as3935Republish')">Republish Status</button>
-              <button class="btn btn--ghost" @click="action('as3935Calibrate')">Calibrate TUN_CAP</button>
-              <button class="btn btn--ghost" @click="action('as3935QueryBattery')">Query Battery</button>
-              <button class="btn btn--amber" @click="action('as3935Reboot')">Reboot</button>
+              <button class="btn btn--ghost" @click="doRepublish()">{{ ackLabel('republish', 'Republish Status') }}</button>
+              <button class="btn btn--ghost" :disabled="calibCountdown > 0"
+                      @click="doCalibrate()">{{ calibCountdown > 0 ? 'Calibrating… ' + calibCountdown + 's' : ackLabel('calib', 'Calibrate TUN_CAP') }}</button>
+              <button class="btn btn--ghost" @click="doQueryBattery()">{{ ackLabel('battery', 'Query Battery') }}</button>
+              <button class="btn btn--amber" @click="doReboot()">Reboot…</button>
             </div>
-            <button class="btn btn--red" @click="action('as3935FactoryReset')">Factory Reset WiFi</button>
+            <button class="btn btn--red" @click="doFactoryReset()">Factory Reset WiFi…</button>
           </div>
         </div>
 
@@ -178,11 +185,11 @@ const LightningCard = {
           </div>
           <div class="section__body" :class="{ 'is-collapsed': !sec.test }">
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;">
-              <button class="btn btn--ghost" @click="action('testStrike','near')">⚡ Near 5km</button>
-              <button class="btn btn--ghost" @click="action('testStrike','far')">⚡ Far 25km</button>
-              <button class="btn btn--ghost" @click="action('testStrike','oor')">⚡ OOR 63</button>
-              <button class="btn btn--ghost" @click="action('testStrike','disturber')">⚠ Disturber</button>
-              <button class="btn btn--ghost" @click="action('testStrike','noise')">📡 Noise</button>
+              <button class="btn btn--ghost" @click="testInject('near')">{{ ackLabel('test-near', '⚡ Near 5km') }}</button>
+              <button class="btn btn--ghost" @click="testInject('far')">{{ ackLabel('test-far', '⚡ Far 25km') }}</button>
+              <button class="btn btn--ghost" @click="testInject('oor')">{{ ackLabel('test-oor', '⚡ OOR 63') }}</button>
+              <button class="btn btn--ghost" @click="testInject('disturber')">{{ ackLabel('test-disturber', '⚠ Disturber') }}</button>
+              <button class="btn btn--ghost" @click="testInject('noise')">{{ ackLabel('test-noise', '📡 Noise') }}</button>
             </div>
           </div>
         </div>
@@ -318,6 +325,52 @@ const LightningCard = {
       action('setTunable', next, key);
     }
 
+    // === Maintenance / test action helpers with feedback ===
+    // Brief acks shown on the button label after a click so the user knows
+    // the click registered (since the bridge reply may take a few seconds).
+    const acks = reactive({});
+    function showAck(id, text, ms = 1800) {
+      acks[id] = text;
+      setTimeout(() => { delete acks[id]; }, ms);
+    }
+    function ackLabel(id, base) { return acks[id] || base; }
+
+    // Calibrate runs ~30s on the bridge; mirror it with a visible countdown
+    const calibCountdown = ref(0);
+    function doRepublish() {
+      action('as3935Republish');
+      showAck('republish', '✓ Sent');
+    }
+    function doQueryBattery() {
+      action('as3935QueryBattery');
+      showAck('battery', '✓ Sent');
+    }
+    function doCalibrate() {
+      if (!confirm('Calibrate the AS3935 TUN_CAP? This takes ~30s and the chip is unavailable during it.')) return;
+      action('as3935Calibrate');
+      calibCountdown.value = 30;
+      const tickId = setInterval(() => {
+        calibCountdown.value--;
+        if (calibCountdown.value <= 0) clearInterval(tickId);
+      }, 1000);
+    }
+    function doReboot() {
+      if (!confirm('Reboot the AS3935 ESP32 bridge?\\n\\nIt will be offline for ~10–20 seconds.')) return;
+      action('as3935Reboot');
+      showAck('reboot', 'Rebooting…', 3000);
+    }
+    function doFactoryReset() {
+      if (!confirm('FACTORY RESET WiFi credentials?\\n\\nThe bridge will lose its WiFi config and require captive-portal re-onboarding. This cannot be undone.')) return;
+      if (!confirm('Are you absolutely sure? Type-confirm via this second dialog.')) return;
+      action('as3935FactoryReset');
+    }
+
+    // Test-inject helpers with visual ack
+    function testInject(kind) {
+      action('testStrike', kind);
+      showAck('test-' + kind, '✓');
+    }
+
     // Operational actions use the same HTTP endpoints D1 uses (proven path).
     // AS3935 maintenance + test injects go via uibuilder → cmd_router.
     // setTunable takes a 3rd `key` argument naming the AS3935 register to change.
@@ -358,7 +411,12 @@ const LightningCard = {
       uibuilder.send({ topic: 'lightning/cmd', payload: { type, value, key } });
     }
 
-    return { expanded, sec, state, bypassRemain, lastSeen, as3935EventIcon, capeColor, summary, action, numericTunables, enumTunables, step };
+    return {
+      expanded, sec, state, bypassRemain, lastSeen, as3935EventIcon, capeColor, summary, action,
+      numericTunables, enumTunables, step,
+      ackLabel, calibCountdown,
+      doRepublish, doCalibrate, doQueryBattery, doReboot, doFactoryReset, testInject
+    };
   }
 };
 
