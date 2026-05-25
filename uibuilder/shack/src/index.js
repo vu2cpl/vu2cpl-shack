@@ -793,6 +793,128 @@ const DXCCCard = {
   }
 };
 
+// === Power Control card ===
+const PowerCard = {
+  template: `
+    <div class="card">
+      <div class="card__header" @click="expanded = !expanded">
+        <span class="chev">{{ expanded ? '▼' : '▶' }}</span>
+        <span>Power Control</span>
+        <span v-if="!expanded" class="summary">
+          <span :style="{color:'var(--accent)', fontWeight:600}">{{ onCount }}/{{ plugs.length }}</span>
+          <span v-if="state.energy?.power != null">·</span>
+          <span v-if="state.energy?.power != null" :style="{color:'var(--text)', fontWeight:600}">
+            {{ state.energy.power }} W
+          </span>
+        </span>
+      </div>
+
+      <div class="card__body" :class="{ 'is-collapsed': !expanded }">
+
+        <div class="plug-grid">
+          <button v-for="p in plugs" :key="p.topic"
+                  class="plug"
+                  :class="plugClass(p)"
+                  @click="toggle(p.topic)">
+            <span class="plug__dot"></span>
+            <span class="plug__lbl">{{ p.label }}</span>
+            <span v-if="p.topic === 'cmnd/powerstrip1/POWER2' && rotatorRemain" class="plug__sub">⏱ {{ rotatorRemain }}</span>
+          </button>
+        </div>
+
+        <div v-if="state.energy" class="energy-row">
+          <div class="energy-tile">
+            <div class="energy-tile__lbl">Voltage</div>
+            <div class="energy-tile__val">{{ state.energy.voltage ?? '—' }}<span class="unit">V</span></div>
+          </div>
+          <div class="energy-tile">
+            <div class="energy-tile__lbl">Current</div>
+            <div class="energy-tile__val">{{ state.energy.current ?? '—' }}<span class="unit">A</span></div>
+          </div>
+          <div class="energy-tile">
+            <div class="energy-tile__lbl">Power</div>
+            <div class="energy-tile__val">{{ state.energy.power ?? '—' }}<span class="unit">W</span></div>
+          </div>
+          <div class="energy-tile">
+            <div class="energy-tile__lbl">Today</div>
+            <div class="energy-tile__val">{{ state.energy.today ?? '—' }}<span class="unit">kWh</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `,
+  setup() {
+    const expanded = ref(true);
+    const state = reactive({ power: {}, energy: null, rotatorTimerEnd: null });
+
+    // All 20 outlets, ordered to match the existing /ui layout
+    const plugs = [
+      { topic:'cmnd/powerstrip1/POWER1', label:'13.8V SMPS' },
+      { topic:'cmnd/powerstrip1/POWER2', label:'Rotator' },
+      { topic:'cmnd/powerstrip1/POWER3', label:'PLUG3' },
+      { topic:'cmnd/powerstrip1/POWER4', label:'Plug4' },
+      { topic:'cmnd/powerstrip1/POWER5', label:'Antenna' },
+      { topic:'cmnd/powerstrip2/POWER1', label:'Plug1' },
+      { topic:'cmnd/powerstrip2/POWER2', label:'Plug2' },
+      { topic:'cmnd/powerstrip2/POWER3', label:'Plug3' },
+      { topic:'cmnd/powerstrip2/POWER4', label:'Plug4' },
+      { topic:'cmnd/powerstrip2/POWER5', label:'USB2' },
+      { topic:'cmnd/powerstrip3/POWER1', label:'LZ1AQ' },
+      { topic:'cmnd/powerstrip3/POWER2', label:'Single Loop' },
+      { topic:'cmnd/powerstrip3/POWER3', label:'SDR Fan' },
+      { topic:'cmnd/powerstrip3/POWER4', label:'PLUG4' },
+      { topic:'cmnd/powerstrip3/POWER5', label:'USB3' },
+      { topic:'cmnd/4relayboard/POWER1', label:'Flex ON' },
+      { topic:'cmnd/4relayboard/POWER2', label:'Flex PTT' },
+      { topic:'cmnd/4relayboard/POWER3', label:'Relay3' },
+      { topic:'cmnd/4relayboard/POWER4', label:'Relay4' },
+      { topic:'cmnd/16Amasterswitch/POWER1', label:'16A Mains', master: true }
+    ];
+
+    function plugIsOn(topic) {
+      const v = state.power?.[topic];
+      return v === 'ON' || v === true || v === 1;
+    }
+    function plugClass(p) {
+      if (p.master) return 'plug--master';
+      return plugIsOn(p.topic) ? 'plug--on' : 'plug--off';
+    }
+    function toggle(topic) {
+      // Optimistic local flip
+      if (state.power) state.power[topic] = plugIsOn(topic) ? 'OFF' : 'ON';
+      uibuilder.send({ topic: 'power/cmd', payload: { type: 'togglePlug', plug: topic } });
+    }
+    const onCount = computed(() => plugs.filter(p => plugIsOn(p.topic)).length);
+
+    // Rotator auto-off countdown (driven by flow.rotatorTimerEnd from Node-RED)
+    const rotatorRemain = ref(null);
+    let rotInt = null;
+    function refreshRotator() {
+      const end = state.rotatorTimerEnd;
+      if (!end) { rotatorRemain.value = null; if (rotInt) { clearInterval(rotInt); rotInt = null; } return; }
+      function tick() {
+        const rem = Math.max(0, Math.round((end - Date.now()) / 1000));
+        const m = Math.floor(rem / 60), s = rem % 60;
+        rotatorRemain.value = m + ':' + String(s).padStart(2, '0');
+        if (rem <= 0) { rotatorRemain.value = null; if (rotInt) { clearInterval(rotInt); rotInt = null; } }
+      }
+      tick();
+      if (!rotInt) rotInt = setInterval(tick, 1000);
+    }
+
+    onMounted(() => {
+      uibuilder.onTopic('power', (msg) => {
+        if (msg && msg.payload && typeof msg.payload === 'object') {
+          Object.assign(state, msg.payload);
+          refreshRotator();
+        }
+      });
+    });
+
+    return { expanded, state, plugs, plugClass, plugIsOn, toggle, onCount, rotatorRemain };
+  }
+};
+
 // === RPi Fleet card ===
 const RPiCard = {
   template: `
@@ -1081,11 +1203,12 @@ const TopBar = {
 
 // === Root app ===
 const App = {
-  components: { TopBar, LightningCard, DXCCCard, NetworkCard, RPiCard },
+  components: { TopBar, LightningCard, DXCCCard, NetworkCard, RPiCard, PowerCard },
   template: `
     <TopBar :connected="connected" />
     <div class="dash-grid">
       <LightningCard />
+      <PowerCard />
       <DXCCCard />
       <RPiCard />
       <NetworkCard />

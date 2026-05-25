@@ -10012,7 +10012,8 @@
       [
         "vue_lightning_cmd_router_01",
         "vue_dxcc_cmd_router_01",
-        "vue_rpi_cmd_router_01"
+        "vue_rpi_cmd_router_01",
+        "vue_pwr_cmd_router_01"
       ],
       []
     ]
@@ -10232,6 +10233,61 @@
     "wires": [
       [
         "a0695975fec84e2c"
+      ]
+    ]
+  },
+  {
+    "id": "vue_pwr_tick_01",
+    "type": "inject",
+    "z": "b76a5310767803b4",
+    "name": "Push Power to Vue every 3s",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "3",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "2",
+    "topic": "",
+    "payload": "",
+    "payloadType": "str",
+    "x": 110,
+    "y": 900,
+    "wires": [
+      [
+        "vue_pwr_builder_01"
+      ]
+    ]
+  },
+  {
+    "id": "vue_pwr_builder_01",
+    "type": "function",
+    "z": "b76a5310767803b4",
+    "name": "Build Power state for Vue",
+    "func": "// flow.power_states is keyed by stat/<dev>/POWERn \u2192 'ON'|'OFF'\n// Plus flow.energy_state for the 16A master, flow.rotatorTimerEnd for rotor auto-off\nvar raw = flow.get('power_states') || {};\n// Vue indexes by cmnd topic. Map stat \u2192 cmnd by simple string swap.\nvar byCmnd = {};\nObject.keys(raw).forEach(function(k){\n    var cmnd = k.replace(/^stat\\//, 'cmnd/');\n    byCmnd[cmnd] = raw[k];\n    byCmnd[k] = raw[k];  // also keep the original in case some keys are already cmnd\n});\n\nvar e = flow.get('energy_state') || {};\nvar energy = {\n    voltage: e.voltage,\n    current: e.current,\n    power:   e.power,\n    today:   e.today\n};\n\nreturn {\n    topic: 'power',\n    payload: {\n        power: byCmnd,\n        energy: energy.voltage != null || energy.power != null ? energy : null,\n        rotatorTimerEnd: flow.get('rotatorTimerEnd') || null\n    }\n};\n",
+    "outputs": 1,
+    "x": 360,
+    "y": 900,
+    "wires": [
+      [
+        "uib_shack_01"
+      ]
+    ]
+  },
+  {
+    "id": "vue_pwr_cmd_router_01",
+    "type": "function",
+    "z": "b76a5310767803b4",
+    "name": "Route Vue Power commands",
+    "func": "if (msg.topic && msg.topic !== 'power/cmd') return null;\nif (!msg.payload || msg.payload.type !== 'togglePlug' || !msg.payload.plug) return null;\n// Convert to the shape Power TOGGLE Router expects: { topic: 'cmnd/.../POWERn' }\nreturn { topic: msg.payload.plug };\n",
+    "outputs": 1,
+    "x": 360,
+    "y": 980,
+    "wires": [
+      [
+        "a1fbb636a745e687"
       ]
     ]
   }

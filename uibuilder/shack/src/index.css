@@ -551,6 +551,78 @@ html, body {
 .dxcc-alert--amber { border-left: 3px solid var(--amber); }
 .dxcc-alert--ghost { border-left: 3px solid var(--border);}
 
+/* === Power Control — plug grid === */
+.plug-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: var(--sp-2);
+}
+.plug {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: var(--sp-2) var(--sp-1);
+  border: 1px solid var(--border-2);
+  border-radius: 6px;
+  background: var(--bg);
+  cursor: pointer;
+  transition: all 0.12s;
+  font-family: var(--font-sans);
+  text-align: center;
+  min-height: 56px;
+}
+.plug:hover { filter: brightness(1.2); }
+.plug:active { transform: scale(0.96); }
+
+.plug__dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 6px currentColor;
+}
+.plug__lbl {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.1;
+}
+.plug__sub {
+  font-size: var(--fs-xs);
+  color: var(--amber);
+  font-family: var(--font-mono);
+  margin-top: 1px;
+}
+.plug--on  { border-color: var(--green-bd); background: var(--green-bg); color: var(--green); }
+.plug--off { border-color: var(--border);   background: var(--bg);       color: var(--muted); }
+.plug--master { border-color: var(--accent-bd); background: var(--accent-bg); color: var(--accent); }
+
+/* === Energy row (under power grid) === */
+.energy-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--border-2);
+}
+.energy-tile {
+  text-align: center;
+  background: var(--bg);
+  border-radius: 6px;
+  padding: var(--sp-2);
+}
+.energy-tile__lbl { font-size: var(--fs-xs); color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.4px; font-weight: 500; }
+.energy-tile__val {
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  color: var(--accent);
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.energy-tile__val .unit { font-size: var(--fs-xs); color: var(--text-dim); margin-left: 2px; font-weight: 400; font-family: var(--font-sans); }
+
 /* === RPi Fleet host cards === */
 .rpi-grid {
   display: grid;
