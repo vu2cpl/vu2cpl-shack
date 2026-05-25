@@ -965,7 +965,7 @@ const RotorCard = {
 
         <!-- Compass with preset buttons inside the SVG at their compass angles -->
         <div class="rotor-stage">
-          <svg viewBox="-30 -25 280 280" class="rotor-compass"
+          <svg viewBox="-50 -45 320 320" class="rotor-compass"
                :style="{opacity: state.power ? 1 : 0.4}">
             <!-- Background ring -->
             <circle cx="110" cy="110" r="104" fill="var(--bg)" stroke="var(--border)" stroke-width="1"/>
@@ -975,11 +975,12 @@ const RotorCard = {
                :transform="'rotate(' + (t * 30) + ' 110 110)'">
               <line x1="110" y1="6" x2="110" y2="14" stroke="var(--text-dim)" stroke-width="1.2"/>
             </g>
-            <!-- Cardinal labels inside the ring -->
-            <text x="110" y="22"  text-anchor="middle" fill="var(--text)"     font-size="13" font-weight="700">N</text>
-            <text x="200" y="115" text-anchor="middle" fill="var(--text-dim)" font-size="12" font-weight="600">E</text>
-            <text x="110" y="208" text-anchor="middle" fill="var(--text-dim)" font-size="12" font-weight="600">S</text>
-            <text x="20"  y="115" text-anchor="middle" fill="var(--text-dim)" font-size="12" font-weight="600">W</text>
+            <!-- Cardinal labels removed: preset buttons N/E/S/W cover those positions -->
+            <!-- Faint NE/SE/SW/NW labels at the intercardinal spots -->
+            <text x="178" y="49"  text-anchor="middle" fill="var(--muted)" font-size="9" opacity="0.5">NE</text>
+            <text x="178" y="182" text-anchor="middle" fill="var(--muted)" font-size="9" opacity="0.5">SE</text>
+            <text x="42"  y="182" text-anchor="middle" fill="var(--muted)" font-size="9" opacity="0.5">SW</text>
+            <text x="42"  y="49"  text-anchor="middle" fill="var(--muted)" font-size="9" opacity="0.5">NW</text>
             <!-- Target heading marker -->
             <line v-if="state.target != null"
                   x1="110" y1="110" :x2="targetX" :y2="targetY"
@@ -1056,10 +1057,10 @@ const RotorCard = {
 
     // SVG-space positions for preset buttons.
     // Compass center is (110, 110); buttons sit just outside the r=104 ring.
-    // Close-angle pairs (N+US, EU+N) get staggered radii so labels don't collide.
+    // Close-angle pairs (N+US, EU+N, ZL+S): keep cardinals at base radius;
+    // push the DXCC presets further out so labels don't collide with N or S.
     const presetsWithPos = computed(() => {
-      // base radius is 128; bump conflicting buttons inward to 115 or outward to 138
-      const customR = { 0: 115, 10: 132, 325: 132 };  // N inward, US/EU outward
+      const customR = { 10: 148, 325: 148, 170: 148 };  // US, EU, ZL pushed outward
       return presets.map(p => {
         const r = customR[p.deg] || 128;
         const a = (p.deg - 90) * Math.PI / 180;
