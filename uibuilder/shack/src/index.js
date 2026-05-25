@@ -966,7 +966,7 @@ const RotorCard = {
         <!-- Big interactive compass — click anywhere on the face to set heading -->
         <div class="rotor-stage">
           <svg viewBox="0 0 220 220" class="rotor-compass"
-               :style="{opacity: state.power ? 1 : 0.4, cursor: state.power ? 'crosshair' : 'not-allowed'}"
+               :style="{cursor: 'crosshair'}"
                @mousemove="onHover($event)"
                @mouseleave="hover.deg = null"
                @click="onClick($event)">
@@ -991,7 +991,7 @@ const RotorCard = {
             <text x="50"  y="175" text-anchor="middle" fill="var(--muted)" font-size="10">SW</text>
             <text x="50"  y="55"  text-anchor="middle" fill="var(--muted)" font-size="10">NW</text>
             <!-- Hover preview line -->
-            <line v-if="hover.deg != null && state.power"
+            <line v-if="hover.deg != null"
                   x1="110" y1="110" :x2="hoverX" :y2="hoverY"
                   stroke="var(--text-dim)" stroke-width="1" stroke-dasharray="2 3" opacity="0.6"/>
             <!-- Target heading marker -->
@@ -1007,7 +1007,7 @@ const RotorCard = {
                   font-family="JetBrains Mono,SFMono-Regular,monospace">{{ headingFmt(state.heading) }}</text>
             <text x="110" y="172" text-anchor="middle" fill="var(--text-dim)" font-size="11">{{ cardinal(state.heading) }}</text>
             <!-- Hover heading display -->
-            <text v-if="hover.deg != null && state.power"
+            <text v-if="hover.deg != null"
                   x="110" y="188" text-anchor="middle" fill="var(--amber-fg)" font-size="10"
                   font-family="JetBrains Mono,SFMono-Regular,monospace">→ {{ Math.round(hover.deg) }}°</text>
           </svg>
@@ -1017,17 +1017,16 @@ const RotorCard = {
               {{ state.power ? '● ON' : '○ OFF' }}
             </button>
             <div v-if="rotatorRemain" class="rotor-timer">⏱ {{ rotatorRemain }}</div>
-            <button class="btn btn--red"   @click="doStop()" :disabled="!state.power">■ STOP</button>
-            <button class="btn btn--amber" @click="doLpSp()" :disabled="!state.power">LP/SP</button>
+            <button class="btn btn--red"   @click="doStop()">■ STOP</button>
+            <button class="btn btn--amber" @click="doLpSp()">LP/SP</button>
           </div>
         </div>
 
         <!-- Manual heading entry -->
         <div class="rotor-manual">
           <input v-model.number="manualHdg" type="number" min="0" max="359" placeholder="0-359"
-                 :disabled="!state.power"
                  @keydown.enter="doGo()" />
-          <button class="btn btn--green" @click="doGo()" :disabled="!state.power || manualHdg == null">GO</button>
+          <button class="btn btn--green" @click="doGo()" :disabled="manualHdg == null">GO</button>
         </div>
 
         <!-- DXCC presets — collapsible (default closed) -->
@@ -1040,7 +1039,6 @@ const RotorCard = {
             <div class="rotor-presets-row">
               <button v-for="p in presets" :key="p.lbl"
                       class="btn btn--ghost rotor-preset-chip"
-                      :disabled="!state.power"
                       @click="goPreset(p.deg)">
                 <span class="rotor-preset-chip__lbl">{{ p.lbl }}</span>
                 <span class="rotor-preset-chip__deg">{{ p.deg }}°</span>
@@ -1104,17 +1102,17 @@ const RotorCard = {
       return { x: p.x, y: p.y };
     }
     function onHover(evt) {
-      if (!state.power) return;
       const p = svgCoords(evt);
       if (!p) return;
       hover.deg = xyToDeg(p.x, p.y);
     }
     function onClick(evt) {
-      if (!state.power) return;
       const p = svgCoords(evt);
       if (!p) return;
       const deg = xyToDeg(p.x, p.y);
       if (deg == null) return;
+      // Set optimistic target so the amber dashed line moves immediately
+      state.target = deg;
       goPreset(deg);
     }
     const needleX = computed(() => endpoint(state.heading).x.toFixed(1));
