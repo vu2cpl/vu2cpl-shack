@@ -135,6 +135,22 @@ html, body {
   gap: var(--sp-2);
 }
 
+/* Tiny inline progress bar used in collapsed card summaries */
+.mini-bar {
+  display: inline-block;
+  width: 60px;
+  height: 6px;
+  background: var(--border-2);
+  border-radius: 3px;
+  overflow: hidden;
+  vertical-align: middle;
+}
+.mini-bar__fill {
+  display: block;
+  height: 100%;
+  transition: width 0.3s, background 0.2s;
+}
+
 .card__body {
   padding: var(--sp-3) var(--sp-4) var(--sp-4);
   display: flex;

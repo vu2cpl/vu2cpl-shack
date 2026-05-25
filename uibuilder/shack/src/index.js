@@ -1215,6 +1215,7 @@ const LP700Card = {
         <span class="chev">{{ expanded ? '▼' : '▶' }}</span>
         <span>LP-700 Power Meter</span>
         <span v-if="!expanded" class="summary">
+          <span class="mini-bar"><span class="mini-bar__fill" :style="{width: pctOf(state.avg, scaleW) + '%', background:'var(--green)'}"></span></span>
           <span :style="{color:'var(--green)', fontWeight:600}">{{ Math.round(state.avg || 0) }}W</span>
           <span>·</span>
           <span :style="{color: swrColor(state.swr), fontWeight:600}">SWR {{ state.swr != null ? state.swr.toFixed(2) : '—' }}</span>
@@ -1365,6 +1366,8 @@ const SPECard = {
           </span>
           <span v-if="powerOn && state.band">·</span>
           <span v-if="powerOn && state.band" :style="{color:'var(--accent)', fontWeight:600}">{{ state.band }}</span>
+          <span v-if="powerOn"><span class="mini-bar"><span class="mini-bar__fill" :style="{width: pwrPct + '%', background: pwrBarColor}"></span></span></span>
+          <span v-if="powerOn" :style="{color: pwrBarColor, fontWeight:600}">{{ Math.round(state.pwr || 0) }}W</span>
         </span>
       </div>
 
