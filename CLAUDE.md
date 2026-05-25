@@ -450,6 +450,7 @@ Sliding strike history lives in `flow.recent_as3935 = [{ts, km}, …]`. Pushed o
 ### FlexRadio
 - All slice state in `flexState` flow context
 - Split mode coloring (fixed 2026-05-15): both slices report `tx:1` in split mode (RX has `active:1`, actual TX has `active:0`). `Flex State Aggregator` (`de6b988cbc7182ca`) now pre-computes a per-slice `isTx` boolean — counts `tx==1 && in_use==1` slices; if more than one (split), picks the one with `active==0` as the true TX; else the single `tx==1` slice. Both `ng-class` expressions in `FlexRadio Panel` (`bf129ed26ea2ca5f`) consume `isTx` instead of the old `tx==1 && active==1` rule.
+- **TX-armed vs actively transmitting (fixed 2026-05-26 during Vue migration):** `slice.isTx` only tells you *which* slice is TX-armed (the slot that would transmit if keyed). It does **not** mean the radio is currently transmitting — that's `flexState.txstate` (`"READY"` while RX, anything else while keyed). The D1 `FlexRadio Panel` happens to render correctly via context cues, but anywhere you need a clean "is the radio transmitting right now?" boolean, use **`txstate !== 'READY'`**. Vue `/shack` FlexCard header uses this; the slice table's per-row `RX`/`TX` chip is now `sliceIsActiveTx(sl) = isTransmitting && sl.isTx` so it only shows `TX` (red) when the radio is genuinely keyed AND it's the TX-armed slice.
 - `clientHandleMap` built from discovery message (`gui_client_handles` + `gui_client_stations`)
 
 ### SPE Amplifier

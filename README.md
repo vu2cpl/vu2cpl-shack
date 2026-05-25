@@ -94,9 +94,26 @@ the amp's selected level (L / M / H).
 
 TCP API to the FLEX-6600 at `192.168.1.148:4992`, plus UDP discovery.
 Per-slice state (frequency, mode, RX/TX, meter levels) aggregated
-into `flowState` flow context and rendered into the FlexRadio panel.
+into `flexState` flow context and rendered into the FlexRadio panel.
 `clientHandleMap` is built from the discovery message so we can label
 slices with the GUI client station name.
+
+**Transmit-state semantics** — two distinct concepts that look the same:
+
+- `slice.tx == 1` and the derived `slice.isTx == 1` mean *"this slice is
+  the TX-armed slice"* — i.e. **which** slice would transmit if you
+  keyed up. It does NOT mean the radio is currently transmitting.
+  (Aggregator handles split mode where both slices have `tx==1`: it
+  picks the one with `active==0` as the true TX.)
+- `flexState.txstate` (string) is the actual radio state — `"READY"`
+  while receiving, something else (e.g. `"TRANSMIT"`) while keyed.
+
+The new Vue `/shack` dashboard uses **`txstate`** for the live `RX`/`TX`
+indicator in the FlexRadio card header. The old D1 panel mixes the two
+in places but renders correctly because of the surrounding context.
+**Lesson:** if you add any "is the radio transmitting right now?" logic
+to a flow node or template, key it off `flexState.txstate`, not
+`slice.isTx`.
 
 ### Power Control (Tasmota fleet)
 
