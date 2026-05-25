@@ -551,6 +551,55 @@ html, body {
 .dxcc-alert--amber { border-left: 3px solid var(--amber); }
 .dxcc-alert--ghost { border-left: 3px solid var(--border);}
 
+/* === FlexRadio slice table === */
+.slice-tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+.slice-tbl tr {
+  border-bottom: 1px dashed var(--border-2);
+}
+.slice-tbl tr:last-child { border-bottom: none; }
+.slice-tbl td {
+  padding: var(--sp-2) var(--sp-1);
+  vertical-align: middle;
+}
+.slice-tbl__letter {
+  width: 26px;
+  text-align: center;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--accent);
+  background: var(--accent-bg);
+  border-radius: 4px;
+}
+.slice-tbl__freq {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.slice-tbl__mode {
+  font-family: var(--font-mono);
+  color: var(--amber);
+  width: 50px;
+}
+.slice-tbl__state { width: 36px; text-align: center; }
+.slice-tbl__client {
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  text-align: right;
+}
+.slice-row--tx { background: rgba(248, 81, 73, 0.06); }
+
+.empty-row {
+  color: var(--text-dim);
+  font-style: italic;
+  text-align: center;
+  font-size: var(--fs-sm);
+  padding: var(--sp-3);
+}
+
 /* === Solar Conditions === */
 .solar-sec-label {
   font-size: var(--fs-xs);

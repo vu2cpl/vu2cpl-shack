@@ -945,6 +945,130 @@ const SolarCard = {
   }
 };
 
+// === FlexRadio card ===
+const FlexCard = {
+  template: `
+    <div class="card">
+      <div class="card__header" @click="expanded = !expanded">
+        <span class="chev">{{ expanded ? '▼' : '▶' }}</span>
+        <span>FlexRadio {{ state.model || '6600' }}</span>
+        <span v-if="!expanded" class="summary">
+          <span :style="{color: isTransmitting ? 'var(--red)' : 'var(--green)', fontWeight:600}">
+            {{ isTransmitting ? '⚡ TX' : '✓ RX' }}
+          </span>
+          <span v-if="primarySlice">·</span>
+          <span v-if="primarySlice" :style="{color:'var(--accent)', fontWeight:600}">
+            {{ primarySlice.freq }} {{ primarySlice.mode }}
+          </span>
+        </span>
+      </div>
+
+      <div class="card__body" :class="{ 'is-collapsed': !expanded }">
+
+        <!-- Header info: connection / callsign / clients -->
+        <div class="statusline">
+          <span :style="{color: state.model ? 'var(--green)' : 'var(--muted)'}">●</span>
+          <strong>{{ state.model || '— (not connected)' }}</strong>
+          <span v-if="state.callsign">Call <strong>{{ state.callsign }}</strong></span>
+          <span v-if="clientNames">Clients <strong>{{ clientNames }}</strong></span>
+        </div>
+
+        <!-- Active slices table -->
+        <div class="solar-sec-label">Active Slices</div>
+        <div v-if="activeSlices.length === 0" class="empty-row">No active slices</div>
+        <table v-else class="slice-tbl">
+          <tbody>
+            <tr v-for="sl in activeSlices" :key="sl.slice"
+                :class="sl.isTx ? 'slice-row--tx' : 'slice-row--rx'">
+              <td class="slice-tbl__letter">{{ sl.slice }}</td>
+              <td class="slice-tbl__freq">{{ sl.freq }}</td>
+              <td class="slice-tbl__mode">{{ sl.mode }}</td>
+              <td class="slice-tbl__state">
+                <span :style="{color: sl.isTx ? 'var(--red)' : 'var(--green)', fontWeight:700}">
+                  {{ sl.isTx ? 'TX' : 'RX' }}
+                </span>
+              </td>
+              <td class="slice-tbl__client">{{ sl.client || '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Power settings -->
+        <div class="tiles">
+          <div class="tile">
+            <div class="tile__lbl">RF Power</div>
+            <div class="tile__val">{{ state.rfpower ?? '—' }}<span class="tile__sub-unit">W</span></div>
+          </div>
+          <div class="tile">
+            <div class="tile__lbl">Tune Power</div>
+            <div class="tile__val">{{ state.tunepower ?? '—' }}<span class="tile__sub-unit">W</span></div>
+          </div>
+        </div>
+
+        <!-- Hardware telemetry -->
+        <div class="solar-sec-label">Hardware</div>
+        <div class="tiles">
+          <div class="tile">
+            <div class="tile__lbl">PA Temp</div>
+            <div class="tile__val" :style="{color: tempColor(state.patemp)}">{{ state.patemp ?? '—' }}<span class="tile__sub-unit">°C</span></div>
+          </div>
+          <div class="tile">
+            <div class="tile__lbl">PA Volts</div>
+            <div class="tile__val">{{ state.pavolts ?? '—' }}<span class="tile__sub-unit">V</span></div>
+          </div>
+          <div class="tile">
+            <div class="tile__lbl">Input</div>
+            <div class="tile__val">{{ state.involts ?? '—' }}<span class="tile__sub-unit">V</span></div>
+          </div>
+          <div class="tile">
+            <div class="tile__lbl">Fan</div>
+            <div class="tile__val">{{ state.fan ?? '—' }}<span class="tile__sub-unit">RPM</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `,
+  setup() {
+    const expanded = ref(true);
+    const state = reactive({
+      model:null, callsign:null, clients:[], slices:{},
+      activeSlices:[], rfpower:null, tunepower:null,
+      patemp:null, pavolts:null, involts:null, fan:null
+    });
+
+    const activeSlices = computed(() => state.activeSlices || []);
+    const isTransmitting = computed(() => activeSlices.value.some(s => s.isTx));
+    const primarySlice = computed(() => {
+      // Show the TX slice if any, else the first active slice
+      return activeSlices.value.find(s => s.isTx) || activeSlices.value[0] || null;
+    });
+    const clientNames = computed(() => {
+      const cs = state.clients;
+      if (!cs) return null;
+      if (Array.isArray(cs)) return cs.length ? cs.join(', ') : null;
+      return String(cs);
+    });
+
+    function tempColor(t) {
+      const n = parseFloat(t);
+      if (isNaN(n)) return 'var(--muted)';
+      if (n >= 60) return 'var(--red)';
+      if (n >= 50) return 'var(--amber)';
+      return 'var(--green)';
+    }
+
+    onMounted(() => {
+      uibuilder.onTopic('flex', (msg) => {
+        if (msg && msg.payload && typeof msg.payload === 'object') {
+          Object.assign(state, msg.payload);
+        }
+      });
+    });
+
+    return { expanded, state, activeSlices, isTransmitting, primarySlice, clientNames, tempColor };
+  }
+};
+
 // === Power Control card ===
 const PowerCard = {
   template: `
@@ -1355,11 +1479,12 @@ const TopBar = {
 
 // === Root app ===
 const App = {
-  components: { TopBar, LightningCard, DXCCCard, NetworkCard, RPiCard, PowerCard, SolarCard },
+  components: { TopBar, LightningCard, DXCCCard, NetworkCard, RPiCard, PowerCard, SolarCard, FlexCard },
   template: `
     <TopBar :connected="connected" />
     <div class="dash-grid">
       <LightningCard />
+      <FlexCard />
       <PowerCard />
       <SolarCard />
       <DXCCCard />

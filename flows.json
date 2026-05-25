@@ -10330,5 +10330,45 @@
         "uib_shack_01"
       ]
     ]
+  },
+  {
+    "id": "vue_flex_tick_01",
+    "type": "inject",
+    "z": "a0a882f85c89cffc",
+    "name": "Push Flex to Vue every 2s",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "2",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "3",
+    "topic": "",
+    "payload": "",
+    "payloadType": "str",
+    "x": 110,
+    "y": 1500,
+    "wires": [
+      [
+        "vue_flex_builder_01"
+      ]
+    ]
+  },
+  {
+    "id": "vue_flex_builder_01",
+    "type": "function",
+    "z": "a0a882f85c89cffc",
+    "name": "Build Flex state for Vue",
+    "func": "// flow.flexState is in-memory only; read it and pass through to Vue.\nvar s = flow.get('flexState') || {};\nreturn {\n    topic: 'flex',\n    payload: {\n        model:        s.model         || null,\n        callsign:     s.callsign      || null,\n        clients:      s.clients       || [],\n        slices:       s.slices        || {},\n        activeSlices: s.activeSlices  || [],\n        rfpower:      s.rfpower       != null ? s.rfpower   : null,\n        tunepower:    s.tunepower     != null ? s.tunepower : null,\n        patemp:       s.patemp        != null ? s.patemp    : null,\n        pavolts:      s.pavolts       != null ? s.pavolts   : null,\n        involts:      s.involts       != null ? s.involts   : null,\n        fan:          s.fan           != null ? s.fan       : null,\n        txstate:      s.txstate       || null\n    }\n};\n",
+    "outputs": 1,
+    "x": 360,
+    "y": 1500,
+    "wires": [
+      [
+        "uib_shack_01"
+      ]
+    ]
   }
 ]
