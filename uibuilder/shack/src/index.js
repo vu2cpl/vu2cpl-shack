@@ -172,10 +172,10 @@ const LightningCard = {
           </div>
           <div class="section__body" :class="{ 'is-collapsed': !sec.maint }">
             <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:3px;">
-              <button class="btn btn--ghost" @click="doRepublish()">{{ ackLabel('republish', 'Republish') }}</button>
-              <button class="btn btn--ghost" :disabled="calibCountdown > 0"
+              <button class="btn btn--blue"  @click="doRepublish()">{{ ackLabel('republish', 'Republish') }}</button>
+              <button class="btn btn--amber" :disabled="calibCountdown > 0"
                       @click="doCalibrate()">{{ calibCountdown > 0 ? calibCountdown + 's' : ackLabel('calib', 'Calibrate') }}</button>
-              <button class="btn btn--ghost" @click="doQueryBattery()">{{ ackLabel('battery', 'Battery') }}</button>
+              <button class="btn btn--green" @click="doQueryBattery()">{{ ackLabel('battery', 'Battery') }}</button>
               <button class="btn btn--amber" @click="doReboot()">Reboot</button>
               <button class="btn btn--red"   @click="doFactoryReset()">Factory Reset</button>
             </div>
@@ -190,11 +190,11 @@ const LightningCard = {
           </div>
           <div class="section__body" :class="{ 'is-collapsed': !sec.test }">
             <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:3px;">
-              <button class="btn btn--ghost" @click="testInject('near')">{{ ackLabel('test-near', '⚡ Near') }}</button>
-              <button class="btn btn--ghost" @click="testInject('far')">{{ ackLabel('test-far', '⚡ Far') }}</button>
-              <button class="btn btn--ghost" @click="testInject('oor')">{{ ackLabel('test-oor', '⚡ OOR') }}</button>
-              <button class="btn btn--ghost" @click="testInject('disturber')">{{ ackLabel('test-disturber', '⚠ Dist') }}</button>
-              <button class="btn btn--ghost" @click="testInject('noise')">{{ ackLabel('test-noise', '📡 Noise') }}</button>
+              <button class="btn btn--red"   @click="testInject('near')">{{ ackLabel('test-near', '⚡ Near') }}</button>
+              <button class="btn btn--amber" @click="testInject('far')">{{ ackLabel('test-far', '⚡ Far') }}</button>
+              <button class="btn btn--green" @click="testInject('oor')">{{ ackLabel('test-oor', '⚡ OOR') }}</button>
+              <button class="btn btn--blue"  @click="testInject('disturber')">{{ ackLabel('test-disturber', '⚠ Dist') }}</button>
+              <button class="btn btn--blue"  @click="testInject('noise')">{{ ackLabel('test-noise', '📡 Noise') }}</button>
             </div>
           </div>
         </div>

@@ -154,6 +154,7 @@ html, body {
 .btn--green { border-color: var(--green-bd); background: var(--green-bg); color: var(--green); }
 .btn--amber { border-color: var(--amber-bd); background: var(--amber-bg); color: var(--amber-fg); }
 .btn--red   { border-color: var(--red-bd);   background: var(--red-bg);   color: var(--red);   }
+.btn--blue  { border-color: #1f6feb;         background: #0d2238;         color: #79c0ff;      }
 .btn--ghost { border-color: var(--border);   background: transparent;     color: var(--muted); }
 
 /* === Banner (bypass-active style) === */
