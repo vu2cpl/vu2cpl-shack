@@ -1,0 +1,244 @@
+/* === VU2CPL Shack — Vue dashboard global styles === */
+
+:root {
+  /* Design tokens — GitHub-dark inspired, monospace, ham-radio dense */
+  --bg:        #0d1117;
+  --surface:   #161b22;
+  --surface-2: #1c2330;
+  --border:    #30363d;
+  --border-2:  #21262d;
+  --text:      #c9d1d9;
+  --muted:     #8b949e;
+  --accent:    #58a6ff;
+  --green:     #3fb950;
+  --green-bg:  #0d2818;
+  --green-bd:  #238636;
+  --amber:     #e3b341;
+  --amber-bg:  #2d2300;
+  --amber-bd:  #b58a00;
+  --amber-fg:  #ffd45e;
+  --red:       #f85149;
+  --red-bg:    #2d0808;
+  --red-bd:    #a82020;
+
+  /* Fluid typography — scales smoothly across phone → desktop */
+  --fs-xs:   clamp(9px,  0.7vw,  11px);
+  --fs-sm:   clamp(10px, 0.85vw, 12px);
+  --fs-base: clamp(12px, 1vw,    14px);
+  --fs-md:   clamp(13px, 1.1vw,  16px);
+  --fs-lg:   clamp(15px, 1.4vw,  20px);
+  --fs-xl:   clamp(18px, 2vw,    26px);
+
+  --font-mono: 'SFMono-Regular', 'Consolas', 'Menlo', 'Courier New', monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-base);
+  line-height: 1.4;
+  min-height: 100vh;
+  /* iPhone safe areas (notch / home indicator) */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+           env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+#app {
+  min-height: 100vh;
+  padding: 4px;
+}
+
+/* === Top-level responsive grid for cards === */
+/* auto-fit + minmax = cards naturally reflow into 1/2/3/4 columns based on
+   available width. No breakpoints to maintain. Phone gets 1 col, iPad 2,
+   laptop 3, big monitor 4+. */
+.dash-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 6px;
+  align-items: start;
+}
+
+/* === Card base — collapsible, dense === */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  /* Each card is its own container query context */
+  container-type: inline-size;
+}
+
+.card__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border-2);
+  cursor: pointer;
+  user-select: none;
+  font-weight: 700;
+  color: var(--accent);
+  font-size: var(--fs-md);
+}
+
+.card__header .chev {
+  width: 12px;
+  display: inline-block;
+  text-align: center;
+}
+
+.card__header .summary {
+  margin-left: auto;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.card__body {
+  padding: 6px 8px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.card__body.is-collapsed { display: none; }
+
+/* === Section (collapsible inside a card, SPE-style) === */
+.section {
+  border: 1px solid var(--border-2);
+  border-radius: 4px;
+  background: var(--surface);
+}
+
+.section__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  user-select: none;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.section__header:hover { color: var(--text); }
+
+.section__body { padding: 6px 8px 8px; display: flex; flex-direction: column; gap: 6px; }
+.section__body.is-collapsed { display: none; }
+
+/* === Buttons (operational vs neutral) === */
+.btn {
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: var(--fs-base);
+  font-family: var(--font-mono);
+  transition: filter 0.12s;
+}
+.btn:hover { filter: brightness(1.15); }
+.btn--green { border-color: var(--green-bd); background: var(--green-bg); color: var(--green); }
+.btn--amber { border-color: var(--amber-bd); background: var(--amber-bg); color: var(--amber-fg); }
+.btn--red   { border-color: var(--red-bd);   background: var(--red-bg);   color: var(--red);   }
+.btn--ghost { border-color: var(--border);   background: transparent;     color: var(--muted); }
+
+/* === Banner (bypass-active style) === */
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--amber-bg);
+  border: 1px solid var(--amber-bd);
+  color: var(--amber-fg);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: var(--fs-sm);
+}
+.banner .ico { font-size: var(--fs-md); }
+
+/* === Stats grid (dense info display) === */
+.stats {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 12px;
+  row-gap: 2px;
+  font-size: var(--fs-sm);
+}
+.stats dt { color: var(--muted); }
+.stats dd { color: var(--text); text-align: right; font-weight: 700; }
+
+/* === Tile grid (for the live AS3935 values, MUF/foF2/etc.) === */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+  gap: 4px;
+}
+.tile {
+  background: var(--bg);
+  border: 1px solid var(--border-2);
+  border-radius: 4px;
+  padding: 3px 4px;
+  text-align: center;
+}
+.tile__lbl { font-size: var(--fs-xs); color: var(--muted); text-transform: uppercase; line-height: 1; }
+.tile__val { font-size: var(--fs-md); font-weight: 700; color: var(--accent); margin-top: 2px; line-height: 1.1; }
+.tile__sub { font-size: var(--fs-xs); color: var(--muted); margin-top: 1px; }
+
+/* === Status row (one-line dense info) === */
+.statusline {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  padding: 2px 4px;
+}
+.statusline strong { color: var(--text); font-weight: 700; }
+
+/* === Connection indicator (top-right, always present) === */
+.conn-dot {
+  position: fixed;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--red);
+  transition: background 0.3s;
+  z-index: 100;
+  box-shadow: 0 0 4px currentColor;
+}
+.conn-dot.is-connected { background: var(--green); }
+
+/* === Header bar with callsign + clocks === */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: var(--fs-sm);
+  margin-bottom: 6px;
+}
+.topbar .callsign { color: var(--accent); font-weight: 700; font-size: var(--fs-lg); letter-spacing: 2px; }
+.topbar .sub { color: var(--muted); font-size: var(--fs-xs); }
+.topbar .clocks { display: flex; gap: 12px; margin-left: auto; }
+.topbar .clk { text-align: center; }
+.topbar .clk-lbl { font-size: var(--fs-xs); color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+.topbar .clk-val { font-size: var(--fs-md); color: var(--text); font-weight: 700; }
+.topbar .clk-val.amber { color: var(--amber); }

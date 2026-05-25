@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0d1117">
+  <title>VU2CPL Shack</title>
+
+  <link rel="stylesheet" href="./index.css">
+  <link rel="manifest" href="./manifest.json">
+
+  <!-- uibuilder library (must come BEFORE Vue + our app) -->
+  <script defer src="../uibuilder/uibuilder.iife.min.js"></script>
+  <!-- Vue 3 from CDN (global build, no build step) -->
+  <script defer src="https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js"></script>
+  <!-- Our app (loaded after uibuilder + Vue thanks to `defer`) -->
+  <script defer src="./index.js"></script>
+</head>
+<body>
+  <div id="app"></div>
+</body>
+</html>
