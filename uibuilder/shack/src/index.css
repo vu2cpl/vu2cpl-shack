@@ -237,54 +237,84 @@ html, body {
   box-shadow: 0 0 3px currentColor;
 }
 
-/* === Inline-editable tunables grid === */
-.tunables-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 4px;
-  font-size: var(--fs-sm);
-}
-.tunable {
+/* === Tunables: row layout with steppers + pills === */
+.tun-row {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: var(--bg);
-  border: 1px solid var(--border-2);
-  border-radius: 4px;
-  padding: 4px 6px;
+  padding: 3px 4px;
+  font-size: var(--fs-sm);
+  border-bottom: 1px dashed var(--border-2);
 }
-.tunable__lbl {
+.tun-row:last-child { border-bottom: none; }
+
+.tun-lbl {
   color: var(--muted);
   font-family: var(--font-mono);
-  flex: 1;
-  font-size: var(--fs-xs);
   text-transform: uppercase;
   letter-spacing: 0.3px;
+  font-size: var(--fs-xs);
+  flex: 0 0 80px;
 }
-.tunable__range {
+.tun-range {
   color: var(--muted);
   font-size: var(--fs-xs);
+  flex: 0 0 40px;
 }
-.tunable input[type="number"],
-.tunable select {
-  background: var(--surface);
-  color: var(--accent);
+
+/* Stepper buttons */
+.tun-step {
+  width: 30px;
+  height: 30px;
   border: 1px solid var(--border);
-  border-radius: 3px;
-  padding: 2px 4px;
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-  width: 60px;
+  background: var(--bg);
+  color: var(--accent);
+  border-radius: 4px;
+  font-size: var(--fs-md);
   font-weight: 700;
+  cursor: pointer;
+  user-select: none;
 }
-.tunable input[type="number"]:focus,
-.tunable select:focus {
-  outline: none;
-  border-color: var(--accent);
+.tun-step:hover:not(:disabled) { background: var(--surface-2); border-color: var(--accent); }
+.tun-step:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.tun-val {
+  flex: 1;
+  text-align: center;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: var(--fs-md);
+  font-family: var(--font-mono);
 }
-.tunable select {
-  width: auto;
-  min-width: 70px;
+
+/* Pill toggle groups */
+.pill-group {
+  flex: 1;
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.pill {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 12px;
+  padding: 3px 10px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  user-select: none;
+  min-width: 36px;
+  min-height: 26px;
+}
+.pill:hover { border-color: var(--accent); color: var(--text); }
+.pill--active {
+  background: var(--green-bg);
+  border-color: var(--green-bd);
+  color: var(--green);
 }
 
 /* === Header bar with callsign + clocks === */

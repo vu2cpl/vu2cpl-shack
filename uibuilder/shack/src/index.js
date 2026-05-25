@@ -115,68 +115,40 @@ const LightningCard = {
           </div>
         </div>
 
-        <!-- Collapsible: AS3935 Tunables (inline editable) -->
+        <!-- Collapsible: AS3935 Tunables (touch-friendly steppers + pill toggles) -->
         <div class="section">
           <div class="section__header" @click="sec.tunables = !sec.tunables">
             <span class="chev">{{ sec.tunables ? '▼' : '▶' }}</span>
             <span>AS3935 Tunables</span>
           </div>
           <div class="section__body" :class="{ 'is-collapsed': !sec.tunables }">
-            <div class="tunables-grid">
-              <!-- Numeric: nf (0-7), wdth (0-15), srej (0-15), tun_cap (0-15) -->
-              <label v-for="t in numericTunables" :key="t.key" class="tunable">
-                <span class="tunable__lbl">{{ t.lbl }}</span>
-                <input type="number" :min="t.min" :max="t.max" :step="1"
-                       :value="state.tunables?.[t.key] ?? ''"
-                       @change="action('setTunable', $event.target.valueAsNumber, t.key)" />
-                <span class="tunable__range">{{ t.min }}–{{ t.max }}</span>
-              </label>
 
-              <!-- Enum: afe_gb (indoor/outdoor) -->
-              <label class="tunable">
-                <span class="tunable__lbl">afe_gb</span>
-                <select :value="state.tunables?.afe_gb ?? ''"
-                        @change="action('setTunable', $event.target.value, 'afe_gb')">
-                  <option value="indoor">indoor</option>
-                  <option value="outdoor">outdoor</option>
-                </select>
-              </label>
-
-              <!-- Enum: modem_sleep (none/min/max) -->
-              <label class="tunable">
-                <span class="tunable__lbl">modem_sleep</span>
-                <select :value="state.tunables?.modem_sleep ?? ''"
-                        @change="action('setTunable', $event.target.value, 'modem_sleep')">
-                  <option value="none">none</option>
-                  <option value="min">min</option>
-                  <option value="max">max</option>
-                </select>
-              </label>
-
-              <!-- Boolean: mask_dist -->
-              <label class="tunable">
-                <span class="tunable__lbl">mask_dist</span>
-                <select :value="String(state.tunables?.mask_dist ?? false)"
-                        @change="action('setTunable', $event.target.value === 'true', 'mask_dist')">
-                  <option value="false">false</option>
-                  <option value="true">true</option>
-                </select>
-              </label>
-
-              <!-- min_num_lightning: 1, 5, 9, 16 -->
-              <label class="tunable">
-                <span class="tunable__lbl">min_num_lightning</span>
-                <select :value="String(state.tunables?.min_num_lightning ?? 1)"
-                        @change="action('setTunable', Number($event.target.value), 'min_num_lightning')">
-                  <option value="1">1</option>
-                  <option value="5">5</option>
-                  <option value="9">9</option>
-                  <option value="16">16</option>
-                </select>
-              </label>
+            <!-- Numerics with − / + steppers -->
+            <div v-for="t in numericTunables" :key="t.key" class="tun-row">
+              <span class="tun-lbl">{{ t.lbl }}</span>
+              <span class="tun-range">{{ t.min }}–{{ t.max }}</span>
+              <button class="tun-step" :disabled="(state.tunables?.[t.key] ?? t.min) <= t.min"
+                      @click="step(t.key, -1, t.min, t.max)">−</button>
+              <span class="tun-val">{{ state.tunables?.[t.key] ?? '—' }}</span>
+              <button class="tun-step" :disabled="(state.tunables?.[t.key] ?? t.max) >= t.max"
+                      @click="step(t.key, +1, t.min, t.max)">+</button>
             </div>
+
+            <!-- Enum pills: afe_gb / modem_sleep / mask_dist / min_num_lightning -->
+            <div v-for="e in enumTunables" :key="e.key" class="tun-row">
+              <span class="tun-lbl">{{ e.lbl }}</span>
+              <div class="pill-group">
+                <button v-for="opt in e.options" :key="String(opt.v)"
+                        class="pill"
+                        :class="{ 'pill--active': String(state.tunables?.[e.key]) === String(opt.v) }"
+                        @click="action('setTunable', opt.v, e.key)">
+                  {{ opt.label }}
+                </button>
+              </div>
+            </div>
+
             <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:4px;">
-              Changes apply immediately; bridge republishes status after each set.
+              Tap a value to apply. Bridge republishes status after each change.
             </div>
           </div>
         </div>
@@ -306,13 +278,45 @@ const LightningCard = {
       });
     });
 
-    // List of numeric tunables (used by template for v-for)
+    // List of numeric tunables (rendered as −/+ steppers)
     const numericTunables = [
-      { key: 'nf',      lbl: 'nf',      min: 0, max:  7 },
-      { key: 'wdth',    lbl: 'wdth',    min: 0, max: 15 },
-      { key: 'srej',    lbl: 'srej',    min: 0, max: 15 },
-      { key: 'tun_cap', lbl: 'tun_cap', min: 0, max: 15 }
+      { key: 'nf',      lbl: 'NF',      min: 0, max:  7 },
+      { key: 'wdth',    lbl: 'WDTH',    min: 0, max: 15 },
+      { key: 'srej',    lbl: 'SREJ',    min: 0, max: 15 },
+      { key: 'tun_cap', lbl: 'TUN_CAP', min: 0, max: 15 }
     ];
+
+    // List of enum-ish tunables (rendered as pill toggle groups)
+    const enumTunables = [
+      { key: 'afe_gb', lbl: 'AFE', options: [
+        { v: 'indoor',  label: 'INDOOR'  },
+        { v: 'outdoor', label: 'OUTDOOR' }
+      ]},
+      { key: 'modem_sleep', lbl: 'WiFi Sleep', options: [
+        { v: 'none', label: 'NONE' },
+        { v: 'min',  label: 'MIN'  },
+        { v: 'max',  label: 'MAX'  }
+      ]},
+      { key: 'mask_dist', lbl: 'Mask Dist', options: [
+        { v: false, label: 'OFF' },
+        { v: true,  label: 'ON'  }
+      ]},
+      { key: 'min_num_lightning', lbl: 'Min Lightning', options: [
+        { v: 1,  label: '1'  },
+        { v: 5,  label: '5'  },
+        { v: 9,  label: '9'  },
+        { v: 16, label: '16' }
+      ]}
+    ];
+
+    // Stepper for numeric tunables — clamps and sends in one click
+    function step(key, dir, min, max) {
+      const cur = state.tunables?.[key];
+      if (cur == null) return;
+      const next = Math.max(min, Math.min(max, cur + dir));
+      if (next === cur) return;
+      action('setTunable', next, key);
+    }
 
     // Operational actions use the same HTTP endpoints D1 uses (proven path).
     // AS3935 maintenance + test injects go via uibuilder → cmd_router.
@@ -348,7 +352,7 @@ const LightningCard = {
       uibuilder.send({ topic: 'lightning/cmd', payload: { type, value, key } });
     }
 
-    return { expanded, sec, state, bypassRemain, lastSeen, as3935EventIcon, capeColor, summary, action, numericTunables };
+    return { expanded, sec, state, bypassRemain, lastSeen, as3935EventIcon, capeColor, summary, action, numericTunables, enumTunables, step };
   }
 };
 
