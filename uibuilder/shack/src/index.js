@@ -1777,15 +1777,20 @@ const PowerCard = {
 
       <div class="card__body" :class="{ 'is-collapsed': !expanded }">
 
+        <!-- Plugs grouped by device — one row per Tasmota -->
         <div class="plug-grid">
-          <button v-for="p in plugs" :key="p.topic"
-                  class="plug"
-                  :class="plugClass(p)"
-                  @click="toggle(p.topic)">
-            <span class="plug__dot"></span>
-            <span class="plug__lbl">{{ p.label }}</span>
-            <span v-if="p.topic === 'cmnd/powerstrip1/POWER2' && rotatorRemain" class="plug__sub">⏱ {{ rotatorRemain }}</span>
-          </button>
+          <template v-for="(devPlugs, devName) in plugsByDevice" :key="devName">
+            <button v-for="p in devPlugs" :key="p.topic"
+                    class="plug"
+                    :class="plugClass(p)"
+                    @click="toggle(p.topic)">
+              <span class="plug__dot"></span>
+              <span class="plug__lbl">{{ p.label }}</span>
+              <span v-if="p.topic === 'cmnd/powerstrip1/POWER2' && rotatorRemain" class="plug__sub">⏱ {{ rotatorRemain }}</span>
+            </button>
+            <!-- Fill empty cells so each device gets its own row in the 5-col grid -->
+            <span v-for="n in (5 - devPlugs.length)" :key="devName + '-pad-' + n" class="plug-pad"></span>
+          </template>
         </div>
 
         <div v-if="state.energy" class="energy-row">
@@ -1837,6 +1842,18 @@ const PowerCard = {
       { topic:'cmnd/16Amasterswitch/POWER1', label:'16A Mains', master: true }
     ];
 
+    // Group plugs by device name so we can render one row per Tasmota
+    // (powerstrip1: 5 · powerstrip2: 5 · powerstrip3: 5 · 4relayboard: 4 · 16Amasterswitch: 1)
+    const plugsByDevice = computed(() => {
+      const out = {};
+      plugs.forEach(p => {
+        const dev = p.topic.split('/')[1];   // 'cmnd/<device>/POWERn'
+        if (!out[dev]) out[dev] = [];
+        out[dev].push(p);
+      });
+      return out;
+    });
+
     function plugIsOn(topic) {
       const v = state.power?.[topic];
       return v === 'ON' || v === true || v === 1;
@@ -1877,7 +1894,7 @@ const PowerCard = {
       });
     });
 
-    return { expanded, state, plugs, plugClass, plugIsOn, toggle, onCount, rotatorRemain };
+    return { expanded, state, plugs, plugsByDevice, plugClass, plugIsOn, toggle, onCount, rotatorRemain };
   }
 };
 
