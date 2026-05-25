@@ -60,7 +60,7 @@ html, body {
    laptop 3, big monitor 4+. */
 .dash-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 6px;
   align-items: start;
 }
@@ -142,12 +142,13 @@ html, body {
   background: var(--bg);
   color: var(--text);
   border-radius: 4px;
-  padding: 8px 12px;
+  padding: 3px 6px;
   cursor: pointer;
   font-weight: 700;
-  font-size: var(--fs-base);
+  font-size: var(--fs-sm);
   font-family: var(--font-mono);
   transition: filter 0.12s;
+  min-height: 24px;
 }
 .btn:hover { filter: brightness(1.15); }
 .btn--green { border-color: var(--green-bd); background: var(--green-bg); color: var(--green); }

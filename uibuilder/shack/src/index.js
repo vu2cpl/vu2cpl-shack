@@ -173,14 +173,14 @@ const LightningCard = {
             <span>AS3935 Maintenance</span>
           </div>
           <div class="section__body" :class="{ 'is-collapsed': !sec.maint }">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
-              <button class="btn btn--ghost" @click="doRepublish()">{{ ackLabel('republish', 'Republish Status') }}</button>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:3px;">
+              <button class="btn btn--ghost" @click="doRepublish()">{{ ackLabel('republish', 'Republish') }}</button>
               <button class="btn btn--ghost" :disabled="calibCountdown > 0"
-                      @click="doCalibrate()">{{ calibCountdown > 0 ? 'Calibrating… ' + calibCountdown + 's' : ackLabel('calib', 'Calibrate TUN_CAP') }}</button>
-              <button class="btn btn--ghost" @click="doQueryBattery()">{{ ackLabel('battery', 'Query Battery') }}</button>
-              <button class="btn btn--amber" @click="doReboot()">Reboot…</button>
+                      @click="doCalibrate()">{{ calibCountdown > 0 ? calibCountdown + 's' : ackLabel('calib', 'Calibrate') }}</button>
+              <button class="btn btn--ghost" @click="doQueryBattery()">{{ ackLabel('battery', 'Battery') }}</button>
+              <button class="btn btn--amber" @click="doReboot()">Reboot</button>
             </div>
-            <button class="btn btn--red" @click="doFactoryReset()">Factory Reset WiFi…</button>
+            <button class="btn btn--red" @click="doFactoryReset()" style="margin-top:3px;">Factory Reset WiFi</button>
           </div>
         </div>
 
