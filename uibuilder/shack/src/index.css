@@ -22,12 +22,12 @@
   --red-bd:    #a82020;
 
   /* Fluid typography — scales smoothly across phone → desktop */
-  --fs-xs:   clamp(9px,  0.7vw,  11px);
-  --fs-sm:   clamp(10px, 0.85vw, 12px);
-  --fs-base: clamp(12px, 1vw,    14px);
-  --fs-md:   clamp(13px, 1.1vw,  16px);
-  --fs-lg:   clamp(15px, 1.4vw,  20px);
-  --fs-xl:   clamp(18px, 2vw,    26px);
+  --fs-xs:   clamp(10px, 0.8vw,  12px);
+  --fs-sm:   clamp(11px, 1vw,    14px);
+  --fs-base: clamp(13px, 1.15vw, 16px);
+  --fs-md:   clamp(15px, 1.3vw,  18px);
+  --fs-lg:   clamp(17px, 1.6vw,  22px);
+  --fs-xl:   clamp(20px, 2.2vw,  28px);
 
   --font-mono: 'SFMono-Regular', 'Consolas', 'Menlo', 'Courier New', monospace;
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -60,7 +60,7 @@ html, body {
    laptop 3, big monitor 4+. */
 .dash-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 6px;
   align-items: start;
 }

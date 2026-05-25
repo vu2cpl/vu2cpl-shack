@@ -115,16 +115,18 @@ const LightningCard = {
             <span>Thresholds</span>
           </div>
           <div class="section__body" :class="{ 'is-collapsed': !sec.thresholds }">
-            <label style="font-size:var(--fs-sm);">
-              Disconnect threshold: <strong style="color:var(--accent)">{{ state.thresholdKm ?? 40 }} km</strong>
-              <input type="range" min="10" max="80" :value="state.thresholdKm ?? 40"
-                     @change="action('setThreshold', $event.target.valueAsNumber)" style="width:100%">
-            </label>
-            <label style="font-size:var(--fs-sm);">
-              Reconnect timer: <strong style="color:var(--accent)">{{ state.reconnectMin ?? 20 }} min</strong>
-              <input type="range" min="5" max="60" :value="state.reconnectMin ?? 20"
-                     @change="action('setReconnect', $event.target.valueAsNumber)" style="width:100%">
-            </label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <label style="font-size:var(--fs-sm);">
+                Disconnect: <strong style="color:var(--accent)">{{ state.thresholdKm ?? 40 }} km</strong>
+                <input type="range" min="10" max="80" :value="state.thresholdKm ?? 40"
+                       @change="action('setThreshold', $event.target.valueAsNumber)" style="width:100%">
+              </label>
+              <label style="font-size:var(--fs-sm);">
+                Reconnect: <strong style="color:var(--accent)">{{ state.reconnectMin ?? 20 }} min</strong>
+                <input type="range" min="5" max="60" :value="state.reconnectMin ?? 20"
+                       @change="action('setReconnect', $event.target.valueAsNumber)" style="width:100%">
+              </label>
+            </div>
           </div>
         </div>
 
