@@ -551,6 +551,78 @@ html, body {
 .dxcc-alert--amber { border-left: 3px solid var(--amber); }
 .dxcc-alert--ghost { border-left: 3px solid var(--border);}
 
+/* === Rotor compass === */
+.rotor-top {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--sp-3);
+  align-items: center;
+}
+.rotor-compass {
+  width: 100%;
+  max-width: 240px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+.rotor-aside {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 80px;
+}
+.rotor-aside .btn { width: 100%; }
+.rotor-timer {
+  background: var(--amber-bg);
+  border: 1px solid var(--amber-bd);
+  color: var(--amber-fg);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: var(--font-mono);
+  text-align: center;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+
+.rotor-presets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+  gap: var(--sp-1);
+}
+.rotor-preset {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: var(--sp-1) var(--sp-2);
+  min-height: 38px;
+}
+.rotor-preset__lbl { font-weight: 700; font-size: var(--fs-sm); }
+.rotor-preset__deg {
+  font-size: var(--fs-xs);
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+}
+
+.rotor-manual {
+  display: flex;
+  gap: var(--sp-2);
+  margin-top: var(--sp-1);
+}
+.rotor-manual input {
+  flex: 1;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: var(--sp-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-md);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.rotor-manual input:focus { outline: none; border-color: var(--accent); }
+
 /* === LP-700 meter bars === */
 .lp-meters { display: flex; flex-direction: column; gap: var(--sp-2); }
 .lp-meter {

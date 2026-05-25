@@ -945,6 +945,187 @@ const SolarCard = {
   }
 };
 
+// === Rotor card ===
+const RotorCard = {
+  template: `
+    <div class="card">
+      <div class="card__header" @click="expanded = !expanded">
+        <span class="chev">{{ expanded ? '▼' : '▶' }}</span>
+        <span>Rotor</span>
+        <span v-if="!expanded" class="summary">
+          <span :style="{color:'var(--accent)', fontWeight:600}">{{ headingFmt(state.heading) }} {{ cardinal(state.heading) }}</span>
+          <span v-if="state.target != null && state.target !== state.heading">·</span>
+          <span v-if="state.target != null && state.target !== state.heading" :style="{color:'var(--amber)', fontWeight:600}">→ {{ headingFmt(state.target) }}</span>
+          <span>·</span>
+          <span :style="{color: state.power ? 'var(--green)' : 'var(--muted)', fontWeight:600}">{{ state.power ? 'ON' : 'OFF' }}</span>
+        </span>
+      </div>
+
+      <div class="card__body" :class="{ 'is-collapsed': !expanded }">
+
+        <!-- Compass + power toggle + timer -->
+        <div class="rotor-top">
+          <svg viewBox="0 0 220 220" class="rotor-compass"
+               :style="{opacity: state.power ? 1 : 0.4}">
+            <!-- Background ring -->
+            <circle cx="110" cy="110" r="104" fill="var(--bg)" stroke="var(--border)" stroke-width="1"/>
+            <circle cx="110" cy="110" r="80"  fill="none" stroke="var(--border-2)" stroke-width="0.5"/>
+            <circle cx="110" cy="110" r="50"  fill="none" stroke="var(--border-2)" stroke-width="0.5"/>
+            <!-- Tick marks every 30° -->
+            <g v-for="t in 12" :key="t"
+               :transform="'rotate(' + (t * 30) + ' 110 110)'">
+              <line x1="110" y1="6" x2="110" y2="14" stroke="var(--text-dim)" stroke-width="1.2"/>
+            </g>
+            <!-- Cardinal labels -->
+            <text x="110" y="22"  text-anchor="middle" fill="var(--text)" font-size="14" font-weight="700" font-family="var(--font-mono)">N</text>
+            <text x="200" y="115" text-anchor="middle" fill="var(--text-dim)" font-size="12" font-weight="600">E</text>
+            <text x="110" y="208" text-anchor="middle" fill="var(--text-dim)" font-size="12" font-weight="600">S</text>
+            <text x="20"  y="115" text-anchor="middle" fill="var(--text-dim)" font-size="12" font-weight="600">W</text>
+            <!-- Target heading marker (amber) -->
+            <line v-if="state.target != null"
+                  x1="110" y1="110"
+                  :x2="targetX" :y2="targetY"
+                  stroke="var(--amber)" stroke-width="2" stroke-dasharray="4 4" opacity="0.7"/>
+            <!-- Current heading needle (green) -->
+            <line x1="110" y1="110"
+                  :x2="needleX" :y2="needleY"
+                  stroke="var(--green)" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="110" cy="110" r="6" fill="var(--green)"/>
+            <!-- Current heading value text -->
+            <text x="110" y="155" text-anchor="middle" fill="var(--accent)" font-size="22" font-weight="700" font-family="var(--font-mono)">{{ headingFmt(state.heading) }}</text>
+            <text x="110" y="175" text-anchor="middle" fill="var(--text-dim)" font-size="11">{{ cardinal(state.heading) }}</text>
+          </svg>
+
+          <div class="rotor-aside">
+            <button class="btn" :class="state.power ? 'btn--green' : 'btn--red'" @click="togglePower()">
+              {{ state.power ? '● ON' : '○ OFF' }}
+            </button>
+            <div v-if="rotatorRemain" class="rotor-timer">⏱ {{ rotatorRemain }}</div>
+            <button class="btn btn--red" @click="doStop()" :disabled="!state.power">■ STOP</button>
+            <button class="btn btn--amber" @click="doLpSp()" :disabled="!state.power">LP/SP</button>
+          </div>
+        </div>
+
+        <!-- Preset buttons grid -->
+        <div class="solar-sec-label">Presets</div>
+        <div class="rotor-presets">
+          <button v-for="p in presets" :key="p.lbl"
+                  class="btn btn--ghost rotor-preset"
+                  :disabled="!state.power"
+                  @click="goPreset(p.deg)">
+            <span class="rotor-preset__lbl">{{ p.lbl }}</span>
+            <span class="rotor-preset__deg">{{ p.deg }}°</span>
+          </button>
+        </div>
+
+        <!-- Manual heading entry -->
+        <div class="rotor-manual">
+          <input v-model.number="manualHdg" type="number" min="0" max="359" placeholder="0-359"
+                 :disabled="!state.power"
+                 @keydown.enter="doGo()" />
+          <button class="btn btn--green" @click="doGo()" :disabled="!state.power || manualHdg == null">GO</button>
+        </div>
+      </div>
+    </div>
+  `,
+  setup() {
+    const expanded = ref(true);
+    const state = reactive({ heading: null, target: null, power: false, timerEnd: null });
+
+    const presets = [
+      { lbl: 'N',  deg:   0 },
+      { lbl: 'US', deg:  10 },
+      { lbl: 'JA', deg:  60 },
+      { lbl: 'E',  deg:  90 },
+      { lbl: 'VK', deg: 120 },
+      { lbl: 'ZL', deg: 170 },
+      { lbl: 'S',  deg: 180 },
+      { lbl: 'SA', deg: 235 },
+      { lbl: 'W',  deg: 270 },
+      { lbl: 'EU', deg: 325 }
+    ];
+
+    function headingFmt(h) { return h == null ? '—°' : (Math.round(h)) + '°'; }
+    function cardinal(h) {
+      if (h == null) return '';
+      const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+      return dirs[Math.round(h / 22.5) % 16];
+    }
+
+    function endpoint(h) {
+      if (h == null) return { x: 110, y: 110 };
+      const rad = (h - 90) * Math.PI / 180;
+      return { x: 110 + 90 * Math.cos(rad), y: 110 + 90 * Math.sin(rad) };
+    }
+    const needleX = computed(() => endpoint(state.heading).x.toFixed(1));
+    const needleY = computed(() => endpoint(state.heading).y.toFixed(1));
+    const targetX = computed(() => endpoint(state.target).x.toFixed(1));
+    const targetY = computed(() => endpoint(state.target).y.toFixed(1));
+
+    // Rotator auto-off countdown (mirrors flow.rotatorTimerEnd from Power card builder)
+    const rotatorRemain = ref(null);
+    let rotInt = null;
+    function refreshRotatorTimer() {
+      if (rotInt) { clearInterval(rotInt); rotInt = null; }
+      const end = state.timerEnd;
+      if (!end) { rotatorRemain.value = null; return; }
+      function tick() {
+        const rem = Math.max(0, Math.round((end - Date.now()) / 1000));
+        const m = Math.floor(rem / 60), s = rem % 60;
+        rotatorRemain.value = m + ':' + String(s).padStart(2, '0');
+        if (rem <= 0) { rotatorRemain.value = null; if (rotInt) { clearInterval(rotInt); rotInt = null; } }
+      }
+      tick();
+      rotInt = setInterval(tick, 1000);
+    }
+
+    // Actions — direct HTTP to existing endpoints
+    const manualHdg = ref(null);
+    function togglePower() {
+      fetch('/rotator/power-toggle', { method: 'POST' }).catch(e => console.warn(e));
+    }
+    function doStop() {
+      fetch('/rotator/stop', { method: 'POST' }).catch(e => console.warn(e));
+    }
+    function doLpSp() {
+      fetch('/rotator/lpsp', { method: 'POST' }).catch(e => console.warn(e));
+    }
+    function doGo() {
+      const h = manualHdg.value;
+      if (h == null || h < 0 || h > 359) return;
+      fetch('/rotator/go', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hdg: h })
+      }).catch(e => console.warn(e));
+      state.target = h;
+    }
+    function goPreset(deg) {
+      fetch('/rotator/go', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hdg: deg })
+      }).catch(e => console.warn(e));
+      state.target = deg;
+    }
+
+    onMounted(() => {
+      uibuilder.onTopic('rotor', (msg) => {
+        if (msg && msg.payload && typeof msg.payload === 'object') {
+          Object.assign(state, msg.payload);
+          refreshRotatorTimer();
+        }
+      });
+    });
+
+    return {
+      expanded, state, presets, manualHdg, rotatorRemain,
+      headingFmt, cardinal, needleX, needleY, targetX, targetY,
+      togglePower, doStop, doLpSp, doGo, goPreset
+    };
+  }
+};
+
 // === LP-700 Power/SWR meter ===
 const LP700Card = {
   template: `
@@ -1873,13 +2054,14 @@ const TopBar = {
 
 // === Root app ===
 const App = {
-  components: { TopBar, LightningCard, DXCCCard, NetworkCard, RPiCard, PowerCard, SolarCard, FlexCard, SPECard, LP700Card },
+  components: { TopBar, LightningCard, DXCCCard, NetworkCard, RPiCard, PowerCard, SolarCard, FlexCard, SPECard, LP700Card, RotorCard },
   template: `
     <TopBar :connected="connected" />
     <div class="dash-grid">
       <FlexCard />
       <LP700Card />
       <SPECard />
+      <RotorCard />
       <LightningCard />
       <PowerCard />
       <SolarCard />

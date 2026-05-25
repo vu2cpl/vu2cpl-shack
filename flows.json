@@ -854,7 +854,7 @@
     "type": "function",
     "z": "3d26c2c5270bdb37",
     "name": "Slice heading",
-    "func": "msg.payload = msg.payload.slice(0,3);\nreturn msg;",
+    "func": "msg.payload = msg.payload.slice(0,3);\nflow.set('rotator_heading', parseInt(msg.payload, 10));\nreturn msg;\n",
     "outputs": 1,
     "noerr": 0,
     "x": 720,
@@ -10456,6 +10456,46 @@
     "wires": [
       [
         "0feb87f388ee869b"
+      ]
+    ]
+  },
+  {
+    "id": "vue_rotor_tick_01",
+    "type": "inject",
+    "z": "3d26c2c5270bdb37",
+    "name": "Push Rotor to Vue every 1s",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "1",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "2",
+    "topic": "",
+    "payload": "",
+    "payloadType": "str",
+    "x": 110,
+    "y": 1200,
+    "wires": [
+      [
+        "vue_rotor_builder_01"
+      ]
+    ]
+  },
+  {
+    "id": "vue_rotor_builder_01",
+    "type": "function",
+    "z": "3d26c2c5270bdb37",
+    "name": "Build Rotor state for Vue",
+    "func": "// flow.rotator_heading is written by Slice heading on each poll.\n// flow.target_hdg is set by Build Rotator String when a heading is sent.\n// Power state mirrors the Tasmota powerstrip1/POWER2 outlet (rotator),\n// which Power tab tracks in flow.power_states (memory-only on Power tab).\n// Easier: read global.dxcc_xxx \u2014 no, that's not it. Use a global mirror.\n// Tasmota state for rotator outlet: stat/powerstrip1/POWER2 'ON' | 'OFF'.\n// The Power Control tab tracks it in its own flow scope. Bridge via global is\n// already done for AS3935; for rotator we'll use the flow.rotatorTimerEnd hint:\n// if a timer is active, the rotator power is ON.\nvar hdg = flow.get('rotator_heading');\nvar tgt = flow.get('target_hdg');\n\n// Power state \u2014 pull from global if present, else infer\nvar pwr = global.get('rotator_power');\nif (pwr == null) {\n    // Fallback: assume ON if heading is being received (rotor needs power to report)\n    pwr = (hdg != null);\n}\n\nreturn {\n    topic: 'rotor',\n    payload: {\n        heading:  hdg != null ? Number(hdg) : null,\n        target:   tgt != null ? Number(tgt) : null,\n        power:    !!pwr,\n        timerEnd: flow.get('rotatorTimerEnd') || null\n    }\n};\n",
+    "outputs": 1,
+    "x": 360,
+    "y": 1200,
+    "wires": [
+      [
+        "uib_shack_01"
       ]
     ]
   }
