@@ -115,22 +115,68 @@ const LightningCard = {
           </div>
         </div>
 
-        <!-- Collapsible: AS3935 Tunables -->
+        <!-- Collapsible: AS3935 Tunables (inline editable) -->
         <div class="section">
           <div class="section__header" @click="sec.tunables = !sec.tunables">
             <span class="chev">{{ sec.tunables ? '▼' : '▶' }}</span>
             <span>AS3935 Tunables</span>
           </div>
           <div class="section__body" :class="{ 'is-collapsed': !sec.tunables }">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:var(--fs-sm);">
-              <label v-for="key in ['nf','wdth','srej','tun_cap','mask_dist','min_num_lightning']" :key="key">
-                {{ key }}: <strong style="color:var(--accent)">{{ state.tunables?.[key] ?? '—' }}</strong>
+            <div class="tunables-grid">
+              <!-- Numeric: nf (0-7), wdth (0-15), srej (0-15), tun_cap (0-15) -->
+              <label v-for="t in numericTunables" :key="t.key" class="tunable">
+                <span class="tunable__lbl">{{ t.lbl }}</span>
+                <input type="number" :min="t.min" :max="t.max" :step="1"
+                       :value="state.tunables?.[t.key] ?? ''"
+                       @change="action('setTunable', $event.target.valueAsNumber, t.key)" />
+                <span class="tunable__range">{{ t.min }}–{{ t.max }}</span>
               </label>
-              <label>AFE: <strong style="color:var(--accent)">{{ state.tunables?.afe_gb || '—' }}</strong></label>
-              <label>Sleep: <strong style="color:var(--accent)">{{ state.tunables?.modem_sleep ?? '—' }}</strong></label>
+
+              <!-- Enum: afe_gb (indoor/outdoor) -->
+              <label class="tunable">
+                <span class="tunable__lbl">afe_gb</span>
+                <select :value="state.tunables?.afe_gb ?? ''"
+                        @change="action('setTunable', $event.target.value, 'afe_gb')">
+                  <option value="indoor">indoor</option>
+                  <option value="outdoor">outdoor</option>
+                </select>
+              </label>
+
+              <!-- Enum: modem_sleep (none/min/max) -->
+              <label class="tunable">
+                <span class="tunable__lbl">modem_sleep</span>
+                <select :value="state.tunables?.modem_sleep ?? ''"
+                        @change="action('setTunable', $event.target.value, 'modem_sleep')">
+                  <option value="none">none</option>
+                  <option value="min">min</option>
+                  <option value="max">max</option>
+                </select>
+              </label>
+
+              <!-- Boolean: mask_dist -->
+              <label class="tunable">
+                <span class="tunable__lbl">mask_dist</span>
+                <select :value="String(state.tunables?.mask_dist ?? false)"
+                        @change="action('setTunable', $event.target.value === 'true', 'mask_dist')">
+                  <option value="false">false</option>
+                  <option value="true">true</option>
+                </select>
+              </label>
+
+              <!-- min_num_lightning: 1, 5, 9, 16 -->
+              <label class="tunable">
+                <span class="tunable__lbl">min_num_lightning</span>
+                <select :value="String(state.tunables?.min_num_lightning ?? 1)"
+                        @change="action('setTunable', Number($event.target.value), 'min_num_lightning')">
+                  <option value="1">1</option>
+                  <option value="5">5</option>
+                  <option value="9">9</option>
+                  <option value="16">16</option>
+                </select>
+              </label>
             </div>
-            <div style="font-size:var(--fs-xs);color:var(--muted);">
-              Edit via AS3935 cmd channel (todo: inline edit UI)
+            <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:4px;">
+              Changes apply immediately; bridge republishes status after each set.
             </div>
           </div>
         </div>
@@ -260,9 +306,18 @@ const LightningCard = {
       });
     });
 
+    // List of numeric tunables (used by template for v-for)
+    const numericTunables = [
+      { key: 'nf',      lbl: 'nf',      min: 0, max:  7 },
+      { key: 'wdth',    lbl: 'wdth',    min: 0, max: 15 },
+      { key: 'srej',    lbl: 'srej',    min: 0, max: 15 },
+      { key: 'tun_cap', lbl: 'tun_cap', min: 0, max: 15 }
+    ];
+
     // Operational actions use the same HTTP endpoints D1 uses (proven path).
     // AS3935 maintenance + test injects go via uibuilder → cmd_router.
-    function action(type, value) {
+    // setTunable takes a 3rd `key` argument naming the AS3935 register to change.
+    function action(type, value, key) {
       // --- HTTP-direct (operational) ---
       if (type === 'antennaOn') {
         return fetch('/lightning/ant-on', { method: 'POST' }).catch(e => console.warn(e));
@@ -289,11 +344,11 @@ const LightningCard = {
           body: JSON.stringify({ value })
         }).catch(e => console.warn(e));
       }
-      // --- uibuilder (AS3935 maintenance + tests) ---
-      uibuilder.send({ topic: 'lightning/cmd', payload: { type, value } });
+      // --- uibuilder (AS3935 maintenance + tests + tunables) ---
+      uibuilder.send({ topic: 'lightning/cmd', payload: { type, value, key } });
     }
 
-    return { expanded, sec, state, bypassRemain, lastSeen, as3935EventIcon, capeColor, summary, action };
+    return { expanded, sec, state, bypassRemain, lastSeen, as3935EventIcon, capeColor, summary, action, numericTunables };
   }
 };
 

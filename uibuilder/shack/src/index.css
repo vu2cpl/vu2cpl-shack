@@ -237,6 +237,56 @@ html, body {
   box-shadow: 0 0 3px currentColor;
 }
 
+/* === Inline-editable tunables grid === */
+.tunables-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 4px;
+  font-size: var(--fs-sm);
+}
+.tunable {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border-2);
+  border-radius: 4px;
+  padding: 4px 6px;
+}
+.tunable__lbl {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  flex: 1;
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.tunable__range {
+  color: var(--muted);
+  font-size: var(--fs-xs);
+}
+.tunable input[type="number"],
+.tunable select {
+  background: var(--surface);
+  color: var(--accent);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 2px 4px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  width: 60px;
+  font-weight: 700;
+}
+.tunable input[type="number"]:focus,
+.tunable select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.tunable select {
+  width: auto;
+  min-width: 70px;
+}
+
 /* === Header bar with callsign + clocks === */
 .topbar {
   display: flex;
