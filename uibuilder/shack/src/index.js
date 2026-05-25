@@ -224,7 +224,7 @@ const LightningCard = {
     </div>
   `,
   setup() {
-    const expanded = ref(true);
+    const expanded = ref(false);
     const sec = reactive({
       thresholds: false,
       tunables:   false,
@@ -614,7 +614,7 @@ const DXCCCard = {
     </div>
   `,
   setup() {
-    const expanded = ref(true);
+    const expanded = ref(false);
     const sec = reactive({ settings: false, blacklist: false });
     const state = reactive({
       newAlerts: 0,
@@ -869,7 +869,7 @@ const SolarCard = {
     </div>
   `,
   setup() {
-    const expanded = ref(true);
+    const expanded = ref(false);
     const state = reactive({
       sfi:null, sfiLbl:null, k:null, kLbl:null, a:null, aLbl:null,
       muf:null, fof2:null, xnow:null, x24:null, rsg:{}
@@ -1060,7 +1060,7 @@ const RotorCard = {
     </div>
   `,
   setup() {
-    const expanded = ref(true);
+    const expanded = ref(false);
     const showPresets = ref(false);
     const hover = reactive({ deg: null });
     const state = reactive({ heading: null, target: null, power: false, timerEnd: null });
@@ -1285,7 +1285,7 @@ const LP700Card = {
     </div>
   `,
   setup() {
-    const expanded = ref(true);
+    const expanded = ref(false);
     const state = reactive({
       avg:null, peak:null, swr:null, channel:null, range:null, scale:null
     });
@@ -1535,7 +1535,7 @@ const SPECard = {
     </div>
   `,
   setup() {
-    const expanded = ref(true);
+    const expanded = ref(false);
     const sec = reactive({ operating: false, atu: false, display: false });
     const state = reactive({
       model:null, mode:null, rxtx:null, band:null, input:null, txant:null,
@@ -1688,7 +1688,7 @@ const FlexCard = {
     </div>
   `,
   setup() {
-    const expanded = ref(true);
+    const expanded = ref(false);
     const state = reactive({
       model:null, callsign:null, clients:[], slices:{},
       activeSlices:[], rfpower:null, tunepower:null,
@@ -1779,7 +1779,7 @@ const PowerCard = {
     </div>
   `,
   setup() {
-    const expanded = ref(true);
+    const expanded = ref(false);
     const state = reactive({ power: {}, energy: null, rotatorTimerEnd: null });
 
     // All 20 outlets, ordered to match the existing /ui layout
@@ -1917,7 +1917,7 @@ const RPiCard = {
     </div>
   `,
   setup() {
-    const expanded = ref(true);
+    const expanded = ref(false);
     const state = reactive({ devices: {} });
 
     function dev(h) { return state.devices?.[h] || {}; }
@@ -2035,7 +2035,7 @@ const NetworkCard = {
     </div>
   `,
   setup() {
-    const expanded = ref(true);
+    const expanded = ref(false);
     const state = reactive({ pings: {}, status: null, totalFails: null, lastFail: null });
 
     // Hosts displayed — keys must match the stamp functions in Node-RED
