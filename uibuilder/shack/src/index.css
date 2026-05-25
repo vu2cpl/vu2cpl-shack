@@ -493,6 +493,25 @@ html, body {
 .dxcc-alert--amber { border-left: 3px solid var(--amber); }
 .dxcc-alert--ghost { border-left: 3px solid var(--border);}
 
+/* === DXCC Settings filter rows === */
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 0;
+  border-bottom: 1px dashed var(--border-2);
+}
+.filter-row:last-child { border-bottom: none; }
+.filter-row__lbl {
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-weight: 700;
+  flex: 0 0 60px;
+}
+
 /* === Header bar with callsign + clocks === */
 .topbar {
   display: flex;

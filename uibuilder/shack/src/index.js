@@ -575,8 +575,38 @@ const DXCCCard = {
               </div>
             </div>
 
-            <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:4px;">
-              Filter toggles + per-cluster URLs coming next.
+            <!-- Alert type filters -->
+            <div class="filter-row">
+              <span class="filter-row__lbl">ALERTS</span>
+              <button v-for="t in alertTypes" :key="t.k" class="pill"
+                      :class="{ 'pill--active': state.filters?.types?.[t.k] }"
+                      @click="toggleFilter('types', t.k)">{{ t.lbl }}</button>
+            </div>
+
+            <!-- Mode filters -->
+            <div class="filter-row">
+              <span class="filter-row__lbl">MODES</span>
+              <button v-for="m in modeKeys" :key="m.k" class="pill"
+                      :class="{ 'pill--active': state.filters?.modes?.[m.k] }"
+                      @click="toggleFilter('modes', m.k)">{{ m.lbl }}</button>
+            </div>
+
+            <!-- Band filters -->
+            <div class="filter-row">
+              <span class="filter-row__lbl">BANDS</span>
+              <button v-for="b in bandKeys" :key="b" class="pill"
+                      :class="{ 'pill--active': isBandOn(b) }"
+                      @click="toggleBand(b)">{{ b }}</button>
+            </div>
+
+            <!-- Spot TTL stepper -->
+            <div class="filter-row">
+              <span class="filter-row__lbl">TTL</span>
+              <button class="tun-step" :disabled="(state.filters?.ttl ?? 20) <= 1"
+                      @click="bumpTtl(-5)">−</button>
+              <span class="tun-val">{{ state.filters?.ttl ?? 20 }}<span style="font-size:var(--fs-xs);color:var(--muted);margin-left:3px;">min</span></span>
+              <button class="tun-step" :disabled="(state.filters?.ttl ?? 20) >= 240"
+                      @click="bumpTtl(+5)">+</button>
             </div>
           </div>
         </div>
@@ -592,8 +622,69 @@ const DXCCCard = {
       clusterStatus: {},
       muted: {},
       alertList: [],
-      blacklist: []
+      blacklist: [],
+      filters: { types:{}, modes:{}, bands:{}, ttl: 20 }
     });
+
+    const alertTypes = [
+      { k:'dxcc',       lbl:'DXCC' },
+      { k:'band',       lbl:'BAND' },
+      { k:'bandUnconf', lbl:'?BAND' },
+      { k:'mode',       lbl:'MODE' },
+      { k:'modeUnconf', lbl:'?MODE' }
+    ];
+    const modeKeys = [
+      { k:'cw',    lbl:'CW' },
+      { k:'phone', lbl:'Phone' },
+      { k:'data',  lbl:'Data' }
+    ];
+    const bandKeys = ['160M','80M','60M','40M','30M','20M','17M','15M','12M','10M','6M'];
+    const bandKeyMap = {  // band label → backend key ("b160" etc.)
+      '160M':'b160','80M':'b80','60M':'b60','40M':'b40','30M':'b30','20M':'b20',
+      '17M':'b17','15M':'b15','12M':'b12','10M':'b10','6M':'b6','2M':'b2'
+    };
+
+    function isBandOn(band) {
+      return !!(state.filters?.bands && state.filters.bands[band]);
+    }
+
+    function buildFilterBody() {
+      // Convert state.filters into the shape /dxcc/filters expects: { b, t, m, ttl }
+      const b = {};
+      bandKeys.forEach(bk => {
+        if (state.filters?.bands?.[bk]) b[bandKeyMap[bk]] = true;
+      });
+      return {
+        b,
+        t: { ...state.filters.types },
+        m: { ...state.filters.modes },
+        ttl: state.filters.ttl || 20
+      };
+    }
+    function postFilters() {
+      fetch('/dxcc/filters', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(buildFilterBody())
+      }).catch(e => console.warn(e));
+    }
+    function toggleFilter(group, key) {
+      if (!state.filters[group]) state.filters[group] = {};
+      state.filters[group][key] = !state.filters[group][key];
+      postFilters();
+    }
+    function toggleBand(band) {
+      if (!state.filters.bands) state.filters.bands = {};
+      state.filters.bands[band] = !state.filters.bands[band];
+      postFilters();
+    }
+    function bumpTtl(d) {
+      const cur = state.filters?.ttl ?? 20;
+      const next = Math.max(1, Math.min(240, cur + d));
+      if (next === cur) return;
+      state.filters.ttl = next;
+      postFilters();
+    }
 
     const clusterNames = ['VU2CPL', 'VU2OY', 'VE7CC', 'N2WQ'];
 
@@ -695,7 +786,9 @@ const DXCCCard = {
       clusterPillClass, clusterTitle, toggleCluster,
       alertTypeShort, alertTypeColor, alertSeverityClass,
       ackLabel, doRefresh, doClear,
-      newBlacklistCall, doBlacklistAdd, doBlacklistRemove
+      newBlacklistCall, doBlacklistAdd, doBlacklistRemove,
+      alertTypes, modeKeys, bandKeys,
+      isBandOn, toggleFilter, toggleBand, bumpTtl
     };
   }
 };
