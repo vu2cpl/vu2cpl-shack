@@ -9052,7 +9052,8 @@
     "y": 120,
     "wires": [
       [
-        "38e130c3d311583b"
+        "38e130c3d311583b",
+        "vue_gpsntp_bridge_01"
       ]
     ]
   },
@@ -10493,6 +10494,21 @@
     "outputs": 1,
     "x": 360,
     "y": 1200,
+    "wires": [
+      [
+        "uib_shack_01"
+      ]
+    ]
+  },
+  {
+    "id": "vue_gpsntp_bridge_01",
+    "type": "function",
+    "z": "4590ed80de4873b1",
+    "name": "GPS NTP \u2192 Vue",
+    "func": "// Wrap the retained chrony JSON for the uibuilder client\nif (!msg.payload) return null;\n// MQTT-in may deliver string or already-parsed JSON; tolerate both\nvar p = msg.payload;\nif (typeof p === 'string') { try { p = JSON.parse(p); } catch (e) { return null; } }\nreturn { topic: 'gpsntp', payload: p };\n",
+    "outputs": 1,
+    "x": 400,
+    "y": 200,
     "wires": [
       [
         "uib_shack_01"

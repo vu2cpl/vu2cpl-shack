@@ -1992,6 +1992,126 @@ const RPiCard = {
   }
 };
 
+// === GPS NTP / Chrony status card ===
+const GpsNtpCard = {
+  template: `
+    <div class="card">
+      <div class="card__header" @click="expanded = !expanded">
+        <span class="chev">{{ expanded ? '▼' : '▶' }}</span>
+        <span>GPS Time Server</span>
+        <span v-if="!expanded" class="summary">
+          <span :style="{color: stratumColor, fontWeight:600}">Stratum {{ state.stratum ?? '—' }}</span>
+          <span>·</span>
+          <span :style="{color: refColor, fontWeight:600}">{{ state.ref_name || '—' }}</span>
+          <span v-if="state.system_time_offset_s != null">·</span>
+          <span v-if="state.system_time_offset_s != null" :style="{color: offsetColor, fontWeight:600}">
+            {{ fmtNs(state.system_time_offset_s) }}
+          </span>
+        </span>
+      </div>
+
+      <div class="card__body" :class="{ 'is-collapsed': !expanded }">
+
+        <!-- Top status row -->
+        <div class="statusline">
+          <span :style="{color: state.host ? 'var(--green)' : 'var(--red)'}">●</span>
+          <strong>{{ state.host || 'gpsntp' }}</strong>
+          <span v-if="state.ts">· {{ ageStr }} ago</span>
+        </div>
+
+        <!-- Headline metrics: stratum, reference, fix -->
+        <div class="tiles">
+          <div class="tile">
+            <div class="tile__lbl">Stratum</div>
+            <div class="tile__val" :style="{color: stratumColor}">{{ state.stratum ?? '—' }}</div>
+          </div>
+          <div class="tile">
+            <div class="tile__lbl">Reference</div>
+            <div class="tile__val" :style="{color: refColor, fontSize:'var(--fs-sm)'}">{{ state.ref_name || '—' }}</div>
+          </div>
+          <div class="tile">
+            <div class="tile__lbl">Fix</div>
+            <div class="tile__val" :style="{color: fixColor}">{{ fixLabel }}</div>
+          </div>
+          <div class="tile">
+            <div class="tile__lbl">Satellites</div>
+            <div class="tile__val">{{ state.sat_used ?? '—' }}<span class="tile__sub-unit">/ {{ state.sat_seen ?? '—' }}</span></div>
+          </div>
+        </div>
+
+        <!-- Offset / dispersion / skew metrics -->
+        <div class="solar-sec-label">Sync Quality</div>
+        <dl class="stats">
+          <dt>System Offset</dt>     <dd :style="{color: offsetColor}">{{ fmtNs(state.system_time_offset_s) }}</dd>
+          <dt>Last Offset</dt>       <dd>{{ fmtNs(state.last_offset_s) }}</dd>
+          <dt>RMS Offset</dt>        <dd :style="{color: rmsColor}">{{ fmtNs(state.rms_offset_s) }}</dd>
+          <dt>Root Dispersion</dt>   <dd :style="{color: dispColor}">{{ fmtNs(state.root_dispersion_s) }}</dd>
+          <dt>Root Delay</dt>        <dd>{{ fmtNs(state.root_delay_s) }}</dd>
+          <dt>Frequency Drift</dt>   <dd>{{ state.freq_ppm != null ? state.freq_ppm.toFixed(3) + ' ppm' : '—' }}</dd>
+          <dt>Skew</dt>              <dd :style="{color: skewColor}">{{ state.skew_ppm != null ? state.skew_ppm.toFixed(3) + ' ppm' : '—' }}</dd>
+          <dt>Leap</dt>              <dd>{{ state.leap || '—' }}</dd>
+        </dl>
+      </div>
+    </div>
+  `,
+  setup() {
+    const expanded = ref(false);
+    const state = reactive({
+      host:null, ts:null, stratum:null, ref_name:null, ref_id:null,
+      system_time_offset_s:null, last_offset_s:null, rms_offset_s:null,
+      root_delay_s:null, root_dispersion_s:null, freq_ppm:null, skew_ppm:null,
+      leap:null, fix_mode:null, sat_used:null, sat_seen:null
+    });
+
+    // Tick to update "X seconds ago" label
+    const tick = ref(0);
+    setInterval(() => { tick.value++; }, 10000);
+    const ageStr = computed(() => {
+      tick.value;
+      if (!state.ts) return '—';
+      const sec = Math.max(0, Math.floor(Date.now() / 1000 - state.ts));
+      if (sec < 60)    return sec + 's';
+      if (sec < 3600)  return Math.floor(sec / 60) + 'm';
+      return Math.floor(sec / 3600) + 'h';
+    });
+
+    // Format small times — chrony reports in seconds; we want ns/µs/ms readable
+    function fmtNs(v) {
+      if (v == null) return '—';
+      const a = Math.abs(v);
+      const sign = v < 0 ? '−' : '';
+      if (a < 1e-6)  return sign + (a * 1e9).toFixed(0) + ' ns';
+      if (a < 1e-3)  return sign + (a * 1e6).toFixed(1) + ' µs';
+      if (a < 1)     return sign + (a * 1e3).toFixed(2) + ' ms';
+      return sign + a.toFixed(3) + ' s';
+    }
+
+    // Threshold colours per the CLAUDE.md spec
+    const offsetColor = computed(() => Math.abs(state.system_time_offset_s || 0) > 1e-3 ? 'var(--amber)' : 'var(--green)');
+    const rmsColor    = computed(() => (state.rms_offset_s ?? 0) > 1e-3 ? 'var(--amber)' : 'var(--green)');
+    const dispColor   = computed(() => (state.root_dispersion_s ?? 0) > 5e-3 ? 'var(--amber)' : 'var(--green)');
+    const skewColor   = computed(() => Math.abs(state.skew_ppm ?? 0) > 1 ? 'var(--amber)' : 'var(--green)');
+    const stratumColor = computed(() => state.stratum === 1 ? 'var(--green)' : (state.stratum != null && state.stratum < 5 ? 'var(--amber)' : 'var(--red)'));
+    const refColor    = computed(() => /^PPS/i.test(state.ref_name || '') ? 'var(--green)' : 'var(--amber)');
+    const fixColor    = computed(() => state.fix_mode === 3 ? 'var(--green)' : (state.fix_mode === 2 ? 'var(--amber)' : 'var(--red)'));
+    const fixLabel    = computed(() => state.fix_mode === 3 ? '3D' : (state.fix_mode === 2 ? '2D' : (state.fix_mode === 1 ? 'No fix' : '—')));
+
+    onMounted(() => {
+      uibuilder.onTopic('gpsntp', (msg) => {
+        if (msg && msg.payload && typeof msg.payload === 'object') {
+          Object.assign(state, msg.payload);
+        }
+      });
+    });
+
+    return {
+      expanded, state, ageStr, fmtNs,
+      offsetColor, rmsColor, dispColor, skewColor,
+      stratumColor, refColor, fixColor, fixLabel
+    };
+  }
+};
+
 // === Network Monitor card ===
 const NetworkCard = {
   template: `
@@ -2138,7 +2258,7 @@ const TopBar = {
 
 // === Root app ===
 const App = {
-  components: { TopBar, LightningCard, DXCCCard, NetworkCard, RPiCard, PowerCard, SolarCard, FlexCard, SPECard, LP700Card, RotorCard },
+  components: { TopBar, LightningCard, DXCCCard, NetworkCard, RPiCard, PowerCard, SolarCard, FlexCard, SPECard, LP700Card, RotorCard, GpsNtpCard },
   template: `
     <TopBar :connected="connected" />
     <div class="dash-grid">
@@ -2152,6 +2272,7 @@ const App = {
       <DXCCCard />
       <RPiCard />
       <NetworkCard />
+      <GpsNtpCard />
     </div>
   `,
   setup() {
