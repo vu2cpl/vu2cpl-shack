@@ -551,25 +551,32 @@ html, body {
 .dxcc-alert--amber { border-left: 3px solid var(--amber); }
 .dxcc-alert--ghost { border-left: 3px solid var(--border);}
 
-/* === Rotor compass === */
-.rotor-top {
+/* === Rotor compass + preset buttons around it === */
+.rotor-stage {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: var(--sp-3);
   align-items: center;
 }
-.rotor-compass {
+.rotor-compass-wrap {
+  position: relative;
   width: 100%;
-  max-width: 240px;
-  height: auto;
-  display: block;
+  max-width: 280px;
+  aspect-ratio: 1;
   margin: 0 auto;
+}
+.rotor-compass {
+  position: absolute;
+  inset: 18%;             /* leave a ring of room around the SVG for preset buttons */
+  width: 64%;
+  height: 64%;
+  display: block;
 }
 .rotor-aside {
   display: flex;
   flex-direction: column;
   gap: var(--sp-1);
-  min-width: 80px;
+  min-width: 84px;
 }
 .rotor-aside .btn { width: 100%; }
 .rotor-timer {
@@ -584,24 +591,41 @@ html, body {
   font-weight: 700;
 }
 
-.rotor-presets {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
-  gap: var(--sp-1);
-}
-.rotor-preset {
-  display: flex;
+/* Preset button positioned by compass angle */
+.rotor-around {
+  position: absolute;
+  display: inline-flex;
   flex-direction: column;
   align-items: center;
   gap: 0;
-  padding: var(--sp-1) var(--sp-2);
-  min-height: 38px;
+  min-width: 42px;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  white-space: nowrap;
+  line-height: 1;
+  transition: filter 0.12s, transform 0.08s;
 }
-.rotor-preset__lbl { font-weight: 700; font-size: var(--fs-sm); }
-.rotor-preset__deg {
+.rotor-around:hover:not(:disabled) {
+  filter: brightness(1.2);
+  border-color: var(--accent);
+}
+.rotor-around:active:not(:disabled) { transform: translate(-50%, -50%) scale(0.95) !important; }
+.rotor-around:disabled { opacity: 0.4; cursor: not-allowed; }
+.rotor-around__lbl {
   font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--accent);
+}
+.rotor-around__deg {
+  font-size: 9px;
   font-family: var(--font-mono);
   color: var(--text-dim);
+  margin-top: 1px;
 }
 
 .rotor-manual {

@@ -963,59 +963,55 @@ const RotorCard = {
 
       <div class="card__body" :class="{ 'is-collapsed': !expanded }">
 
-        <!-- Compass + power toggle + timer -->
-        <div class="rotor-top">
-          <svg viewBox="0 0 220 220" class="rotor-compass"
-               :style="{opacity: state.power ? 1 : 0.4}">
-            <!-- Background ring -->
-            <circle cx="110" cy="110" r="104" fill="var(--bg)" stroke="var(--border)" stroke-width="1"/>
-            <circle cx="110" cy="110" r="80"  fill="none" stroke="var(--border-2)" stroke-width="0.5"/>
-            <circle cx="110" cy="110" r="50"  fill="none" stroke="var(--border-2)" stroke-width="0.5"/>
-            <!-- Tick marks every 30° -->
-            <g v-for="t in 12" :key="t"
-               :transform="'rotate(' + (t * 30) + ' 110 110)'">
-              <line x1="110" y1="6" x2="110" y2="14" stroke="var(--text-dim)" stroke-width="1.2"/>
-            </g>
-            <!-- Cardinal labels -->
-            <text x="110" y="22"  text-anchor="middle" fill="var(--text)" font-size="14" font-weight="700" font-family="var(--font-mono)">N</text>
-            <text x="200" y="115" text-anchor="middle" fill="var(--text-dim)" font-size="12" font-weight="600">E</text>
-            <text x="110" y="208" text-anchor="middle" fill="var(--text-dim)" font-size="12" font-weight="600">S</text>
-            <text x="20"  y="115" text-anchor="middle" fill="var(--text-dim)" font-size="12" font-weight="600">W</text>
-            <!-- Target heading marker (amber) -->
-            <line v-if="state.target != null"
-                  x1="110" y1="110"
-                  :x2="targetX" :y2="targetY"
-                  stroke="var(--amber)" stroke-width="2" stroke-dasharray="4 4" opacity="0.7"/>
-            <!-- Current heading needle (green) -->
-            <line x1="110" y1="110"
-                  :x2="needleX" :y2="needleY"
-                  stroke="var(--green)" stroke-width="3" stroke-linecap="round"/>
-            <circle cx="110" cy="110" r="6" fill="var(--green)"/>
-            <!-- Current heading value text -->
-            <text x="110" y="155" text-anchor="middle" fill="var(--accent)" font-size="22" font-weight="700" font-family="var(--font-mono)">{{ headingFmt(state.heading) }}</text>
-            <text x="110" y="175" text-anchor="middle" fill="var(--text-dim)" font-size="11">{{ cardinal(state.heading) }}</text>
-          </svg>
+        <!-- Compass with preset buttons positioned around it by compass angle -->
+        <div class="rotor-stage">
+          <div class="rotor-compass-wrap">
+            <svg viewBox="0 0 220 220" class="rotor-compass"
+                 :style="{opacity: state.power ? 1 : 0.4}">
+              <circle cx="110" cy="110" r="104" fill="var(--bg)" stroke="var(--border)" stroke-width="1"/>
+              <circle cx="110" cy="110" r="80"  fill="none" stroke="var(--border-2)" stroke-width="0.5"/>
+              <circle cx="110" cy="110" r="50"  fill="none" stroke="var(--border-2)" stroke-width="0.5"/>
+              <g v-for="t in 12" :key="t"
+                 :transform="'rotate(' + (t * 30) + ' 110 110)'">
+                <line x1="110" y1="6" x2="110" y2="14" stroke="var(--text-dim)" stroke-width="1.2"/>
+              </g>
+              <!-- Cardinal labels inside the ring -->
+              <text x="110" y="22"  text-anchor="middle" fill="var(--text)"     font-size="13" font-weight="700">N</text>
+              <text x="200" y="115" text-anchor="middle" fill="var(--text-dim)" font-size="12" font-weight="600">E</text>
+              <text x="110" y="208" text-anchor="middle" fill="var(--text-dim)" font-size="12" font-weight="600">S</text>
+              <text x="20"  y="115" text-anchor="middle" fill="var(--text-dim)" font-size="12" font-weight="600">W</text>
+              <!-- Target heading marker -->
+              <line v-if="state.target != null"
+                    x1="110" y1="110" :x2="targetX" :y2="targetY"
+                    stroke="var(--amber)" stroke-width="2" stroke-dasharray="4 4" opacity="0.7"/>
+              <!-- Current heading needle -->
+              <line x1="110" y1="110" :x2="needleX" :y2="needleY"
+                    stroke="var(--green)" stroke-width="3" stroke-linecap="round"/>
+              <circle cx="110" cy="110" r="6" fill="var(--green)"/>
+              <!-- Heading value in center -->
+              <text x="110" y="155" text-anchor="middle" fill="var(--accent)" font-size="22" font-weight="700" font-family="JetBrains Mono,SFMono-Regular,monospace">{{ headingFmt(state.heading) }}</text>
+              <text x="110" y="175" text-anchor="middle" fill="var(--text-dim)" font-size="11">{{ cardinal(state.heading) }}</text>
+            </svg>
+
+            <!-- Preset buttons absolute-positioned at their compass angles -->
+            <button v-for="p in presets" :key="p.lbl"
+                    class="rotor-around"
+                    :style="presetStyle(p.deg)"
+                    :disabled="!state.power"
+                    @click="goPreset(p.deg)">
+              <span class="rotor-around__lbl">{{ p.lbl }}</span>
+              <span class="rotor-around__deg">{{ p.deg }}°</span>
+            </button>
+          </div>
 
           <div class="rotor-aside">
             <button class="btn" :class="state.power ? 'btn--green' : 'btn--red'" @click="togglePower()">
               {{ state.power ? '● ON' : '○ OFF' }}
             </button>
             <div v-if="rotatorRemain" class="rotor-timer">⏱ {{ rotatorRemain }}</div>
-            <button class="btn btn--red" @click="doStop()" :disabled="!state.power">■ STOP</button>
+            <button class="btn btn--red"   @click="doStop()" :disabled="!state.power">■ STOP</button>
             <button class="btn btn--amber" @click="doLpSp()" :disabled="!state.power">LP/SP</button>
           </div>
-        </div>
-
-        <!-- Preset buttons grid -->
-        <div class="solar-sec-label">Presets</div>
-        <div class="rotor-presets">
-          <button v-for="p in presets" :key="p.lbl"
-                  class="btn btn--ghost rotor-preset"
-                  :disabled="!state.power"
-                  @click="goPreset(p.deg)">
-            <span class="rotor-preset__lbl">{{ p.lbl }}</span>
-            <span class="rotor-preset__deg">{{ p.deg }}°</span>
-          </button>
         </div>
 
         <!-- Manual heading entry -->
@@ -1056,6 +1052,19 @@ const RotorCard = {
       if (h == null) return { x: 110, y: 110 };
       const rad = (h - 90) * Math.PI / 180;
       return { x: 110 + 90 * Math.cos(rad), y: 110 + 90 * Math.sin(rad) };
+    }
+
+    // Position a preset button around the compass at its compass angle (0°=N at top)
+    function presetStyle(deg) {
+      const a = (deg - 90) * Math.PI / 180;
+      const r = 58;  // % from compass center — sits just outside the compass ring
+      const x = 50 + r * Math.cos(a);
+      const y = 50 + r * Math.sin(a);
+      return {
+        left: x + '%',
+        top:  y + '%',
+        transform: 'translate(-50%, -50%)'
+      };
     }
     const needleX = computed(() => endpoint(state.heading).x.toFixed(1));
     const needleY = computed(() => endpoint(state.heading).y.toFixed(1));
@@ -1121,7 +1130,7 @@ const RotorCard = {
     return {
       expanded, state, presets, manualHdg, rotatorRemain,
       headingFmt, cardinal, needleX, needleY, targetX, targetY,
-      togglePower, doStop, doLpSp, doGo, goPreset
+      togglePower, doStop, doLpSp, doGo, goPreset, presetStyle
     };
   }
 };
