@@ -249,9 +249,14 @@ const LightningCard = {
     onMounted(() => {
       // Card-specific channel: topic === 'lightning'
       uibuilder.onTopic('lightning', (msg) => {
+        console.log('[shack] lightning msg received:', msg);
         if (msg && msg.payload && typeof msg.payload === 'object') {
           Object.assign(state, msg.payload);
         }
+      });
+      // Catch-all debug: log every uibuilder msg so we can see what arrives
+      uibuilder.onChange('msg', (msg) => {
+        console.log('[shack] msg(any topic):', msg && msg.topic, msg);
       });
     });
 
@@ -313,9 +318,19 @@ const App = {
   `,
   setup() {
     const connected = ref(false);
+    let lastMsgAt = 0;
     onMounted(() => {
       uibuilder.start();
-      uibuilder.onChange('socketConnected', (v) => { connected.value = v; });
+      // Multi-pronged detection — v7 may use different property names than older versions
+      try { uibuilder.onChange('socketConnected', (v) => { connected.value = !!v; }); } catch (e) {}
+      try { uibuilder.onChange('ioConnected',     (v) => { connected.value = !!v; }); } catch (e) {}
+      // Definitive: if we've received a message in the last 10s, we are connected
+      uibuilder.onChange('msg', () => { lastMsgAt = Date.now(); });
+      setInterval(() => {
+        if (Date.now() - lastMsgAt < 10_000) connected.value = true;
+        else if (Date.now() - lastMsgAt > 15_000) connected.value = false;
+      }, 1000);
+      console.log('[shack] uibuilder started, version:', uibuilder.version || 'unknown');
     });
     return { connected };
   }
