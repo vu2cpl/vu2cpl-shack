@@ -970,13 +970,12 @@ html, body {
   border-top: 1px solid var(--border-2);
 }
 
-/* === Power Control — plug grid: 5 columns, one row per Tasmota device === */
+/* === Power Control — fixed 4×5 plug grid (last row = 4relay + 16A) === */
 .plug-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: var(--sp-2);
 }
-.plug-pad { visibility: hidden; }   /* empty slots so each device gets its own row */
 .plug {
   display: flex;
   flex-direction: column;

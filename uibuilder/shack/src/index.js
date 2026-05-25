@@ -1777,10 +1777,10 @@ const PowerCard = {
 
       <div class="card__body" :class="{ 'is-collapsed': !expanded }">
 
-        <!-- Plugs grouped by device — one row per Tasmota -->
+        <!-- Plugs in 4 rows of 5 (last row merges 4relay + 16A) -->
         <div class="plug-grid">
-          <template v-for="(devPlugs, devName) in plugsByDevice" :key="devName">
-            <button v-for="p in devPlugs" :key="p.topic"
+          <template v-for="(row, ri) in plugRows" :key="ri">
+            <button v-for="p in row" :key="p.topic"
                     class="plug"
                     :class="plugClass(p)"
                     @click="toggle(p.topic)">
@@ -1788,8 +1788,6 @@ const PowerCard = {
               <span class="plug__lbl">{{ p.label }}</span>
               <span v-if="p.topic === 'cmnd/powerstrip1/POWER2' && rotatorRemain" class="plug__sub">⏱ {{ rotatorRemain }}</span>
             </button>
-            <!-- Fill empty cells so each device gets its own row in the 5-col grid -->
-            <span v-for="n in (5 - devPlugs.length)" :key="devName + '-pad-' + n" class="plug-pad"></span>
           </template>
         </div>
 
@@ -1842,16 +1840,21 @@ const PowerCard = {
       { topic:'cmnd/16Amasterswitch/POWER1', label:'16A Mains', master: true }
     ];
 
-    // Group plugs by device name so we can render one row per Tasmota
-    // (powerstrip1: 5 · powerstrip2: 5 · powerstrip3: 5 · 4relayboard: 4 · 16Amasterswitch: 1)
-    const plugsByDevice = computed(() => {
-      const out = {};
+    // Explicit row layout — 4 rows of 5 buttons each.
+    // Row 1: powerstrip1 (5)  ·  Row 2: powerstrip2 (5)
+    // Row 3: powerstrip3 (5)  ·  Row 4: 4relayboard (4) + 16Amasterswitch (1)
+    const plugRows = computed(() => {
+      const byDev = {};
       plugs.forEach(p => {
-        const dev = p.topic.split('/')[1];   // 'cmnd/<device>/POWERn'
-        if (!out[dev]) out[dev] = [];
-        out[dev].push(p);
+        const dev = p.topic.split('/')[1];
+        (byDev[dev] = byDev[dev] || []).push(p);
       });
-      return out;
+      return [
+        byDev['powerstrip1']    || [],
+        byDev['powerstrip2']    || [],
+        byDev['powerstrip3']    || [],
+        [...(byDev['4relayboard'] || []), ...(byDev['16Amasterswitch'] || [])]
+      ];
     });
 
     function plugIsOn(topic) {
@@ -1894,7 +1897,7 @@ const PowerCard = {
       });
     });
 
-    return { expanded, state, plugs, plugsByDevice, plugClass, plugIsOn, toggle, onCount, rotatorRemain };
+    return { expanded, state, plugs, plugRows, plugClass, plugIsOn, toggle, onCount, rotatorRemain };
   }
 };
 
