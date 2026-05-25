@@ -945,6 +945,190 @@ const SolarCard = {
   }
 };
 
+// === SPE Amplifier card ===
+const SPECard = {
+  template: `
+    <div class="card">
+      <div class="card__header" @click="expanded = !expanded">
+        <span class="chev">{{ expanded ? '▼' : '▶' }}</span>
+        <span>SPE Amplifier {{ state.model && state.model !== '—' ? state.model : '' }}</span>
+        <span v-if="!expanded" class="summary">
+          <span :style="{color: powerOn ? 'var(--green)' : 'var(--muted)', fontWeight:600}">
+            {{ powerOn ? '● ON' : '○ OFF' }}
+          </span>
+          <span v-if="powerOn">·</span>
+          <span v-if="powerOn" :style="{color: isTransmitting ? 'var(--red)' : 'var(--green)', fontWeight:600}">
+            {{ state.rxtx === 'TRANSMIT' ? 'TX' : 'RX' }}
+          </span>
+          <span v-if="powerOn && state.band">·</span>
+          <span v-if="powerOn && state.band" :style="{color:'var(--accent)', fontWeight:600}">{{ state.band }}</span>
+        </span>
+      </div>
+
+      <div class="card__body" :class="{ 'is-collapsed': !expanded }">
+
+        <!-- Top: power toggle + sync status -->
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button class="btn" :class="powerOn ? 'btn--green' : 'btn--red'"
+                  style="flex:0 0 auto;" @click="togglePower()">
+            {{ powerOn ? '● ON' : '○ OFF' }}
+          </button>
+          <span class="statusline" style="flex:1;justify-content:flex-end;">
+            <span>{{ state.usb ? '✓ WS Connected' : '✗ Disconnected' }}</span>
+          </span>
+        </div>
+
+        <!-- Top metrics: Mode / RX-TX / Band -->
+        <div class="tiles">
+          <div class="tile">
+            <div class="tile__lbl">Mode</div>
+            <div class="tile__val" :style="{color: state.mode === 'Operate' ? 'var(--red)' : 'var(--green)'}">{{ state.mode || '—' }}</div>
+          </div>
+          <div class="tile">
+            <div class="tile__lbl">RX / TX</div>
+            <div class="tile__val" :style="{color: state.rxtx === 'TRANSMIT' ? 'var(--red)' : 'var(--green)'}">{{ state.rxtx || '—' }}</div>
+          </div>
+          <div class="tile">
+            <div class="tile__lbl">Band</div>
+            <div class="tile__val" :style="{color:'var(--accent)'}">{{ state.band || '—' }}</div>
+          </div>
+        </div>
+
+        <!-- Power level + Input + TX Ant -->
+        <div class="tiles">
+          <div class="tile">
+            <div class="tile__lbl">Power Level</div>
+            <div class="tile__val" :style="{color: pwrLvlColor}">{{ state.pwrlvl || '—' }}</div>
+          </div>
+          <div class="tile">
+            <div class="tile__lbl">Input</div>
+            <div class="tile__val" style="font-size:var(--fs-sm)">{{ state.input || '—' }}</div>
+          </div>
+          <div class="tile">
+            <div class="tile__lbl">TX Antenna</div>
+            <div class="tile__val" style="font-size:var(--fs-sm)">{{ state.txant || '—' }}</div>
+          </div>
+        </div>
+
+        <!-- Output power bar -->
+        <div class="solar-sec-label">Output Power</div>
+        <div class="band-row" style="grid-template-columns:auto 1fr auto;">
+          <span class="band-row__name" style="width:auto">{{ Math.round(state.pwr || 0) }} W</span>
+          <div class="band-row__bar" style="height:10px">
+            <div :style="{height:'100%', width: pwrPct + '%', background: pwrBarColor, transition:'width 0.3s'}"></div>
+          </div>
+          <span style="font-size:var(--fs-xs);color:var(--text-dim);">/ {{ state.pwrMax || 1500 }} W</span>
+        </div>
+
+        <!-- SWR tiles -->
+        <div class="tiles">
+          <div class="tile">
+            <div class="tile__lbl">ATU SWR</div>
+            <div class="tile__val" :style="{color: swrColor(state.atuswr)}">{{ state.atuswr != null ? state.atuswr.toFixed(2) : '—' }}</div>
+          </div>
+          <div class="tile">
+            <div class="tile__lbl">Antenna SWR</div>
+            <div class="tile__val" :style="{color: swrColor(state.antswr)}">{{ state.antswr != null ? state.antswr.toFixed(2) : '—' }}</div>
+          </div>
+        </div>
+
+        <!-- Warnings / Alarms -->
+        <div class="tiles">
+          <div class="tile">
+            <div class="tile__lbl">Warnings</div>
+            <div class="tile__val" :style="{color: state.warnings === 'No Warnings' ? 'var(--green)' : 'var(--amber)', fontSize:'var(--fs-sm)'}">{{ state.warnings || '—' }}</div>
+          </div>
+          <div class="tile">
+            <div class="tile__lbl">Alarms</div>
+            <div class="tile__val" :style="{color: state.alarms === 'No Alarms' ? 'var(--green)' : 'var(--red)', fontSize:'var(--fs-sm)'}">{{ state.alarms || '—' }}</div>
+          </div>
+        </div>
+
+        <!-- Hardware telemetry -->
+        <div class="solar-sec-label">Hardware</div>
+        <div class="tiles">
+          <div class="tile">
+            <div class="tile__lbl">V PA</div>
+            <div class="tile__val">{{ state.vpa != null ? state.vpa.toFixed(1) : '—' }}<span class="tile__sub-unit">V</span></div>
+          </div>
+          <div class="tile">
+            <div class="tile__lbl">I PA</div>
+            <div class="tile__val">{{ state.ipa != null ? state.ipa.toFixed(1) : '—' }}<span class="tile__sub-unit">A</span></div>
+          </div>
+          <div class="tile">
+            <div class="tile__lbl">Temp Upper</div>
+            <div class="tile__val" :style="{color: tempColor(state.tempUpper)}">{{ state.tempUpper != null ? Math.round(state.tempUpper) : '—' }}<span class="tile__sub-unit">°C</span></div>
+          </div>
+          <div class="tile">
+            <div class="tile__lbl">Temp Lower</div>
+            <div class="tile__val" :style="{color: tempColor(state.tempLower)}">{{ state.tempLower != null ? Math.round(state.tempLower) : '—' }}<span class="tile__sub-unit">°C</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `,
+  setup() {
+    const expanded = ref(true);
+    const state = reactive({
+      model:null, mode:null, rxtx:null, band:null, input:null, txant:null,
+      pwrlvl:null, pwr:0, pwrMax:1500, atuswr:null, antswr:null,
+      vpa:null, ipa:null, tempUpper:null, tempLower:null, tempComb:null,
+      warnings:null, alarms:null, usb:false
+    });
+
+    const powerOn = computed(() => !!state.usb);
+    const isTransmitting = computed(() => state.rxtx === 'TRANSMIT');
+
+    const pwrPct = computed(() => {
+      if (!state.pwr || !state.pwrMax) return 0;
+      return Math.min(100, (state.pwr / state.pwrMax) * 100);
+    });
+    const pwrBarColor = computed(() => {
+      const p = pwrPct.value;
+      if (p > 85) return 'var(--red)';
+      if (p > 65) return 'var(--amber)';
+      return 'var(--green)';
+    });
+    const pwrLvlColor = computed(() => {
+      if (state.pwrlvl === 'Maximum') return 'var(--red)';
+      if (state.pwrlvl === 'Middle')  return 'var(--amber)';
+      return 'var(--accent)';
+    });
+
+    function swrColor(s) {
+      if (s == null) return 'var(--muted)';
+      if (s >= 2.0) return 'var(--red)';
+      if (s >= 1.5) return 'var(--amber)';
+      return 'var(--green)';
+    }
+    function tempColor(t) {
+      if (t == null) return 'var(--muted)';
+      if (t >= 80) return 'var(--red)';
+      if (t >= 60) return 'var(--amber)';
+      return 'var(--green)';
+    }
+
+    function togglePower() {
+      const next = powerOn.value ? 'OFF_SPE' : 'ON_SPE';
+      const msg = powerOn.value
+        ? 'Power OFF the SPE amplifier?'
+        : 'Power ON the SPE amplifier?';
+      if (!confirm(msg)) return;
+      uibuilder.send({ topic: 'spe/cmd', payload: { type: 'spePower', value: next } });
+    }
+
+    onMounted(() => {
+      uibuilder.onTopic('spe', (msg) => {
+        if (msg && msg.payload && typeof msg.payload === 'object') {
+          Object.assign(state, msg.payload);
+        }
+      });
+    });
+
+    return { expanded, state, powerOn, isTransmitting, pwrPct, pwrBarColor, pwrLvlColor, swrColor, tempColor, togglePower };
+  }
+};
+
 // === FlexRadio card ===
 const FlexCard = {
   template: `
@@ -1479,12 +1663,13 @@ const TopBar = {
 
 // === Root app ===
 const App = {
-  components: { TopBar, LightningCard, DXCCCard, NetworkCard, RPiCard, PowerCard, SolarCard, FlexCard },
+  components: { TopBar, LightningCard, DXCCCard, NetworkCard, RPiCard, PowerCard, SolarCard, FlexCard, SPECard },
   template: `
     <TopBar :connected="connected" />
     <div class="dash-grid">
       <LightningCard />
       <FlexCard />
+      <SPECard />
       <PowerCard />
       <SolarCard />
       <DXCCCard />

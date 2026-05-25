@@ -8922,7 +8922,8 @@
     "y": 100,
     "wires": [
       [
-        "ws_panel_node"
+        "ws_panel_node",
+        "vue_spe_bridge_01"
       ]
     ]
   },
@@ -10013,7 +10014,8 @@
         "vue_lightning_cmd_router_01",
         "vue_dxcc_cmd_router_01",
         "vue_rpi_cmd_router_01",
-        "vue_pwr_cmd_router_01"
+        "vue_pwr_cmd_router_01",
+        "vue_spe_cmd_router_01"
       ],
       []
     ]
@@ -10368,6 +10370,36 @@
     "wires": [
       [
         "uib_shack_01"
+      ]
+    ]
+  },
+  {
+    "id": "vue_spe_bridge_01",
+    "type": "function",
+    "z": "spe_ws_tab_01",
+    "name": "Build SPE state for Vue",
+    "func": "// ws_format_state already builds the flat panel-ready object.\n// Wrap with topic 'spe' for the uibuilder client.\nreturn { topic: 'spe', payload: msg.payload };\n",
+    "outputs": 1,
+    "x": 700,
+    "y": 200,
+    "wires": [
+      [
+        "uib_shack_01"
+      ]
+    ]
+  },
+  {
+    "id": "vue_spe_cmd_router_01",
+    "type": "function",
+    "z": "spe_ws_tab_01",
+    "name": "Route Vue SPE commands",
+    "func": "if (msg.topic && msg.topic !== 'spe/cmd') return null;\nif (!msg.payload || msg.payload.type !== 'spePower') return null;\nreturn { payload: msg.payload.value };  // 'ON_SPE' or 'OFF_SPE'\n",
+    "outputs": 1,
+    "x": 360,
+    "y": 280,
+    "wires": [
+      [
+        "ws_btn_router"
       ]
     ]
   }
