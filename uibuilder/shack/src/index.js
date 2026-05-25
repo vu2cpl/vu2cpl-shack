@@ -77,12 +77,10 @@ const LightningCard = {
           <span>IRQ <strong>{{ state.counters?.irq ?? '—' }}</strong></span>
         </div>
 
-        <!-- Stats grid -->
+        <!-- Stats grid — operational stats only.
+             Callsign + Grid live in the top bar; Threshold + Reconnect
+             live in the Thresholds section below alongside their sliders. -->
         <dl class="stats">
-          <dt>Callsign</dt>             <dd>{{ state.callsign || 'VU2CPL' }}</dd>
-          <dt>Grid</dt>                 <dd>{{ state.grid || 'MK83TE' }}</dd>
-          <dt>Threshold</dt>            <dd>{{ state.thresholdKm ?? '—' }} km</dd>
-          <dt>Reconnect</dt>            <dd>{{ state.reconnectMin ?? '—' }} min</dd>
           <dt>Total strikes</dt>        <dd>{{ state.totalStrikes ?? 0 }}</dd>
           <dt>&lt;40 / &lt;50 / &gt;50</dt> <dd>{{ state.lt40 ?? 0 }} / {{ state.lt50 ?? 0 }} / {{ state.gt50 ?? 0 }}</dd>
           <dt>Closest</dt>              <dd>{{ state.closestKm != null ? state.closestKm + ' km' : '—' }}</dd>
