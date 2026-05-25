@@ -1,5 +1,12 @@
 [
   {
+    "id": "vue_dashboard_tab_01",
+    "type": "tab",
+    "label": "Vue Dashboard",
+    "disabled": false,
+    "info": "uibuilder + Vue 3 web app at /shack. Single Page App that talks to Node-RED via uibuilder's websocket. True responsive design via CSS Grid + clamp() + container queries."
+  },
+  {
     "id": "3d26c2c5270bdb37",
     "type": "tab",
     "label": "Rotor",
@@ -9976,6 +9983,33 @@
     "x": 200,
     "y": 400,
     "wires": [
+      []
+    ]
+  },
+  {
+    "id": "uib_shack_01",
+    "type": "uibuilder",
+    "z": "vue_dashboard_tab_01",
+    "name": "Shack Vue",
+    "topic": "",
+    "url": "shack",
+    "fwdInMessages": false,
+    "allowScripts": false,
+    "allowStyles": false,
+    "copyIndex": true,
+    "templateFolder": "blank",
+    "extTemplate": "",
+    "showfolder": false,
+    "reload": false,
+    "sourceFolder": "src",
+    "deployedVersion": "7.6.2",
+    "showMsgUib": false,
+    "title": "",
+    "descr": "",
+    "x": 300,
+    "y": 100,
+    "wires": [
+      [],
       []
     ]
   }
