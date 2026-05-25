@@ -149,10 +149,10 @@ const LightningCard = {
                       @click="step(t.key, +1, t.min, t.max)">+</button>
             </div>
 
-            <!-- Enum pills: afe_gb / modem_sleep / mask_dist / min_num_lightning -->
-            <div v-for="e in enumTunables" :key="e.key" class="tun-row">
-              <span class="tun-lbl">{{ e.lbl }}</span>
-              <div class="pill-group">
+            <!-- Enum pills: all four in one wrap-flow inline row -->
+            <div class="enum-row">
+              <div v-for="e in enumTunables" :key="e.key" class="enum-cell">
+                <span class="enum-cell__lbl">{{ e.lbl }}</span>
                 <button v-for="opt in e.options" :key="String(opt.v)"
                         class="pill"
                         :class="{ 'pill--active': String(state.tunables?.[e.key]) === String(opt.v) }"
@@ -302,22 +302,22 @@ const LightningCard = {
       { key: 'tun_cap', lbl: 'TUN_CAP', min: 0, max: 15 }
     ];
 
-    // List of enum-ish tunables (rendered as pill toggle groups)
+    // List of enum-ish tunables (rendered as pill toggle groups, inline)
     const enumTunables = [
       { key: 'afe_gb', lbl: 'AFE', options: [
-        { v: 'indoor',  label: 'INDOOR'  },
-        { v: 'outdoor', label: 'OUTDOOR' }
+        { v: 'indoor',  label: 'IN'  },
+        { v: 'outdoor', label: 'OUT' }
       ]},
-      { key: 'modem_sleep', lbl: 'WiFi Sleep', options: [
+      { key: 'modem_sleep', lbl: 'SLP', options: [
         { v: 'none', label: 'NONE' },
         { v: 'min',  label: 'MIN'  },
         { v: 'max',  label: 'MAX'  }
       ]},
-      { key: 'mask_dist', lbl: 'Mask Dist', options: [
+      { key: 'mask_dist', lbl: 'MASK', options: [
         { v: false, label: 'OFF' },
         { v: true,  label: 'ON'  }
       ]},
-      { key: 'min_num_lightning', lbl: 'Min Lightning', options: [
+      { key: 'min_num_lightning', lbl: 'MIN', options: [
         { v: 1,  label: '1'  },
         { v: 5,  label: '5'  },
         { v: 9,  label: '9'  },

@@ -22,12 +22,12 @@
   --red-bd:    #a82020;
 
   /* Fluid typography — scales smoothly across phone → desktop */
-  --fs-xs:   clamp(10px, 0.8vw,  12px);
-  --fs-sm:   clamp(11px, 1vw,    14px);
-  --fs-base: clamp(13px, 1.15vw, 16px);
-  --fs-md:   clamp(15px, 1.3vw,  18px);
-  --fs-lg:   clamp(17px, 1.6vw,  22px);
-  --fs-xl:   clamp(20px, 2.2vw,  28px);
+  --fs-xs:   clamp(11px, 0.9vw,  13px);
+  --fs-sm:   clamp(12px, 1.05vw, 15px);
+  --fs-base: clamp(14px, 1.25vw, 17px);
+  --fs-md:   clamp(16px, 1.4vw,  20px);
+  --fs-lg:   clamp(18px, 1.7vw,  24px);
+  --fs-xl:   clamp(22px, 2.4vw,  30px);
 
   --font-mono: 'SFMono-Regular', 'Consolas', 'Menlo', 'Courier New', monospace;
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -60,7 +60,7 @@ html, body {
    laptop 3, big monitor 4+. */
 .dash-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 6px;
   align-items: start;
 }
@@ -318,16 +318,38 @@ html, body {
   background: var(--bg);
   border: 1px solid var(--border);
   color: var(--muted);
-  border-radius: 12px;
-  padding: 3px 10px;
+  border-radius: 8px;
+  padding: 1px 6px;
   font-size: var(--fs-xs);
   font-weight: 700;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   cursor: pointer;
   font-family: var(--font-mono);
   user-select: none;
-  min-width: 36px;
-  min-height: 26px;
+  min-width: 22px;
+  min-height: 20px;
+}
+
+/* All-enums-inline row (under the numeric tunables) */
+.enum-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin-top: 4px;
+  padding: 2px 4px;
+}
+.enum-cell {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.enum-cell__lbl {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-weight: 700;
+  margin-right: 2px;
 }
 .pill:hover { border-color: var(--accent); color: var(--text); }
 .pill:active { transform: scale(0.93); }
