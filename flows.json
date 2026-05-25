@@ -10514,5 +10514,45 @@
         "uib_shack_01"
       ]
     ]
+  },
+  {
+    "id": "vue_rbn_tick_01",
+    "type": "inject",
+    "z": "f9a0e3ad0e019052",
+    "name": "Push RBN to Vue every 5s",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "5",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "3",
+    "topic": "",
+    "payload": "",
+    "payloadType": "str",
+    "x": 110,
+    "y": 1100,
+    "wires": [
+      [
+        "vue_rbn_builder_01"
+      ]
+    ]
+  },
+  {
+    "id": "vue_rbn_builder_01",
+    "type": "function",
+    "z": "f9a0e3ad0e019052",
+    "name": "Build RBN state for Vue",
+    "func": "// flow.rbn_dash is file-backed by the existing RBN State Aggregator\nvar s = flow.get('rbn_dash', 'file') || flow.get('rbn_dash') || {};\nreturn {\n    topic: 'rbn',\n    payload: {\n        skimmers:   s.skimmers   || {},\n        calFetched: s.calFetched || null,\n        sk1:        s.sk1, sk2: s.sk2\n    }\n};\n",
+    "outputs": 1,
+    "x": 360,
+    "y": 1100,
+    "wires": [
+      [
+        "uib_shack_01"
+      ]
+    ]
   }
 ]

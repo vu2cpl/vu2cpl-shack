@@ -1992,6 +1992,104 @@ const RPiCard = {
   }
 };
 
+// === RBN Skimmer Monitor card ===
+const RBNCard = {
+  template: `
+    <div class="card">
+      <div class="card__header" @click="expanded = !expanded">
+        <span class="chev">{{ expanded ? '▼' : '▶' }}</span>
+        <span>RBN Skimmer</span>
+        <span v-if="!expanded" class="summary">
+          <span :style="{color: onlineCount === skimmerNames.length ? 'var(--green)' : 'var(--amber)', fontWeight:600}">
+            {{ onlineCount }}/{{ skimmerNames.length }} online
+          </span>
+          <span>·</span>
+          <span :style="{color:'var(--accent)', fontWeight:600}">{{ totalH1 }} spots/h</span>
+        </span>
+      </div>
+
+      <div class="card__body" :class="{ 'is-collapsed': !expanded }">
+
+        <div class="rbn-skim-list">
+          <div v-for="name in skimmerNames" :key="name" class="rbn-skim"
+               :class="{ 'rbn-skim--offline': !isOnline(skim(name)) }">
+            <div class="rbn-skim__head">
+              <span class="rbn-skim__name">
+                <span class="dot" :style="{color: isOnline(skim(name)) ? 'var(--green)' : 'var(--red)'}"></span>
+                {{ name }}
+              </span>
+              <span class="rbn-skim__last">
+                <span v-if="skim(name).lastFreq" style="font-family:var(--font-mono); color:var(--accent)">{{ skim(name).lastFreq.toFixed(1) }} kHz</span>
+                <span v-if="skim(name).lastSpot" style="color:var(--text-dim); margin-left:6px;">{{ skim(name).lastSpot }}</span>
+              </span>
+            </div>
+
+            <!-- Spot counts 1h / 12h / 24h -->
+            <div class="rbn-counts">
+              <div v-for="w in ['h1','h12','h24']" :key="w" class="rbn-bucket">
+                <div class="rbn-bucket__lbl">{{ w === 'h1' ? '1h' : w === 'h12' ? '12h' : '24h' }}</div>
+                <div class="rbn-bucket__val">{{ skim(name)[w + '_total'] ?? 0 }}</div>
+                <div class="rbn-bucket__sub">
+                  <span style="color:var(--amber)">CW {{ skim(name)[w + '_cw'] ?? 0 }}</span>
+                  <span style="color:var(--accent);margin-left:4px;">FT8 {{ skim(name)[w + '_ft8'] ?? 0 }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Skew calibration -->
+            <div class="rbn-skew">
+              <span>Skew</span>
+              <strong :style="{color: skewColor(skim(name).skew)}">{{ fmtSkew(skim(name).skew) }}</strong>
+              <span v-if="skim(name).skewSpots != null" style="color:var(--text-dim);font-size:var(--fs-xs);">{{ skim(name).skewSpots }} spots</span>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="state.calFetched" class="statusline" style="margin-top:var(--sp-2);">
+          <span>Calibration updated</span>
+          <strong>{{ state.calFetched }}</strong>
+        </div>
+      </div>
+    </div>
+  `,
+  setup() {
+    const expanded = ref(false);
+    const state = reactive({ skimmers: {}, calFetched: null, sk1: null, sk2: null });
+
+    const skimmerNames = computed(() => Object.keys(state.skimmers || {}));
+    function skim(name) { return state.skimmers?.[name] || {}; }
+    function isOnline(s) { return s.status === 'online'; }
+    const onlineCount = computed(() => skimmerNames.value.filter(n => isOnline(skim(n))).length);
+    const totalH1 = computed(() => skimmerNames.value.reduce((sum, n) => sum + (skim(n).h1_total || 0), 0));
+
+    function fmtSkew(v) {
+      if (v == null) return '—';
+      const sign = v > 0 ? '+' : '';
+      return sign + Number(v).toFixed(1) + ' Hz';
+    }
+    function skewColor(v) {
+      if (v == null) return 'var(--muted)';
+      const a = Math.abs(v);
+      if (a > 5) return 'var(--red)';
+      if (a > 2) return 'var(--amber)';
+      return 'var(--green)';
+    }
+
+    onMounted(() => {
+      uibuilder.onTopic('rbn', (msg) => {
+        if (msg && msg.payload && typeof msg.payload === 'object') {
+          Object.assign(state, msg.payload);
+        }
+      });
+    });
+
+    return {
+      expanded, state, skimmerNames, skim, isOnline,
+      onlineCount, totalH1, fmtSkew, skewColor
+    };
+  }
+};
+
 // === GPS NTP / Chrony status card ===
 const GpsNtpCard = {
   template: `
@@ -2258,7 +2356,7 @@ const TopBar = {
 
 // === Root app ===
 const App = {
-  components: { TopBar, LightningCard, DXCCCard, NetworkCard, RPiCard, PowerCard, SolarCard, FlexCard, SPECard, LP700Card, RotorCard, GpsNtpCard },
+  components: { TopBar, LightningCard, DXCCCard, NetworkCard, RPiCard, PowerCard, SolarCard, FlexCard, SPECard, LP700Card, RotorCard, GpsNtpCard, RBNCard },
   template: `
     <TopBar :connected="connected" />
     <div class="dash-grid">
@@ -2270,6 +2368,7 @@ const App = {
       <PowerCard />
       <SolarCard />
       <DXCCCard />
+      <RBNCard />
       <RPiCard />
       <NetworkCard />
       <GpsNtpCard />
