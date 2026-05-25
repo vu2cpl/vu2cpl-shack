@@ -793,6 +793,110 @@ const DXCCCard = {
   }
 };
 
+// === Network Monitor card ===
+const NetworkCard = {
+  template: `
+    <div class="card">
+      <div class="card__header" @click="expanded = !expanded">
+        <span class="chev">{{ expanded ? '▼' : '▶' }}</span>
+        <span>Network Monitor</span>
+        <span v-if="!expanded" class="summary">
+          <span :style="{color: anyDown ? 'var(--red)' : 'var(--green)', fontWeight:700}">
+            {{ upCount }}/{{ hosts.length }} up
+          </span>
+          <span v-if="avgMs != null">·</span>
+          <span v-if="avgMs != null" :style="{color: latencyColor(avgMs), fontWeight:700}">{{ avgMs }}ms avg</span>
+        </span>
+      </div>
+
+      <div class="card__body" :class="{ 'is-collapsed': !expanded }">
+
+        <div class="net-grid">
+          <div v-for="h in hosts" :key="h.key" class="net-tile" :class="tileClass(h)">
+            <div class="net-tile__name">{{ h.label }}</div>
+            <div class="net-tile__addr">{{ h.addr }}</div>
+            <div class="net-tile__val" :style="{color: tileColor(h)}">
+              <span class="dot"></span>
+              {{ tileText(h) }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Internet failover stats line -->
+        <div class="statusline">
+          <span>Internet
+            <strong :style="{color: state.status ? 'var(--green)' : 'var(--red)'}">
+              {{ state.status ? 'UP' : 'DOWN' }}
+            </strong>
+          </span>
+          <span v-if="state.totalFails != null">Fails <strong>{{ state.totalFails }}</strong></span>
+          <span v-if="state.lastFail">Last <strong>{{ state.lastFail }}</strong></span>
+        </div>
+      </div>
+    </div>
+  `,
+  setup() {
+    const expanded = ref(true);
+    const state = reactive({ pings: {}, status: null, totalFails: null, lastFail: null });
+
+    // Hosts displayed — keys must match the stamp functions in Node-RED
+    const hosts = [
+      { key:'Internet',  label:'Internet',  addr:'www.google.com'  },
+      { key:'Flex',      label:'FlexRadio', addr:'192.168.1.148'   },
+      { key:'OpenwebRX', label:'OpenwebRX+',addr:'192.168.1.158'   },
+      { key:'RBN_PC',    label:'Mac RBN',   addr:'192.168.1.245'   },
+      { key:'RBN_SDR',   label:'RBN SDR',   addr:'192.168.1.241'   }
+    ];
+
+    function pingFor(key) { return state.pings?.[key] || {}; }
+    function latencyColor(ms) {
+      if (ms == null) return 'var(--muted)';
+      if (ms < 50)   return 'var(--green)';
+      if (ms < 200)  return 'var(--amber)';
+      return 'var(--red)';
+    }
+    function tileClass(h) {
+      const p = pingFor(h.key);
+      if (p.up === false) return 'net-tile--down';
+      if (p.up === true)  return 'net-tile--up';
+      return 'net-tile--unknown';
+    }
+    function tileColor(h) {
+      const p = pingFor(h.key);
+      if (p.up === false) return 'var(--red)';
+      return latencyColor(p.ms);
+    }
+    function tileText(h) {
+      const p = pingFor(h.key);
+      if (p.up === false) return 'DOWN';
+      if (p.up === true && p.ms != null) return Math.round(p.ms) + ' ms';
+      return '—';
+    }
+
+    const upCount = computed(() =>
+      hosts.filter(h => pingFor(h.key).up === true).length
+    );
+    const anyDown = computed(() =>
+      hosts.some(h => pingFor(h.key).up === false)
+    );
+    const avgMs = computed(() => {
+      const ups = hosts.map(h => pingFor(h.key)).filter(p => p.up === true && p.ms != null);
+      if (!ups.length) return null;
+      return Math.round(ups.reduce((s, p) => s + p.ms, 0) / ups.length);
+    });
+
+    onMounted(() => {
+      uibuilder.onTopic('network', (msg) => {
+        if (msg && msg.payload && typeof msg.payload === 'object') {
+          Object.assign(state, msg.payload);
+        }
+      });
+    });
+
+    return { expanded, state, hosts, pingFor, latencyColor, tileClass, tileColor, tileText, upCount, anyDown, avgMs };
+  }
+};
+
 // === Top-bar with callsign + clocks + inline connection pill ===
 const TopBar = {
   props: ['connected'],
@@ -835,12 +939,13 @@ const TopBar = {
 
 // === Root app ===
 const App = {
-  components: { TopBar, LightningCard, DXCCCard },
+  components: { TopBar, LightningCard, DXCCCard, NetworkCard },
   template: `
     <TopBar :connected="connected" />
     <div class="dash-grid">
       <LightningCard />
       <DXCCCard />
+      <NetworkCard />
     </div>
   `,
   setup() {

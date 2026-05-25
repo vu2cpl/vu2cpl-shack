@@ -10138,5 +10138,45 @@
     "wires": [
       []
     ]
+  },
+  {
+    "id": "vue_net_tick_01",
+    "type": "inject",
+    "z": "b05f8c028b368ae9",
+    "name": "Push Net to Vue every 3s",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "3",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "2",
+    "topic": "",
+    "payload": "",
+    "payloadType": "str",
+    "x": 110,
+    "y": 800,
+    "wires": [
+      [
+        "vue_net_builder_01"
+      ]
+    ]
+  },
+  {
+    "id": "vue_net_builder_01",
+    "type": "function",
+    "z": "b05f8c028b368ae9",
+    "name": "Build Network state for Vue",
+    "func": "// Read flow.net_state and forward to Vue with topic 'network'.\nvar ns = flow.get('net_state') || {};\nvar ageStr = function (sec) {\n    if (sec == null) return null;\n    if (sec < 60)    return Math.round(sec) + 's ago';\n    if (sec < 3600)  return Math.round(sec/60) + 'm ago';\n    if (sec < 86400) return Math.round(sec/3600) + 'h ago';\n    return Math.round(sec/86400) + 'd ago';\n};\nreturn {\n    topic: 'network',\n    payload: {\n        pings:      ns.pings || {},\n        status:     ns.status,\n        totalFails: ns.totalFails,\n        lastFail:   ageStr(ns.lastFail)\n    }\n};\n",
+    "outputs": 1,
+    "x": 360,
+    "y": 800,
+    "wires": [
+      [
+        "uib_shack_01"
+      ]
+    ]
   }
 ]

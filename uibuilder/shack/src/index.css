@@ -493,6 +493,44 @@ html, body {
 .dxcc-alert--amber { border-left: 3px solid var(--amber); }
 .dxcc-alert--ghost { border-left: 3px solid var(--border);}
 
+/* === Network Monitor tile grid === */
+.net-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 4px;
+}
+.net-tile {
+  background: var(--bg);
+  border: 1px solid var(--border-2);
+  border-left-width: 3px;
+  border-radius: 4px;
+  padding: 4px 6px;
+}
+.net-tile--up      { border-left-color: var(--green); }
+.net-tile--down    { border-left-color: var(--red);   }
+.net-tile--unknown { border-left-color: var(--border);}
+.net-tile__name {
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  color: var(--text);
+}
+.net-tile__addr {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  margin-top: 1px;
+}
+.net-tile__val {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 3px;
+  font-size: var(--fs-md);
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+.net-tile__val .dot { width:7px; height:7px; border-radius:50%; background:currentColor; box-shadow:0 0 3px currentColor; }
+
 /* === DXCC Settings filter rows === */
 .filter-row {
   display: flex;
