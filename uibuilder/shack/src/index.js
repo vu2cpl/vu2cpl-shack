@@ -1638,13 +1638,13 @@ const FlexCard = {
         <table v-else class="slice-tbl">
           <tbody>
             <tr v-for="sl in activeSlices" :key="sl.slice"
-                :class="sl.isTx ? 'slice-row--tx' : 'slice-row--rx'">
+                :class="sliceIsActiveTx(sl) ? 'slice-row--tx' : 'slice-row--rx'">
               <td class="slice-tbl__letter">{{ sl.slice }}</td>
               <td class="slice-tbl__freq">{{ sl.freq }}</td>
               <td class="slice-tbl__mode">{{ sl.mode }}</td>
               <td class="slice-tbl__state">
-                <span :style="{color: sl.isTx ? 'var(--red)' : 'var(--green)', fontWeight:700}">
-                  {{ sl.isTx ? 'TX' : 'RX' }}
+                <span :style="{color: sliceIsActiveTx(sl) ? 'var(--red)' : 'var(--green)', fontWeight:700}">
+                  {{ sliceIsActiveTx(sl) ? 'TX' : 'RX' }}
                 </span>
               </td>
               <td class="slice-tbl__client">{{ sl.client || '—' }}</td>
@@ -1696,10 +1696,15 @@ const FlexCard = {
     });
 
     const activeSlices = computed(() => state.activeSlices || []);
-    const isTransmitting = computed(() => activeSlices.value.some(s => s.isTx));
+    // Actual TX state comes from flexState.txstate ('READY' = RX, anything else = transmitting).
+    // Slice .isTx only indicates which slice is TX-armed, not whether the radio is keyed.
+    const isTransmitting = computed(() => {
+      const t = (state.txstate || '').toUpperCase();
+      return t && t !== 'READY' && t !== 'STANDBY';
+    });
     const primarySlice = computed(() => {
-      // Show the TX slice if any, else the first active slice
-      return activeSlices.value.find(s => s.isTx) || activeSlices.value[0] || null;
+      // Show the TX-armed slice while transmitting, else the first active slice
+      return (isTransmitting.value && activeSlices.value.find(s => s.isTx)) || activeSlices.value[0] || null;
     });
     const clientNames = computed(() => {
       const cs = state.clients;
@@ -1724,7 +1729,8 @@ const FlexCard = {
       });
     });
 
-    return { expanded, state, activeSlices, isTransmitting, primarySlice, clientNames, tempColor };
+    function sliceIsActiveTx(sl) { return isTransmitting.value && sl.isTx; }
+    return { expanded, state, activeSlices, isTransmitting, primarySlice, clientNames, tempColor, sliceIsActiveTx };
   }
 };
 
