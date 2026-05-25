@@ -1143,15 +1143,15 @@ const RotorCard = {
       fetch('/rotator/power-toggle', { method: 'POST' }).catch(e => console.warn(e));
     }
     function doStop() {
-      fetch('/rotator/stop', { method: 'POST' }).catch(e => console.warn(e));
+      fetch('/rotor/stop', { method: 'POST' }).catch(e => console.warn(e));
     }
     function doLpSp() {
-      fetch('/rotator/lpsp', { method: 'POST' }).catch(e => console.warn(e));
+      fetch('/rotor/lpsp', { method: 'POST' }).catch(e => console.warn(e));
     }
     function doGo() {
       const h = manualHdg.value;
       if (h == null || h < 0 || h > 359) return;
-      fetch('/rotator/go', {
+      fetch('/rotor/go', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ hdg: h })
@@ -1159,7 +1159,7 @@ const RotorCard = {
       state.target = h;
     }
     function goPreset(deg) {
-      fetch('/rotator/go', {
+      fetch('/rotor/go', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ hdg: deg })
