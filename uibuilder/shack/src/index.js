@@ -481,6 +481,225 @@ const LightningCard = {
   }
 };
 
+// === DXCC Tracker card ===
+const DXCCCard = {
+  template: `
+    <div class="card">
+      <div class="card__header" @click="expanded = !expanded">
+        <span class="chev">{{ expanded ? '▼' : '▶' }}</span>
+        <span>DXCC Tracker</span>
+        <span v-if="!expanded" class="summary">
+          <span :style="{color: state.newAlerts > 0 ? 'var(--accent)' : 'var(--muted)', fontWeight:700}">
+            ⚡ {{ state.newAlerts ?? 0 }} new
+          </span>
+          <span>·</span>
+          <span :style="{color: allClustersOk ? 'var(--green)' : 'var(--amber)', fontWeight:700}">
+            {{ clustersOnline }}/{{ clusterNames.length }} clusters
+          </span>
+          <span>·</span>
+          <span :style="{fontWeight:700}">{{ state.stats?.totalWorked ?? '—' }} worked</span>
+        </span>
+      </div>
+
+      <div class="card__body" :class="{ 'is-collapsed': !expanded }">
+
+        <!-- Cluster pills — clickable to mute/unmute spots from each -->
+        <div class="cluster-row">
+          <button v-for="c in clusterNames" :key="c"
+                  class="cluster-pill"
+                  :class="clusterPillClass(c)"
+                  :title="clusterTitle(c)"
+                  @click="toggleCluster(c)">
+            <span class="dot"></span>
+            <span class="cluster-pill__name">{{ c }}</span>
+          </button>
+        </div>
+
+        <!-- Stats line -->
+        <div class="statusline">
+          <span>Worked <strong style="color:var(--accent)">{{ state.stats?.totalWorked ?? '—' }}</strong></span>
+          <span>Confirmed <strong style="color:var(--green)">{{ state.stats?.totalConfirmed ?? '—' }}</strong></span>
+          <span>Seed <strong>{{ state.stats?.seedAge ?? '—' }}</strong></span>
+        </div>
+
+        <!-- Alerts table (always visible — main content) -->
+        <div class="dxcc-alerts">
+          <div class="dxcc-alerts__title">
+            ALERTS · {{ state.alertList?.length ?? 0 }}
+          </div>
+          <div class="dxcc-alerts__list" v-if="(state.alertList?.length ?? 0) > 0">
+            <div v-for="(a, i) in (state.alertList || []).slice(0, 30)" :key="i"
+                 class="dxcc-alert"
+                 :class="'dxcc-alert--' + alertSeverityClass(a.type)">
+              <span class="dxcc-alert__time">{{ a.time || '--:--' }}</span>
+              <span class="dxcc-alert__freq">{{ a.freq ?? '—' }}</span>
+              <span class="dxcc-alert__mode">{{ a.mode || '—' }}</span>
+              <span class="dxcc-alert__call">{{ a.call || '?' }}</span>
+              <span class="dxcc-alert__entity">{{ a.entity || '' }}</span>
+              <span class="dxcc-alert__type" :style="{color: alertTypeColor(a.type)}">{{ alertTypeShort(a.type) }}</span>
+            </div>
+          </div>
+          <div v-else class="dxcc-alerts__empty">No alerts yet</div>
+        </div>
+
+        <!-- Settings (collapsible, default closed) -->
+        <div class="section">
+          <div class="section__header" @click="sec.settings = !sec.settings">
+            <span class="chev">{{ sec.settings ? '▼' : '▶' }}</span>
+            <span>Settings</span>
+          </div>
+          <div class="section__body" :class="{ 'is-collapsed': !sec.settings }">
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:3px;">
+              <button class="btn btn--blue"  @click="doRefresh()">{{ ackLabel('dxcc-refresh', 'Refresh Club Log') }}</button>
+              <button class="btn btn--amber" @click="doClear()">{{ ackLabel('dxcc-clear', 'Clear Alerts') }}</button>
+              <button class="btn btn--ghost" @click="sec.blacklist = !sec.blacklist">
+                Blacklist ({{ (state.blacklist || []).length }})
+              </button>
+            </div>
+
+            <div v-if="sec.blacklist" style="background:var(--bg);border:1px solid var(--border-2);border-radius:4px;padding:6px;">
+              <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:4px;">BLACKLIST · click × to remove</div>
+              <div style="display:flex;flex-wrap:wrap;gap:3px;">
+                <span v-for="cs in (state.blacklist || [])" :key="cs" class="pill" style="cursor:default;">
+                  {{ cs }}
+                  <span style="margin-left:4px;cursor:pointer;color:var(--red);font-weight:bold;"
+                        @click="doBlacklistRemove(cs)">×</span>
+                </span>
+                <span v-if="!(state.blacklist || []).length" style="color:var(--muted);font-size:var(--fs-xs);">empty</span>
+              </div>
+              <div style="display:flex;gap:4px;margin-top:6px;">
+                <input v-model="newBlacklistCall" type="text" placeholder="callsign"
+                       style="flex:1;padding:3px 6px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:3px;font-family:var(--font-mono);font-size:var(--fs-sm);"
+                       @keydown.enter="doBlacklistAdd()" />
+                <button class="btn btn--red" @click="doBlacklistAdd()">Add</button>
+              </div>
+            </div>
+
+            <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:4px;">
+              Filter toggles + per-cluster URLs coming next.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `,
+  setup() {
+    const expanded = ref(true);
+    const sec = reactive({ settings: false, blacklist: false });
+    const state = reactive({
+      newAlerts: 0,
+      stats: {},
+      clusterStatus: {},
+      muted: {},
+      alertList: [],
+      blacklist: []
+    });
+
+    const clusterNames = ['VU2CPL', 'VU2OY', 'VE7CC', 'N2WQ'];
+
+    const allClustersOk = computed(() =>
+      clusterNames.every(c => (state.clusterStatus?.[c]?.connected) && !state.muted?.[c])
+    );
+    const clustersOnline = computed(() =>
+      clusterNames.filter(c => state.clusterStatus?.[c]?.connected && !state.muted?.[c]).length
+    );
+
+    function clusterPillClass(name) {
+      if (state.muted?.[name]) return 'cluster-pill--muted';
+      const s = state.clusterStatus?.[name];
+      if (s && s.connected) return 'cluster-pill--ok';
+      return 'cluster-pill--off';
+    }
+    function clusterTitle(name) {
+      const s = state.clusterStatus?.[name] || {};
+      const muted = state.muted?.[name];
+      return `${name} · ${muted ? 'MUTED' : (s.connected ? 'connected' : 'disconnected')}` +
+             (s.lastSpot ? ` · last spot ${s.lastSpot}` : '');
+    }
+    function toggleCluster(name) {
+      const next = !state.muted?.[name];
+      if (!state.muted) state.muted = {};
+      state.muted[name] = next;   // optimistic
+      uibuilder.send({ topic: 'dxcc/cmd', payload: { type: 'muteCluster', value: next, key: name } });
+    }
+
+    // Alerts colouring
+    function alertTypeShort(t) {
+      return ({ NEW_DXCC: 'NEW!', NEW_BAND: 'NEW BAND', NEW_MODE: 'NEW MODE',
+               NEW_BAND_UNCONF: '? BAND', NEW_MODE_UNCONF: '? MODE',
+               NEED_QSL: 'NEED QSL' })[t] || t || '';
+    }
+    function alertTypeColor(t) {
+      return ({ NEW_DXCC: 'var(--red)', NEW_BAND: 'var(--accent)',
+               NEW_BAND_UNCONF: 'var(--accent)', NEW_MODE: 'var(--amber)',
+               NEW_MODE_UNCONF: 'var(--amber)', NEED_QSL: '#bc8cff' })[t] || 'var(--muted)';
+    }
+    function alertSeverityClass(t) {
+      if (t === 'NEW_DXCC') return 'red';
+      if (t === 'NEW_BAND' || t === 'NEW_BAND_UNCONF') return 'blue';
+      if (t === 'NEW_MODE' || t === 'NEW_MODE_UNCONF') return 'amber';
+      return 'ghost';
+    }
+
+    // Actions (HTTP via existing endpoints)
+    const acks = reactive({});
+    function showAck(id, text, ms = 1500) {
+      acks[id] = text;
+      setTimeout(() => { delete acks[id]; }, ms);
+    }
+    function ackLabel(id, base) { return acks[id] || base; }
+
+    function doRefresh() {
+      fetch('/dxcc/refresh', { method: 'POST' }).catch(e => console.warn(e));
+      showAck('dxcc-refresh', '✓ Sent');
+    }
+    function doClear() {
+      if (!confirm('Clear the alerts list?')) return;
+      fetch('/dxcc/clear', { method: 'POST' }).catch(e => console.warn(e));
+      showAck('dxcc-clear', '✓ Cleared');
+      state.alertList = [];   // optimistic
+    }
+    const newBlacklistCall = ref('');
+    function doBlacklistAdd() {
+      const cs = (newBlacklistCall.value || '').trim().toUpperCase();
+      if (!cs) return;
+      fetch('/dxcc/blacklist-add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ call: cs })
+      }).catch(e => console.warn(e));
+      if (!state.blacklist) state.blacklist = [];
+      if (!state.blacklist.includes(cs)) state.blacklist.push(cs);
+      newBlacklistCall.value = '';
+    }
+    function doBlacklistRemove(cs) {
+      fetch('/dxcc/blacklist-remove', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ call: cs })
+      }).catch(e => console.warn(e));
+      state.blacklist = (state.blacklist || []).filter(x => x !== cs);
+    }
+
+    onMounted(() => {
+      uibuilder.onTopic('dxcc', (msg) => {
+        if (msg && msg.payload && typeof msg.payload === 'object') {
+          Object.assign(state, msg.payload);
+        }
+      });
+    });
+
+    return {
+      expanded, sec, state,
+      clusterNames, allClustersOk, clustersOnline,
+      clusterPillClass, clusterTitle, toggleCluster,
+      alertTypeShort, alertTypeColor, alertSeverityClass,
+      ackLabel, doRefresh, doClear,
+      newBlacklistCall, doBlacklistAdd, doBlacklistRemove
+    };
+  }
+};
+
 // === Top-bar with callsign + clocks + inline connection pill ===
 const TopBar = {
   props: ['connected'],
@@ -523,12 +742,12 @@ const TopBar = {
 
 // === Root app ===
 const App = {
-  components: { TopBar, LightningCard },
+  components: { TopBar, LightningCard, DXCCCard },
   template: `
     <TopBar :connected="connected" />
     <div class="dash-grid">
       <LightningCard />
-      <!-- More cards go here as we migrate them -->
+      <DXCCCard />
     </div>
   `,
   setup() {

@@ -416,6 +416,81 @@ html, body {
 }
 .pill { transition: transform 0.1s, background 0.15s, color 0.15s, border-color 0.15s; }
 
+/* === DXCC Tracker — cluster pills row === */
+.cluster-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 2px 0;
+}
+.cluster-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  cursor: pointer;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  font-family: var(--font-mono);
+  letter-spacing: 0.3px;
+  user-select: none;
+  transition: all 0.15s;
+}
+.cluster-pill .dot { width:6px; height:6px; border-radius:50%; background:currentColor; box-shadow:0 0 3px currentColor; }
+.cluster-pill--ok    { border-color: var(--green-bd); background: var(--green-bg); color: var(--green); }
+.cluster-pill--muted { border-color: var(--border);   background: var(--surface);  color: var(--muted); }
+.cluster-pill--off   { border-color: var(--red-bd);   background: var(--red-bg);   color: var(--red);   }
+.cluster-pill:hover { filter: brightness(1.2); }
+
+/* === DXCC alerts table === */
+.dxcc-alerts {
+  background: var(--bg);
+  border: 1px solid var(--border-2);
+  border-radius: 4px;
+}
+.dxcc-alerts__title {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  letter-spacing: 0.4px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border-2);
+}
+.dxcc-alerts__list {
+  max-height: 280px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+.dxcc-alerts__empty {
+  padding: 12px;
+  color: var(--muted);
+  font-style: italic;
+  text-align: center;
+  font-size: var(--fs-xs);
+}
+.dxcc-alert {
+  display: grid;
+  grid-template-columns: 44px 56px 32px 1fr auto auto;
+  gap: 6px;
+  align-items: center;
+  padding: 3px 8px;
+  border-bottom: 1px dashed var(--border-2);
+}
+.dxcc-alert:last-child { border-bottom: none; }
+.dxcc-alert__time { color: var(--muted); }
+.dxcc-alert__freq { color: var(--accent); }
+.dxcc-alert__mode { color: var(--muted); }
+.dxcc-alert__call { color: var(--text); font-weight: 700; }
+.dxcc-alert__entity { color: var(--muted); text-align: right; font-size: 90%; }
+.dxcc-alert__type { font-weight: 700; padding-left: 6px; }
+.dxcc-alert--red   { border-left: 3px solid var(--red);   }
+.dxcc-alert--blue  { border-left: 3px solid var(--accent);}
+.dxcc-alert--amber { border-left: 3px solid var(--amber); }
+.dxcc-alert--ghost { border-left: 3px solid var(--border);}
+
 /* === Header bar with callsign + clocks === */
 .topbar {
   display: flex;
