@@ -793,6 +793,148 @@ const DXCCCard = {
   }
 };
 
+// === RPi Fleet card ===
+const RPiCard = {
+  template: `
+    <div class="card">
+      <div class="card__header" @click="expanded = !expanded">
+        <span class="chev">{{ expanded ? '▼' : '▶' }}</span>
+        <span>RPi Fleet</span>
+        <span v-if="!expanded" class="summary">
+          <span :style="{color: anyOffline ? 'var(--red)' : 'var(--green)', fontWeight:700}">
+            {{ onlineCount }}/{{ hosts.length }} online
+          </span>
+          <span v-if="hottestPi">·</span>
+          <span v-if="hottestPi" :style="{color: tempColor(hottestPi.temp), fontWeight:700}">
+            {{ hottestPi.name }} {{ hottestPi.temp }}°C
+          </span>
+        </span>
+      </div>
+
+      <div class="card__body" :class="{ 'is-collapsed': !expanded }">
+
+        <div class="rpi-grid">
+          <div v-for="h in hosts" :key="h" class="rpi-host" :class="hostClass(h)">
+            <div class="rpi-host__top">
+              <span class="rpi-host__name">
+                <span class="dot" :style="{color: statusColor(h)}"></span>
+                {{ h }}
+              </span>
+              <span class="rpi-host__actions">
+                <button class="btn btn--amber" @click="doReboot(h)">Reboot</button>
+                <button class="btn btn--red"   @click="doShutdown(h)">Shutdown</button>
+              </span>
+            </div>
+
+            <div class="rpi-host__metrics">
+              <div class="rpi-metric">
+                <div class="rpi-metric__lbl">CPU</div>
+                <div class="rpi-metric__val" :style="{color: cpuColor(dev(h).cpu)}">{{ dev(h).cpu ?? '—' }}%</div>
+                <div class="rpi-metric__bar"><div :style="{width:(dev(h).cpu||0)+'%', background:cpuColor(dev(h).cpu)}"></div></div>
+              </div>
+              <div class="rpi-metric">
+                <div class="rpi-metric__lbl">Temp</div>
+                <div class="rpi-metric__val" :style="{color: tempColor(dev(h).temp)}">{{ dev(h).temp ?? '—' }}°C</div>
+                <div class="rpi-metric__bar"><div :style="{width:tempPct(dev(h).temp)+'%', background:tempColor(dev(h).temp)}"></div></div>
+              </div>
+              <div class="rpi-metric">
+                <div class="rpi-metric__lbl">Mem</div>
+                <div class="rpi-metric__val" :style="{color: pctColor(dev(h).mem)}">{{ dev(h).mem ?? '—' }}%</div>
+                <div class="rpi-metric__bar"><div :style="{width:(dev(h).mem||0)+'%', background:pctColor(dev(h).mem)}"></div></div>
+              </div>
+              <div class="rpi-metric">
+                <div class="rpi-metric__lbl">Disk</div>
+                <div class="rpi-metric__val" :style="{color: pctColor(dev(h).disk)}">{{ dev(h).disk ?? '—' }}%</div>
+                <div class="rpi-metric__bar"><div :style="{width:(dev(h).disk||0)+'%', background:pctColor(dev(h).disk)}"></div></div>
+              </div>
+            </div>
+
+            <div class="rpi-host__meta">
+              <span>IP {{ dev(h).ip || '—' }}</span>
+              <span>Up {{ fmtUptime(dev(h).uptime) }}</span>
+              <span v-if="dev(h).lastSeen">Seen {{ dev(h).lastSeen }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `,
+  setup() {
+    const expanded = ref(true);
+    const state = reactive({ devices: {} });
+
+    function dev(h) { return state.devices?.[h] || {}; }
+
+    const hosts = computed(() => Object.keys(state.devices || {}).sort());
+
+    const onlineCount = computed(() => hosts.value.filter(h => dev(h).status === 'online').length);
+    const anyOffline  = computed(() => hosts.value.some(h => dev(h).status !== 'online'));
+    const hottestPi   = computed(() => {
+      let best = null;
+      hosts.value.forEach(h => {
+        const t = parseFloat(dev(h).temp);
+        if (!isNaN(t) && (!best || t > best.temp)) best = { name: h, temp: t };
+      });
+      return best;
+    });
+
+    function statusColor(h) { return dev(h).status === 'online' ? 'var(--green)' : 'var(--red)'; }
+    function hostClass(h)   { return dev(h).status === 'online' ? 'rpi-host--online' : 'rpi-host--offline'; }
+
+    function pctColor(v) {
+      const n = parseFloat(v);
+      if (isNaN(n)) return 'var(--muted)';
+      if (n >= 90) return 'var(--red)';
+      if (n >= 70) return 'var(--amber)';
+      return 'var(--green)';
+    }
+    function cpuColor(v) { return pctColor(v); }
+    function tempColor(v) {
+      const n = parseFloat(v);
+      if (isNaN(n)) return 'var(--muted)';
+      if (n >= 75) return 'var(--red)';
+      if (n >= 60) return 'var(--amber)';
+      return 'var(--green)';
+    }
+    function tempPct(v) {
+      const n = parseFloat(v);
+      if (isNaN(n)) return 0;
+      return Math.min(100, Math.max(0, n));  // simple 0–100°C scale
+    }
+    function fmtUptime(u) {
+      if (!u) return '—';
+      const s = parseInt(u, 10);
+      if (isNaN(s)) return String(u);
+      const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
+      return (d ? d + 'd ' : '') + (h || d ? h + 'h ' : '') + m + 'm';
+    }
+
+    function doReboot(host) {
+      if (!confirm(`Reboot ${host}?\n\nIt will be unreachable for ~30 seconds.`)) return;
+      uibuilder.send({ topic: 'rpi/cmd', payload: { type: 'rpiReboot', host } });
+    }
+    function doShutdown(host) {
+      if (!confirm(`SHUTDOWN ${host}?\n\nIt will NOT restart automatically — you'll need to power-cycle it manually.`)) return;
+      uibuilder.send({ topic: 'rpi/cmd', payload: { type: 'rpiShutdown', host } });
+    }
+
+    onMounted(() => {
+      uibuilder.onTopic('rpi', (msg) => {
+        if (msg && msg.payload && typeof msg.payload === 'object') {
+          Object.assign(state, msg.payload);
+        }
+      });
+    });
+
+    return {
+      expanded, state, hosts, dev,
+      onlineCount, anyOffline, hottestPi,
+      statusColor, hostClass, pctColor, cpuColor, tempColor, tempPct, fmtUptime,
+      doReboot, doShutdown
+    };
+  }
+};
+
 // === Network Monitor card ===
 const NetworkCard = {
   template: `
@@ -939,12 +1081,13 @@ const TopBar = {
 
 // === Root app ===
 const App = {
-  components: { TopBar, LightningCard, DXCCCard, NetworkCard },
+  components: { TopBar, LightningCard, DXCCCard, NetworkCard, RPiCard },
   template: `
     <TopBar :connected="connected" />
     <div class="dash-grid">
       <LightningCard />
       <DXCCCard />
+      <RPiCard />
       <NetworkCard />
     </div>
   `,

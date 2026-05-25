@@ -493,6 +493,73 @@ html, body {
 .dxcc-alert--amber { border-left: 3px solid var(--amber); }
 .dxcc-alert--ghost { border-left: 3px solid var(--border);}
 
+/* === RPi Fleet host cards === */
+.rpi-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+@container (min-width: 480px) {
+  .rpi-grid { grid-template-columns: 1fr 1fr; }
+}
+.rpi-host {
+  background: var(--bg);
+  border: 1px solid var(--border-2);
+  border-left-width: 3px;
+  border-radius: 4px;
+  padding: 5px 6px;
+}
+.rpi-host--online  { border-left-color: var(--green); }
+.rpi-host--offline { border-left-color: var(--red); opacity: 0.7; }
+
+.rpi-host__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+.rpi-host__name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+}
+.rpi-host__name .dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: currentColor; box-shadow: 0 0 3px currentColor;
+}
+.rpi-host__actions { display: flex; gap: 3px; }
+.rpi-host__actions .btn { padding: 2px 6px; min-height: 0; font-size: var(--fs-xs); }
+
+.rpi-host__metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 3px;
+  margin-top: 4px;
+}
+.rpi-metric {
+  background: var(--surface);
+  border-radius: 3px;
+  padding: 2px 4px;
+  text-align: center;
+}
+.rpi-metric__lbl { font-size: var(--fs-xs); color: var(--muted); line-height: 1; }
+.rpi-metric__val { font-size: var(--fs-sm); font-weight: 700; font-family: var(--font-mono); margin-top: 1px; line-height: 1.1; }
+.rpi-metric__bar { background: var(--border-2); border-radius: 2px; height: 3px; margin-top: 3px; overflow: hidden; }
+.rpi-metric__bar > div { height: 100%; transition: width 0.4s; }
+
+.rpi-host__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+
 /* === Network Monitor tile grid === */
 .net-grid {
   display: grid;

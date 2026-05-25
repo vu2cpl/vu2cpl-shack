@@ -10011,7 +10011,8 @@
     "wires": [
       [
         "vue_lightning_cmd_router_01",
-        "vue_dxcc_cmd_router_01"
+        "vue_dxcc_cmd_router_01",
+        "vue_rpi_cmd_router_01"
       ],
       []
     ]
@@ -10176,6 +10177,61 @@
     "wires": [
       [
         "uib_shack_01"
+      ]
+    ]
+  },
+  {
+    "id": "vue_rpi_tick_01",
+    "type": "inject",
+    "z": "d5fec2fea3dd37f4",
+    "name": "Push RPi to Vue every 3s",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "3",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "2",
+    "topic": "",
+    "payload": "",
+    "payloadType": "str",
+    "x": 110,
+    "y": 800,
+    "wires": [
+      [
+        "vue_rpi_builder_01"
+      ]
+    ]
+  },
+  {
+    "id": "vue_rpi_builder_01",
+    "type": "function",
+    "z": "d5fec2fea3dd37f4",
+    "name": "Build RPi state for Vue",
+    "func": "// flow.rpi_dash.devices = { <host>: { cpu, temp, mem, disk, uptime, ip, status, lastSeen, ... } }\nvar d = flow.get('rpi_dash') || {};\nreturn { topic: 'rpi', payload: { devices: d.devices || {} } };\n",
+    "outputs": 1,
+    "x": 360,
+    "y": 800,
+    "wires": [
+      [
+        "uib_shack_01"
+      ]
+    ]
+  },
+  {
+    "id": "vue_rpi_cmd_router_01",
+    "type": "function",
+    "z": "d5fec2fea3dd37f4",
+    "name": "Route Vue RPi commands",
+    "func": "// From Vue: { topic: 'rpi/cmd', payload: { type:'rpiReboot'|'rpiShutdown', host:'<name>' } }\nif (msg.topic && msg.topic !== 'rpi/cmd') return null;\nif (!msg.payload || !msg.payload.type || !msg.payload.host) return null;\nvar t = msg.payload.type;\nvar host = msg.payload.host;\nvar cmd = null;\nif (t === 'rpiReboot')   cmd = 'reboot';\nif (t === 'rpiShutdown') cmd = 'shutdown';\nif (!cmd) return null;\n// Re-emit in the shape Route CMD expects: { topic: 'rpi/<host>/cmd', payload: 'reboot'|'shutdown' }\nreturn { topic: 'rpi/' + host + '/cmd', payload: cmd };\n",
+    "outputs": 1,
+    "x": 360,
+    "y": 880,
+    "wires": [
+      [
+        "a0695975fec84e2c"
       ]
     ]
   }
