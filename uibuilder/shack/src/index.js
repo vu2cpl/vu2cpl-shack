@@ -793,6 +793,158 @@ const DXCCCard = {
   }
 };
 
+// === Solar Conditions card ===
+const SolarCard = {
+  template: `
+    <div class="card">
+      <div class="card__header" @click="expanded = !expanded">
+        <span class="chev">{{ expanded ? '▼' : '▶' }}</span>
+        <span>Solar Conditions</span>
+        <span v-if="!expanded" class="summary">
+          <span :style="{color: gColor({k:'sfi',v:state.sfi}), fontWeight:600}">SFI {{ state.sfi ?? '—' }}</span>
+          <span>·</span>
+          <span :style="{color: gColor({k:'k',v:state.k}), fontWeight:600}">K {{ state.k != null ? Number(state.k).toFixed(1) : '—' }}</span>
+          <span v-if="state.muf != null">·</span>
+          <span v-if="state.muf != null" :style="{color:'var(--accent)', fontWeight:600}">MUF {{ state.muf }}</span>
+        </span>
+      </div>
+
+      <div class="card__body" :class="{ 'is-collapsed': !expanded }">
+
+        <!-- Mini gauges -->
+        <div class="solar-gauges">
+          <div v-for="g in gauges" :key="g.k" class="solar-gauge">
+            <div class="solar-gauge__lbl">{{ g.title }}</div>
+            <svg viewBox="0 0 80 44" width="100%" style="display:block;">
+              <path d="M8 40 A32 32 0 0 1 72 40" fill="none" stroke="var(--border)" stroke-width="5" stroke-linecap="round"/>
+              <path d="M8 40 A32 32 0 0 1 72 40" fill="none" :stroke="gColor(g)" stroke-width="5" stroke-linecap="round"
+                    stroke-dasharray="101" :stroke-dashoffset="(101*(1-pct(g))).toFixed(1)"/>
+              <text x="40" y="36" text-anchor="middle" :fill="gColor(g)" font-size="15" font-weight="700"
+                    font-family="JetBrains Mono,SFMono-Regular,monospace">{{ display(g) }}</text>
+            </svg>
+            <div class="solar-gauge__sub">{{ g.lbl || '—' }}</div>
+          </div>
+        </div>
+
+        <!-- Space Weather (R/S/G) -->
+        <div class="solar-sec-label">Space Weather (R/S/G)</div>
+        <div class="solar-rsg-row">
+          <div v-for="s in scales" :key="s.key" class="solar-rsg">
+            <div class="solar-rsg__lbl">{{ s.lbl }}</div>
+            <div class="solar-rsg__values">
+              <span v-for="c in ['R','S','G']" :key="c" :style="rsgStyle(scaleVal(s.key, c))">{{ c }}{{ scaleVal(s.key, c) ?? '—' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- MUF / foF2 / X-ray -->
+        <div class="tiles">
+          <div class="tile">
+            <div class="tile__lbl">MUF</div>
+            <div class="tile__val">{{ state.muf ?? '—' }}<span class="tile__sub-unit">MHz</span></div>
+          </div>
+          <div class="tile">
+            <div class="tile__lbl">foF2</div>
+            <div class="tile__val">{{ state.fof2 ?? '—' }}<span class="tile__sub-unit">MHz</span></div>
+          </div>
+          <div class="tile">
+            <div class="tile__lbl">X-ray now / 24h</div>
+            <div class="tile__val">{{ state.xnow ?? '—' }} / {{ state.x24 ?? '—' }}</div>
+          </div>
+        </div>
+
+        <!-- HF Band Conditions -->
+        <div class="solar-sec-label">HF Bands · SFI − K Penalty</div>
+        <div class="bands-list">
+          <div v-for="b in bands" :key="b.name" class="band-row">
+            <span class="band-row__name">{{ b.name }}</span>
+            <div class="band-row__bar">
+              <div :style="{height:'100%', width: b.score + '%', background: b.color, transition:'width 0.4s'}"></div>
+            </div>
+            <span class="band-row__lbl" :style="{color: b.color}">{{ b.label }}</span>
+          </div>
+          <div class="solar-bands-legend">≥80 Excellent · ≥60 Good · ≥40 Fair · ≥20 Poor · &lt;20 Bad</div>
+        </div>
+      </div>
+    </div>
+  `,
+  setup() {
+    const expanded = ref(true);
+    const state = reactive({
+      sfi:null, sfiLbl:null, k:null, kLbl:null, a:null, aLbl:null,
+      muf:null, fof2:null, xnow:null, x24:null, rsg:{}
+    });
+
+    const gauges = computed(() => [
+      { k:'sfi', title:'SFI',     v: state.sfi, lbl: state.sfiLbl, min: 50, max: 250 },
+      { k:'k',   title:'K-Index', v: state.k,   lbl: state.kLbl,   min:  0, max:   9 },
+      { k:'a',   title:'A-Index', v: state.a,   lbl: state.aLbl,   min:  0, max: 100 }
+    ]);
+    const scales = [
+      { key:'h24',  lbl:'24h' }, { key:'cur', lbl:'Now' }, { key:'pred', lbl:'Pred' }
+    ];
+
+    function display(g) { if (g.v == null) return '—'; return g.k === 'k' ? Number(g.v).toFixed(1) : String(g.v); }
+    function pct(g) { if (g.v == null) return 0; return Math.max(0, Math.min(1, (g.v - g.min) / (g.max - g.min))); }
+    function gColor(g) {
+      if (g.v == null) return 'var(--muted)';
+      if (g.k === 'sfi') return g.v >= 130 ? 'var(--green)' : g.v >= 90 ? 'var(--amber)' : 'var(--red)';
+      if (g.k === 'k')   return g.v < 4.5  ? 'var(--green)' : g.v < 6    ? 'var(--amber)' : 'var(--red)';
+      return g.v < 36 ? 'var(--green)' : g.v < 103 ? 'var(--amber)' : 'var(--red)';
+    }
+    function scaleVal(k, c) { return state.rsg?.[k]?.[c]; }
+    function rsgStyle(v) {
+      let color = 'var(--green)';
+      if (v != null && v > 0) color = v <= 2 ? 'var(--amber)' : 'var(--red)';
+      return {
+        color, fontWeight:600, fontFamily:'var(--font-mono)',
+        background: 'var(--bg)', border: '1px solid currentColor',
+        borderRadius:'4px', padding:'2px 6px', fontSize:'var(--fs-sm)'
+      };
+    }
+
+    // Band conditions formula (matches Node-RED builder so colours/labels are identical)
+    const BANDS = [
+      {name:'6M',   minSFI:200, maxSFI:300, kW:0.20},
+      {name:'10M',  minSFI:130, maxSFI:280, kW:0.25},
+      {name:'12M',  minSFI:115, maxSFI:270, kW:0.30},
+      {name:'15M',  minSFI:100, maxSFI:260, kW:0.35},
+      {name:'17M',  minSFI:90,  maxSFI:250, kW:0.40},
+      {name:'20M',  minSFI:70,  maxSFI:240, kW:0.45},
+      {name:'30M',  minSFI:65,  maxSFI:230, kW:0.55},
+      {name:'40M',  minSFI:60,  maxSFI:220, kW:0.65},
+      {name:'60M',  minSFI:60,  maxSFI:210, kW:0.70},
+      {name:'80M',  minSFI:55,  maxSFI:200, kW:0.80},
+      {name:'160M', minSFI:50,  maxSFI:180, kW:0.90}
+    ];
+    const bands = computed(() => {
+      const sfi = state.sfi || 0, k = state.k || 0;
+      return BANDS.map(b => {
+        const sfiScore = Math.min(100, Math.max(0, (sfi - b.minSFI) / (b.maxSFI - b.minSFI) * 100));
+        const kPen = (k / 9) * b.kW * 100;
+        const sc = Math.max(0, Math.min(100, sfiScore - kPen));
+        let label, color;
+        if (sc >= 80) { label='Excellent'; color='var(--green)'; }
+        else if (sc >= 60) { label='Good';  color='var(--green)'; }
+        else if (sc >= 40) { label='Fair';  color='var(--amber)'; }
+        else if (sc >= 20) { label='Poor';  color='var(--amber)'; }
+        else               { label='Bad';   color='var(--red)';   }
+        return { name: b.name, score: Math.round(sc), label, color };
+      });
+    });
+
+    onMounted(() => {
+      uibuilder.onTopic('solar', (msg) => {
+        if (msg && msg.payload && typeof msg.payload === 'object') {
+          Object.assign(state, msg.payload);
+        }
+      });
+    });
+
+    return { expanded, state, gauges, scales, bands, display, pct, gColor, scaleVal, rsgStyle };
+  }
+};
+
 // === Power Control card ===
 const PowerCard = {
   template: `
@@ -1203,12 +1355,13 @@ const TopBar = {
 
 // === Root app ===
 const App = {
-  components: { TopBar, LightningCard, DXCCCard, NetworkCard, RPiCard, PowerCard },
+  components: { TopBar, LightningCard, DXCCCard, NetworkCard, RPiCard, PowerCard, SolarCard },
   template: `
     <TopBar :connected="connected" />
     <div class="dash-grid">
       <LightningCard />
       <PowerCard />
+      <SolarCard />
       <DXCCCard />
       <RPiCard />
       <NetworkCard />

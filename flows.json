@@ -10290,5 +10290,45 @@
         "a1fbb636a745e687"
       ]
     ]
+  },
+  {
+    "id": "vue_solar_tick_01",
+    "type": "inject",
+    "z": "590e889d44815afb",
+    "name": "Push Solar to Vue every 5s",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "5",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "3",
+    "topic": "",
+    "payload": "",
+    "payloadType": "str",
+    "x": 110,
+    "y": 1100,
+    "wires": [
+      [
+        "vue_solar_builder_01"
+      ]
+    ]
+  },
+  {
+    "id": "vue_solar_builder_01",
+    "type": "function",
+    "z": "590e889d44815afb",
+    "name": "Build Solar state for Vue",
+    "func": "// flow.solarState is file-backed by the existing Solar State Aggregator.\nvar s = flow.get('solarState', 'file') || flow.get('solarState') || {};\nfunction rnd(v, n) { return (typeof v === 'number') ? Number(v.toFixed(n)) : v; }\nreturn {\n    topic: 'solar',\n    payload: {\n        sfi:    s.sfi,            sfiLbl: s.sfiLabel,\n        k:      s.k != null ? Number(s.k.toFixed(2)) : null,\n        kLbl:   s.kLabel,\n        a:      s.a,              aLbl:   s.aLabel,\n        muf:    rnd(s.muf,  1),\n        fof2:   rnd(s.fof2, 1),\n        xnow:   s.xray2,\n        x24:    s.xray24,\n        rsg:    { cur: s.rsgCur, h24: s.rsg24, pred: s.rsgPred }\n    }\n};\n",
+    "outputs": 1,
+    "x": 360,
+    "y": 1100,
+    "wires": [
+      [
+        "uib_shack_01"
+      ]
+    ]
   }
 ]

@@ -551,6 +551,99 @@ html, body {
 .dxcc-alert--amber { border-left: 3px solid var(--amber); }
 .dxcc-alert--ghost { border-left: 3px solid var(--border);}
 
+/* === Solar Conditions === */
+.solar-sec-label {
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  margin-top: var(--sp-2);
+}
+.solar-gauges {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-2);
+}
+.solar-gauge {
+  background: var(--bg);
+  border: 1px solid var(--border-2);
+  border-radius: 6px;
+  padding: var(--sp-2);
+  text-align: center;
+}
+.solar-gauge__lbl {
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-weight: 500;
+}
+.solar-gauge__sub { font-size: var(--fs-xs); color: var(--text-dim); margin-top: 2px; }
+
+.solar-rsg-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-2);
+}
+.solar-rsg {
+  background: var(--bg);
+  border: 1px solid var(--border-2);
+  border-radius: 6px;
+  padding: var(--sp-2);
+  text-align: center;
+}
+.solar-rsg__lbl {
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-weight: 500;
+  margin-bottom: var(--sp-1);
+}
+.solar-rsg__values { display: flex; gap: 3px; justify-content: center; }
+
+.tile__sub-unit {
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  margin-left: 3px;
+  font-weight: 400;
+  font-family: var(--font-sans);
+}
+
+.bands-list { display: flex; flex-direction: column; gap: 2px; }
+.band-row {
+  display: grid;
+  grid-template-columns: 38px 1fr 70px;
+  gap: var(--sp-2);
+  align-items: center;
+}
+.band-row__name {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+  font-weight: 600;
+}
+.band-row__bar {
+  background: var(--border-2);
+  border-radius: 3px;
+  height: 8px;
+  overflow: hidden;
+}
+.band-row__lbl {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  text-align: right;
+}
+.solar-bands-legend {
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  text-align: center;
+  margin-top: var(--sp-2);
+  padding-top: var(--sp-1);
+  border-top: 1px solid var(--border-2);
+}
+
 /* === Power Control — plug grid === */
 .plug-grid {
   display: grid;
