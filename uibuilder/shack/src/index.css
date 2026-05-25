@@ -208,20 +208,34 @@ html, body {
 }
 .statusline strong { color: var(--text); font-weight: 700; }
 
-/* === Connection indicator (top-right, always present) === */
-.conn-dot {
+/* === Connection indicator (top-right pill) === */
+.conn-pill {
   position: fixed;
   top: 6px;
   right: 6px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--red);
-  transition: background 0.3s;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--red);
+  background: var(--red-bg);
+  border: 1px solid var(--red-bd);
   z-index: 100;
-  box-shadow: 0 0 4px currentColor;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
-.conn-dot.is-connected { background: var(--green); }
+.conn-pill.is-connected {
+  color: var(--green);
+  background: var(--green-bg);
+  border-color: var(--green-bd);
+}
+.conn-pill .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 3px currentColor;
+}
 
 /* === Header bar with callsign + clocks === */
 .topbar {

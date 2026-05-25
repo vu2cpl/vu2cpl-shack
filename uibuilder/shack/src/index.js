@@ -301,7 +301,10 @@ const TopBar = {
 const App = {
   components: { TopBar, LightningCard },
   template: `
-    <div class="conn-dot" :class="{ 'is-connected': connected }" :title="connected ? 'Connected' : 'Disconnected'"></div>
+    <div class="conn-pill" :class="{ 'is-connected': connected }">
+      <span class="dot"></span>
+      <span>{{ connected ? 'LIVE' : 'OFFLINE' }}</span>
+    </div>
     <TopBar />
     <div class="dash-grid">
       <LightningCard />
