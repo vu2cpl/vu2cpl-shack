@@ -10210,7 +10210,7 @@
     "type": "function",
     "z": "d5fec2fea3dd37f4",
     "name": "Build RPi state for Vue",
-    "func": "// TMP_RPI_DEBUG\nvar d_ = flow.get('rpi_dash') || {};\nnode.warn('RPi builder fired. devices=' + JSON.stringify(Object.keys(d_.devices || {})));\n// flow.rpi_dash.devices = { <host>: { cpu, temp, mem, disk, uptime, ip, status, lastSeen, ... } }\nvar d = flow.get('rpi_dash') || {};\nreturn { topic: 'rpi', payload: { devices: d.devices || {} } };\n",
+    "func": "// flow.rpi_dash is file-backed by the existing RPi State Aggregator\nvar d = flow.get('rpi_dash', 'file') || flow.get('rpi_dash') || {};\nreturn { topic: 'rpi', payload: { devices: d.devices || {} } };\n",
     "outputs": 1,
     "x": 360,
     "y": 800,
