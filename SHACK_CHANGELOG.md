@@ -4682,6 +4682,135 @@ docs for next time:
 
 ---
 
+## 2026-05-26
+
+### SPE (Vue /shack) — auto-ranging power bar replaces L/M/H scale
+
+The Vue `/shack` SPECard's output-power bar was driven by `state.pwrMax`,
+which `ws_format_state` derives from the amp's selected power level
+(`p_level: L | M | H` → `pwrMaxMap = {L:500, M:1000, H:1500}` W, bumped
+to 700/1400/2000 for the 20K model). Operator clarified that
+"auto-scale per README" was meant to be the *detected-power-driven*
+auto-ranging behaviour the legacy `/ui` `SPE Panel (WS)` ui_template
+has had for years, not the L/M/H ↔ pwrMax mapping.
+
+#### Fix — port the auto-ranging ladder, with finer low rungs
+
+Vue SPECard now ignores `state.pwrMax` and computes its own `pwrBandMax`
+locally:
+
+```javascript
+const PWR_LADDER = [5, 10, 25, 50, 100, 250, 500, 1000, 1500, 2000, 5000];
+const pwrBandMax = computed(() => {
+  const p = parseFloat(state.pwr) || 0;
+  for (let i = 0; i < PWR_LADDER.length; i++) {
+    if (p <= PWR_LADDER[i]) return PWR_LADDER[i];
+  }
+  return PWR_LADDER[PWR_LADDER.length - 1];
+});
+```
+
+`pwrPct` divides current power by `pwrBandMax.value` for the fill width.
+A new `pwrBandLabel` computed pretty-prints the rung as `5 W`, `100 W`,
+`1k W`, `1.5k W`, `5k W`.
+
+Ladder differs from the legacy `/ui` Panel (`[5,25,50,100,500,1000,
+1500,2000,5000]`) by inserting `10` and `250` and bumping `25→50` so
+low-power tune carriers are actually readable:
+
+- 3 W tune fills ~60 % of the **5 W** bar
+- 18 W exciter pre-drive fills ~72 % of the **25 W** bar
+- 80 W barefoot fills ~80 % of the **100 W** bar
+- 700 W mid-drive fills 70 % of the **1k W** bar
+- Full output sits at the **1.5k W** rung
+
+The amp's L/M/H setting is still rendered as the `PWR LVL` tile
+(amber for Middle, red for Maximum) — just no longer drives the bar
+scale. `ws_format_state` is unchanged (still emits `state.pwrMax` for
+D1 compat; Vue ignores it).
+
+CLAUDE.md SPE section + README "SPE Amplifier" both rewritten to make
+the new semantics explicit and to call out "don't recouple L/M/H to
+pwrMax" as a deliberate design rule.
+
+Commit [`debb454`](https://github.com/vu2cpl/vu2cpl-shack/commit/debb454).
+
+### /shack PWA — apple-touch-icon, favicon, manifest icons
+
+For iPad/iPhone "Add to Home Screen" and a browser-tab favicon that
+isn't Node-RED's red dot. Previous `index.html` referenced uibuilder's
+shipped `uib-world.svg` which is generic and doesn't survive PWA install.
+
+Hand-drew two source SVGs in `uibuilder/shack/src/`:
+
+- `icon.svg` (180×180) — dark `#0d1117` rounded square with a subtle
+  `#1f6feb` accent border, three concentric green signal arcs
+  (`#3fb950`) over a vertical antenna mast (`#c9d1d9`) with a blue
+  feed dot, and **"VU2CPL"** + **"SHACK"** lettering centred below.
+  Used for browser favicon + apple-touch-icon.
+- `icon-maskable.svg` (192×192) — full-bleed background, mast and
+  callsign re-positioned into the centred 80 % safe zone so Android
+  adaptive icons can crop without amputating anything. Used for
+  manifest `purpose:"maskable"`.
+
+Rasterised via `rsvg-convert` to 6 PNGs: `favicon-{16,32,48}.png`,
+`apple-touch-icon-180.png`, `icon-{192,512}.png`. Built `favicon.ico`
+(multi-resolution 16+32+48) via Python PIL — this is the key one
+because **Safari prefers `.ico` over `<link rel="icon">` SVG**, and
+falls back to the *site root*'s `/favicon.ico` (which is Node-RED's
+red dot) if `/shack/favicon.ico` doesn't exist.
+
+`index.html` link tags reordered most-compatible-first so each browser
+picks something it understands:
+
+```html
+<link rel="shortcut icon" href="./favicon.ico?v=4">
+<link rel="icon" type="image/x-icon" href="./favicon.ico?v=4">
+<link rel="icon" type="image/png" sizes="16x16" href="./favicon-16.png?v=4">
+<link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=4">
+<link rel="icon" type="image/png" sizes="48x48" href="./favicon-48.png?v=4">
+<link rel="icon" type="image/svg+xml" sizes="any" href="./icon.svg?v=4">
+<link rel="mask-icon" href="./icon.svg?v=4" color="#1f6feb">
+<link rel="apple-touch-icon" href="./apple-touch-icon-180.png?v=4">
+<link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon-180.png?v=4">
+```
+
+`apple-mobile-web-app-title` meta added so iOS home-screen label shows
+**"Shack"** not the full title. `manifest.json` lists raster + SVG,
+192/512 carry `purpose:"any maskable"` for Chrome PWA install.
+
+Cache-buster suffix `?v=N` — bump on each icon redesign so browsers
+re-fetch.
+
+Commits [`debb454`](https://github.com/vu2cpl/vu2cpl-shack/commit/debb454)
+(initial SVG + apple-touch-icon links) +
+[`5897fab`](https://github.com/vu2cpl/vu2cpl-shack/commit/5897fab)
+(rasterised PNGs + multi-res `favicon.ico` + reordered link tags +
+maskable PNGs in manifest).
+
+#### Gotcha — Safari favicon cache is sticky
+
+Safari maintains a per-host favicon cache in
+`~/Library/Safari/Touch Icons Cache/` that survives `Cmd+R`, Develop
+→ Empty Caches, AND `rm -rf` (macOS Sequoia TCC blocks
+`~/Library/Safari/*` writes even with `sudo` — you'd need Full Disk
+Access). After deploying a new favicon set on the Pi and verifying
+via DevTools that `/shack/favicon.ico` returns 200 with the new
+icon, the browser-tab icon may still show the cached old one
+(Node-RED's red dot in this case).
+
+The reliable nuke: **`Cmd+Q` the Safari process and relaunch.** The
+in-process favicon cache rebuilds from disk on next page load.
+Secondary path: Safari → Settings → Privacy → Manage Website Data →
+search `192.168.1.169` → Remove → reload.
+
+This matters because anyone who refreshes the new favicon and sees
+the old one will assume the deploy is broken. It isn't — Safari is.
+Logged here so the next refresh doesn't waste an afternoon debugging
+a non-bug.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:
