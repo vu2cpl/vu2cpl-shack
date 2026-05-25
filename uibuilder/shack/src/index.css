@@ -865,7 +865,9 @@ html, body {
   color: var(--text-dim);
   text-align: right;
 }
-.slice-row--tx { background: rgba(248, 81, 73, 0.06); }
+.slice-row--tx-active { background: rgba(248, 81, 73, 0.08); }   /* actively transmitting — red wash */
+.slice-row--tx-armed  { background: rgba(210, 153, 34, 0.05); }   /* TX-armed but not transmitting — amber wash */
+.slice-row--rx        { /* no background */ }
 
 .empty-row {
   color: var(--text-dim);

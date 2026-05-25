@@ -1612,9 +1612,7 @@ const FlexCard = {
         <span class="chev">{{ expanded ? '▼' : '▶' }}</span>
         <span>FlexRadio {{ state.model || '6600' }}</span>
         <span v-if="!expanded" class="summary">
-          <span :style="{color: isTransmitting ? 'var(--red)' : 'var(--green)', fontWeight:600}">
-            {{ isTransmitting ? '⚡ TX' : '✓ RX' }}
-          </span>
+          <span :style="{color: summaryColor, fontWeight:600}">{{ summaryLabel }}</span>
           <span v-if="primarySlice">·</span>
           <span v-if="primarySlice" :style="{color:'var(--accent)', fontWeight:600}">
             {{ primarySlice.freq }} {{ primarySlice.mode }}
@@ -1638,14 +1636,12 @@ const FlexCard = {
         <table v-else class="slice-tbl">
           <tbody>
             <tr v-for="sl in activeSlices" :key="sl.slice"
-                :class="sliceIsActiveTx(sl) ? 'slice-row--tx' : 'slice-row--rx'">
+                :class="sliceRowClass(sl)">
               <td class="slice-tbl__letter">{{ sl.slice }}</td>
               <td class="slice-tbl__freq">{{ sl.freq }}</td>
               <td class="slice-tbl__mode">{{ sl.mode }}</td>
               <td class="slice-tbl__state">
-                <span :style="{color: sliceIsActiveTx(sl) ? 'var(--red)' : 'var(--green)', fontWeight:700}">
-                  {{ sliceIsActiveTx(sl) ? 'TX' : 'RX' }}
-                </span>
+                <span :style="{color: sliceColor(sl), fontWeight:700}">{{ sliceLabel(sl) }}</span>
               </td>
               <td class="slice-tbl__client">{{ sl.client || '—' }}</td>
             </tr>
@@ -1729,8 +1725,38 @@ const FlexCard = {
       });
     });
 
-    function sliceIsActiveTx(sl) { return isTransmitting.value && sl.isTx; }
-    return { expanded, state, activeSlices, isTransmitting, primarySlice, clientNames, tempColor, sliceIsActiveTx };
+    // Tri-state slice colour:
+    //   RX (green)         — not TX-armed
+    //   TX-armed (amber)   — TX-armed but radio not actually keyed
+    //   TX active (red)    — TX-armed AND radio is keyed (txstate ≠ READY)
+    function sliceColor(sl) {
+      if (!sl.isTx)              return 'var(--green)';
+      if (isTransmitting.value)  return 'var(--red)';
+      return 'var(--amber)';
+    }
+    function sliceLabel(sl) { return sl.isTx ? 'TX' : 'RX'; }
+    function sliceRowClass(sl) {
+      if (!sl.isTx)              return 'slice-row--rx';
+      if (isTransmitting.value)  return 'slice-row--tx-active';
+      return 'slice-row--tx-armed';
+    }
+
+    // Collapsed-header summary: pick the most "alarming" slice colour
+    const summaryColor = computed(() => {
+      if (isTransmitting.value && activeSlices.value.some(s => s.isTx)) return 'var(--red)';
+      if (activeSlices.value.some(s => s.isTx))                          return 'var(--amber)';
+      return 'var(--green)';
+    });
+    const summaryLabel = computed(() => {
+      if (isTransmitting.value && activeSlices.value.some(s => s.isTx)) return '⚡ TX';
+      if (activeSlices.value.some(s => s.isTx))                          return '◆ TX-armed';
+      return '✓ RX';
+    });
+
+    return {
+      expanded, state, activeSlices, isTransmitting, primarySlice, clientNames, tempColor,
+      sliceColor, sliceLabel, sliceRowClass, summaryColor, summaryLabel
+    };
   }
 };
 
