@@ -248,14 +248,15 @@ html, body {
   box-shadow: 0 0 3px currentColor;
 }
 
-/* === Tunables: row layout with steppers + pills === */
+/* === Tunables: 4-row layout (numeric on left + paired enum on right) === */
 .tun-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   padding: 3px 4px;
   font-size: var(--fs-sm);
   border-bottom: 1px dashed var(--border-2);
+  flex-wrap: wrap;            /* enum wraps to a 2nd line if the card is too narrow */
 }
 .tun-row:last-child { border-bottom: none; }
 
@@ -265,12 +266,23 @@ html, body {
   text-transform: uppercase;
   letter-spacing: 0.3px;
   font-size: var(--fs-xs);
-  flex: 0 0 80px;
+  flex: 0 0 70px;
 }
 .tun-range {
   color: var(--muted);
   font-size: var(--fs-xs);
-  flex: 0 0 40px;
+  flex: 0 0 38px;
+}
+/* Paired enum on the right side of each row */
+.tun-enum-lbl {
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  font-weight: 700;
+  margin-left: auto;       /* pushes everything from here to the right edge */
+  margin-right: 4px;
+  flex-shrink: 0;
 }
 
 /* Stepper buttons */
@@ -297,7 +309,7 @@ html, body {
 
 
 .tun-val {
-  flex: 1;
+  flex: 0 0 28px;        /* fixed narrow — was flex:1 which span-stretched */
   text-align: center;
   color: var(--accent);
   font-weight: 700;

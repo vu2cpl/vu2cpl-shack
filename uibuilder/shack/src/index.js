@@ -138,28 +138,24 @@ const LightningCard = {
           </div>
           <div class="section__body" :class="{ 'is-collapsed': !sec.tunables }">
 
-            <!-- Numerics with − / + steppers -->
-            <div v-for="t in numericTunables" :key="t.key" class="tun-row">
-              <span class="tun-lbl">{{ t.lbl }}</span>
-              <span class="tun-range">{{ t.min }}–{{ t.max }}</span>
-              <button class="tun-step" :disabled="(state.tunables?.[t.key] ?? t.min) <= t.min"
-                      @click="step(t.key, -1, t.min, t.max)">−</button>
-              <span class="tun-val">{{ state.tunables?.[t.key] ?? '—' }}</span>
-              <button class="tun-step" :disabled="(state.tunables?.[t.key] ?? t.max) >= t.max"
-                      @click="step(t.key, +1, t.min, t.max)">+</button>
-            </div>
+            <!-- 4 rows: numeric (left) + paired enum (right) -->
+            <div v-for="(row, i) in tunableRows" :key="i" class="tun-row">
+              <span class="tun-lbl">{{ row.num.lbl }}</span>
+              <span class="tun-range">{{ row.num.min }}–{{ row.num.max }}</span>
+              <button class="tun-step" :disabled="(state.tunables?.[row.num.key] ?? row.num.min) <= row.num.min"
+                      @click="step(row.num.key, -1, row.num.min, row.num.max)">−</button>
+              <span class="tun-val">{{ state.tunables?.[row.num.key] ?? '—' }}</span>
+              <button class="tun-step" :disabled="(state.tunables?.[row.num.key] ?? row.num.max) >= row.num.max"
+                      @click="step(row.num.key, +1, row.num.min, row.num.max)">+</button>
 
-            <!-- Enum pills: all four in one wrap-flow inline row -->
-            <div class="enum-row">
-              <div v-for="e in enumTunables" :key="e.key" class="enum-cell">
-                <span class="enum-cell__lbl">{{ e.lbl }}</span>
-                <button v-for="opt in e.options" :key="String(opt.v)"
-                        class="pill"
-                        :class="{ 'pill--active': String(state.tunables?.[e.key]) === String(opt.v) }"
-                        @click="action('setTunable', opt.v, e.key)">
-                  {{ opt.label }}
-                </button>
-              </div>
+              <!-- Paired enum on the right -->
+              <span class="tun-enum-lbl">{{ row.enum.lbl }}</span>
+              <button v-for="opt in row.enum.options" :key="String(opt.v)"
+                      class="pill"
+                      :class="{ 'pill--active': String(state.tunables?.[row.enum.key]) === String(opt.v) }"
+                      @click="action('setTunable', opt.v, row.enum.key)">
+                {{ opt.label }}
+              </button>
             </div>
 
             <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:4px;">
@@ -325,6 +321,14 @@ const LightningCard = {
       ]}
     ];
 
+    // Pair each numeric with its enum so they share a row
+    const tunableRows = [
+      { num: numericTunables[0], enum: enumTunables[0] }, // NF      ↔ AFE
+      { num: numericTunables[1], enum: enumTunables[1] }, // WDTH    ↔ SLP
+      { num: numericTunables[2], enum: enumTunables[2] }, // SREJ    ↔ MASK
+      { num: numericTunables[3], enum: enumTunables[3] }  // TUN_CAP ↔ MIN
+    ];
+
     // Stepper for numeric tunables — clamps and sends in one click
     function step(key, dir, min, max) {
       const cur = state.tunables?.[key];
@@ -448,7 +452,7 @@ const LightningCard = {
 
     return {
       expanded, sec, state, bypassRemain, lastSeen, as3935EventIcon, capeColor, summary, action,
-      numericTunables, enumTunables, step,
+      numericTunables, enumTunables, tunableRows, step,
       ackLabel, calibCountdown,
       rebooting, rebootElapsed,
       doRepublish, doCalibrate, doQueryBattery, doReboot, doFactoryReset, testInject
