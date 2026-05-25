@@ -138,24 +138,29 @@ const LightningCard = {
           </div>
           <div class="section__body" :class="{ 'is-collapsed': !sec.tunables }">
 
-            <!-- 4 rows: numeric (left) + paired enum (right) -->
-            <div v-for="(row, i) in tunableRows" :key="i" class="tun-row">
-              <span class="tun-lbl" :title="row.num.tip">{{ row.num.lbl }}</span>
-              <span class="tun-range">{{ row.num.min }}–{{ row.num.max }}</span>
-              <button class="tun-step" :disabled="(state.tunables?.[row.num.key] ?? row.num.min) <= row.num.min"
-                      @click="step(row.num.key, -1, row.num.min, row.num.max)">−</button>
-              <span class="tun-val">{{ state.tunables?.[row.num.key] ?? '—' }}</span>
-              <button class="tun-step" :disabled="(state.tunables?.[row.num.key] ?? row.num.max) >= row.num.max"
-                      @click="step(row.num.key, +1, row.num.min, row.num.max)">+</button>
+            <!-- 4 rows: numeric (left) + paired enum (right). Click a label to reveal help. -->
+            <div v-for="(row, i) in tunableRows" :key="i">
+              <div class="tun-row">
+                <span class="tun-lbl" @click="toggleHelp('num-'+i)">{{ row.num.lbl }} <span class="help-mark">?</span></span>
+                <span class="tun-range">{{ row.num.min }}–{{ row.num.max }}</span>
+                <button class="tun-step" :disabled="(state.tunables?.[row.num.key] ?? row.num.min) <= row.num.min"
+                        @click="step(row.num.key, -1, row.num.min, row.num.max)">−</button>
+                <span class="tun-val">{{ state.tunables?.[row.num.key] ?? '—' }}</span>
+                <button class="tun-step" :disabled="(state.tunables?.[row.num.key] ?? row.num.max) >= row.num.max"
+                        @click="step(row.num.key, +1, row.num.min, row.num.max)">+</button>
 
-              <!-- Paired enum on the right -->
-              <span class="tun-enum-lbl" :title="row.enum.tip">{{ row.enum.lbl }}</span>
-              <button v-for="opt in row.enum.options" :key="String(opt.v)"
-                      class="pill"
-                      :class="{ 'pill--active': String(state.tunables?.[row.enum.key]) === String(opt.v) }"
-                      @click="action('setTunable', opt.v, row.enum.key)">
-                {{ opt.label }}
-              </button>
+                <!-- Paired enum on the right -->
+                <span class="tun-enum-lbl" @click="toggleHelp('enum-'+i)">{{ row.enum.lbl }} <span class="help-mark">?</span></span>
+                <button v-for="opt in row.enum.options" :key="String(opt.v)"
+                        class="pill"
+                        :class="{ 'pill--active': String(state.tunables?.[row.enum.key]) === String(opt.v) }"
+                        @click="action('setTunable', opt.v, row.enum.key)">
+                  {{ opt.label }}
+                </button>
+              </div>
+              <!-- Help text rows (revealed on label click) -->
+              <div v-if="activeHelp === 'num-'+i"  class="tun-help">{{ row.num.tip }}</div>
+              <div v-if="activeHelp === 'enum-'+i" class="tun-help">{{ row.enum.tip }}</div>
             </div>
 
             <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:4px;">
@@ -321,6 +326,12 @@ const LightningCard = {
       ]}
     ];
 
+    // Click-to-reveal help text per label (toggles which row's help is shown)
+    const activeHelp = ref(null);
+    function toggleHelp(id) {
+      activeHelp.value = activeHelp.value === id ? null : id;
+    }
+
     // Pair each numeric with its enum so they share a row
     const tunableRows = [
       { num: numericTunables[0], enum: enumTunables[0] }, // NF      ↔ AFE
@@ -453,6 +464,7 @@ const LightningCard = {
     return {
       expanded, sec, state, bypassRemain, lastSeen, as3935EventIcon, capeColor, summary, action,
       numericTunables, enumTunables, tunableRows, step,
+      activeHelp, toggleHelp,
       ackLabel, calibCountdown,
       rebooting, rebootElapsed,
       doRepublish, doCalibrate, doQueryBattery, doReboot, doFactoryReset, testInject
