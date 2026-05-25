@@ -54,15 +54,22 @@ html, body {
   padding: 4px;
 }
 
-/* === Top-level responsive grid for cards === */
-/* auto-fit + minmax = cards naturally reflow into 1/2/3/4 columns based on
-   available width. No breakpoints to maintain. Phone gets 1 col, iPad 2,
-   laptop 3, big monitor 4+. */
+/* === Top-level masonry layout for cards === */
+/* CSS columns = cards flow into the shortest column automatically (Pinterest-style).
+   Avoids the "Lightning is 2x taller, other columns have empty space" problem that
+   CSS Grid causes when row heights are equal but cards aren't. Column count derived
+   from `column-width` so layout is still responsive: phone 1 col, iPad 2, etc. */
 .dash-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 6px;
-  align-items: start;
+  column-width: 250px;
+  column-gap: 6px;
+}
+.dash-grid > .card {
+  display: inline-block;     /* required for column-fill to work nicely */
+  width: 100%;
+  margin-bottom: 6px;
+  break-inside: avoid;       /* never split a card across columns */
+  -webkit-column-break-inside: avoid;
+  page-break-inside: avoid;
 }
 
 /* === Card base — collapsible, dense === */
