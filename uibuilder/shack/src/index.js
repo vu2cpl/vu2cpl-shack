@@ -140,7 +140,7 @@ const LightningCard = {
 
             <!-- 4 rows: numeric (left) + paired enum (right) -->
             <div v-for="(row, i) in tunableRows" :key="i" class="tun-row">
-              <span class="tun-lbl">{{ row.num.lbl }}</span>
+              <span class="tun-lbl" :title="row.num.tip">{{ row.num.lbl }}</span>
               <span class="tun-range">{{ row.num.min }}–{{ row.num.max }}</span>
               <button class="tun-step" :disabled="(state.tunables?.[row.num.key] ?? row.num.min) <= row.num.min"
                       @click="step(row.num.key, -1, row.num.min, row.num.max)">−</button>
@@ -149,7 +149,7 @@ const LightningCard = {
                       @click="step(row.num.key, +1, row.num.min, row.num.max)">+</button>
 
               <!-- Paired enum on the right -->
-              <span class="tun-enum-lbl">{{ row.enum.lbl }}</span>
+              <span class="tun-enum-lbl" :title="row.enum.tip">{{ row.enum.lbl }}</span>
               <button v-for="opt in row.enum.options" :key="String(opt.v)"
                       class="pill"
                       :class="{ 'pill--active': String(state.tunables?.[row.enum.key]) === String(opt.v) }"
@@ -292,28 +292,28 @@ const LightningCard = {
 
     // List of numeric tunables (rendered as −/+ steppers)
     const numericTunables = [
-      { key: 'nf',      lbl: 'NF',      min: 0, max:  7 },
-      { key: 'wdth',    lbl: 'WDTH',    min: 0, max: 15 },
-      { key: 'srej',    lbl: 'SREJ',    min: 0, max: 15 },
-      { key: 'tun_cap', lbl: 'TUN_CAP', min: 0, max: 15 }
+      { key: 'nf',      lbl: 'Noise',     tip: 'Noise Floor (NF) — threshold below which the chip ignores noise. Range 0–7.', min: 0, max:  7 },
+      { key: 'wdth',    lbl: 'Watchdog',  tip: 'Watchdog Threshold (WDTH) — filters out very brief spikes. Range 0–15.',     min: 0, max: 15 },
+      { key: 'srej',    lbl: 'Spike Rej', tip: 'Spike Rejection (SREJ) — pattern-match strictness vs lightning waveform. Range 0–15.', min: 0, max: 15 },
+      { key: 'tun_cap', lbl: 'Tune Cap',  tip: 'Antenna LC tuning capacitor (TUN_CAP) — adjusts antenna resonance toward 500 kHz. Range 0–15.', min: 0, max: 15 }
     ];
 
     // List of enum-ish tunables (rendered as pill toggle groups, inline)
     const enumTunables = [
-      { key: 'afe_gb', lbl: 'AFE', options: [
+      { key: 'afe_gb', lbl: 'Gain', tip: 'Analog Front-End gain (AFE_GB). Indoor = high gain (weak signals), Outdoor = low gain (strong signals).', options: [
         { v: 'indoor',  label: 'IN'  },
         { v: 'outdoor', label: 'OUT' }
       ]},
-      { key: 'modem_sleep', lbl: 'SLP', options: [
+      { key: 'modem_sleep', lbl: 'Sleep', tip: 'WiFi modem sleep mode. None = always-on (most responsive, highest power). Min/Max = power saving.', options: [
         { v: 'none', label: 'NONE' },
         { v: 'min',  label: 'MIN'  },
         { v: 'max',  label: 'MAX'  }
       ]},
-      { key: 'mask_dist', lbl: 'MASK', options: [
+      { key: 'mask_dist', lbl: 'Mask Dist', tip: 'Mask disturbers — when ON, the chip ignores non-lightning events that look similar (reduces false alerts).', options: [
         { v: false, label: 'OFF' },
         { v: true,  label: 'ON'  }
       ]},
-      { key: 'min_num_lightning', lbl: 'MIN', options: [
+      { key: 'min_num_lightning', lbl: 'Min Strikes', tip: 'Min lightning strikes before triggering. 1 = report any single strike. Higher = more reliable but slower.', options: [
         { v: 1,  label: '1'  },
         { v: 5,  label: '5'  },
         { v: 9,  label: '9'  },

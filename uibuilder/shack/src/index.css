@@ -264,10 +264,10 @@ html, body {
 .tun-lbl {
   color: var(--muted);
   font-family: var(--font-mono);
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
   font-size: var(--fs-xs);
-  flex: 0 0 70px;
+  flex: 0 0 80px;
+  cursor: help;        /* hover to see :title tooltip */
 }
 .tun-range {
   color: var(--muted);
@@ -278,12 +278,12 @@ html, body {
 .tun-enum-lbl {
   color: var(--muted);
   font-size: var(--fs-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
   font-weight: 700;
   margin-left: auto;       /* pushes everything from here to the right edge */
   margin-right: 4px;
   flex-shrink: 0;
+  cursor: help;
 }
 
 /* Stepper buttons */
