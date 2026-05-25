@@ -666,6 +666,24 @@ html, body {
 }
 .rbn-skew strong { font-family: var(--font-mono); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
 
+/* Inline rotor power pill (collapsed summary) */
+.rotor-pwr-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: filter 0.12s, transform 0.08s;
+}
+.rotor-pwr-pill:hover  { filter: brightness(1.2); }
+.rotor-pwr-pill:active { transform: scale(0.94); }
+.rotor-pwr-pill--on    { color: var(--green); background: var(--green-bg); border: 1px solid var(--green-bd); }
+.rotor-pwr-pill--off   { color: var(--red);   background: var(--red-bg);   border: 1px solid var(--red-bd); }
+
 /* === Rotor: click-anywhere compass === */
 .rotor-compass {
   width: 100%;

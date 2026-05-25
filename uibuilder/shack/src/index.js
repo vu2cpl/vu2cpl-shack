@@ -956,8 +956,13 @@ const RotorCard = {
           <span :style="{color:'var(--accent)', fontWeight:600}">{{ headingFmt(state.heading) }} {{ cardinal(state.heading) }}</span>
           <span v-if="state.target != null && state.target !== state.heading">·</span>
           <span v-if="state.target != null && state.target !== state.heading" :style="{color:'var(--amber)', fontWeight:600}">→ {{ headingFmt(state.target) }}</span>
-          <span>·</span>
-          <span :style="{color: state.power ? 'var(--green)' : 'var(--muted)', fontWeight:600}">{{ state.power ? 'ON' : 'OFF' }}</span>
+          <!-- Clickable power pill — does NOT bubble up to toggle collapse -->
+          <button class="rotor-pwr-pill"
+                  :class="state.power ? 'rotor-pwr-pill--on' : 'rotor-pwr-pill--off'"
+                  @click.stop="togglePower()"
+                  :title="state.power ? 'Click to power OFF' : 'Click to power ON'">
+            ● {{ state.power ? 'ON' : 'OFF' }}
+          </button>
         </span>
       </div>
 
