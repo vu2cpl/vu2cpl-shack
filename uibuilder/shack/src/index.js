@@ -25,7 +25,15 @@ const LightningCard = {
         <span class="chev">{{ expanded ? '▼' : '▶' }}</span>
         <span>Lightning Protection</span>
         <span v-if="!expanded" class="summary">
-          {{ summary }}
+          <span v-if="state.bypassActive" :style="{color:'var(--amber-fg)'}">🔕 BYPASS</span>
+          <span v-if="state.bypassActive">·</span>
+          <span :style="{color: state.antennaOn ? 'var(--green)' : 'var(--red)', fontWeight:700}">
+            {{ state.antennaOn ? 'ANT ON' : 'ANT OFF' }}
+          </span>
+          <template v-if="state.closestKm != null">
+            <span>·</span>
+            <span :style="{color: closestKmColor, fontWeight:700}">{{ state.closestKm }}km</span>
+          </template>
         </span>
       </div>
 
@@ -272,12 +280,13 @@ const LightningCard = {
       if (state.cape >= 800)  return 'var(--amber)';
       return 'var(--green)';
     });
-    const summary = computed(() => {
-      const parts = [];
-      if (state.bypassActive) parts.push('🔕 BYPASS');
-      parts.push((state.antennaOn ? 'ANT ON' : 'ANT OFF'));
-      if (state.closestKm != null) parts.push(state.closestKm + 'km');
-      return parts.join(' · ');
+    // Colour of the "closest strike" pill in the collapsed summary
+    const closestKmColor = computed(() => {
+      const km = state.closestKm;
+      if (km == null) return 'var(--muted)';
+      if (km < 10)  return 'var(--red)';     // close — would auto-disconnect
+      if (km < 25)  return 'var(--amber)';   // medium
+      return 'var(--green)';                 // far — informational
     });
 
     // Receive messages from Node-RED via uibuilder
@@ -462,7 +471,7 @@ const LightningCard = {
     }
 
     return {
-      expanded, sec, state, bypassRemain, lastSeen, as3935EventIcon, capeColor, summary, action,
+      expanded, sec, state, bypassRemain, lastSeen, as3935EventIcon, capeColor, closestKmColor, action,
       numericTunables, enumTunables, tunableRows, step,
       activeHelp, toggleHelp,
       ackLabel, calibCountdown,
