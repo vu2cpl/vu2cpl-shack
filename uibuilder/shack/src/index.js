@@ -349,6 +349,12 @@ const LightningCard = {
         }).catch(e => console.warn(e));
       }
       // --- uibuilder (AS3935 maintenance + tests + tunables) ---
+      // Optimistic update for setTunable — show the new value instantly so the
+      // user gets immediate feedback. The real bridge status (1–3s later)
+      // overwrites this with the confirmed value.
+      if (type === 'setTunable' && key && state.tunables) {
+        state.tunables[key] = value;
+      }
       uibuilder.send({ topic: 'lightning/cmd', payload: { type, value, key } });
     }
 

@@ -276,7 +276,14 @@ html, body {
   user-select: none;
 }
 .tun-step:hover:not(:disabled) { background: var(--surface-2); border-color: var(--accent); }
+.tun-step:active:not(:disabled) {
+  background: var(--green-bg);
+  border-color: var(--green-bd);
+  color: var(--green);
+  transform: scale(0.92);
+}
 .tun-step:disabled { opacity: 0.3; cursor: not-allowed; }
+
 
 .tun-val {
   flex: 1;
@@ -285,6 +292,7 @@ html, body {
   font-weight: 700;
   font-size: var(--fs-md);
   font-family: var(--font-mono);
+  transition: color 0.15s, transform 0.15s;
 }
 
 /* Pill toggle groups */
@@ -311,11 +319,13 @@ html, body {
   min-height: 26px;
 }
 .pill:hover { border-color: var(--accent); color: var(--text); }
+.pill:active { transform: scale(0.93); }
 .pill--active {
   background: var(--green-bg);
   border-color: var(--green-bd);
   color: var(--green);
 }
+.pill { transition: transform 0.1s, background 0.15s, color 0.15s, border-color 0.15s; }
 
 /* === Header bar with callsign + clocks === */
 .topbar {
