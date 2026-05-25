@@ -481,12 +481,19 @@ const LightningCard = {
   }
 };
 
-// === Top-bar with callsign + clocks ===
+// === Top-bar with callsign + clocks + inline connection pill ===
 const TopBar = {
+  props: ['connected'],
   template: `
     <div class="topbar">
-      <div>
-        <div class="callsign">VU2CPL</div>
+      <div class="topbar__left">
+        <div class="callsign-row">
+          <span class="callsign">VU2CPL</span>
+          <span class="conn-pill" :class="{ 'is-connected': connected }">
+            <span class="dot"></span>
+            <span>{{ connected ? 'LIVE' : 'OFFLINE' }}</span>
+          </span>
+        </div>
         <div class="sub">MK83TE · Bengaluru · Shack Control</div>
       </div>
       <div class="clocks">
@@ -518,11 +525,7 @@ const TopBar = {
 const App = {
   components: { TopBar, LightningCard },
   template: `
-    <div class="conn-pill" :class="{ 'is-connected': connected }">
-      <span class="dot"></span>
-      <span>{{ connected ? 'LIVE' : 'OFFLINE' }}</span>
-    </div>
-    <TopBar />
+    <TopBar :connected="connected" />
     <div class="dash-grid">
       <LightningCard />
       <!-- More cards go here as we migrate them -->
