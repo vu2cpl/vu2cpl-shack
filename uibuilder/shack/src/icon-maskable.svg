@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <!-- Full-bleed background (maskable icons are cropped by the OS, so safe area is the centered 80%) -->
+  <rect width="192" height="192" fill="#0d1117"/>
+
+  <!-- Signal arcs (centered in safe area ~96 ±60) -->
+  <g fill="none" stroke="#3fb950" stroke-width="3" stroke-linecap="round" opacity="0.85" transform="translate(0,8)">
+    <path d="M 68 78 Q 96 58 124 78"/>
+    <path d="M 58 88 Q 96 48 134 88"/>
+    <path d="M 48 98 Q 96 38 144 98"/>
+  </g>
+
+  <!-- Antenna mast -->
+  <line x1="96" y1="66" x2="96" y2="114" stroke="#c9d1d9" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="96" cy="114" r="4" fill="#1f6feb"/>
+
+  <!-- Callsign -->
+  <text x="96" y="150" text-anchor="middle"
+        font-family="-apple-system, 'SF Pro Display', system-ui, sans-serif"
+        font-size="32" font-weight="800" fill="#c9d1d9"
+        letter-spacing="0.5">VU2CPL</text>
+</svg>

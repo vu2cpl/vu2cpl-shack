@@ -86,9 +86,19 @@ UI lives on the main Shack tab as the *Lightning Protection* group
 
 Reads the SPE Expert 1.5 KFA over FTDI serial at 250 ms intervals
 (76-byte fixed frame, checksum + wraparound validation). Power-on
-requires a one-shot DTR/RTS toggle from `power_spe_on.py`. Output-power
-bar auto-scales between 500 W / 1000 W / 1500 W full scale based on
-the amp's selected level (L / M / H).
+requires a one-shot DTR/RTS toggle from `power_spe_on.py`.
+
+**Output-power bar — auto-ranging.** The bar's full-scale value is
+picked from a ladder (5 / 10 / 25 / 50 / 100 / 250 / 500 / 1k / 1.5k
+/ 2k / 5k W) — the smallest rung that still contains the current
+reading. So a 3 W tune carrier fills ~60 % of a 5 W bar, a 700 W blast
+fills ~70 % of a 1 k W bar, and a clean 1.5 kW key-down sits on the
+1.5 k W rung. Matches the legacy `/ui` SPE Panel behaviour with a
+finer low-end ladder (so low-power tuning is actually readable). The
+amp's L / M / H power-level setting is still shown separately as a
+tile (`PWR LVL` / colour-coded amber/red for Middle/Maximum), but
+does not drive the bar scale — auto-ranging tracks the *actual*
+output regardless of the amp's selected level cap.
 
 ### FlexRadio
 

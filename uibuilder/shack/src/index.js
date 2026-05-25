@@ -1428,14 +1428,24 @@ const SPECard = {
           </div>
         </div>
 
-        <!-- Output power bar -->
+        <!-- Output power bar (auto-ranges through 5/10/25/50/100/250/500/1k/1.5k/2k/5k W
+             scale bands based on detected power — picks the smallest band that fits). -->
         <div class="solar-sec-label">Output Power</div>
         <div class="band-row" style="grid-template-columns:auto 1fr auto;">
           <span class="band-row__name" style="width:auto">{{ Math.round(state.pwr || 0) }} W</span>
-          <div class="band-row__bar" style="height:10px">
+          <div class="band-row__bar" style="height:10px;position:relative;">
             <div :style="{height:'100%', width: pwrPct + '%', background: pwrBarColor, transition:'width 0.3s'}"></div>
+            <!-- 25/50/75% tick marks -->
+            <div style="position:absolute;inset:0;pointer-events:none;">
+              <span style="position:absolute;top:0;bottom:0;left:25%;width:1px;background:var(--border);opacity:0.5;"></span>
+              <span style="position:absolute;top:0;bottom:0;left:50%;width:1px;background:var(--border);opacity:0.7;"></span>
+              <span style="position:absolute;top:0;bottom:0;left:75%;width:1px;background:var(--border);opacity:0.5;"></span>
+            </div>
           </div>
-          <span style="font-size:var(--fs-xs);color:var(--text-dim);">/ {{ state.pwrMax || 1500 }} W</span>
+          <span title="Auto-ranging scale: 5 / 10 / 25 / 50 / 100 / 250 / 500 / 1k / 1.5k / 2k / 5k W full scale — bar picks the smallest band that holds the current reading."
+                :style="{fontSize:'var(--fs-xs)', color:'var(--text-dim)', fontWeight:500, whiteSpace:'nowrap'}">
+            / {{ pwrBandLabel }}
+          </span>
         </div>
 
         <!-- SWR tiles -->
@@ -1552,9 +1562,32 @@ const SPECard = {
     const powerOn = computed(() => !!state.usb);
     const isTransmitting = computed(() => state.rxtx === 'TRANSMIT');
 
+    // Auto-ranging power bar — picks the smallest ladder rung that
+    // contains the current reading, so a 3W tune carrier shows as
+    // ~60% of a 5W bar and a 1200W blast shows as 80% of a 1500W bar.
+    // Matches the legacy /ui SPE Panel behaviour (with a finer ladder).
+    const PWR_LADDER = [5, 10, 25, 50, 100, 250, 500, 1000, 1500, 2000, 5000];
+    const pwrBandMax = computed(() => {
+      const p = parseFloat(state.pwr) || 0;
+      for (let i = 0; i < PWR_LADDER.length; i++) {
+        if (p <= PWR_LADDER[i]) return PWR_LADDER[i];
+      }
+      return PWR_LADDER[PWR_LADDER.length - 1];
+    });
     const pwrPct = computed(() => {
-      if (!state.pwr || !state.pwrMax) return 0;
-      return Math.min(100, (state.pwr / state.pwrMax) * 100);
+      const p = parseFloat(state.pwr) || 0;
+      const max = pwrBandMax.value;
+      if (!max) return 0;
+      return Math.min(100, Math.max(0, (p / max) * 100));
+    });
+    // Pretty-print the current band ceiling: 5W, 100W, 1k W, 1.5k W, 5k W…
+    const pwrBandLabel = computed(() => {
+      const m = pwrBandMax.value;
+      if (m >= 1000) {
+        const k = m / 1000;
+        return (k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)) + 'k W';
+      }
+      return m + ' W';
     });
     const pwrBarColor = computed(() => {
       const p = pwrPct.value;
@@ -1605,7 +1638,7 @@ const SPECard = {
       });
     });
 
-    return { expanded, sec, state, powerOn, isTransmitting, pwrPct, pwrBarColor, pwrLvlColor, swrColor, tempColor, togglePower, sendCmd, confirmTune };
+    return { expanded, sec, state, powerOn, isTransmitting, pwrPct, pwrBandMax, pwrBandLabel, pwrBarColor, pwrLvlColor, swrColor, tempColor, togglePower, sendCmd, confirmTune };
   }
 };
 
