@@ -13,8 +13,8 @@
 
   <!-- uibuilder library (must come BEFORE Vue + our app) -->
   <script defer src="../uibuilder/uibuilder.iife.min.js"></script>
-  <!-- Vue 3 from CDN (global build, no build step) -->
-  <script defer src="https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js"></script>
+  <!-- Vue 3 (self-hosted to remove external CDN dependency) -->
+  <script defer src="./vue.global.prod.js"></script>
   <!-- Our app (loaded after uibuilder + Vue thanks to `defer`) -->
   <script defer src="./index.js"></script>
 </head>
