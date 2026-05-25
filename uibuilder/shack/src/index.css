@@ -248,27 +248,16 @@ html, body {
   box-shadow: 0 0 3px currentColor;
 }
 
-/* === Tunables: tight row layout, optional 2-col grid via container query === */
-.tun-numeric-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-/* If the card body is wide enough, show 2 numeric tunables per row */
-@container (min-width: 280px) {
-  .tun-numeric-list {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 4px;
-  }
-}
+/* === Tunables: row layout with steppers + pills === */
 .tun-row {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 4px;
+  gap: 6px;
+  padding: 3px 4px;
   font-size: var(--fs-sm);
+  border-bottom: 1px dashed var(--border-2);
 }
+.tun-row:last-child { border-bottom: none; }
 
 .tun-lbl {
   color: var(--muted);
@@ -276,18 +265,18 @@ html, body {
   text-transform: uppercase;
   letter-spacing: 0.3px;
   font-size: var(--fs-xs);
-  flex: 1 1 auto;       /* take whatever space remains so the stepper cluster sits right */
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  flex: 0 0 80px;
+}
+.tun-range {
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  flex: 0 0 40px;
 }
 
 /* Stepper buttons */
 .tun-step {
-  width: 26px;
-  height: 26px;
-  flex: 0 0 26px;
+  width: 30px;
+  height: 30px;
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--accent);
@@ -308,7 +297,7 @@ html, body {
 
 
 .tun-val {
-  flex: 0 0 28px;       /* fixed narrow — was flex:1 (huge space hog) */
+  flex: 1;
   text-align: center;
   color: var(--accent);
   font-weight: 700;

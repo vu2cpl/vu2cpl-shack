@@ -138,17 +138,15 @@ const LightningCard = {
           </div>
           <div class="section__body" :class="{ 'is-collapsed': !sec.tunables }">
 
-            <!-- Numerics with − / + steppers — 2-col grid at wider cards via container query -->
-            <div class="tun-numeric-list">
-              <div v-for="t in numericTunables" :key="t.key" class="tun-row"
-                   :title="t.lbl + ' (range ' + t.min + '–' + t.max + ')'">
-                <span class="tun-lbl">{{ t.lbl }}</span>
-                <button class="tun-step" :disabled="(state.tunables?.[t.key] ?? t.min) <= t.min"
-                        @click="step(t.key, -1, t.min, t.max)">−</button>
-                <span class="tun-val">{{ state.tunables?.[t.key] ?? '—' }}</span>
-                <button class="tun-step" :disabled="(state.tunables?.[t.key] ?? t.max) >= t.max"
-                        @click="step(t.key, +1, t.min, t.max)">+</button>
-              </div>
+            <!-- Numerics with − / + steppers -->
+            <div v-for="t in numericTunables" :key="t.key" class="tun-row">
+              <span class="tun-lbl">{{ t.lbl }}</span>
+              <span class="tun-range">{{ t.min }}–{{ t.max }}</span>
+              <button class="tun-step" :disabled="(state.tunables?.[t.key] ?? t.min) <= t.min"
+                      @click="step(t.key, -1, t.min, t.max)">−</button>
+              <span class="tun-val">{{ state.tunables?.[t.key] ?? '—' }}</span>
+              <button class="tun-step" :disabled="(state.tunables?.[t.key] ?? t.max) >= t.max"
+                      @click="step(t.key, +1, t.min, t.max)">+</button>
             </div>
 
             <!-- Enum pills: all four in one wrap-flow inline row -->
