@@ -945,6 +945,147 @@ const SolarCard = {
   }
 };
 
+// === LP-700 Power/SWR meter ===
+const LP700Card = {
+  template: `
+    <div class="card">
+      <div class="card__header" @click="expanded = !expanded">
+        <span class="chev">{{ expanded ? '▼' : '▶' }}</span>
+        <span>LP-700 Power Meter</span>
+        <span v-if="!expanded" class="summary">
+          <span :style="{color:'var(--green)', fontWeight:600}">{{ Math.round(state.avg || 0) }}W</span>
+          <span>·</span>
+          <span :style="{color: swrColor(state.swr), fontWeight:600}">SWR {{ state.swr != null ? state.swr.toFixed(2) : '—' }}</span>
+        </span>
+      </div>
+
+      <div class="card__body" :class="{ 'is-collapsed': !expanded }">
+
+        <!-- Scale indicator -->
+        <div class="statusline">
+          <span>Full Scale</span>
+          <strong>{{ scaleW }}<span style="color:var(--text-dim);font-weight:400;margin-left:2px;font-family:var(--font-sans);"> W</span></strong>
+        </div>
+
+        <!-- Power + SWR bars -->
+        <div class="lp-meters">
+          <!-- Avg power -->
+          <div class="lp-meter">
+            <div class="lp-meter__head">
+              <span class="lp-meter__lbl">AVG</span>
+              <span class="lp-meter__val" :style="{color:'var(--green)'}">{{ Math.round(state.avg || 0) }}<span class="tile__sub-unit">W</span></span>
+            </div>
+            <div class="lp-meter__track">
+              <div class="lp-meter__fill" :style="{width: pctOf(state.avg, scaleW) + '%', background: 'var(--green)'}"></div>
+            </div>
+          </div>
+          <!-- Peak power -->
+          <div class="lp-meter">
+            <div class="lp-meter__head">
+              <span class="lp-meter__lbl">PEAK</span>
+              <span class="lp-meter__val" :style="{color:'var(--amber)'}">{{ Math.round(state.peak || 0) }}<span class="tile__sub-unit">W</span></span>
+            </div>
+            <div class="lp-meter__track">
+              <div class="lp-meter__fill" :style="{width: pctOf(state.peak, scaleW) + '%', background: 'var(--amber)'}"></div>
+            </div>
+          </div>
+          <!-- SWR -->
+          <div class="lp-meter">
+            <div class="lp-meter__head">
+              <span class="lp-meter__lbl">SWR</span>
+              <span class="lp-meter__val" :style="{color: swrColor(state.swr)}">{{ state.swr != null ? state.swr.toFixed(2) : '—' }}</span>
+            </div>
+            <div class="lp-meter__track">
+              <div class="lp-meter__fill" :style="{width: swrPct + '%', background: swrColor(state.swr)}"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Channel + Range cycle buttons -->
+        <div class="lp-controls">
+          <div class="lp-control">
+            <div class="lp-control__lbl">Channel</div>
+            <button class="btn btn--blue lp-control__btn" @click="cycleChannel()">
+              <span class="lp-control__val">{{ channelLabel }}</span>
+              <span class="lp-control__hint">▸ cycle</span>
+            </button>
+          </div>
+          <div class="lp-control">
+            <div class="lp-control__lbl">Range</div>
+            <button class="btn btn--blue lp-control__btn" @click="cycleRange()">
+              <span class="lp-control__val">{{ rangeLabel }}</span>
+              <span class="lp-control__hint">▸ cycle</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `,
+  setup() {
+    const expanded = ref(true);
+    const state = reactive({
+      avg:null, peak:null, swr:null, channel:null, range:null, scale:null
+    });
+
+    const CH_LABELS  = ['Auto','CH 1','CH 2','CH 3','CH 4'];
+    const RNG_LABELS = ['5W','10W','25W','50W','100W','250W','500W','1kW','2.5kW','5kW','10kW','Auto'];
+
+    const channelLabel = computed(() => {
+      const c = state.channel;
+      if (c == null) return '—';
+      return CH_LABELS[c] != null ? CH_LABELS[c] : ('CH ' + c);
+    });
+    const rangeLabel = computed(() => {
+      const r = state.range;
+      if (r == null) return '—';
+      return RNG_LABELS[r] != null ? RNG_LABELS[r] : String(r);
+    });
+
+    // Scale: bar full-scale watts based on currently active range / scale
+    const scaleW = computed(() => {
+      const SCALE_STEPS = [5, 25, 50, 100, 500, 1000, 1500, 2000, 5000];
+      const target = Math.max(state.avg || 0, state.peak || 0);
+      for (const s of SCALE_STEPS) {
+        if (target <= s) return s;
+      }
+      return SCALE_STEPS[SCALE_STEPS.length - 1];
+    });
+
+    function pctOf(v, max) {
+      if (v == null || max == null || max === 0) return 0;
+      return Math.min(100, (v / max) * 100);
+    }
+    const swrPct = computed(() => {
+      const s = state.swr;
+      if (s == null) return 0;
+      return Math.min(100, ((s - 1) / 2) * 100);
+    });
+    function swrColor(s) {
+      if (s == null) return 'var(--muted)';
+      if (s >= 2.0) return 'var(--red)';
+      if (s >= 1.5) return 'var(--amber)';
+      return 'var(--green)';
+    }
+
+    function cycleChannel() {
+      uibuilder.send({ topic: 'lp700/cmd', payload: { type: 'channelStep' } });
+    }
+    function cycleRange() {
+      uibuilder.send({ topic: 'lp700/cmd', payload: { type: 'rangeStep' } });
+    }
+
+    onMounted(() => {
+      uibuilder.onTopic('lp700', (msg) => {
+        if (msg && msg.payload && typeof msg.payload === 'object') {
+          Object.assign(state, msg.payload);
+        }
+      });
+    });
+
+    return { expanded, state, channelLabel, rangeLabel, scaleW, pctOf, swrPct, swrColor, cycleChannel, cycleRange };
+  }
+};
+
 // === SPE Amplifier card ===
 const SPECard = {
   template: `
@@ -1732,13 +1873,14 @@ const TopBar = {
 
 // === Root app ===
 const App = {
-  components: { TopBar, LightningCard, DXCCCard, NetworkCard, RPiCard, PowerCard, SolarCard, FlexCard, SPECard },
+  components: { TopBar, LightningCard, DXCCCard, NetworkCard, RPiCard, PowerCard, SolarCard, FlexCard, SPECard, LP700Card },
   template: `
     <TopBar :connected="connected" />
     <div class="dash-grid">
       <LightningCard />
       <FlexCard />
       <SPECard />
+      <LP700Card />
       <PowerCard />
       <SolarCard />
       <DXCCCard />

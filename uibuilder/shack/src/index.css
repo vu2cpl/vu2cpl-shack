@@ -551,6 +551,69 @@ html, body {
 .dxcc-alert--amber { border-left: 3px solid var(--amber); }
 .dxcc-alert--ghost { border-left: 3px solid var(--border);}
 
+/* === LP-700 meter bars === */
+.lp-meters { display: flex; flex-direction: column; gap: var(--sp-2); }
+.lp-meter {
+  background: var(--bg);
+  border: 1px solid var(--border-2);
+  border-radius: 6px;
+  padding: var(--sp-2);
+}
+.lp-meter__head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: var(--sp-1); }
+.lp-meter__lbl {
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+.lp-meter__val {
+  font-size: var(--fs-md);
+  font-weight: 700;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.lp-meter__track {
+  background: var(--border-2);
+  border-radius: 4px;
+  height: 8px;
+  overflow: hidden;
+}
+.lp-meter__fill { height: 100%; transition: width 0.3s; border-radius: 4px; }
+
+.lp-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-2);
+}
+.lp-control { display: flex; flex-direction: column; gap: var(--sp-1); }
+.lp-control__lbl {
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-weight: 500;
+}
+.lp-control__btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--sp-2);
+  min-height: 48px;
+}
+.lp-control__val {
+  font-size: var(--fs-md);
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+.lp-control__hint {
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  font-weight: 400;
+  font-family: var(--font-sans);
+}
+
 /* === FlexRadio slice table === */
 .slice-tbl {
   width: 100%;

@@ -10015,7 +10015,8 @@
         "vue_dxcc_cmd_router_01",
         "vue_rpi_cmd_router_01",
         "vue_pwr_cmd_router_01",
-        "vue_spe_cmd_router_01"
+        "vue_spe_cmd_router_01",
+        "vue_lp_cmd_router_01"
       ],
       []
     ]
@@ -10400,6 +10401,61 @@
     "wires": [
       [
         "ws_btn_router"
+      ]
+    ]
+  },
+  {
+    "id": "vue_lp_tick_01",
+    "type": "inject",
+    "z": "18fb42443172f33c",
+    "name": "Push LP-700 to Vue every 1s",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "1",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "2",
+    "topic": "",
+    "payload": "",
+    "payloadType": "str",
+    "x": 110,
+    "y": 800,
+    "wires": [
+      [
+        "vue_lp_builder_01"
+      ]
+    ]
+  },
+  {
+    "id": "vue_lp_builder_01",
+    "type": "function",
+    "z": "18fb42443172f33c",
+    "name": "Build LP-700 state for Vue",
+    "func": "// flow.lpState = { avg, peak, swr, channel, range, scale }\nvar s = flow.get('lpState') || {};\nreturn {\n    topic: 'lp700',\n    payload: {\n        avg:     s.avg     != null ? s.avg     : null,\n        peak:    s.peak    != null ? s.peak    : null,\n        swr:     s.swr     != null ? s.swr     : null,\n        channel: s.channel != null ? s.channel : null,\n        range:   s.range   != null ? s.range   : null,\n        scale:   s.scale   != null ? s.scale   : null\n    }\n};\n",
+    "outputs": 1,
+    "x": 360,
+    "y": 800,
+    "wires": [
+      [
+        "uib_shack_01"
+      ]
+    ]
+  },
+  {
+    "id": "vue_lp_cmd_router_01",
+    "type": "function",
+    "z": "18fb42443172f33c",
+    "name": "Route Vue LP-700 commands",
+    "func": "if (msg.topic && msg.topic !== 'lp700/cmd') return null;\nif (!msg.payload || !msg.payload.type) return null;\n// Convert to the topic LP Button Router expects: 'lp700_ch' or 'lp700_rng'\nif (msg.payload.type === 'channelStep') return { topic: 'lp700_ch' };\nif (msg.payload.type === 'rangeStep')   return { topic: 'lp700_rng' };\nreturn null;\n",
+    "outputs": 1,
+    "x": 360,
+    "y": 880,
+    "wires": [
+      [
+        "0feb87f388ee869b"
       ]
     ]
   }
