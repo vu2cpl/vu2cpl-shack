@@ -10393,7 +10393,7 @@
     "type": "function",
     "z": "spe_ws_tab_01",
     "name": "Route Vue SPE commands",
-    "func": "if (msg.topic && msg.topic !== 'spe/cmd') return null;\nif (!msg.payload || msg.payload.type !== 'spePower') return null;\nreturn { payload: msg.payload.value };  // 'ON_SPE' or 'OFF_SPE'\n",
+    "func": "if (msg.topic && msg.topic !== 'spe/cmd') return null;\nif (!msg.payload || !msg.payload.type) return null;\n// Vue sends { type: 'spePower' | 'speCmd', value: 'ON_SPE' | 'OFF_SPE' | 'MODE' | 'TUNE' | ... }\n// ws_btn_router accepts the same alphabetic command codes via msg.payload.\nif (msg.payload.type === 'spePower' || msg.payload.type === 'speCmd') {\n    return { payload: msg.payload.value };\n}\nreturn null;\n",
     "outputs": 1,
     "x": 360,
     "y": 280,

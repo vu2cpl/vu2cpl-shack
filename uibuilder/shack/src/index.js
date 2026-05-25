@@ -978,6 +978,13 @@ const SPECard = {
           </span>
         </div>
 
+        <!-- Primary controls: MODE / TUNE / PWRLVL -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;">
+          <button class="btn btn--blue"  :disabled="!powerOn" @click="sendCmd('MODE')">Mode</button>
+          <button class="btn btn--amber" :disabled="!powerOn" @click="confirmTune()">Tune</button>
+          <button class="btn btn--blue"  :disabled="!powerOn" @click="sendCmd('PWRLVL')">PWR Level</button>
+        </div>
+
         <!-- Top metrics: Mode / RX-TX / Band -->
         <div class="tiles">
           <div class="tile">
@@ -1064,11 +1071,66 @@ const SPECard = {
             <div class="tile__val" :style="{color: tempColor(state.tempLower)}">{{ state.tempLower != null ? Math.round(state.tempLower) : '—' }}<span class="tile__sub-unit">°C</span></div>
           </div>
         </div>
+
+        <!-- Collapsible: Operating -->
+        <div class="section">
+          <div class="section__header" @click="sec.operating = !sec.operating">
+            <span class="chev">{{ sec.operating ? '▼' : '▶' }}</span>
+            <span>Operating</span>
+          </div>
+          <div class="section__body" :class="{ 'is-collapsed': !sec.operating }">
+            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:4px;">
+              <button class="btn btn--ghost" :disabled="!powerOn" @click="sendCmd('INPUT')">Input</button>
+              <button class="btn btn--ghost" :disabled="!powerOn" @click="sendCmd('ANTENNA')">Antenna</button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:4px;">
+              <button class="btn btn--ghost" :disabled="!powerOn" @click="sendCmd('BAND_MINUS')">◀ Band</button>
+              <button class="btn btn--ghost" :disabled="!powerOn" @click="sendCmd('BAND_PLUS')">Band ▶</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Collapsible: ATU manual tune -->
+        <div class="section">
+          <div class="section__header" @click="sec.atu = !sec.atu">
+            <span class="chev">{{ sec.atu ? '▼' : '▶' }}</span>
+            <span>ATU Manual</span>
+          </div>
+          <div class="section__body" :class="{ 'is-collapsed': !sec.atu }">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+              <button class="btn btn--ghost" :disabled="!powerOn" @click="sendCmd('L_MINUS')">L −</button>
+              <button class="btn btn--ghost" :disabled="!powerOn" @click="sendCmd('L_PLUS')">L +</button>
+              <button class="btn btn--ghost" :disabled="!powerOn" @click="sendCmd('C_MINUS')">C −</button>
+              <button class="btn btn--ghost" :disabled="!powerOn" @click="sendCmd('C_PLUS')">C +</button>
+            </div>
+            <button class="btn btn--blue" :disabled="!powerOn" @click="sendCmd('SET')" style="margin-top:4px;">SET (save ATU)</button>
+          </div>
+        </div>
+
+        <!-- Collapsible: Display + navigation -->
+        <div class="section">
+          <div class="section__header" @click="sec.display = !sec.display">
+            <span class="chev">{{ sec.display ? '▼' : '▶' }}</span>
+            <span>Display</span>
+          </div>
+          <div class="section__body" :class="{ 'is-collapsed': !sec.display }">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;">
+              <button class="btn btn--ghost" :disabled="!powerOn" @click="sendCmd('BL_ON')">BL ON</button>
+              <button class="btn btn--ghost" :disabled="!powerOn" @click="sendCmd('BL_OFF')">BL OFF</button>
+              <button class="btn btn--ghost" :disabled="!powerOn" @click="sendCmd('DISPLAY')">Display</button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:4px;">
+              <button class="btn btn--ghost" :disabled="!powerOn" @click="sendCmd('LEFT')">◀</button>
+              <button class="btn btn--ghost" :disabled="!powerOn" @click="sendCmd('RIGHT')">▶</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   `,
   setup() {
     const expanded = ref(true);
+    const sec = reactive({ operating: false, atu: false, display: false });
     const state = reactive({
       model:null, mode:null, rxtx:null, band:null, input:null, txant:null,
       pwrlvl:null, pwr:0, pwrMax:1500, atuswr:null, antswr:null,
@@ -1116,6 +1178,13 @@ const SPECard = {
       if (!confirm(msg)) return;
       uibuilder.send({ topic: 'spe/cmd', payload: { type: 'spePower', value: next } });
     }
+    function sendCmd(cmd) {
+      uibuilder.send({ topic: 'spe/cmd', payload: { type: 'speCmd', value: cmd } });
+    }
+    function confirmTune() {
+      if (!confirm('Start ATU TUNE?\n\nThe amp will transmit a low-power tuning carrier for a few seconds.')) return;
+      sendCmd('TUNE');
+    }
 
     onMounted(() => {
       uibuilder.onTopic('spe', (msg) => {
@@ -1125,7 +1194,7 @@ const SPECard = {
       });
     });
 
-    return { expanded, state, powerOn, isTransmitting, pwrPct, pwrBarColor, pwrLvlColor, swrColor, tempColor, togglePower };
+    return { expanded, sec, state, powerOn, isTransmitting, pwrPct, pwrBarColor, pwrLvlColor, swrColor, tempColor, togglePower, sendCmd, confirmTune };
   }
 };
 
