@@ -970,6 +970,13 @@ const RotorCard = {
                @mousemove="onHover($event)"
                @mouseleave="hover.deg = null"
                @click="onClick($event)">
+            <!-- Arrowhead marker for the needle -->
+            <defs>
+              <marker id="needle-arrow" viewBox="0 0 10 10" refX="9" refY="5"
+                      markerWidth="5" markerHeight="5" orient="auto">
+                <polygon points="0,0 10,5 0,10" fill="var(--green)"/>
+              </marker>
+            </defs>
             <!-- Background rings + tick marks -->
             <circle cx="110" cy="110" r="104" fill="var(--bg)" stroke="var(--border)" stroke-width="1"/>
             <circle cx="110" cy="110" r="80"  fill="none" stroke="var(--border-2)" stroke-width="0.5"/>
@@ -998,10 +1005,11 @@ const RotorCard = {
             <line v-if="state.target != null"
                   x1="110" y1="110" :x2="targetX" :y2="targetY"
                   stroke="var(--amber)" stroke-width="2" stroke-dasharray="4 4" opacity="0.8"/>
-            <!-- Current heading needle -->
+            <!-- Current heading needle (thicker + arrowhead) -->
             <line x1="110" y1="110" :x2="needleX" :y2="needleY"
-                  stroke="var(--green)" stroke-width="3" stroke-linecap="round"/>
-            <circle cx="110" cy="110" r="6" fill="var(--green)"/>
+                  stroke="var(--green)" stroke-width="5" stroke-linecap="round"
+                  marker-end="url(#needle-arrow)"/>
+            <circle cx="110" cy="110" r="7" fill="var(--green)"/>
             <!-- Heading value in center bottom of compass -->
             <text x="110" y="155" text-anchor="middle" fill="var(--accent)" font-size="22" font-weight="700"
                   font-family="JetBrains Mono,SFMono-Regular,monospace">{{ headingFmt(state.heading) }}</text>
@@ -1018,7 +1026,7 @@ const RotorCard = {
             </button>
             <div v-if="rotatorRemain" class="rotor-timer">⏱ {{ rotatorRemain }}</div>
             <button class="btn btn--red"   @click="doStop()">■ STOP</button>
-            <button class="btn btn--amber" @click="doLpSp()">LP/SP</button>
+            <button class="btn btn--amber" @click="doLpSp()">{{ onLongPath ? 'SP' : 'LP' }}</button>
           </div>
         </div>
 
@@ -1145,8 +1153,10 @@ const RotorCard = {
     function doStop() {
       fetch('/rotor/stop', { method: 'POST' }).catch(e => console.warn(e));
     }
+    const onLongPath = ref(false);
     function doLpSp() {
       fetch('/rotor/lpsp', { method: 'POST' }).catch(e => console.warn(e));
+      onLongPath.value = !onLongPath.value;
     }
     function doGo() {
       const h = manualHdg.value;
@@ -1178,6 +1188,7 @@ const RotorCard = {
 
     return {
       expanded, showPresets, state, presets, hover, manualHdg, rotatorRemain,
+      onLongPath,
       headingFmt, cardinal, needleX, needleY, targetX, targetY, hoverX, hoverY,
       togglePower, doStop, doLpSp, doGo, goPreset, onHover, onClick
     };
