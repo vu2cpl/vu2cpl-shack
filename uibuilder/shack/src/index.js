@@ -381,7 +381,7 @@ const LightningCard = {
     }
 
     function doReboot() {
-      if (!confirm('Reboot the AS3935 ESP32 bridge?\\n\\nIt will be offline for ~10–20 seconds.')) return;
+      if (!confirm('Reboot the AS3935 ESP32 bridge?\n\nIt will be offline for ~10–20 seconds.')) return;
       action('as3935Reboot');
       // Optimistic: blank the live fields so the UI doesn't keep showing pre-reboot stats
       state.as3935Status = 'offline';
@@ -393,7 +393,7 @@ const LightningCard = {
       startRebootBanner();
     }
     function doFactoryReset() {
-      if (!confirm('FACTORY RESET WiFi credentials?\\n\\nThe bridge will lose its WiFi config and require captive-portal re-onboarding. This cannot be undone.')) return;
+      if (!confirm('FACTORY RESET WiFi credentials?\n\nThe bridge will lose its WiFi config and require captive-portal re-onboarding. This cannot be undone.')) return;
       if (!confirm('Are you absolutely sure? Type-confirm via this second dialog.')) return;
       action('as3935FactoryReset');
     }
