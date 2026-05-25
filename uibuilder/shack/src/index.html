@@ -8,12 +8,23 @@
   <meta name="theme-color" content="#0d1117">
   <title>VU2CPL Shack</title>
 
-  <!-- Favicon (browser tab) -->
-  <link rel="icon" type="image/svg+xml" href="./icon.svg">
+  <!-- Favicon (browser tab) — order matters: most-compatible first.
+       Safari prefers .ico when present (it's the legacy fallback for
+       sites that don't ship modern link tags). Then PNG by size hint.
+       SVG last as the future-proof scalable variant.
+       The ?v=N suffix forces a cache-bypass when the icon is updated. -->
+  <link rel="shortcut icon" href="./favicon.ico?v=4">
+  <link rel="icon" type="image/x-icon" href="./favicon.ico?v=4">
+  <link rel="icon" type="image/png" sizes="16x16"  href="./favicon-16.png?v=4">
+  <link rel="icon" type="image/png" sizes="32x32"  href="./favicon-32.png?v=4">
+  <link rel="icon" type="image/png" sizes="48x48"  href="./favicon-48.png?v=4">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="./icon.svg?v=4">
+  <!-- Safari macOS tinted "mask" icon for pinned tabs -->
+  <link rel="mask-icon" href="./icon.svg?v=4" color="#1f6feb">
 
   <!-- iOS home-screen icon (iPad / iPhone "Add to Home Screen") -->
-  <link rel="apple-touch-icon" href="./icon.svg">
-  <link rel="apple-touch-icon" sizes="180x180" href="./icon.svg">
+  <link rel="apple-touch-icon" href="./apple-touch-icon-180.png?v=4">
+  <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon-180.png?v=4">
 
   <!-- iOS PWA title shown under the home-screen icon -->
   <meta name="apple-mobile-web-app-title" content="Shack">
