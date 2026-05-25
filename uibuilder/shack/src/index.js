@@ -1046,7 +1046,9 @@ const RotorCard = {
           <div class="section__body" :class="{ 'is-collapsed': !showPresets }">
             <div class="rotor-presets-row">
               <button v-for="p in presets" :key="p.lbl"
-                      class="btn btn--ghost rotor-preset-chip"
+                      class="rotor-preset-chip"
+                      :class="{ 'rotor-preset-chip--active': state.target === p.deg }"
+                      :style="{ '--chip-accent': octantColor(p.deg) }"
                       @click="goPreset(p.deg)">
                 <span class="rotor-preset-chip__lbl">{{ p.lbl }}</span>
                 <span class="rotor-preset-chip__deg">{{ p.deg }}°</span>
@@ -1075,6 +1077,16 @@ const RotorCard = {
       { lbl: 'W',  deg: 270 },
       { lbl: 'EU', deg: 325 }
     ];
+
+    // Octant colour: 8 mild hues, one per compass octant — gives the preset chips
+    // a "compass rose" tint without being garish
+    function octantColor(deg) {
+      const octant = Math.floor(((deg + 22.5) % 360) / 45);
+      // N · NE · E · SE · S · SW · W · NW
+      const palette = ['#58a6ff', '#79c0ff', '#d29922', '#e3b341',
+                       '#bc8cff', '#a371f7', '#3fb950', '#56d364'];
+      return palette[octant];
+    }
 
     function headingFmt(h) { return h == null ? '—°' : (Math.round(h)) + '°'; }
     function cardinal(h) {
@@ -1189,7 +1201,7 @@ const RotorCard = {
     return {
       expanded, showPresets, state, presets, hover, manualHdg, rotatorRemain,
       onLongPath,
-      headingFmt, cardinal, needleX, needleY, targetX, targetY, hoverX, hoverY,
+      headingFmt, cardinal, octantColor, needleX, needleY, targetX, targetY, hoverX, hoverY,
       togglePower, doStop, doLpSp, doGo, goPreset, onHover, onClick
     };
   }

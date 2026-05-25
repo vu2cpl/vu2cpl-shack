@@ -593,28 +593,74 @@ html, body {
   margin: 0 auto;
 }
 
-/* === DXCC preset chips (collapsible row) === */
+/* === DXCC preset chips (fill grid with octant colour) === */
 .rotor-presets-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-1);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
+  gap: var(--sp-2);
 }
 .rotor-preset-chip {
-  display: inline-flex;
+  --chip-accent: var(--accent);
+  display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0;
-  padding: 4px 8px;
-  min-height: 36px;
+  gap: 2px;
+  padding: 8px 6px;
+  background: linear-gradient(180deg,
+              color-mix(in srgb, var(--chip-accent) 12%, var(--surface)) 0%,
+              var(--surface) 100%);
+  border: 1px solid var(--border-2);
+  border-top: 2px solid var(--chip-accent);
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+  font-family: var(--font-sans);
   line-height: 1;
+  transition: transform 0.08s, filter 0.15s, border-color 0.15s, background 0.2s;
+  position: relative;
+  overflow: hidden;
 }
-.rotor-preset-chip__lbl { font-weight: 700; font-size: var(--fs-sm); }
+.rotor-preset-chip:hover {
+  filter: brightness(1.25);
+  border-color: var(--chip-accent);
+  transform: translateY(-1px);
+}
+.rotor-preset-chip:active {
+  transform: translateY(0) scale(0.96);
+  filter: brightness(1.6);
+}
+.rotor-preset-chip__lbl {
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  color: var(--chip-accent);
+}
 .rotor-preset-chip__deg {
   font-size: var(--fs-xs);
   font-family: var(--font-mono);
   color: var(--text-dim);
-  margin-top: 2px;
 }
+
+/* Currently-targeted preset gets a glow */
+.rotor-preset-chip--active {
+  background: linear-gradient(180deg,
+              color-mix(in srgb, var(--chip-accent) 28%, var(--surface)) 0%,
+              color-mix(in srgb, var(--chip-accent) 8%,  var(--surface)) 100%);
+  border-color: var(--chip-accent);
+  box-shadow: 0 0 0 1px var(--chip-accent),
+              0 0 12px color-mix(in srgb, var(--chip-accent) 50%, transparent);
+}
+.rotor-preset-chip--active .rotor-preset-chip__lbl { color: var(--text); }
+
+/* Subtle ripple-ish flash on click — overlay that briefly appears */
+.rotor-preset-chip::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: var(--chip-accent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease-out;
+}
+.rotor-preset-chip:active::after { opacity: 0.4; transition: opacity 0s; }
 
 .rotor-manual {
   display: flex;
