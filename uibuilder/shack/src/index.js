@@ -79,12 +79,12 @@ const LightningCard = {
 
         <!-- Stats grid — operational stats only.
              Callsign + Grid live in the top bar; Threshold + Reconnect
-             live in the Thresholds section below alongside their sliders. -->
+             live in the Thresholds section below alongside their sliders;
+             Antenna ON/OFF lives in the collapsed header summary. -->
         <dl class="stats">
           <dt>Total strikes</dt>        <dd>{{ state.totalStrikes ?? 0 }}</dd>
           <dt>&lt;40 / &lt;50 / &gt;50</dt> <dd>{{ state.lt40 ?? 0 }} / {{ state.lt50 ?? 0 }} / {{ state.gt50 ?? 0 }}</dd>
           <dt>Closest</dt>              <dd>{{ state.closestKm != null ? state.closestKm + ' km' : '—' }}</dd>
-          <dt>Antenna</dt>              <dd :style="{color: state.antennaOn ? 'var(--green)' : 'var(--red)'}">{{ state.antennaOn ? 'ON' : 'OFF' }}</dd>
         </dl>
 
         <!-- AS3935 live tiles -->
