@@ -963,46 +963,53 @@ const RotorCard = {
 
       <div class="card__body" :class="{ 'is-collapsed': !expanded }">
 
-        <!-- Compass with preset buttons inside the SVG at their compass angles -->
+        <!-- Big interactive compass — click anywhere on the face to set heading -->
         <div class="rotor-stage">
-          <svg viewBox="-50 -45 320 320" class="rotor-compass"
-               :style="{opacity: state.power ? 1 : 0.4}">
-            <!-- Background ring -->
+          <svg viewBox="0 0 220 220" class="rotor-compass"
+               :style="{opacity: state.power ? 1 : 0.4, cursor: state.power ? 'crosshair' : 'not-allowed'}"
+               @mousemove="onHover($event)"
+               @mouseleave="hover.deg = null"
+               @click="onClick($event)">
+            <!-- Background rings + tick marks -->
             <circle cx="110" cy="110" r="104" fill="var(--bg)" stroke="var(--border)" stroke-width="1"/>
             <circle cx="110" cy="110" r="80"  fill="none" stroke="var(--border-2)" stroke-width="0.5"/>
             <circle cx="110" cy="110" r="50"  fill="none" stroke="var(--border-2)" stroke-width="0.5"/>
-            <g v-for="t in 12" :key="t"
-               :transform="'rotate(' + (t * 30) + ' 110 110)'">
-              <line x1="110" y1="6" x2="110" y2="14" stroke="var(--text-dim)" stroke-width="1.2"/>
+            <g v-for="t in 36" :key="t"
+               :transform="'rotate(' + (t * 10) + ' 110 110)'">
+              <line x1="110" :y1="t % 3 === 0 ? 6 : 8" x2="110" y2="14"
+                    :stroke="t % 3 === 0 ? 'var(--text-dim)' : 'var(--border)'"
+                    :stroke-width="t % 3 === 0 ? 1.2 : 0.6"/>
             </g>
-            <!-- Cardinal labels removed: preset buttons N/E/S/W cover those positions -->
-            <!-- Faint NE/SE/SW/NW labels at the intercardinal spots -->
-            <text x="178" y="49"  text-anchor="middle" fill="var(--muted)" font-size="9" opacity="0.5">NE</text>
-            <text x="178" y="182" text-anchor="middle" fill="var(--muted)" font-size="9" opacity="0.5">SE</text>
-            <text x="42"  y="182" text-anchor="middle" fill="var(--muted)" font-size="9" opacity="0.5">SW</text>
-            <text x="42"  y="49"  text-anchor="middle" fill="var(--muted)" font-size="9" opacity="0.5">NW</text>
+            <!-- Cardinal labels INSIDE the compass ring -->
+            <text x="110" y="26"  text-anchor="middle" fill="var(--text)"     font-size="14" font-weight="700">N</text>
+            <text x="195" y="115" text-anchor="middle" fill="var(--text)"     font-size="14" font-weight="700">E</text>
+            <text x="110" y="202" text-anchor="middle" fill="var(--text)"     font-size="14" font-weight="700">S</text>
+            <text x="25"  y="115" text-anchor="middle" fill="var(--text)"     font-size="14" font-weight="700">W</text>
+            <!-- Intercardinals -->
+            <text x="170" y="55"  text-anchor="middle" fill="var(--muted)" font-size="10">NE</text>
+            <text x="170" y="175" text-anchor="middle" fill="var(--muted)" font-size="10">SE</text>
+            <text x="50"  y="175" text-anchor="middle" fill="var(--muted)" font-size="10">SW</text>
+            <text x="50"  y="55"  text-anchor="middle" fill="var(--muted)" font-size="10">NW</text>
+            <!-- Hover preview line -->
+            <line v-if="hover.deg != null && state.power"
+                  x1="110" y1="110" :x2="hoverX" :y2="hoverY"
+                  stroke="var(--text-dim)" stroke-width="1" stroke-dasharray="2 3" opacity="0.6"/>
             <!-- Target heading marker -->
             <line v-if="state.target != null"
                   x1="110" y1="110" :x2="targetX" :y2="targetY"
-                  stroke="var(--amber)" stroke-width="2" stroke-dasharray="4 4" opacity="0.7"/>
+                  stroke="var(--amber)" stroke-width="2" stroke-dasharray="4 4" opacity="0.8"/>
             <!-- Current heading needle -->
             <line x1="110" y1="110" :x2="needleX" :y2="needleY"
                   stroke="var(--green)" stroke-width="3" stroke-linecap="round"/>
             <circle cx="110" cy="110" r="6" fill="var(--green)"/>
-            <!-- Heading value in center -->
-            <text x="110" y="155" text-anchor="middle" fill="var(--accent)" font-size="22" font-weight="700" font-family="JetBrains Mono,SFMono-Regular,monospace">{{ headingFmt(state.heading) }}</text>
-            <text x="110" y="175" text-anchor="middle" fill="var(--text-dim)" font-size="11">{{ cardinal(state.heading) }}</text>
-
-            <!-- Preset buttons drawn as SVG groups at compass angles -->
-            <g v-for="p in presetsWithPos" :key="p.lbl"
-               :class="['svg-preset', state.power ? '' : 'svg-preset--disabled']"
-               :transform="'translate(' + p.x + ',' + p.y + ')'"
-               @click="state.power && goPreset(p.deg)">
-              <rect x="-18" y="-9" width="36" height="18" rx="3"
-                    fill="var(--surface)" stroke="var(--accent)" stroke-width="1"/>
-              <text x="0" y="3" text-anchor="middle" fill="var(--accent)"
-                    font-size="11" font-weight="700" font-family="var(--font-sans)">{{ p.lbl }}</text>
-            </g>
+            <!-- Heading value in center bottom of compass -->
+            <text x="110" y="155" text-anchor="middle" fill="var(--accent)" font-size="22" font-weight="700"
+                  font-family="JetBrains Mono,SFMono-Regular,monospace">{{ headingFmt(state.heading) }}</text>
+            <text x="110" y="172" text-anchor="middle" fill="var(--text-dim)" font-size="11">{{ cardinal(state.heading) }}</text>
+            <!-- Hover heading display -->
+            <text v-if="hover.deg != null && state.power"
+                  x="110" y="188" text-anchor="middle" fill="var(--amber-fg)" font-size="10"
+                  font-family="JetBrains Mono,SFMono-Regular,monospace">→ {{ Math.round(hover.deg) }}°</text>
           </svg>
 
           <div class="rotor-aside">
@@ -1022,11 +1029,32 @@ const RotorCard = {
                  @keydown.enter="doGo()" />
           <button class="btn btn--green" @click="doGo()" :disabled="!state.power || manualHdg == null">GO</button>
         </div>
+
+        <!-- DXCC presets — collapsible (default closed) -->
+        <div class="section">
+          <div class="section__header" @click="showPresets = !showPresets">
+            <span class="chev">{{ showPresets ? '▼' : '▶' }}</span>
+            <span>DXCC Presets</span>
+          </div>
+          <div class="section__body" :class="{ 'is-collapsed': !showPresets }">
+            <div class="rotor-presets-row">
+              <button v-for="p in presets" :key="p.lbl"
+                      class="btn btn--ghost rotor-preset-chip"
+                      :disabled="!state.power"
+                      @click="goPreset(p.deg)">
+                <span class="rotor-preset-chip__lbl">{{ p.lbl }}</span>
+                <span class="rotor-preset-chip__deg">{{ p.deg }}°</span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   `,
   setup() {
     const expanded = ref(true);
+    const showPresets = ref(false);
+    const hover = reactive({ deg: null });
     const state = reactive({ heading: null, target: null, power: false, timerEnd: null });
 
     const presets = [
@@ -1055,22 +1083,40 @@ const RotorCard = {
       return { x: 110 + 90 * Math.cos(rad), y: 110 + 90 * Math.sin(rad) };
     }
 
-    // SVG-space positions for preset buttons.
-    // Compass center is (110, 110); buttons sit just outside the r=104 ring.
-    // Close-angle pairs (N+US, EU+N, ZL+S): keep cardinals at base radius;
-    // push the DXCC presets further out so labels don't collide with N or S.
-    const presetsWithPos = computed(() => {
-      const customR = { 10: 148, 325: 148, 170: 148 };  // US, EU, ZL pushed outward
-      return presets.map(p => {
-        const r = customR[p.deg] || 128;
-        const a = (p.deg - 90) * Math.PI / 180;
-        return {
-          ...p,
-          x: (110 + r * Math.cos(a)).toFixed(1),
-          y: (110 + r * Math.sin(a)).toFixed(1)
-        };
-      });
-    });
+    // Hover preview endpoint
+    const hoverX = computed(() => endpoint(hover.deg).x.toFixed(1));
+    const hoverY = computed(() => endpoint(hover.deg).y.toFixed(1));
+
+    // Convert SVG-space (x, y) to compass degrees (0–359, 0° = North)
+    function xyToDeg(x, y) {
+      const dx = x - 110, dy = y - 110;
+      if (dx * dx + dy * dy > 104 * 104) return null;  // outside the ring → ignore
+      const ang = Math.atan2(dy, dx) * 180 / Math.PI; // -180..180, 0° = East
+      return Math.round((ang + 90 + 360) % 360);
+    }
+    function svgCoords(evt) {
+      const svg = evt.currentTarget;
+      const pt = svg.createSVGPoint();
+      pt.x = evt.clientX; pt.y = evt.clientY;
+      const ctm = svg.getScreenCTM();
+      if (!ctm) return null;
+      const p = pt.matrixTransform(ctm.inverse());
+      return { x: p.x, y: p.y };
+    }
+    function onHover(evt) {
+      if (!state.power) return;
+      const p = svgCoords(evt);
+      if (!p) return;
+      hover.deg = xyToDeg(p.x, p.y);
+    }
+    function onClick(evt) {
+      if (!state.power) return;
+      const p = svgCoords(evt);
+      if (!p) return;
+      const deg = xyToDeg(p.x, p.y);
+      if (deg == null) return;
+      goPreset(deg);
+    }
     const needleX = computed(() => endpoint(state.heading).x.toFixed(1));
     const needleY = computed(() => endpoint(state.heading).y.toFixed(1));
     const targetX = computed(() => endpoint(state.target).x.toFixed(1));
@@ -1133,9 +1179,9 @@ const RotorCard = {
     });
 
     return {
-      expanded, state, presetsWithPos, manualHdg, rotatorRemain,
-      headingFmt, cardinal, needleX, needleY, targetX, targetY,
-      togglePower, doStop, doLpSp, doGo, goPreset
+      expanded, showPresets, state, presets, hover, manualHdg, rotatorRemain,
+      headingFmt, cardinal, needleX, needleY, targetX, targetY, hoverX, hoverY,
+      togglePower, doStop, doLpSp, doGo, goPreset, onHover, onClick
     };
   }
 };

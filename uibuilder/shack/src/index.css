@@ -584,11 +584,37 @@ html, body {
   font-weight: 700;
 }
 
-/* SVG preset button — uses :hover via CSS on SVG groups */
-.svg-preset { cursor: pointer; transition: filter 0.12s; }
-.svg-preset:hover rect { fill: var(--accent-bg); }
-.svg-preset--disabled { cursor: not-allowed; opacity: 0.4; }
-.svg-preset--disabled:hover rect { fill: var(--surface); }
+/* === Rotor: click-anywhere compass === */
+.rotor-compass {
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
+/* === DXCC preset chips (collapsible row) === */
+.rotor-presets-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+}
+.rotor-preset-chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: 4px 8px;
+  min-height: 36px;
+  line-height: 1;
+}
+.rotor-preset-chip__lbl { font-weight: 700; font-size: var(--fs-sm); }
+.rotor-preset-chip__deg {
+  font-size: var(--fs-xs);
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  margin-top: 2px;
+}
 
 .rotor-manual {
   display: flex;
