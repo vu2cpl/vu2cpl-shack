@@ -6,6 +6,17 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#0d1117">
+
+  <!-- Defeat PWA / dock-icon HTML caching. Without these, Safari
+       caches index.html on first launch and never re-fetches it,
+       even when the underlying file on the Pi changes — so ?v=N
+       bumps on subresources never take effect. iOS home-screen
+       PWAs and macOS Sonoma "Add to Dock" webviews are especially
+       sticky. These headers force a revalidate on every open. -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
   <title>VU2CPL Shack</title>
 
   <!-- Favicon (browser tab) — order matters: most-compatible first.
@@ -29,16 +40,18 @@
   <!-- iOS PWA title shown under the home-screen icon -->
   <meta name="apple-mobile-web-app-title" content="Shack">
 
-  <link rel="stylesheet" href="./index.css">
-  <link rel="manifest" href="./manifest.json">
+  <link rel="stylesheet" href="./index.css?v=2">
+  <link rel="manifest" href="./manifest.json?v=2">
 
   <!-- uibuilder library (must come BEFORE Vue + our app) -->
   <script defer src="../uibuilder/uibuilder.iife.min.js"></script>
   <!-- Vue 3 (self-hosted to remove external CDN dependency) -->
   <script defer src="./vue.global.prod.js"></script>
   <!-- Our app (loaded after uibuilder + Vue thanks to `defer`).
-       Cache-buster bumped when the connection-pill logic changed. -->
-  <script defer src="./index.js?v=2"></script>
+       Cache-buster bumps with every JS change so the browser
+       re-fetches even when no-cache headers are stripped by a
+       proxy or PWA cache. -->
+  <script defer src="./index.js?v=3"></script>
 </head>
 <body>
   <div id="app"></div>
