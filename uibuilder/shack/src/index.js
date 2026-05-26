@@ -7,6 +7,39 @@
 
 const { createApp, ref, reactive, computed, onMounted } = Vue;
 
+// =====================================================================
+// Connection-status heartbeat (install BEFORE any component is defined)
+// =====================================================================
+// The LIVE/OFFLINE pill in the TopBar is driven by a single global
+// `window.__shackLastMsgAt` timestamp. Every uibuilder.onTopic
+// callback registered by any card automatically bumps this value via
+// the wrapper installed below.
+//
+// Why this approach over uibuilder.ioConnected / onChange('ioConnected'):
+//   - uibuilder v7's connection-state signals fired inconsistently
+//     across iPhone / iPad / macOS Safari and across reconnect cycles.
+//     Pill stayed OFFLINE while cards were visibly receiving data.
+//   - Cards are the ground truth: if any card got a msg in the last
+//     LIVE_WINDOW_MS, the websocket IS up by definition.
+//   - This survives any future uibuilder API rename — the only API
+//     we depend on is `uibuilder.onTopic`, which we already use
+//     everywhere in the app.
+window.__shackLastMsgAt = 0;
+(function installHeartbeatWrap() {
+  if (typeof uibuilder === 'undefined' || typeof uibuilder.onTopic !== 'function') {
+    console.warn('[shack] uibuilder.onTopic not available — heartbeat wrap skipped');
+    return;
+  }
+  const origOnTopic = uibuilder.onTopic.bind(uibuilder);
+  uibuilder.onTopic = function(topic, cb) {
+    return origOnTopic(topic, function(msg) {
+      window.__shackLastMsgAt = Date.now();
+      try { cb(msg); }
+      catch (e) { console.error('[shack] onTopic(' + topic + ') handler threw:', e); }
+    });
+  };
+})();
+
 // --- Helper: relative time formatter ---
 function relTime(epochMs) {
   if (!epochMs) return '—';
@@ -2409,7 +2442,8 @@ const TopBar = {
       <div class="topbar__left">
         <div class="callsign-row">
           <span class="callsign">VU2CPL</span>
-          <span class="conn-pill" :class="{ 'is-connected': connected }">
+          <span class="conn-pill" :class="{ 'is-connected': connected }"
+                :title="connected ? 'Live data flowing · last msg ' + lastMsgAge + 's ago' : 'No msgs received in last ' + lastMsgAge + 's'">
             <span class="dot"></span>
             <span>{{ connected ? 'LIVE' : 'OFFLINE' }}</span>
           </span>
@@ -2429,15 +2463,18 @@ const TopBar = {
     const ist = ref('--:--:--');
     const sr  = ref('05:56'); // TODO: compute properly or fetch from NR
     const ss  = ref('18:36');
+    const lastMsgAge = ref('—');
     const pad = (n) => String(n).padStart(2, '0');
     function tick() {
       const now = new Date();
       utc.value = pad(now.getUTCHours()) + ':' + pad(now.getUTCMinutes()) + ':' + pad(now.getUTCSeconds());
       const istD = new Date(now.getTime() + (5 * 60 + 30) * 60_000);
       ist.value = pad(istD.getUTCHours()) + ':' + pad(istD.getUTCMinutes()) + ':' + pad(istD.getUTCSeconds());
+      const t = window.__shackLastMsgAt || 0;
+      lastMsgAge.value = t ? Math.floor((Date.now() - t) / 1000) : '∞';
     }
     tick(); setInterval(tick, 1000);
-    return { utc, ist, sr, ss };
+    return { utc, ist, sr, ss, lastMsgAge };
   }
 };
 
@@ -2463,41 +2500,27 @@ const App = {
   `,
   setup() {
     const connected = ref(false);
-    let lastMsgAt = 0;
     onMounted(() => {
       uibuilder.start();
 
-      // Path 1 — uibuilder's onChange callbacks for socket state.
-      // v7 fires 'ioConnected' on connect/disconnect with boolean v.
-      try { uibuilder.onChange('socketConnected', (v) => { connected.value = !!v; }); } catch (e) {}
-      try { uibuilder.onChange('ioConnected',     (v) => { connected.value = !!v; }); } catch (e) {}
-
-      // Path 2 — heartbeat. onChange('msg') fires only for the *default*
-      // topic in v7; per-card uibuilder.onTopic('lightning', …) etc.
-      // does NOT trigger it. So we ALSO bump lastMsgAt from a DOM
-      // event the v7 client fires for every incoming msg regardless
-      // of topic (`uibuilder:stdMsgReceived` is the public name; some
-      // builds emit `msg` too).
-      const bump = () => { lastMsgAt = Date.now(); };
-      try { uibuilder.onChange('msg', bump); } catch (e) {}
-      document.addEventListener('uibuilder:stdMsgReceived', bump);
-      document.addEventListener('msg', bump);
-
-      // Path 3 — direct read of uibuilder.ioConnected each tick. This
-      // is the most reliable signal in v7; the other paths are belt
-      // and braces in case the property is missing or renamed.
+      // LIVE/OFFLINE = "is any msg flowing through *any* uibuilder.onTopic
+      // handler within the last LIVE_WINDOW_MS." This is the empirically
+      // correct definition — every card registers onTopic, so any one of
+      // them firing means the websocket is actually delivering data. We
+      // do NOT trust uibuilder.ioConnected / onChange('msg') / onChange
+      // ('ioConnected') because in v7 those signals behave inconsistently
+      // across browsers and reconnect scenarios.
+      //
+      // The wrap was installed at the top of this file (before any
+      // component's setup() runs) so every card's onTopic callback
+      // already touches window.__shackLastMsgAt. Here we just poll.
+      const LIVE_WINDOW_MS = 8000;
       setInterval(() => {
-        if (typeof uibuilder.ioConnected === 'boolean') {
-          connected.value = uibuilder.ioConnected;
-          return;
-        }
-        // Fallback to heartbeat if ioConnected isn't exposed
-        if (Date.now() - lastMsgAt < 10_000) connected.value = true;
-        else if (Date.now() - lastMsgAt > 15_000) connected.value = false;
-      }, 1000);
+        const age = Date.now() - (window.__shackLastMsgAt || 0);
+        connected.value = age < LIVE_WINDOW_MS;
+      }, 500);
 
-      console.log('[shack] uibuilder started, version:', uibuilder.version || 'unknown',
-                  '· ioConnected initial:', uibuilder.ioConnected);
+      console.log('[shack] uibuilder started, version:', uibuilder.version || 'unknown');
     });
     return { connected };
   }

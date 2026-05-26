@@ -36,8 +36,9 @@
   <script defer src="../uibuilder/uibuilder.iife.min.js"></script>
   <!-- Vue 3 (self-hosted to remove external CDN dependency) -->
   <script defer src="./vue.global.prod.js"></script>
-  <!-- Our app (loaded after uibuilder + Vue thanks to `defer`) -->
-  <script defer src="./index.js"></script>
+  <!-- Our app (loaded after uibuilder + Vue thanks to `defer`).
+       Cache-buster bumped when the connection-pill logic changed. -->
+  <script defer src="./index.js?v=2"></script>
 </head>
 <body>
   <div id="app"></div>
