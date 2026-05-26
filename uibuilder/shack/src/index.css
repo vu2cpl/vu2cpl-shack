@@ -1207,7 +1207,8 @@ html, body {
 .topbar {
   display: flex;
   align-items: center;
-  gap: var(--sp-4);
+  flex-wrap: wrap;                   /* iPhone: left+right groups stack vertically */
+  gap: var(--sp-3) var(--sp-4);      /* row-gap × col-gap so wrapped row has spacing */
   padding: var(--sp-3) var(--sp-4);
   background: var(--surface);
   border: 1px solid var(--border);
@@ -1215,6 +1216,7 @@ html, body {
   font-size: var(--fs-sm);
   margin-bottom: var(--sp-3);
 }
+.topbar__left { min-width: 0; flex: 1 1 auto; }   /* let it shrink, don't push clocks off-screen */
 .topbar .callsign {
   color: var(--accent);
   font-weight: 700;
@@ -1223,8 +1225,14 @@ html, body {
   font-family: var(--font-mono);
 }
 .topbar .sub { color: var(--text-dim); font-size: var(--fs-xs); margin-top: 2px; }
-.topbar .clocks { display: flex; gap: var(--sp-4); margin-left: auto; }
-.topbar .clk { text-align: center; }
+.topbar .clocks {
+  display: flex;
+  flex-wrap: wrap;                   /* if 4 clocks won't fit one row, they wrap into 2×2 */
+  gap: var(--sp-2) var(--sp-4);      /* tighter row-gap when wrapped */
+  margin-left: auto;
+  justify-content: flex-end;
+}
+.topbar .clk { text-align: center; min-width: 56px; }
 .topbar .clk-lbl { font-size: var(--fs-xs); color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; font-weight: 500; }
 .topbar .clk-val {
   font-size: var(--fs-md);
@@ -1234,3 +1242,15 @@ html, body {
   font-variant-numeric: tabular-nums;
 }
 .topbar .clk-val.amber { color: var(--amber-fg); }
+
+/* iPhone-portrait (<= 480px) — tighter padding + smaller clock font so
+   the 4 clocks fit comfortably below the callsign row. */
+@media (max-width: 480px) {
+  .topbar { padding: var(--sp-2) var(--sp-3); gap: var(--sp-2) var(--sp-3); }
+  .topbar .callsign { font-size: var(--fs-lg); letter-spacing: 0.5px; }
+  .topbar .sub { font-size: 10px; }
+  .topbar .clocks { gap: var(--sp-1) var(--sp-3); margin-left: 0; width: 100%; justify-content: space-between; }
+  .topbar .clk { min-width: 0; flex: 1 1 0; }      /* 4 clocks split evenly across the row */
+  .topbar .clk-val { font-size: var(--fs-sm); }
+  .topbar .clk-lbl { font-size: 9px; letter-spacing: 0.5px; }
+}
