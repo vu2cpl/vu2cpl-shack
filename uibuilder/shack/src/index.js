@@ -8,36 +8,83 @@
 const { createApp, ref, reactive, computed, onMounted } = Vue;
 
 // =====================================================================
-// Connection-status heartbeat (install BEFORE any component is defined)
+// Build version stamp (visible in TopBar — distinguishes "code didn't
+// load" from "code loaded but signal broken" without DevTools).
+// Bump this on every deploy that touches connection logic.
 // =====================================================================
-// The LIVE/OFFLINE pill in the TopBar is driven by a single global
-// `window.__shackLastMsgAt` timestamp. Every uibuilder.onTopic
-// callback registered by any card automatically bumps this value via
-// the wrapper installed below.
+window.__shackBuild = 'v5 · 2026-05-26 12:00 IST';
+
+// =====================================================================
+// Connection-status heartbeat — MULTI-PATH (belt and braces).
+// =====================================================================
+// Goal: pill = GREEN iff ANY of these signals fire within LIVE_WINDOW_MS.
+// One of them is bound to work on every browser/PWA combo.
 //
-// Why this approach over uibuilder.ioConnected / onChange('ioConnected'):
-//   - uibuilder v7's connection-state signals fired inconsistently
-//     across iPhone / iPad / macOS Safari and across reconnect cycles.
-//     Pill stayed OFFLINE while cards were visibly receiving data.
-//   - Cards are the ground truth: if any card got a msg in the last
-//     LIVE_WINDOW_MS, the websocket IS up by definition.
-//   - This survives any future uibuilder API rename — the only API
-//     we depend on is `uibuilder.onTopic`, which we already use
-//     everywhere in the app.
+// Diagnostic counters exposed on window.__shackPaths so the OFFLINE
+// pill can show *which* path is firing (or not firing) on a device
+// without needing DevTools.
 window.__shackLastMsgAt = 0;
-(function installHeartbeatWrap() {
-  if (typeof uibuilder === 'undefined' || typeof uibuilder.onTopic !== 'function') {
-    console.warn('[shack] uibuilder.onTopic not available — heartbeat wrap skipped');
+window.__shackPaths = {
+  wrapInstalled: false,        // did the onTopic monkey-patch take?
+  onTopicBumps: 0,             // count of msgs via wrapped onTopic
+  onChangeMsgBumps: 0,         // count via uibuilder.onChange('msg', …)
+  domUibMsgBumps: 0,           // count via document 'uibuilder:msg'
+  domStdMsgBumps: 0,           // count via document 'uibuilder:stdMsgReceived'
+  ioConnectedSeen: null,       // last value of uibuilder.ioConnected
+  uibuilderVersion: null
+};
+
+function __shackBump(pathKey) {
+  return function(_msg) {
+    window.__shackLastMsgAt = Date.now();
+    if (pathKey && pathKey in window.__shackPaths) window.__shackPaths[pathKey]++;
+  };
+}
+
+(function installAllPaths() {
+  if (typeof uibuilder === 'undefined') {
+    console.warn('[shack] uibuilder global not present — all heartbeat paths skipped');
     return;
   }
-  const origOnTopic = uibuilder.onTopic.bind(uibuilder);
-  uibuilder.onTopic = function(topic, cb) {
-    return origOnTopic(topic, function(msg) {
-      window.__shackLastMsgAt = Date.now();
-      try { cb(msg); }
-      catch (e) { console.error('[shack] onTopic(' + topic + ') handler threw:', e); }
+  window.__shackPaths.uibuilderVersion = uibuilder.version || '?';
+
+  // Path A: wrap uibuilder.onTopic so every per-card callback bumps.
+  if (typeof uibuilder.onTopic === 'function') {
+    try {
+      const origOnTopic = uibuilder.onTopic.bind(uibuilder);
+      const wrapped = function(topic, cb) {
+        return origOnTopic(topic, function(msg) {
+          __shackBump('onTopicBumps')(msg);
+          try { cb(msg); } catch (e) { console.error('[shack] onTopic(' + topic + ') handler threw:', e); }
+        });
+      };
+      // Try plain assignment first; fall back to defineProperty if non-writable
+      uibuilder.onTopic = wrapped;
+      if (uibuilder.onTopic !== wrapped) {
+        Object.defineProperty(uibuilder, 'onTopic', { value: wrapped, writable: true, configurable: true });
+      }
+      window.__shackPaths.wrapInstalled = (uibuilder.onTopic === wrapped);
+    } catch (e) { console.error('[shack] onTopic wrap failed:', e); }
+  }
+
+  // Path B: uibuilder.onChange('msg', cb) — documented v7 API for all incoming msgs.
+  try { uibuilder.onChange && uibuilder.onChange('msg', __shackBump('onChangeMsgBumps')); } catch (e) {}
+
+  // Path C: uibuilder.onChange('ioConnected', cb) — flips connected flag directly.
+  try {
+    uibuilder.onChange && uibuilder.onChange('ioConnected', function(v) {
+      window.__shackPaths.ioConnectedSeen = !!v;
+      if (v) __shackBump('onChangeMsgBumps')();   // count as a heartbeat too
     });
-  };
+  } catch (e) {}
+
+  // Path D + E: DOM events fired for every msg in v7 (event names vary by build).
+  document.addEventListener('uibuilder:msg',             __shackBump('domUibMsgBumps'));
+  document.addEventListener('uibuilder:stdMsgReceived',  __shackBump('domStdMsgBumps'));
+
+  console.log('[shack] heartbeat paths installed; build', window.__shackBuild,
+              '· uibuilder', window.__shackPaths.uibuilderVersion,
+              '· wrap', window.__shackPaths.wrapInstalled);
 })();
 
 // --- Helper: relative time formatter ---
@@ -2443,10 +2490,17 @@ const TopBar = {
         <div class="callsign-row">
           <span class="callsign">VU2CPL</span>
           <span class="conn-pill" :class="{ 'is-connected': connected }"
-                :title="connected ? 'Live data flowing · last msg ' + lastMsgAge + 's ago' : 'No msgs received in last ' + lastMsgAge + 's'">
+                :title="connected ? 'Live data flowing · last msg ' + lastMsgAge + 's ago' : diagText">
             <span class="dot"></span>
             <span>{{ connected ? 'LIVE' : 'OFFLINE' }}</span>
           </span>
+          <!-- Diagnostic strip — only visible when OFFLINE. Shows which
+               of the 4 heartbeat paths are firing so we can debug on the
+               device without Safari DevTools. Format:
+                 v5 · uib7.6.2 · wrap=YES · oT3 oM7 dU0 dS0 · ∞s
+               oT = onTopic-wrap bumps, oM = onChange('msg') bumps,
+               dU = document uibuilder:msg, dS = uibuilder:stdMsgReceived. -->
+          <span v-if="!connected" class="conn-diag" :title="diagText">{{ diagShort }}</span>
         </div>
         <div class="sub">MK83TE · Bengaluru · Shack Control</div>
       </div>
@@ -2464,6 +2518,8 @@ const TopBar = {
     const sr  = ref('05:56'); // TODO: compute properly or fetch from NR
     const ss  = ref('18:36');
     const lastMsgAge = ref('—');
+    const diagShort  = ref('');
+    const diagText   = ref('');
     const pad = (n) => String(n).padStart(2, '0');
     function tick() {
       const now = new Date();
@@ -2472,9 +2528,30 @@ const TopBar = {
       ist.value = pad(istD.getUTCHours()) + ':' + pad(istD.getUTCMinutes()) + ':' + pad(istD.getUTCSeconds());
       const t = window.__shackLastMsgAt || 0;
       lastMsgAge.value = t ? Math.floor((Date.now() - t) / 1000) : '∞';
+      // Diagnostic strip when offline
+      const p = window.__shackPaths || {};
+      const build = window.__shackBuild || '?';
+      diagShort.value = '' +
+        build.split(' ')[0] +                          // "v5"
+        ' · uib' + (p.uibuilderVersion || '?') +
+        ' · wrap=' + (p.wrapInstalled ? 'Y' : 'N') +
+        ' · oT' + (p.onTopicBumps     || 0) +
+        ' oM' + (p.onChangeMsgBumps   || 0) +
+        ' dU' + (p.domUibMsgBumps     || 0) +
+        ' dS' + (p.domStdMsgBumps     || 0) +
+        ' · ioC=' + (p.ioConnectedSeen == null ? '?' : (p.ioConnectedSeen ? 'Y' : 'N')) +
+        ' · ' + lastMsgAge.value + 's';
+      diagText.value = 'No msgs received in last ' + lastMsgAge.value + 's. Build ' + build +
+        ', uibuilder ' + (p.uibuilderVersion || '?') +
+        ', onTopic-wrap ' + (p.wrapInstalled ? 'installed' : 'NOT installed') +
+        ', counts onTopic=' + (p.onTopicBumps || 0) +
+        ' onChange-msg=' + (p.onChangeMsgBumps || 0) +
+        ' DOM:uibuilder:msg=' + (p.domUibMsgBumps || 0) +
+        ' DOM:stdMsgReceived=' + (p.domStdMsgBumps || 0) +
+        ', ioConnected=' + (p.ioConnectedSeen == null ? 'never seen' : p.ioConnectedSeen);
     }
     tick(); setInterval(tick, 1000);
-    return { utc, ist, sr, ss, lastMsgAge };
+    return { utc, ist, sr, ss, lastMsgAge, diagShort, diagText };
   }
 };
 
@@ -2503,24 +2580,17 @@ const App = {
     onMounted(() => {
       uibuilder.start();
 
-      // LIVE/OFFLINE = "is any msg flowing through *any* uibuilder.onTopic
-      // handler within the last LIVE_WINDOW_MS." This is the empirically
-      // correct definition — every card registers onTopic, so any one of
-      // them firing means the websocket is actually delivering data. We
-      // do NOT trust uibuilder.ioConnected / onChange('msg') / onChange
-      // ('ioConnected') because in v7 those signals behave inconsistently
-      // across browsers and reconnect scenarios.
-      //
-      // The wrap was installed at the top of this file (before any
-      // component's setup() runs) so every card's onTopic callback
-      // already touches window.__shackLastMsgAt. Here we just poll.
+      // OR-gate of ALL detection paths — GREEN if any path says we're live.
+      // See top-of-file installAllPaths() for what's wired up.
       const LIVE_WINDOW_MS = 8000;
       setInterval(() => {
         const age = Date.now() - (window.__shackLastMsgAt || 0);
-        connected.value = age < LIVE_WINDOW_MS;
+        const ioConn = window.__shackPaths && window.__shackPaths.ioConnectedSeen === true;
+        connected.value = (age < LIVE_WINDOW_MS) || ioConn;
       }, 500);
 
-      console.log('[shack] uibuilder started, version:', uibuilder.version || 'unknown');
+      console.log('[shack] uibuilder started, version:', uibuilder.version || 'unknown',
+                  '· ioConnected initial:', uibuilder.ioConnected);
     });
     return { connected };
   }
