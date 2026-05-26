@@ -2466,16 +2466,38 @@ const App = {
     let lastMsgAt = 0;
     onMounted(() => {
       uibuilder.start();
-      // Multi-pronged detection — v7 may use different property names than older versions
+
+      // Path 1 — uibuilder's onChange callbacks for socket state.
+      // v7 fires 'ioConnected' on connect/disconnect with boolean v.
       try { uibuilder.onChange('socketConnected', (v) => { connected.value = !!v; }); } catch (e) {}
       try { uibuilder.onChange('ioConnected',     (v) => { connected.value = !!v; }); } catch (e) {}
-      // Definitive: if we've received a message in the last 10s, we are connected
-      uibuilder.onChange('msg', () => { lastMsgAt = Date.now(); });
+
+      // Path 2 — heartbeat. onChange('msg') fires only for the *default*
+      // topic in v7; per-card uibuilder.onTopic('lightning', …) etc.
+      // does NOT trigger it. So we ALSO bump lastMsgAt from a DOM
+      // event the v7 client fires for every incoming msg regardless
+      // of topic (`uibuilder:stdMsgReceived` is the public name; some
+      // builds emit `msg` too).
+      const bump = () => { lastMsgAt = Date.now(); };
+      try { uibuilder.onChange('msg', bump); } catch (e) {}
+      document.addEventListener('uibuilder:stdMsgReceived', bump);
+      document.addEventListener('msg', bump);
+
+      // Path 3 — direct read of uibuilder.ioConnected each tick. This
+      // is the most reliable signal in v7; the other paths are belt
+      // and braces in case the property is missing or renamed.
       setInterval(() => {
+        if (typeof uibuilder.ioConnected === 'boolean') {
+          connected.value = uibuilder.ioConnected;
+          return;
+        }
+        // Fallback to heartbeat if ioConnected isn't exposed
         if (Date.now() - lastMsgAt < 10_000) connected.value = true;
         else if (Date.now() - lastMsgAt > 15_000) connected.value = false;
       }, 1000);
-      console.log('[shack] uibuilder started, version:', uibuilder.version || 'unknown');
+
+      console.log('[shack] uibuilder started, version:', uibuilder.version || 'unknown',
+                  '· ioConnected initial:', uibuilder.ioConnected);
     });
     return { connected };
   }
