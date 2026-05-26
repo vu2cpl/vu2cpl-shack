@@ -10,6 +10,14 @@ different Pi like `gpsntp` or `openwebrxplus`), see
 [`DEPLOY_PI.md`](DEPLOY_PI.md) instead. This runbook is for the
 shack-control Pi itself.
 
+> **Cloning to a *different* shack?** If you're another operator who
+> wants to run this stack at your own QTH (different callsign / grid /
+> hardware / MQTT broker), read [`FORK_GUIDE.md`](FORK_GUIDE.md)
+> first — it covers the per-site customisation pass you need to do
+> before (or after) following this rebuild runbook. The rebuild
+> runbook brings up an identical clone of VU2CPL's Pi; FORK_GUIDE
+> tells you which knobs to turn for your own station.
+
 **Estimated time:** ~90 minutes from blank SD card to fully working
 shack, assuming reasonable internet and existing GitHub SSH keys.
 
@@ -157,6 +165,7 @@ Open `http://192.168.1.169:1880` in a browser to confirm the editor loads.
 cd ~/.node-red
 npm install \
   node-red-dashboard \
+  node-red-contrib-uibuilder \
   node-red-node-serialport \
   node-red-contrib-flexradio \
   node-red-contrib-ui-svg \
@@ -166,6 +175,15 @@ npm install \
   node-red-contrib-loop \
   node-red-contrib-ui-level
 ```
+
+`node-red-dashboard` is Dashboard 1 (the legacy `/ui`).
+`node-red-contrib-uibuilder` serves the Vue 3 `/shack` SPA — both URLs
+coexist on the same Node-RED instance with no conflict.
+
+> Dashboard 2 (`@flowfuse/node-red-dashboard`) was evaluated as a POC
+> in 2026-05-24 and **retired 2026-05-26** in favour of uibuilder + Vue
+> (see SHACK_CHANGELOG). Don't install it — the flow has no D2 nodes
+> any more and the dashboard would just be empty.
 
 ### Enable the Projects feature
 
@@ -475,29 +493,31 @@ Each reply should be `{"Timezone":"+05:30"}`.
 
 ## Step 12 — Final verification
 
-A 14-point checklist. Hit each one.
+A 15-point checklist. Hit each one.
 
 | # | Check | Pass criterion |
 |---|-------|----------------|
 | 1 | Pi reachable at `192.168.1.169` | `ping -c 3 192.168.1.169` from Mac |
 | 2 | Node-RED editor loads | Browser → `http://192.168.1.169:1880` |
-| 3 | Dashboard loads | Browser → `http://192.168.1.169:1880/ui` |
-| 4 | All 11 flow tabs deploy clean | No red triangles on tab labels |
-| 5 | MQTT broker alive | `mosquitto_sub -h localhost -t '#' -C 5` shows traffic |
-| 6 | AS3935 publishing (from ESP32 bridge) | Topic `lightning/as3935/hb` ticks every 30 s. The Pi daemon (`as3935.service`) is intentionally disabled — the ESP-WROOM-32 in [`vu2cpl-as3935-bridge`](https://github.com/vu2cpl/vu2cpl-as3935-bridge) is the live publisher. If the ESP32 is offline / dead, `sudo systemctl enable --now as3935` on this Pi resurrects the indoor daemon as fallback |
-| 7 | RPi telemetry publishing | Topic `rpi/noderedpi4/cpu` updates every 60 s |
-| 8 | LP-700 telemetry alive | Dashboard LP-700 panel shows live values |
-| 9 | FlexRadio TCP up | Dashboard FlexRadio panel shows slice state |
-| 10 | Tasmota state sync | Toggle a power outlet from dashboard → relay clicks → state syncs back |
-| 11 | DXCC alerts firing | DXCC tab status badges green; spots arriving in the table. `Login + Parse + Dedup` shows recent activity (`[cluster1] DX de ...`); `DXCC Prefix Lookup + Alert Classify` shows per-spot status (`worked` / `NEW DXCC` / etc.) |
-| 12 | Lightning auto-disconnect | Click `TEST ⚡ 6 km DISCONNECT` inject → antenna + radio go OFF |
-| 13 | Lightning event log file | File `~/.node-red/projects/vu2cpl-shack/nr_lightning_events.jsonl` exists and contains recent events: `tail -f ~/.node-red/projects/vu2cpl-shack/nr_lightning_events.jsonl` should show JSON event records. The path is hardcoded in the **Init Defaults** node on the Lightning tab. This JSONL file persists across Node-RED restarts |
-| 14 | Chrony / GPS card live | Dashboard tab `Shack Monitoring tools` → `Network Monitor` group shows `Chrony status card` updating every minute. Requires `gpsntp.local` to be up + its publisher cron firing (`/usr/local/bin/gpsntp-mqtt-publish.sh`). If silent: `mosquitto_sub -h localhost -t shack/gpsntp/chrony -v` should print one retained payload immediately + a fresh one each minute |
+| 3 | Dashboard 1 (legacy) loads | Browser → `http://192.168.1.169:1880/ui` |
+| 4 | **Vue `/shack` dashboard loads** | Browser → `http://192.168.1.169:1880/shack`. Should show top bar + 12 cards (all collapsed by default). LIVE pill should be green next to the callsign within ~2 s of page load. iPad/iPhone: Safari Share → Add to Home Screen installs as "Shack" |
+| 5 | All 11 flow tabs deploy clean | No red triangles on tab labels |
+| 6 | MQTT broker alive | `mosquitto_sub -h localhost -t '#' -C 5` shows traffic |
+| 7 | AS3935 publishing (from ESP32 bridge) | Topic `lightning/as3935/hb` ticks every 30 s. The Pi daemon (`as3935.service`) is intentionally disabled — the ESP-WROOM-32 in [`vu2cpl-as3935-bridge`](https://github.com/vu2cpl/vu2cpl-as3935-bridge) is the live publisher. If the ESP32 is offline / dead, `sudo systemctl enable --now as3935` on this Pi resurrects the indoor daemon as fallback |
+| 8 | RPi telemetry publishing | Topic `rpi/noderedpi4/cpu` updates every 60 s |
+| 9 | LP-700 telemetry alive | Dashboard LP-700 panel shows live values |
+| 10 | FlexRadio TCP up | Dashboard FlexRadio panel shows slice state |
+| 11 | Tasmota state sync | Toggle a power outlet from dashboard → relay clicks → state syncs back |
+| 12 | DXCC alerts firing | DXCC tab status badges green; spots arriving in the table. `Login + Parse + Dedup` shows recent activity (`[cluster1] DX de ...`); `DXCC Prefix Lookup + Alert Classify` shows per-spot status (`worked` / `NEW DXCC` / etc.) |
+| 13 | Lightning auto-disconnect | Click `TEST ⚡ 6 km DISCONNECT` inject → antenna + radio go OFF |
+| 14 | Lightning event log file | File `~/.node-red/projects/vu2cpl-shack/nr_lightning_events.jsonl` exists and contains recent events: `tail -f ~/.node-red/projects/vu2cpl-shack/nr_lightning_events.jsonl` should show JSON event records. The path is hardcoded in the **Init Defaults** node on the Lightning tab. This JSONL file persists across Node-RED restarts |
+| 15 | Chrony / GPS card live | Dashboard tab `Shack Monitoring tools` → `Network Monitor` group shows `Chrony status card` updating every minute. Requires `gpsntp.local` to be up + its publisher cron firing (`/usr/local/bin/gpsntp-mqtt-publish.sh`). If silent: `mosquitto_sub -h localhost -t shack/gpsntp/chrony -v` should print one retained payload immediately + a fresh one each minute |
 
-If 1–7 pass but 8 fails: re-check Step 9 (lp700-server install).
-If 11 fails: re-check Step 10 (credentials node) and the file context store.
-If 13 fails (JSONL file missing or empty): The Lightning tab is working but events aren't being persisted. Verify the **Init Defaults** node (`ec1fd4dece8c4dc0`) on the Lightning tab has correctly set `flow.set('cfg_events_jsonl', ...)`. Trigger a test event via `TEST ⚡ 6 km DISCONNECT` inject and watch for the file to be created/updated. If still missing, the file-context store from Step 6 may not be properly enabled — re-run `enable_file_context.sh` and restart Node-RED.
-If 14 fails but other cards are fine: not a noderedpi4 problem — it's gpsntp.local. See `pi-gps-ntp-server` repo.
+If 1–8 pass but 9 fails: re-check Step 9 (lp700-server install).
+If 4 fails (`/shack` 404 or blank): check `node-red-contrib-uibuilder` is installed (`grep uibuilder ~/.node-red/package.json`); confirm the `Shack Vue` uibuilder node on the `Vue Dashboard` flow tab is deployed; check that `~/.node-red/projects/vu2cpl-shack/uibuilder/shack/src/` contains `index.html`, `index.js`, `index.css`, `vue.global.prod.js`. No Node-RED restart needed for front-end file changes — uibuilder serves them directly from disk.
+If 12 fails: re-check Step 10 (credentials node) and the file context store.
+If 14 fails (JSONL file missing or empty): The Lightning tab is working but events aren't being persisted. Verify the **Init Defaults** node (`ec1fd4dece8c4dc0`) on the Lightning tab has correctly set `flow.set('cfg_events_jsonl', ...)`. Trigger a test event via `TEST ⚡ 6 km DISCONNECT` inject and watch for the file to be created/updated. If still missing, the file-context store from Step 6 may not be properly enabled — re-run `enable_file_context.sh` and restart Node-RED.
+If 15 fails but other cards are fine: not a noderedpi4 problem — it's gpsntp.local. See `pi-gps-ntp-server` repo.
 
 ---
 

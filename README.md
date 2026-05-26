@@ -24,8 +24,19 @@ dashboard. Hardware talks to Node-RED via:
   [`lp700-server`](https://github.com/VU3ESV/LP-700-Server) gateway)
 - **HTTP** — Open-Meteo, NOAA SWPC, Club Log, RPi fleet agent
 
-The dashboard runs at `http://192.168.1.169:1880/ui` and is dark-themed
-(base `#097479`, bg `#111111`).
+**Two dashboards**, both served by the same Node-RED instance:
+
+- **`/ui`** — Dashboard 1 (legacy Angular). Dark-themed
+  (base `#097479`, bg `#111111`). Original, all features intact.
+- **`/shack`** — Vue 3 SPA served via uibuilder. 12 cards, all
+  collapsed by default with live summary headers, true responsive
+  layout (CSS column masonry), PWA-installable on iPad / iPhone
+  ("Add to Home Screen"). The primary dashboard going forward.
+
+A 2026-05-24 POC of Dashboard 2 (`@flowfuse/node-red-dashboard`,
+served at `/dashboard`) was retired on 2026-05-26 in favour of
+uibuilder + Vue. See SHACK_CHANGELOG `2026-05-26` for the retirement
+rationale.
 
 ---
 
@@ -229,6 +240,7 @@ from `sm7iun.se/rbnskew.csv` every 6 h.
 ├── CLAUDE.md                        Operator deep-reference: node IDs, gotchas, runtimes
 ├── REBUILD_PI.md                    Disaster-recovery runbook: blank SD → working shack
 ├── DEPLOY_PI.md                     Per-host fleet-member onboarding runbook
+├── FORK_GUIDE.md                    Customisation runbook for forking to a different station
 ├── HANDOVER.md                      Session pickup notes
 ├── SHACK_CHANGELOG.md               Dated changelog of non-DXCC tab changes
 ├── SHACK_CHANGELOG.pdf              Changelog rendered PDF (always in sync with .md)
@@ -245,6 +257,7 @@ from `sm7iun.se/rbnskew.csv` every 6 h.
 | [CLAUDE.md](CLAUDE.md) | Operator (and the LLM context) | Looking up a node ID, broker port, install command |
 | [REBUILD_PI.md](REBUILD_PI.md) | Operator (disaster recovery) | "The shack Pi died — rebuild from blank SD card" |
 | [DEPLOY_PI.md](DEPLOY_PI.md) | Operator | Onboarding a *different* Pi as a fleet member (telemetry + reboot agent only) |
+| [FORK_GUIDE.md](FORK_GUIDE.md) | Different operator forking the repo | "I'm not VU2CPL but I want to run this stack at my own QTH" — per-site customisation runbook (callsign, grid, MQTT broker, hardware substitutions, `/shack` rebadging) |
 | [DXCC.md](DXCC.md) / [PDF](DXCC_Tracker_README.pdf) | Operator | Working on the DXCC tab specifically |
 | [SHACK_CHANGELOG.md](SHACK_CHANGELOG.md) / [PDF](SHACK_CHANGELOG.pdf) | Future-self | "What did I change on day X" |
 | [HANDOVER.md](HANDOVER.md) | New session pickup | "What was I in the middle of" |

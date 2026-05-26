@@ -221,7 +221,8 @@ stage_04_nodered_palette() {
     cd "$HOME/.node-red"
 
     local packages=(
-        node-red-dashboard
+        node-red-dashboard            # Dashboard 1 (legacy /ui)
+        node-red-contrib-uibuilder    # Vue 3 SPA at /shack — both coexist
         node-red-node-serialport
         node-red-contrib-flexradio
         node-red-contrib-ui-svg

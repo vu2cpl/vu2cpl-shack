@@ -603,7 +603,8 @@ rejected on import as "unknown types".
 ## NODE-RED PALETTE PACKAGES
 
 ```
-node-red-dashboard           3.6.6
+node-red-dashboard           3.6.6      ← Dashboard 1 (legacy /ui)
+node-red-contrib-uibuilder   7.6.2      ← Vue 3 SPA at /shack
 node-red-node-serialport     2.0.3
 node-red-contrib-flexradio   1.2.5
 node-red-contrib-ui-svg      2.3.3
@@ -614,13 +615,26 @@ node-red-contrib-loop        latest
 node-red-contrib-ui-level    latest
 ```
 
-LP-700 used to use `@gdziuba/node-red-usbhid` (direct HID access from
-Node-RED). Migrated to the [`lp700-server`](https://github.com/VU3ESV/LP-700-Server)
-WebSocket gateway on 2026-05-09 and uninstalled the HID package on
-2026-05-11. Its build-time `-dev` libs (`libudev-dev`, `librtlsdr-dev`,
-`libusb-1.0-0-dev`) were not present at uninstall time either. The
-runtime counterparts (`libudev1`, `libusb-1.0-0`, `librtlsdr0`) remain
-as transitive deps of system packages and are unrelated.
+Both `/ui` and `/shack` coexist on the same Node-RED instance with no
+conflict — they share flow context and MQTT subscriptions through
+common builder functions.
+
+**Retired packages:**
+
+- `@gdziuba/node-red-usbhid` (LP-700 direct HID): migrated to the
+  [`lp700-server`](https://github.com/VU3ESV/LP-700-Server) WebSocket
+  gateway on 2026-05-09; uninstalled 2026-05-11. Its build-time `-dev`
+  libs (`libudev-dev`, `librtlsdr-dev`, `libusb-1.0-0-dev`) were not
+  present at uninstall time either. The runtime counterparts
+  (`libudev1`, `libusb-1.0-0`, `librtlsdr0`) remain as transitive deps
+  of system packages and are unrelated.
+- `@flowfuse/node-red-dashboard` (Dashboard 2 POC): installed
+  2026-05-24 alongside D1 to evaluate as a more-responsive successor;
+  retired and uninstalled 2026-05-26 in favour of uibuilder + Vue 3.
+  Lessons from the POC (D2's fixed-grid widget layout is not actually
+  responsive; `ui_control` not present in v3.6.6; cross-tab wires drop
+  silently) drove the decision. All `d2_*` nodes stripped from
+  flows.json in the same cleanup. See SHACK_CHANGELOG `2026-05-26`.
 
 ---
 
