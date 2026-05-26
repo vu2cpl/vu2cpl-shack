@@ -4809,6 +4809,122 @@ the old one will assume the deploy is broken. It isn't — Safari is.
 Logged here so the next refresh doesn't waste an afternoon debugging
 a non-bug.
 
+### Lightning Vue card — fix CAPE always-null bug (writer/reader key mismatch)
+
+`Build Lightning state for Vue` (`vue_lightning_builder_01`) had:
+
+```javascript
+s.cape = flow.get('cape_now') ?? null;
+```
+
+…but the only writer on the tab, `Parse Open-Meteo → Strike`
+(`593f22a507b46335`), emits the value as:
+
+```javascript
+flow.set('om_cape_latest', cape);
+```
+
+So `flow.cape_now` was never set anywhere and the Vue Lightning card's
+CAPE tile always rendered as `—` regardless of actual atmospheric
+conditions. `omState` worked fine for the same reason — its key
+matched between writer and reader.
+
+Same class of bug as the [2026-05-10 DXCC `spot.dxCall` vs `spot.call`
+field-name mismatch](#dxcc-real-regression--spot-field-name-mismatch).
+Pattern: when a downstream node renders nothing while upstream is
+clearly alive, the first thing to check is **whether the keys actually
+match end-to-end**, not whether the downstream code has a bug.
+
+**Fix** (`vue_lightning_builder_01`) — read the actual key the writer
+emits, plus an inline comment naming the writer and warning future-self
+not to rename either side without touching the other:
+
+```javascript
+// Writer is `Parse Open-Meteo → Strike` (593f22a507b46335) on this
+// same tab. It writes om_cape_latest + om_state (+ om_wc_latest).
+// Don't change these key names without updating that node too —
+// Vue dashboard goes silent.
+s.cape    = flow.get('om_cape_latest') ?? null;
+s.omState = flow.get('om_state')       ?? null;
+```
+
+Commit [`662bb7b`](https://github.com/vu2cpl/vu2cpl-shack/commit/662bb7b).
+Verified live: CAPE tile populates within ~5 min (next Open-Meteo poll)
+or immediately if `Poll Open-Meteo (5 min)` inject is hand-fired.
+
+### Lightning Vue card — drop redundant display rows from stats grid
+
+The expanded card's stats `<dl>` had four rows that just duplicated
+data already visible elsewhere on the page:
+
+| Removed row | Where it actually lives |
+|-------------|-------------------------|
+| Callsign | Top bar (`VU2CPL` chip) |
+| Grid     | Top bar subtitle (`MK83TE · Bengaluru · Shack Control`) |
+| Threshold | Thresholds collapsible — right beside its slider, where it's interactive |
+| Reconnect | Thresholds collapsible — right beside its slider |
+| Antenna | Collapsed header summary chip (`ANT ON` / `ANT OFF`, green/red) |
+
+Result: the stats grid is now three operational rows that live nowhere
+else on the page — `Total strikes`, `<40 / <50 / >50` zone breakdown,
+`Closest`. State fields (`state.callsign / grid / thresholdKm /
+reconnectMin / antennaOn`) kept in the reactive state object because
+Thresholds sliders, builder defaults, and the collapsed-header chip
+still read them.
+
+Commits [`3497bea`](https://github.com/vu2cpl/vu2cpl-shack/commit/3497bea)
+(Callsign/Grid/Threshold/Reconnect) +
+[`916a789`](https://github.com/vu2cpl/vu2cpl-shack/commit/916a789)
+(Antenna). Front-end only — no Node-RED restart needed.
+
+**Open follow-up:** when the Lightning card is *expanded*, the
+collapsed-summary header (which carries the `ANT ON / ANT OFF` chip)
+is hidden via `v-if="!expanded"`. So antenna state isn't currently
+visible at the top of the open card either. If we want it always
+visible, move the chip out of the `v-if` so it sits permanently in
+the header row alongside the title. Deferred — operator hasn't asked
+for it.
+
+### DXCC Vue card — surface seed age from nr_dxcc_seed.json mtime
+
+`Build DXCC state for Vue` (`vue_dxcc_builder_01`) had `seedAge:
+null` hardcoded, so the **Seed** field on the DXCC card always
+rendered as `—` instead of the actual age of the last Club Log
+fetch.
+
+**Fix:** `fs.statSync` the seed file's mtime and format as a short
+relative-time string. The seed file is rewritten by `Fetch All Modes +
+Parse` on the daily 02:00 Club Log cron (and on any manual `POST
+/dxcc/refresh`), so mtime cleanly equals "last successful fetch" —
+exactly what the Seed field is meant to mean.
+
+Format ladder (same shape as Last-seen tiles elsewhere on the
+dashboard for consistency):
+
+| Age | Renders as |
+|-----|------------|
+| < 1 min | `just now` |
+| < 1 h | `Nm ago` |
+| < 24 h | `Nh ago` |
+| < 30 d | `Nd ago` |
+| else | `Nmo ago` |
+
+Path probe order mirrors `Bootstrap Worked Table` (the canonical
+reader): `flow.cfg_flows_dir + '/nr_dxcc_seed.json'` first, then
+`~/.node-red/nr_dxcc_seed.json` as fallback. Required adding
+`libs: [{var:'fs',module:'fs'}, {var:'os',module:'os'}]` to the
+function node (per the CLAUDE.md gotcha that `fs` / `os` are not
+free globals in Node-RED function nodes).
+
+Also emits `stats.seedMtime` (epoch ms) for future-proofing — Vue
+can do `toLocaleString` or stale-data colour-coding off it without
+a flow round-trip.
+
+Commit [`ea0e361`](https://github.com/vu2cpl/vu2cpl-shack/commit/ea0e361).
+Verified live: post-restart, Seed field flipped from `—` to `3h ago`
+within the next 3-second tick (matched the ~05:00 IST time of day
+versus the 02:00 IST cron run).
+
 ---
 
 ## Standard Commit Sequence (reminder)
