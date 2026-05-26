@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v5 · 2026-05-26 12:00 IST';
+window.__shackBuild = 'v6 · 2026-05-26 12:15 IST';
 
 // =====================================================================
 // Connection-status heartbeat — MULTI-PATH (belt and braces).
@@ -2483,7 +2483,11 @@ const NetworkCard = {
 
 // === Top-bar with callsign + clocks + inline connection pill ===
 const TopBar = {
-  props: ['connected'],
+  // No longer accepting `connected` from parent — it failed to propagate
+  // through Vue's reactive prop chain on some browsers. The TopBar's own
+  // tick() already reads window.__shackLastMsgAt every second and that's
+  // demonstrably working, so we derive `connected` inline from the same
+  // tick.
   template: `
     <div class="topbar">
       <div class="topbar__left">
@@ -2520,6 +2524,8 @@ const TopBar = {
     const lastMsgAge = ref('—');
     const diagShort  = ref('');
     const diagText   = ref('');
+    const connected  = ref(false);
+    const LIVE_WINDOW_MS = 8000;
     const pad = (n) => String(n).padStart(2, '0');
     function tick() {
       const now = new Date();
@@ -2527,7 +2533,11 @@ const TopBar = {
       const istD = new Date(now.getTime() + (5 * 60 + 30) * 60_000);
       ist.value = pad(istD.getUTCHours()) + ':' + pad(istD.getUTCMinutes()) + ':' + pad(istD.getUTCSeconds());
       const t = window.__shackLastMsgAt || 0;
-      lastMsgAge.value = t ? Math.floor((Date.now() - t) / 1000) : '∞';
+      const ageMs = t ? (Date.now() - t) : Infinity;
+      lastMsgAge.value = isFinite(ageMs) ? Math.floor(ageMs / 1000) : '∞';
+      // ── Connection-state derivation right here in the working tick ──
+      const ioConn = window.__shackPaths && window.__shackPaths.ioConnectedSeen === true;
+      connected.value = (ageMs < LIVE_WINDOW_MS) || ioConn;
       // Diagnostic strip when offline
       const p = window.__shackPaths || {};
       const build = window.__shackBuild || '?';
@@ -2550,8 +2560,8 @@ const TopBar = {
         ' DOM:stdMsgReceived=' + (p.domStdMsgBumps || 0) +
         ', ioConnected=' + (p.ioConnectedSeen == null ? 'never seen' : p.ioConnectedSeen);
     }
-    tick(); setInterval(tick, 1000);
-    return { utc, ist, sr, ss, lastMsgAge, diagShort, diagText };
+    tick(); setInterval(tick, 500);   // 500ms so pill responds within a sec
+    return { utc, ist, sr, ss, lastMsgAge, diagShort, diagText, connected };
   }
 };
 
@@ -2559,7 +2569,7 @@ const TopBar = {
 const App = {
   components: { TopBar, LightningCard, DXCCCard, NetworkCard, RPiCard, PowerCard, SolarCard, FlexCard, SPECard, LP700Card, RotorCard, GpsNtpCard, RBNCard },
   template: `
-    <TopBar :connected="connected" />
+    <TopBar />
     <div class="dash-grid">
       <FlexCard />
       <LP700Card />
@@ -2576,23 +2586,12 @@ const App = {
     </div>
   `,
   setup() {
-    const connected = ref(false);
     onMounted(() => {
       uibuilder.start();
-
-      // OR-gate of ALL detection paths — GREEN if any path says we're live.
-      // See top-of-file installAllPaths() for what's wired up.
-      const LIVE_WINDOW_MS = 8000;
-      setInterval(() => {
-        const age = Date.now() - (window.__shackLastMsgAt || 0);
-        const ioConn = window.__shackPaths && window.__shackPaths.ioConnectedSeen === true;
-        connected.value = (age < LIVE_WINDOW_MS) || ioConn;
-      }, 500);
-
       console.log('[shack] uibuilder started, version:', uibuilder.version || 'unknown',
                   '· ioConnected initial:', uibuilder.ioConnected);
     });
-    return { connected };
+    return {};
   }
 };
 
