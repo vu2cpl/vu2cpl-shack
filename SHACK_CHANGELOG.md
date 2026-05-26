@@ -4925,6 +4925,152 @@ Verified live: post-restart, Seed field flipped from `—` to `3h ago`
 within the next 3-second tick (matched the ~05:00 IST time of day
 versus the 02:00 IST cron run).
 
+### Dashboard 2 (FlowFuse) — retired; uibuilder + Vue 3 wins
+
+The Dashboard 2 POC installed on 2026-05-24 (one Solar widget on
+`/dashboard`) is gone. The decision to stop investing in D2 was clear
+once the uibuilder + Vue 3 `/shack` migration delivered the actual
+goal — a dashboard that reflows cleanly from iPhone portrait through
+4K desktop, with PWA install on iPad / iPhone — at significantly
+lower porting cost per card.
+
+#### Why D2 didn't survive
+
+In ~22 commits of porting effort, the D2 POC surfaced architectural
+blockers that compound across 12 cards:
+
+- **D2's grid is fixed**, not responsive. Each widget declares
+  `width: N, height: N` units. The "responsiveness" we got from D2
+  was the same hand-tuned breakpoints D1 already had — moving to D2
+  bought zero layout intelligence we didn't already control with CSS
+  on D1.
+- **`ui_control` not shipped in `node-red-dashboard` 3.6.6** (and
+  verified absent on `--force` reinstall — not a packaging fluke,
+  genuinely absent from the npm tarball). This kills the instant-on
+  rehydrate pattern; you have to fall back to periodic ticks anyway,
+  which is what D1 already does.
+- **`ui-gauge` can't render value text at `width < 2`** — so any
+  compact card has to use custom SVG anyway. Custom SVG inside D2
+  costs the same as custom SVG inside D1; the abstraction over the
+  primitive is the only thing D2 was selling, and it was leaking.
+- **Cross-tab wires silently drop in D2.** `flow.solarState` is tab-
+  scoped, so fanout had to move onto the source tab regardless. No
+  improvement over D1.
+- **Default `gtype` is `gauge-half`** (not the unqualified `gauge`).
+  Minor, but the kind of paper-cut you hit per widget.
+- **`ui-text` format is `{{msg.payload}}`** not `{{value}}`. Different
+  templating dialect than D1.
+- **No native collapsible groups.** No dynamic widget-height messages
+  on `ui-template`. So custom layout JS still needed.
+
+Set against `/shack`'s wins — CSS column masonry with `clamp()`
+typography that *actually* reflows phone → tablet → laptop → 4K,
+collapsed-by-default cards with click-to-expand, PWA install with
+home-screen icon, single-file Vue app with no build step — D2 has
+no remaining purpose.
+
+#### What got removed
+
+**flows.json** — 9 nodes deleted (1 tab, 1 ui-base, 1 ui-page,
+1 ui-theme, 1 ui-group, 1 function, 1 inject, 2 ui-templates), all
+prefixed `d2_` for clean grep:
+
+```
+d2_tab_solar_01           D2 Solar (flow tab)
+d2_ui_base_01             Shack D2 (ui-base, served /dashboard)
+d2_ui_page_shack_01       Shack (ui-page)
+d2_ui_theme_01            Shack Dark (ui-theme)
+d2_ui_grp_solar_01        Solar Conditions (ui-group)
+d2_solar_fanout_01        Solar State → D2 widgets (function)
+d2_solar_tick_01          Refresh D2 every 30s (inject)
+d2_solar_unified_01       Solar — Unified Compact (ui-template)
+d2_global_css_01          Global CSS overrides (ui-template)
+```
+
+Plus one stray wire on the Solar-tab inject that fed
+`d2_solar_fanout_01` as its second downstream — stripped via a
+Python pass over the JSON. After cleanup: 511 → 502 nodes, zero
+`d2_*` references anywhere in the serialised flow (regex-verified
+post-write).
+
+**Pi-side** — `npm uninstall @flowfuse/node-red-dashboard` ran
+cleanly; package.json dropped the dep + 25 transitive deps + ~80 MB
+of `node_modules/`. `/dashboard` URL returns 404 (was 200 before).
+
+**Misleading code comment** — the `Replay AS3935 state` function
+(`as3935_tuning_replay_fn` on the `AS3935 Tuning` tab) carried a
+comment "Tick is the workable substitute until either Dashboard 1
+ships ui_control again or we migrate widgets to Dashboard 2
+(FlowFuse)." The D2 hint is now stale; rewrote it to "D1 /ui
+rehydrate path; the /shack Vue card uses its own uibuilder tick
+(vue_as3935_tick) and doesn't depend on this one."
+
+#### What got kept
+
+The D2 history stays in this changelog and in HANDOVER — the lesson
+("a 'responsive dashboard' that doesn't reflow isn't responsive") is
+worth keeping for the next time someone (including me, six months
+from now) wonders whether D2 has matured enough to revisit.
+
+#### Verification
+
+```
+$ curl -s -o /dev/null -w '%{http_code}' http://localhost:1880/dashboard
+404
+$ curl -s -o /dev/null -w '%{http_code}' http://localhost:1880/shack/
+200
+$ curl -s -o /dev/null -w '%{http_code}' http://localhost:1880/ui
+301
+```
+
+`/ui` (D1) and `/shack` (Vue) keep working; `/dashboard` (D2) is gone.
+
+Commit [`13c9ac6`](https://github.com/vu2cpl/vu2cpl-shack/commit/13c9ac6).
+
+### New doc — `FORK_GUIDE.md` for different-operator forks
+
+A 350-line top-level runbook for a different operator who wants to
+run this stack at **their own QTH**. Pattern matches the existing
+docs: REBUILD_PI = same-Pi rebuild, DEPLOY_PI = fleet member, and
+now FORK_GUIDE = different station.
+
+**Why a separate doc.** CLAUDE.md is full of VU2CPL-specific
+operational lore (the GPIO17-vs-GPIO4 AS3935 saga, the SPE WS
+migration history, the cluster login regex saga) which a forker
+doesn't need to read end-to-end. REBUILD_PI assumes VU2CPL-specific
+values everywhere (`192.168.1.169`, `VU2CPL`, `MK83TE`, `gpsntp.local`).
+A clean per-site customisation pass needed its own runbook.
+
+**Stages covered:** A=network/MQTT broker, B=Lightning Init Defaults
+(callsign / grid / antenna power switch / radio enable / thresholds),
+C=DXCC + Telegram credentials + cluster selection, D=FlexRadio,
+E=SPE amplifier, F=rotator, G=LP-700, H=Tasmota devices (topic
+renames + TZ + power-card layout), I=`/shack` PWA rebadge with full
+icon-regeneration command list (`rsvg-convert` + PIL `favicon.ico`
+multi-res), J=RPi fleet, K=network monitor, L=GPS NTP card,
+M=Open-Meteo location, N=backups + secrets hygiene.
+
+**Hardware compatibility table** up front tells a forker exactly
+which flow tabs to delete if they don't own the matching hardware,
+so the "I followed the runbook and now I have a broken FlexRadio tab
+that's bothering me" path closes off early.
+
+**Troubleshooting table** at the end indexes the usual "I skipped a
+stage" failure modes (`/ui` shows only `—` → MQTT broker IP wrong
+somewhere; DXCC silent → cluster IPs unreachable; etc.).
+
+REBUILD_PI.md prologue gets a callout pointing forkers at FORK_GUIDE
+*before* they walk the rebuild runbook. README.md "Documentation map"
+gains a FORK_GUIDE row + repository-layout tree includes the new
+file. CLAUDE.md unchanged — it's already labelled as "VU2CPL-specific
+operational lore" and the forker is now correctly steered away from it.
+
+Verification: clean git clone + `rebuild_pi.sh` end-to-end remains
+the same first step for both same-Pi rebuild AND forker (the docs
+just diverge after step 13).
+
+Commit [`13c9ac6`](https://github.com/vu2cpl/vu2cpl-shack/commit/13c9ac6).
+
 ---
 
 ## Standard Commit Sequence (reminder)
