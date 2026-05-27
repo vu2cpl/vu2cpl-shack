@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v7 · 2026-05-26 17:50 IST';
+window.__shackBuild = 'v8 · 2026-05-27 22:35 IST';
 
 // =====================================================================
 // Connection-status heartbeat — MULTI-PATH (belt and braces).
@@ -593,10 +593,16 @@ const DXCCCard = {
           </button>
         </div>
 
-        <!-- Stats line -->
+        <!-- Stats line — entities and band-slots are different units.
+             "319 entities" = 319 distinct DXCCs worked.
+             "2395/2432 slots ✓" = of 2432 entity-band combinations
+             worked, 2395 are QSL/LoTW confirmed. -->
         <div class="statusline">
-          <span>Worked <strong style="color:var(--accent)">{{ state.stats?.totalWorked ?? '—' }}</strong></span>
-          <span>Confirmed <strong style="color:var(--green)">{{ state.stats?.totalConfirmed ?? '—' }}</strong></span>
+          <span>Entities <strong style="color:var(--accent)">{{ state.stats?.entities ?? '—' }}</strong></span>
+          <span :title="'Of ' + (state.stats?.bandSlots ?? '—') + ' band slots worked, ' + (state.stats?.confirmedSlots ?? '—') + ' are confirmed via QSL/LoTW'">
+            Slots <strong style="color:var(--green)">{{ state.stats?.confirmedSlots ?? '—' }}</strong>
+            <span style="color:var(--muted)">/ {{ state.stats?.bandSlots ?? '—' }} ✓</span>
+          </span>
           <span>Seed <strong>{{ state.stats?.seedAge ?? '—' }}</strong></span>
         </div>
 
