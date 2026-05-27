@@ -5620,6 +5620,136 @@ yellow/lit, green/cold) instead of by the fake distance.
 
 Commit [`3ea8d33`](https://github.com/vu2cpl/vu2cpl-shack/commit/3ea8d33).
 
+### D1 `/ui` — five Vue-parity backports (closes #26–#30)
+
+Five HANDOVER follow-ups closed together — D1 `/ui` now matches Vue
+`/shack` on the substantive UX deltas. Did in three commits sized by
+risk.
+
+#### `b9b727c` — #28 SPE finer power-bar rungs
+
+Trivial array-literal change in `ws_panel_node`'s SPE_SCALE:
+`[5, 25, 50, 100, 500, 1000, 1500, 2000, 5000]` →
+`[5, 10, 25, 50, 100, 250, 500, 1000, 1500, 2000, 5000]`. Adds 10 W
+and 250 W rungs. Low-power tune carriers (1–10 W) now read
+meaningfully on D1 instead of all collapsing into the 5 W rung.
+Matches Vue's PWR_LADDER exactly.
+
+#### `0153c9a` — #27 cluster click-to-mute + #30 seed-age display
+
+Both touch the DXCC Dashboard ui_template (`38a6451a95a57685`).
+
+**#30 (seed-age display)** — new "Seed age" row in the WORKED STATS
+card backed by `dxcc_seed_age_fn_01` function node (`fs.statSync` on
+`nr_dxcc_seed.json`, `libs:[fs, os]` declared) driven by a 30 s inject
+`dxcc_seed_age_tick_01`. Watch handler in the template's
+`scope.$watch` now branches on `topic === 'seed_age'` and updates
+`#st-seed` text + amber colour for `>30d` ages. Mirrors
+`vue_dxcc_builder_01`'s implementation for the /shack DXCC card.
+
+**#27 (cluster mute toggle)** — each of the 4 cluster nodes
+(VU2CPL/VU2OY/VE7CC/N2WQ) now has an `onclick` handler that fires
+`scope.send({topic:'dxcc_mute', payload:{name, mute}})`. New downstream
+function `dxcc_mute_handler_01` reads that topic and updates
+`global.dxcc_cluster_mute` — the SAME global already honoured by
+`login-parse-dedup-v2`'s mute check, so **D1 and Vue share mute state**.
+Visual: muted cluster nodes render at 0.4 opacity with `.cl-info`
+text replaced by amber "MUTED" label. Cluster Watchdog
+(`c68f81fda8c7f015`) extended to attach `payload._muted` (current
+global state) alongside per-cluster status so the dashboard rehydrates
+correctly on page open instead of starting from local stale state.
+
+DXCC Dashboard output now fans out to TWO targets (existing Blacklist
+Filter + new mute handler). Both ignore msgs they don't recognise.
+
+#### `38bf3fb` — #26 AS3935 Bridge + Lightning merge + #29 stats trim
+
+The big one. Master Dashboard (`557083037f168b22`) absorbs the
+standalone AS3935 Control Panel (`223cb2ce733c5d3f`).
+
+**Motivation** — Vue `/shack` Lightning card already shows AS3935
+sensor state, Bridge tunables, controls, test injects, and event log
+all together. D1 had them split across two dashboard tabs (Shack tab
+for Lightning Master Dashboard; Shack Monitoring tools tab for AS3935
+Control Panel). Operator wanted them unified to match Vue.
+
+**Merge mechanics:**
+
+- Master Dashboard `format` absorbs the AS3935 panel piecewise:
+  - **CSS** (`#a35tune *`, `#a35ev *` namespaces) appended inside the
+    Master Dashboard's `<style>` block. Namespaces don't collide with
+    Master's `#dash` namespace.
+  - **HTML** wrapped in a `<details><summary>AS3935 Bridge — Tuning ·
+    Diagnostics · Test injects</summary>...</details>` collapsible
+    inserted right after the existing `as3935Card` mini-display and
+    before the Event Log. Preserves the compact distance/energy/event/
+    last-seen tiles already on Master; controls below are click-to-
+    expand so the card isn't overwhelming.
+  - **Two IIFE scripts** (Pattern-B `(function(scope){...})(scope)`
+    form) appended inside Master Dashboard's `<script>`. Both bind
+    their own `scope.$watch` and coexist cleanly with Master's
+    existing IIFE — three watch handlers on the same scope is fine,
+    each just inspects msg fields they care about and returns.
+
+- Master Dashboard's `height` bumped **12 → 22** to fit the merged
+  content even with the AS3935 details collapsible closed.
+
+- **7 incoming wires** that previously targeted `223cb2ce733c5d3f`
+  (AS3935 status, hb, cmd-ack, event, last_event mqtt-in
+  subscriptions plus replay-tick fan-out) re-pointed to
+  `557083037f168b22`. The merged template's IIFEs receive everything
+  the standalone panel used to receive.
+
+- Master Dashboard's **output** now also wires to
+  `82f732a0dac14945` (AS3935 cmd MQTT-out). AS3935 IIFE scope.send
+  calls for `{set: key, value: v}` tunable updates and
+  `{action: name}` maintenance commands now reach the bridge via this
+  fan-out wire — alongside the existing Manual Override + Save
+  Threshold wires which ignore non-matching topics.
+
+- **`223cb2ce733c5d3f` ui_template + `as3935_ctl_grp` ui_group
+  deleted.** Regex-verified zero remaining references. The "Shack
+  Monitoring tools" dashboard tab keeps its other four groups (RBN
+  Skimmer, RPi Fleet, Network Monitor, Solar Conditions) — only the
+  orphan AS3935 group goes away. The tab itself stays populated.
+
+**#29 (stats grid trim)** done in the same commit — removed Callsign
++ Grid Square entries from Master Dashboard's `rows` array in the
+stats render function. Both already render in the Header card. Kept
+Threshold + Reconnect + Antenna rows (useful at-a-glance and Vue keeps
+them too in its Thresholds collapsible).
+
+507 → 505 nodes net.
+
+**Risk + mitigation** — this is a substantial single-template change
+(~22 KB of HTML/CSS/JS pasted in). If a script error breaks the new
+IIFEs the Master Dashboard wouldn't render at all (panel-wide JS
+failure stops Angular). Mitigation: (a) the two IIFEs are unchanged
+from the standalone panel that worked for weeks; only their host
+template changed, (b) restart-then-30s journalctl shows no error/warn
+lines from Node-RED, (c) revert path is `git revert 38bf3fb` which
+restores both templates atomically.
+
+**Operator verify path after deploy:**
+1. Open `/ui` Lightning Master Dashboard card → AS3935 mini-display
+   tiles still render with live data (distance/energy/event/last
+   seen). ✓
+2. Click the `▶ AS3935 Bridge — Tuning · Diagnostics · Test injects`
+   summary → opens. NF/WDTH/SREJ/TUN_CAP rows populate; battery row
+   shows current value; counters tick; test-inject buttons present.
+3. Hit a tunable nudge (e.g. NF +) → check journalctl for
+   `lightning/as3935/cmd` publish with the right payload.
+4. DXCC Dashboard → click a cluster pill → goes 0.4 opacity + "MUTED"
+   amber text. Confirms global mute is set.
+5. DXCC Dashboard → WORKED STATS row "Seed age" reads actual age
+   (e.g. `3h ago`).
+6. SPE Panel → push a low-power tune carrier (~3 W) → bar reads
+   reasonable percentage on the 5W rung not stuck near 0.
+
+If any step fails: `git revert 38bf3fb` restores AS3935 Control Panel
+standalone; `git revert 0153c9a` restores DXCC pre-mute-pill;
+`git revert b9b727c` restores the coarser SPE ladder.
+
 ---
 
 ## Standard Commit Sequence (reminder)
