@@ -5071,6 +5071,228 @@ just diverge after step 13).
 
 Commit [`13c9ac6`](https://github.com/vu2cpl/vu2cpl-shack/commit/13c9ac6).
 
+### DXCC — Login + Parse + Dedup now handles multi-line TCP chunks
+
+In the Vue `/shack` DXCC card the **VU2CPL** cluster pill was showing
+offline while N2WQ / VU2OY / VE7CC were green. The cluster server
+(`vu2cpl.ddns.net:7300`, CwSkimmer) was alive and serving spots —
+verified by manual `nc` login + watching spots arrive. So the TCP
+side was fine.
+
+**Root cause:** `login-parse-dedup-v2` treated each incoming TCP chunk
+as a single line. The tcp-in nodes use `newline: ""` (raw chunks)
+because CwSkimmer's `Please enter your callsign:` prompt has no
+trailing newline (and tcp-in's newline-split would buffer the prompt
+forever). But CwSkimmer also **batches** multiple lines into one TCP
+segment — `cluster ack + 2-3 DX spots in one chunk` is the normal
+post-login traffic pattern. Two failure modes inside the function:
+
+1. `line.startsWith('DX de')` failed when the chunk began with the
+   post-login ack `VU2CPL-1 de SKIMMER 2026-05-26 ...Z CwSkimmer >`.
+   The embedded `DX de` lines were silently dropped.
+2. Even when a chunk did start with `DX de`, the parse regex's `$`
+   anchor failed because of embedded `\n` between consecutive spots.
+
+Both paths returned `[null, null, null]`, so `cluster3` (VU2CPL)
+never received a `lastSpotTs` bump. Cluster Watchdog (every 30s)
+saw `lastSpotTs === 0` and held `connected: false`. Vue rendered
+"offline".
+
+N2WQ / VU2OY / VE7CC happen to deliver one spot per TCP chunk
+(line-buffered output from traditional cluster software) so the
+single-line assumption held for them and they showed green.
+
+The RBN tab's `Login Handler VU2CPL` got this same fix back on
+[2026-05-17](#vu2cpl-skimmer--login-handlers-send-vu2cpl-1-on-port-7300)
+("loops over all lines, emits one msg per DX de") but the DXCC tab's
+unified handler never got it. The two now match.
+
+**Fix:** refactor `Login + Parse + Dedup` to split the chunk on
+newlines and iterate per-line, emitting one spot msg per `DX de`
+line via `node.send()`, plus one final `cluster_status` update per
+chunk. Login detection already operated on the **last** fragment
+of the chunk and stays as-is.
+
+Also tightened: mute-check fallback now derives `_name` from
+`msg.topic` (clusterN) when `_session.host` / `msg.host` aren't
+populated. TCP-in in client mode doesn't reliably set `_session`
+on inbound msgs, so the previous mute check could silently skip
+the host string and miss mute commands. Topic-based fallback
+closes the gap.
+
+Same class of bug as the [2026-05-10 DXCC `spot.dxCall` vs `spot.call`
+field-name mismatch](#dxcc-real-regression--spot-field-name-mismatch).
+Pattern: when a downstream node renders nothing while upstream is
+clearly alive, the first thing to check is **whether the parsing
+assumptions actually match what the wire is delivering**, not whether
+the downstream code has a flag bug.
+
+Status badge format also clearer now: `[clusterN] X/Y spots (chunk)`
+shows emitted vs total DX lines so the dedup ratio is visible at a
+glance.
+
+Verified by manual `nc vu2cpl.ddns.net 7300` → login as `VU2CPL-1`
+returns the cluster ack + 2 spots all in one `recv()` call.
+
+Commit [`e188e9d`](https://github.com/vu2cpl/vu2cpl-shack/commit/e188e9d).
+
+### Vue `/shack` LIVE/OFFLINE pill — multi-iteration saga
+
+The TopBar's connection indicator went through five iterations in
+one afternoon before landing on something that works on every
+browser / PWA combo. Logged here so the rationale for the final
+architecture isn't lost.
+
+**Symptom:** pill stuck on red OFFLINE even though cards were
+visibly receiving live data. Mac Safari sometimes worked, iPad /
+iPhone Safari / dock-icon PWAs / home-screen PWAs did not.
+
+**Iteration 1** (`0834b41`) — read `uibuilder.ioConnected` boolean
+directly on a 1s interval. Mac green; iPad red. uibuilder v7's
+`ioConnected` property is inconsistently populated across WebKit
+variants and reconnect cycles.
+
+**Iteration 2** (`3822489`) — install a wrapper on `uibuilder.onTopic`
+so every card's per-topic callback bumps a `window.__shackLastMsgAt`
+heartbeat; pill = green if any msg within last 8s. Conceptually
+right approach (every card IS using `onTopic` and they ARE getting
+data, so the wrap should catch every msg). Mac green; iPad still
+red. The wrap installed correctly but something further down still
+broke the binding.
+
+**Iteration 3** (`479ef10`) — added no-cache HTTP-equiv meta tags
+to `index.html` on the theory that iPad Safari was caching the old
+HTML. Helped future-proof updates but didn't fix the immediate red
+pill (Safari Website Data clear was needed once to drop the old
+cached HTML; from that point on the meta tags do their job).
+
+**Iteration 4** (`77e9059`) — added VISIBLE diagnostics to the
+OFFLINE pill itself: a build-stamp + per-signal counters strip
+showing `v5 · uib? · wrap=Y · oT28 oM29 dU0 dS28 · ioC=Y · 0s`.
+This is what cracked it: the screenshot from Mac Safari showed
+EVERY signal firing correctly (`oT28` = 28 msgs via wrapped
+`onTopic`, `oM29` = 29 via `onChange('msg')`, `dS28` = 28 via
+DOM event `uibuilder:stdMsgReceived`, `ioC=Y` = `ioConnected`
+true, `0s` = last msg 0 seconds ago) — but pill still said
+OFFLINE. So the data collection was fine; the bug was in the
+state-to-pill propagation, not in the heartbeat.
+
+**Iteration 5** (`85ab62f`) — the actual fix. State `connected`
+was being set in the App component's `setInterval` (`connected.value
+= true`) and passed to TopBar via `:connected` prop. The prop
+binding was failing silently — Vue's reactive ref-to-prop chain
+didn't propagate the change. Meanwhile TopBar had its own working
+`setInterval` (`tick()`, the same one that updated the clocks and
+the diag-strip last-msg counter — proven to work because we
+watched the `0s` counter increment). Moved the `connected`-state
+derivation INTO `tick()`, dropped the parent-to-child prop chain
+entirely. Pill works on every device since.
+
+**Lesson:** when you can't reason about which of three competing
+signals is breaking, **make every signal visible on the device**.
+The diag-strip iteration was ugly UI but it diagnosed the bug in
+one screenshot's worth of feedback. Without it, this could have
+been another full afternoon of guessing.
+
+**Architecture left in place:**
+- `window.__shackLastMsgAt` heartbeat (single global, bumped from
+  4 parallel paths in `installAllPaths()`)
+- `window.__shackPaths` per-path counters (used by the diag-strip
+  when offline — but inert when connected, so they're cheap to
+  leave wired up for future debugging)
+- `window.__shackBuild = 'v6 · …'` build stamp, visible in the
+  diag-strip — distinguishes "code didn't load" (no diag-strip at
+  all) from "code loaded but signal broken" (diag-strip with stale
+  counters)
+- TopBar's `tick()` reads `__shackLastMsgAt` + `__shackPaths.ioConnectedSeen`
+  on a 500ms interval; `connected.value` = OR-gate of `(age <
+  8000ms) || ioConnectedSeen`
+
+**Commits:** `0834b41`, `3822489`, `479ef10`, `77e9059`, `85ab62f`.
+
+### Vue `/shack` PWA — defeat HTML caching on iOS Safari / Mac dock icons
+
+While debugging the LIVE/OFFLINE pill (above), discovered that
+iOS Safari and the macOS Sonoma "Add to Dock" webviews both cache
+the `/shack` HTML aggressively and don't honour `Cache-Control:
+max-age=0` reliably. Cards still received data (the cached JS
+worked fine), but my new HTML referencing `?v=N` cache-busters
+was never fetched — so subresource updates didn't propagate.
+
+**Fix** (`479ef10`): added three meta tags to `index.html` head:
+
+```html
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+```
+
+These are interpreted by WebKit at HTML-load time and instruct the
+browser/PWA not to cache the HTML itself for future use. Won't help
+the PWA whose cached HTML is from BEFORE these tags landed (those
+have to be deleted + re-added once); but every PWA installed from
+this commit onward auto-refreshes on each open. Operator never
+again has to ask users to delete + reinstall after a code push.
+
+Per-device-cleanup procedure documented in **FORK_GUIDE.md Stage O**
+troubleshooting table.
+
+### TopBar — responsive layout on iPhone portrait
+
+After pill fix landed, iPhone portrait (~390px wide) was showing
+the sunrise + sunset clocks overflowing off-screen to the right.
+Topbar was a single-row flexbox with 4 clocks (UTC, IST, Sunrise,
+Sunset) pinned right via `margin-left: auto`.
+
+**Fix** (`22d75c8`):
+
+- `.topbar { flex-wrap: wrap }` so left group (callsign + pill +
+  subtitle) and right group (4 clocks) stack vertically when they
+  can't fit horizontally.
+- `.topbar__left { flex: 1 1 auto; min-width: 0 }` lets the left
+  group shrink rather than pushing clocks off-screen.
+- `.clocks { flex-wrap: wrap }` so the 4 clocks can wrap into a 2×2
+  if needed.
+- `@media (max-width: 480px)`: smaller callsign font, 4 clocks
+  splitting full width via `justify-content: space-between` +
+  `flex: 1 1 0` per clock, tighter padding overall.
+
+Mac and iPad-landscape (>480px) layouts unchanged — same single-row
+look as before.
+
+### FORK_GUIDE — new Stage O for per-device PWA install
+
+A forker's users (family / club mates / co-ops) need a clean
+roll-out path separate from operator-side customisation. Stages
+A–N cover making `/shack` work; Stage O covers handing it out to
+humans.
+
+Added under Stage N:
+
+- **Operator pre-flight:** `curl` smoke test + browser verify
+  before handing the URL out to users
+- **Hand-out template:** the 2-line message a forker actually
+  sends ("URL: http://… · Tip: install as home-screen app")
+- **Per-platform PWA install steps:**
+  - Mac Safari 17+: File → Add to Dock
+  - iPad/iPhone Safari: Share → Add to Home Screen
+  - Android Chrome: ⋮ → Install app
+  - Windows / Linux Chrome / Edge: address-bar install icon
+- **What users see after install:** LIVE/OFFLINE pill semantics
+  (8s heartbeat window, auto-reconnect, tooltip with last-msg age),
+  auto-update behaviour via no-cache meta tags, responsive
+  column-masonry layout, collapsed-by-default cards
+- **Per-device troubleshooting table** covering the 5 bugs we hit
+  this afternoon during the actual rollout (stale Safari favicon
+  cache on iOS, Mac dock-icon webview holding pre-no-cache HTML,
+  iOS Safari ignoring `max-age=0`, sunrise/sunset overflow on
+  iPhone, pill permanently OFFLINE = real Node-RED issue)
+
+Cross-linked from Stage I (operator-side rebadging) so anyone
+reading the dashboard section sees the user-facing install path.
+
+Commit [`3b909df`](https://github.com/vu2cpl/vu2cpl-shack/commit/3b909df).
+
 ---
 
 ## Standard Commit Sequence (reminder)
