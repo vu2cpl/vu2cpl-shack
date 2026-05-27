@@ -2,7 +2,7 @@
 
 **Period:** 2026-05-01 → 2026-05-26
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
-**Last commit at handover:** `38bf3fb` — Lightning Master Dashboard: merge AS3935 Bridge Tuning panel + stats trim (closes #26, #29)
+**Last commit at handover:** `218a11a` — HANDOVER: close #8 - DXCC backlog audit confirms all sub-items done
 
 ---
 

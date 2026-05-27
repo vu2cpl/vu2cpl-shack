@@ -5750,6 +5750,177 @@ If any step fails: `git revert 38bf3fb` restores AS3935 Control Panel
 standalone; `git revert 0153c9a` restores DXCC pre-mute-pill;
 `git revert b9b727c` restores the coarser SPE ladder.
 
+### DXCC Dashboard D1 — layout restructure (settings collapsible, full-width spots)
+
+Operator request to reshape the DXCC Dashboard so the spots table (the
+thing you actually look at) gets the full card width instead of being
+squeezed into the right column of a two-column layout.
+
+**Old structure** (two-column `dx-wrap` grid):
+
+```
+[Cluster header pills]
+[dx-side: Stats | Refresh/Clear | Filters | Blocked]   [dx-main: spots table]
+ ^^^ 220 px fixed sidebar                              ^^^ remainder
+```
+
+**New structure** (vertical stack):
+
+```
+[<details>: Stats + Filters + Blacklist (collapsed by default)]
+[Cluster header pills (always visible)]
+[Spots table — FULL card width]
+```
+
+**HTML changes:**
+
+- Old `dx-wrap` grid container removed entirely
+- `dx-side` now lives inside `<details class="dxcc-settings">` with a
+  collapsible `<summary>` "STATS · FILTERS · BLACKLIST"
+- `dx-main` (the spots table) is now a flat sibling, full card width
+- Cluster header (with the 4 mute-toggle pills from #27) moved DOWN to
+  sit between the collapsed settings and the table — always visible
+  since it's the operational read-out (which cluster is connected /
+  muted)
+
+**CSS changes:**
+
+- Dropped `.dx-wrap` rule
+- `.dx-side` changed from `flex-direction: column` to
+  `display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,
+  1fr));` so the four settings cards arrange side-by-side on wide
+  screens and stack on narrow
+- `.dx-main` gets `width: 100%`
+- New rules for `details.dxcc-settings` — matches GitHub-dark card
+  theme with custom `::before` triangle marker that swaps ▶/▼ on the
+  `[open]` attribute; default `::-webkit-details-marker` hidden
+
+**No JS changes** — all element IDs preserved (`st-ent`, `st-conf`,
+`st-seed`, `dx-band-btns`, `bl-input`, `cl-grid`, `dx-tbody`, …) so
+existing `scope.$watch` handlers + onclick wiring continue to fire
+correctly. Cluster mute pills + seed-age display + filter buttons all
+still work as before.
+
+Commit [`ccc05d7`](https://github.com/vu2cpl/2026-05-27-ccc05d7).
+
+### Lightning Master Dashboard D1 — Vue-parity trim + narrow-card friendly
+
+Mirror the trims we did to the Vue `/shack` Lightning card on
+2026-05-26 (callsign/grid/threshold/reconnect/antenna rows out of the
+stats grid) over to D1, and reshape the layout so the card lives
+comfortably at width 8 (≈ 384 px) instead of width 10 (≈ 480 px).
+
+**Removed:**
+
+- Hidden `switchBox` legacy block (was `display: none` dead code
+  carrying the old vertical antenna/radio/bypass UI; replaced by the
+  `row2` button row months ago but never deleted)
+- Stats row: **Threshold** (visible in the Disconnect slider value)
+- Stats row: **Reconnect** (visible in the Reconnect slider value)
+- Stats row: **Antenna** (already shown by the ANTENNA ON button and
+  by the bypass banner)
+- Big **Atmospheric CAPE** display in the right column (was a 28 px
+  number with a label; replaced by a one-line statusline)
+- Three separate zone rows (`<thr km` / `<50` / `>50`) merged into
+  one slash-separated row matching Vue
+
+**Restructured:**
+
+- `row3` was a 2-column grid (`statsBox` 220 px sidebar | `threshBox`
+  right). Now stacked vertically:
+  ```
+  [stats grid (3 rows: Total / zone-slash / Closest)]
+  [CAPE statusline: "CAPE 240 J/kg · OM state: lit"]
+  [<details> THRESHOLDS · Disconnect · Reconnect]
+  ```
+- Sliders now in a collapsible `<details>` (matches Vue's "Thresholds"
+  section)
+- CAPE compact statusline replaces big-number display; **OM state**
+  surfaces inline as colour-coded sub-text (cold → grey, lit → amber,
+  severe → red)
+- `as3935Body` AS3935 mini-tiles get
+  `repeat(auto-fit, minmax(80px, 1fr))` so the four tiles wrap to 2×2
+  on narrow card widths instead of overflowing
+
+**JS:**
+
+- `setStats` rows array trimmed from 8 → 3 (+ Radio if enabled)
+- `paintCape` extended to also paint `#omStateVal` sub-text alongside
+  the CAPE value; both live on the new compact statusline
+
+**Card geometry:** `width 10 → 8`, `height 22 → 18` (removed content
+frees vertical room).
+
+**CSS additions (~60 lines):**
+
+- `.status-line` — compact one-line data display, used by CAPE
+- `details.thr-details` — Thresholds collapsible matching the
+  GitHub-dark card theme
+- `#as3935Body` grid override for responsive tile wrap
+
+Commit [`3a68f19`](https://github.com/vu2cpl/vu2cpl-shack/commit/3a68f19).
+
+#### Follow-up fine-tuning — three small fixes after operator screenshot
+
+Screenshot showed two glitches in the expanded AS3935 Bridge collapsible:
+
+1. **Double arrow on the summary:** "▼ ▶ AS3935 BRIDGE — TUNING …" —
+   browser's default disclosure triangle (▼ when open) was rendering
+   alongside my literal `▶` baked into the summary text.
+2. **`IRQ 436` clipped** at the right edge — `.countstrip` was
+   `display: flex; gap: 18px` with 4 items, didn't fit at width 8.
+
+Commit [`4a2f62b`](https://github.com/vu2cpl/vu2cpl-shack/commit/4a2f62b):
+
+- AS3935 Bridge `<details>` switched from inline-styled (with the
+  literal `▶`) to `class="thr-details"` — picks up the existing CSS
+  that hides the default marker
+- Literal `▶` removed from the summary text
+- `.countstrip` gained `flex-wrap: wrap` + tighter `gap: 6px 12px` so
+  counters reflow to 2 rows on narrow cards instead of clipping
+- `#a35tune` and `#a35ev` inner-panel padding tightened from `10px` →
+  `6px 0` to buy back ~8 px of usable width for the tunable rows
+
+But that commit had a follow-on bug — **no arrow at all** because
+`.thr-details` only hid the default marker without adding a
+`::before` triangle replacement (the THRESHOLDS collapsible had a
+literal `▸` in its summary text which papered over the missing CSS
+triangle, but the AS3935 Bridge migration dropped that literal as
+part of un-doubling the arrow).
+
+Fix commit [`ff50b2a`](https://github.com/vu2cpl/vu2cpl-shack/commit/ff50b2a):
+
+- Added `::before` triangle to `.thr-details > summary` that swaps
+  `▶ ↔ ▼` on the `[open]` attribute (same pattern as
+  `.dxcc-settings` above)
+- Stripped the literal `▸ ` from the THRESHOLDS summary so it
+  doesn't double up with the new CSS triangle
+
+Net: both collapsibles on the Lightning card (THRESHOLDS + AS3935
+Bridge) now show a single proper open/closed triangle that animates
+correctly. The `.thr-details` class is now the canonical pattern for
+narrow-card collapsibles in this dashboard — reusable for any future
+section.
+
+### HANDOVER #8 — DXCC backlog audit closure
+
+Per-item audit confirmed every sub-item in #8's row text was already
+done weeks ago via the parent #18/#19 rows or the original 2026-05-10/11
+work. Row was just stale:
+
+| Sub-item | Status |
+|---|---|
+| Filter persistence | Closed 2026-05-11 (#19) |
+| Separate CW/Ph/Data fetches | `Fetch All Modes + Parse` already `Promise.all`s modes 0..3 |
+| Non-project-folder path | `Bootstrap Worked Table` falls back to `~/.node-red/nr_dxcc_seed.json` |
+| README+PDF | DXCC.md + .pdf last committed together [`cfea28f`](https://github.com/vu2cpl/vu2cpl-shack/commit/cfea28f) |
+| Club Log API ban verification | Closed 2026-05-11 (#18) |
+| Daily 02:00 inject wiring | Inject `c43fbdd61175ce24` "Daily club log refresh (0200)" with crontab `00 02 * * *` verified live |
+
+Closed via [`218a11a`](https://github.com/vu2cpl/vu2cpl-shack/commit/218a11a)
+with the audit detail captured in the row's closure note for future
+reference. Open TODOs **5 → 4**.
+
 ---
 
 ## Standard Commit Sequence (reminder)
