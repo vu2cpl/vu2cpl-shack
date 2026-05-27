@@ -336,6 +336,11 @@ Add to Home Screen → installs as your station name with your icon.
 If `/shack` is blank or 404: see REBUILD_PI Step 12 check #4 for
 diagnostics.
 
+**Per-device PWA install for your users** (Mac dock, iPad/iPhone
+home screen, Android app drawer, Windows/Linux app launcher) is
+covered separately in **Stage O — Roll out `/shack` to your users**
+below. Operator-only icon and callsign rebadging stays here.
+
 ---
 
 ## Stage J — RPi Fleet Monitor
@@ -402,6 +407,143 @@ After everything is working:
 3. **Backup the secrets file** somewhere off the Pi.
 4. Adapt `CLAUDE.md` rule #3 (DXCC PDF regen on every flow commit)
    for your fork — either keep it or drop the DXCC tab entirely.
+
+---
+
+## Stage O — Roll out `/shack` to your users
+
+Once your fork is configured (A–N done), `/shack` is the dashboard
+your family / co-ops / club mates actually use. They don't need to
+know anything about Node-RED, MQTT, or git — they just need:
+
+1. The dashboard URL
+2. How to "install" it on their device so it looks/behaves like a
+   native app, not a browser tab
+
+This stage is the per-device roll-out checklist. Operator-only steps
+(callsign / icon rebadging) are in **Stage I** above.
+
+### Operator pre-flight — verify `/shack` actually works
+
+Before handing the URL to users:
+
+```bash
+# On the Pi
+curl -sI http://localhost:1880/shack | head -1
+# Must return: HTTP/1.1 200 OK
+```
+
+```bash
+# In a browser on the LAN (e.g. Mac)
+# Open: http://<your-pi-ip>:1880/shack
+# Verify:
+#   - Your callsign appears in the TopBar (not VU2CPL)
+#   - LIVE pill goes green within ~5 seconds
+#   - All cards render (collapsed by default; click chevrons to expand)
+#   - Browser tab icon is your rebadged favicon (not the Node-RED red dot)
+```
+
+If `/shack` returns 404: `node-red-contrib-uibuilder` isn't installed
+or the `Vue Dashboard` flow tab isn't deployed. See
+[`REBUILD_PI.md`](REBUILD_PI.md) Step 12 check #4.
+
+If cards show `—` instead of live data: see Stage A above — most
+likely a flow node still has the VU2CPL MQTT broker IP hard-coded.
+
+### Hand-out — the URL + one-line description
+
+What users need from you:
+
+```
+URL:  http://<your-pi-ip>:1880/shack
+Tip:  Install as a home-screen / dock app for the best experience —
+      see your platform below.
+```
+
+That's it. No login. Anyone on the LAN with the URL gets in.
+
+> If you want LAN-only access enforced at the network layer, that's
+> already the case — the Pi listens on a private RFC1918 address and
+> is not exposed to the internet unless you've set up port forwarding
+> (and you shouldn't, no auth).
+
+### Install on Mac (Safari 17+ on macOS Sonoma+)
+
+PWA appears in the dock, runs in its own window, behaves like a
+native app:
+
+1. Open `http://<your-pi-ip>:1880/shack` in **Safari**
+2. **File** menu → **Add to Dock…**
+3. Confirm name (defaults to "Shack" from your `manifest.json`) →
+   click **Add**
+
+**To remove later:** right-click the dock icon → **Options** →
+**Remove from Dock**.
+
+### Install on iPad / iPhone (Safari)
+
+Runs fullscreen, no Safari chrome, respects notch / Dynamic Island:
+
+1. Open the URL in **Safari** (not Chrome or Firefox — only Safari
+   can install PWAs to the home screen on iOS)
+2. Tap the **Share** button (square with up-arrow) at the bottom
+3. Scroll down in the share sheet → **Add to Home Screen**
+4. Confirm name → tap **Add**
+
+The icon appears on the home screen with your rebadged station logo.
+
+**To remove later:** tap-and-hold the icon → **Delete from Home Screen**
+→ **Delete**.
+
+### Install on Android (Chrome / Edge)
+
+1. Open the URL in **Chrome**
+2. Three-dot menu (top-right) → **Install app** (or **Add to Home
+   Screen** on older builds)
+3. **Install**
+
+Result: appears in the app drawer + home screen.
+
+### Install on Windows / Linux desktop (Chrome / Edge)
+
+1. Open the URL in Chrome or Edge
+2. Look for the **install icon** in the address bar — small monitor
+   with a down-arrow on the right side of the URL field. Or use the
+   three-dot menu → **Apps** → **Install this site as an app**
+3. **Install**
+
+Result: standalone app window launchable from the Start menu /
+launcher.
+
+### What users see after install
+
+- **Live/offline pill** next to the callsign at the top
+  - 🟢 **LIVE** — websocket connected, msgs flowing within the last 8s
+  - 🔴 **OFFLINE** — Wi-Fi flap, Pi reboot, or Node-RED restart.
+    Auto-reconnects when the link comes back; no user action needed.
+  - Long-press / hover the pill for a tooltip with the last-msg age.
+- **Auto-updates** — `index.html` ships with `Cache-Control:
+  no-store, no-cache, must-revalidate` meta tags, so when you push
+  new front-end code to your fork, users' next app open picks it up
+  automatically. No reinstall needed.
+- **Responsive layout** — column-masonry CSS reflows the cards to
+  fit any width: 1 column on iPhone portrait, 2 on iPad portrait,
+  3 on a laptop, 4 on a wide monitor. No orientation switches or
+  manual zoom needed.
+- **Collapsed by default** — every card opens with a one-line
+  summary in its header (e.g. *Lightning · ANT ON · 0 km · CAPE 1340
+  J/kg*). Tap the chevron to expand. State per card; nothing remembered
+  across app restarts.
+
+### Troubleshooting per-device install
+
+| Symptom | Fix |
+|---------|-----|
+| iOS Safari "Add to Home Screen" shows the wrong icon (Node-RED red dot, or a partial favicon) | Stale Safari favicon cache. Settings → Safari → Advanced → Website Data → search your Pi's IP → swipe-delete. Reopen `/shack`, re-add to home screen. |
+| Mac dock icon launches but pill stays red | The dock-icon webview cached the old HTML pre-`Cache-Control` headers. Right-click icon → Remove from Dock, reopen `/shack` in Safari, re-add. |
+| iPhone shows pill OFFLINE even though Mac shows LIVE | iOS Safari's HTTP cache doesn't always honour `max-age=0`. Settings → Safari → Advanced → Website Data → search IP → swipe-delete. Then reopen. After the first post-fix open, the no-cache meta tags take effect and this won't recur. |
+| Pill stays OFFLINE forever, on every device | Real Node-RED-side issue, not a client cache problem. Check `Vue Dashboard` flow tab is deployed; uibuilder is installed; `vue_*_tick_NN` injects are firing (Node-RED editor status). |
+| Sunrise / sunset times overflow off-screen on iPhone portrait | Should be auto-handled by the `@media (max-width: 480px)` rule in `index.css`. If not, your fork may have an older `index.css` — `git pull` on the Pi to get the latest. |
 
 ---
 
