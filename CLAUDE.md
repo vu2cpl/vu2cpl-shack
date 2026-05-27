@@ -390,6 +390,29 @@ Weather data to Header template (`eee1a8b8552aa21f`): plain `wxData` object (no 
 - AS3935 ESP32 bridge cmd channel: `lightning/as3935/cmd` (in), `lightning/as3935/cmd/ack` (out, not retained). `set` keys: nf, wdth, srej, tun_cap, mask_dist, min_num_lightning, afe_gb (`"indoor"`/`"outdoor"`), modem_sleep. Actions: republish_status, calibrate_tun_cap, reboot, factory_reset_wifi. NVS-persisted; status republished after each successful set. Controlled from the **AS3935 Control Panel** ui_template on the `AS3935 Tuning` flow tab (`fe70cfdcdfa19aa4`)
 - Weather: Parse Weather has 2 outputs — output 1 → Header (plain wxData), output 2 → Master Dashboard ({type:'weather'})
 
+#### FlexRadio TX inhibit chain (2026-05-26)
+
+Lightning disconnect now also sends a FlexRadio TX inhibit so the operator can't accidentally key into a disconnected antenna. Radio stays powered + RX-capable; only TX is blocked.
+
+- **`TX Inhibit Setter`** (`tx_inhibit_setter_01`, function) reads `msg.cmd` from each upstream source:
+  - `'DISCONNECT'` → emit `interlock tx1_inhibit=1`
+  - `'RECONNECT'` / `'BYPASS_ON'` → emit `interlock tx1_inhibit=0`
+  - Anything else → return null (not relevant)
+  - Idempotent — re-firing same value is harmless, so DC retriggers during the 20-min reconnect window safely re-send `tx1_inhibit=1`.
+- **`FlexRadio TX Inhibit`** (`flexradio_tx_inhibit_01`, flexradio-request) — uses the same `flexradio-radio` config node (`94d0df28ae5cccfc`) the FlexRadio tab uses. Config nodes are cross-tab; no new TCP connection.
+- **Sources wired in** (each adds one new wire to its existing output): `Trigger Disconnect` (out 0, cmd:DISCONNECT) · `Execute Reconnect` (out 0, cmd:RECONNECT) · `Force Reconnect` (out 0, cmd:RECONNECT) · `HTTP → Antenna ON` (out 1, cmd:RECONNECT added to Tasmota msg) · `Manual Override` (out 0, cmd:RECONNECT|DISCONNECT). Bypass ON path routes through `Execute Reconnect` so it picks up `cmd:RECONNECT` automatically — no separate wire from Bypass Handler needed.
+- **TX inhibit and reconnect timer are decoupled** — the matrix decides DC, that fires `cmd:DISCONNECT` to the Setter, which inhibits TX. The reconnect timer expires → Execute Reconnect fires `cmd:RECONNECT` → Setter clears TX inhibit. If a new strike during the 20-min window re-fires DC, `flow.antenna_off` was already true, so `Trigger Disconnect` passes `retrigger:true` downstream. The TX Inhibit Setter still fires `inhibit=1` (idempotent) and the Telegram alert formatter (below) renders a different "STORM CONTINUES" message instead of duplicating the disconnect notification.
+
+#### Telegram alert — retrigger differentiation (2026-05-26)
+
+`Trigger Disconnect` now sets `msg.retrigger = (flow.antenna_off was already true)`. `Format Log` propagates it to `event_record.retrigger`. `Telegram Alert Router` (`tg_lightning_router`) branches:
+
+- First disconnect (retrigger=false): `⚡ ANTENNA DISCONNECT` with distance, antenna/radio state, "TX inhibited", time
+- Subsequent disconnect during reconnect window (retrigger=true): `⚡ STORM CONTINUES` — "Antenna already OFF; TX still inhibited. Reconnect timer reset to NN min from now." NN reads `flow.reconnect_min` live so the user sees the actual current countdown.
+- Reconnect: `✅ ANTENNA RECONNECT` now also says "TX allowed again" so it's symmetric.
+
+Stops the "five identical DISCONNECT alerts in a single storm" noise pattern.
+
 #### Distance-graded disconnect (2026-05-12)
 
 `Trigger Disconnect` (`d62fb0c3c40f03b7`) no longer fires unconditionally — it rejects only the `Open-Meteo` source (storm-probability signal, never directly fires DC) and lets every other source (`AS3935 (local)`, `TEST`, future Blitzortung etc.) pass through the 3×3 decision matrix. Only sources whose `source` string contains `AS3935` populate the corroboration window (`flow.recent_as3935`); test injects exercise the matrix without polluting that counter.
