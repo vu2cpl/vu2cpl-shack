@@ -5303,11 +5303,15 @@ operator's experience of the first.
 
 When the matrix fires `Trigger Disconnect`, we already cut antenna
 power via Tasmota. We now ALSO send the FlexRadio a TX inhibit
-command (`interlock tx1_inhibit=1`) over its TCP API. The radio
+command (`transmit set inhibit=1`) over its TCP API. The radio
 stays powered and RX-capable, but key-up does nothing — the
 operator can't accidentally transmit into a disconnected antenna.
 On reconnect / force-reconnect / bypass-on / manual override /
-HTTP ANT ON, we send `interlock tx1_inhibit=0` to clear it.
+HTTP ANT ON, we send `transmit set inhibit=0` to clear it.
+
+> **Command form discovered via spray-and-pray** — see the
+> "Command lineage" sub-section below. First two iterations used
+> `interlock tx1_inhibit=N` which FLEX-6600 firmware rejects.
 
 **Why TX inhibit and not full radio power-off**: cutting radio
 power (the existing `RADIO_ENABLED=true` mode in Init Defaults)
@@ -5323,8 +5327,9 @@ the API.
 New nodes:
 - **`tx_inhibit_setter_01`** (function "TX Inhibit Setter") — reads
   `msg.cmd` from any incoming msg:
-  - `'DISCONNECT'` → emit `payload: 'interlock tx1_inhibit=1'`
-  - `'RECONNECT'` / `'BYPASS_ON'` → emit `'interlock tx1_inhibit=0'`
+  - `'DISCONNECT'` → emit `payload: ['xmit 0', 'transmit set inhibit=1']`
+    (universal PTT release first, then inhibit future TX)
+  - `'RECONNECT'` / `'BYPASS_ON'` → emit `['transmit set inhibit=0']`
   - else → `return null`
   - Idempotent — same value re-fired is harmless, so DC retriggers
     during the 20-min reconnect window safely re-send `=1`.
@@ -5430,7 +5435,98 @@ the TX inhibit chain + Telegram retrigger logic.
    Antenna ON, radio TX inhibit clears, SmartSDR's TX Inhibit
    indicator goes dark, RECONNECT alert with "TX allowed again".
 
-Commit [`d87a708`](https://github.com/vu2cpl/vu2cpl-shack/commit/d87a708).
+Commits [`d87a708`](https://github.com/vu2cpl/vu2cpl-shack/commit/d87a708)
+(initial implementation), [`e16646e`](https://github.com/vu2cpl/vu2cpl-shack/commit/e16646e)
++ [`34c1db4`](https://github.com/vu2cpl/vu2cpl-shack/commit/34c1db4) (debug
+iterations), [`0722d41`](https://github.com/vu2cpl/vu2cpl-shack/commit/0722d41)
+(working form locked in).
+
+#### Command lineage — how `transmit set inhibit=N` was discovered
+
+The initial implementation `d87a708` used `interlock tx1_inhibit=N`
+based on what looked like a sensible API form. It didn't work —
+3 commands sent, 3 empty replies, SmartSDR's TX Inhibit
+indicator stayed dark. Two debug iterations followed:
+
+**`e16646e`** — sprayed 3 known forms (`xmit 0`, `interlock
+tx1_inhibit=N`, `radio set tx_inhibit=N`) and added a diagnostic
+logger downstream of `flexradio-request`. The logger dumped
+`msg.payload` of the radio's reply, which came back EMPTY for all
+three. Inconclusive — either all 3 commands were ack'd with no
+payload (silent success), or the reply lived in a different msg
+field that we weren't reading.
+
+**`34c1db4`** — expanded to 5 command variants (added `transmit
+set inhibit=N` and `interlock tx1_inhibit_value=N`) AND rewrote
+the logger to dump EVERY msg field (not just `msg.payload`). One
+test inject later, journalctl revealed the actual reply shape:
+
+```
+flex reply msg: payload="" · _txInhibitValue=1 ·
+                request="xmit 0" · sequence_number=9 · status_code=0
+flex reply msg: payload="" · _txInhibitValue=1 ·
+                request="interlock tx1_inhibit=1" ·
+                sequence_number=10 · status_code="0x5000002D"
+flex reply msg: payload="" · _txInhibitValue=1 ·
+                request="radio set tx_inhibit=1" ·
+                sequence_number=11 · status_code="0x5000002D"
+flex reply msg: payload="" · _txInhibitValue=1 ·
+                request="transmit set inhibit=1" ·
+                sequence_number=12 · status_code=0
+flex reply msg: payload="" · _txInhibitValue=1 ·
+                request="interlock tx1_inhibit_value=1" ·
+                sequence_number=13 · status_code="0x5000002D"
+```
+
+`status_code=0` is ACK, `0x5000002D` is "command not recognised".
+The data was hiding in `msg.status_code`, not `msg.payload`.
+
+**Lineage table** (FLEX-6600, SmartSDR v3.x firmware, 2026-05-27):
+
+| Command | `status_code` | Verdict |
+|---|---|---|
+| `xmit 0` | `0` | ✓ universal PTT release (works everywhere) |
+| `interlock tx1_inhibit=N` | `0x5000002D` | ✗ rejected |
+| `radio set tx_inhibit=N` | `0x5000002D` | ✗ rejected |
+| **`transmit set inhibit=N`** | **`0`** | **✓ THE working form** |
+| `interlock tx1_inhibit_value=N` | `0x5000002D` | ✗ rejected |
+
+**`0722d41`** trimmed the spray array to just the two ACKing
+commands (`xmit 0` + `transmit set inhibit=N`) and removed the
+debug logger entirely. CLAUDE.md "Lightning Antenna Protector"
+gained the lineage table so a future firmware update that
+breaks this can be re-derived quickly — re-apply the spray-and-
+pray pattern from `34c1db4`, grep journalctl for
+`status_code=0`, identify the new working form.
+
+#### Verification — confirmed end-to-end 2026-05-27
+
+Operator verification after `0722d41`:
+1. Fire `TEST ⚡ 6 km DISCONNECT` inject → antenna OFF via Tasmota
+   AND SmartSDR TX Inhibit indicator lit red AND key-up refused.
+   Telegram fired the first-DC alert with "TX inhibited" line. ✓
+2. Press BYPASS ON in `/shack` dashboard → antenna ON, SmartSDR
+   TX Inhibit clears (BYPASS_ON path routes through Execute
+   Reconnect which emits `cmd:'RECONNECT'`, picked up by the
+   Setter), key-up works. ✓
+3. Fire another `TEST ⚡ 6 km DISCONNECT` while bypass active →
+   Trigger Disconnect early-exits on `bypass_active`. Antenna
+   stays ON, TX inhibit stays clear, only an info log entry
+   appears. Telegram silent (matrix didn't fire DC). ✓
+
+Bypass mode correctly shadows the disconnect+inhibit chain;
+manual operator override fully restores radio TX capability.
+
+#### Side note — minor cosmetic dead code
+
+The `TX Inhibit Setter` has an explicit `cmd === 'BYPASS_ON'`
+branch but it's never hit, because the BYPASS ON path routes
+through `Execute Reconnect` which rewrites `msg.cmd = 'RECONNECT'`
+before the message reaches the Setter. The `RECONNECT` branch
+handles bypass-on correctly. The `BYPASS_ON` case is harmless
+(does the same thing) — leaving it as documentation of intent
+in case Bypass Handler's wiring ever changes to skip Execute
+Reconnect.
 
 ---
 
