@@ -198,7 +198,7 @@ Agent endpoints: `POST /reboot`, `POST /shutdown`
 | `d62fb0c3c40f03b7` | Trigger Disconnect | Sends MQTT OFF, starts timer |
 | `dabc283d78fa8081` | Reconnect Timer | setTimeout, resets on new strike |
 | `bfbe99e98a8c6ce8` | Execute Reconnect | Sends MQTT ON after clear |
-| `593f22a507b46335` | Parse Open-Meteo → Strike | index → synthetic km |
+| `593f22a507b46335` | Parse Open-Meteo → Strike | Sets `flow.om_state` + emits CAPE tile / log msg to Master Dashboard. **No longer emits a strike-shaped payload as of 2026-05-27** (was a synthetic 0-km strike pre-matrix-fix; misleading cosmetically). The name "→ Strike" is now a historical artifact — node title kept for grep stability. |
 | `c6d09b384716b54c` | Parse Weather → Header | 2 outputs: Header + Dashboard |
 | `eee1a8b8552aa21f` | Header — Clocks + Weather | ui_template on Shack tab |
 | `b2e2ed6a2bba24af` | Tasmota Antenna Switch | mqtt out |
@@ -450,6 +450,8 @@ Sensor-offline alert debounce (added 2026-05-16, `as3935_health_xition`): brief 
 Sliding strike history lives in `flow.recent_as3935 = [{ts, km}, …]`. Pushed only when `msg.strike.source` contains `AS3935` (real sensor hits); TEST injects run the matrix without pushing, so they cannot manufacture corroboration. Filtered to the trailing `cfg_med_window_min`-minute window on every call. Persists across deploys only via memory (resets on Init Defaults run / Node-RED restart). Bypass switch still wins over everything (early-exit at top of Trigger Disconnect).
 
 **Behaviour change vs pre-2026-05-12:** Open-Meteo-only "synthetic strike" disconnects (CAPE > 800 alone → DC) stop happening. Only actual AS3935 lightning events drive the chain; OM modulates the corroboration threshold per the matrix. Net effect: fewer false-positive DCs during high-CAPE-no-storm Bengaluru summer afternoons; same protection on real-storm days.
+
+**Behaviour change vs pre-2026-05-27** (HANDOVER #25 closure): Open-Meteo also no longer emits a synthetic strike-shaped payload at all. Previously it sent a strike-shape to Parse Strike with `km = 0` on current-hour thunderstorm, `km = 10..100` on rising CAPE. Trigger Disconnect already early-rejected this (matrix-fix 2026-05-12) so no DC fired — but the strike got recorded in `nr_lightning_events.jsonl` as `type:'strike' source:'Open-Meteo' km:0`, and the event log read as "Open-Meteo: TS NOW → 0 km" which looked like "lightning directly overhead". Now the function only emits `type:'cape'` (CAPE tile) + `type:'log'` (descriptive text) to Master Dashboard; the wire to Parse Strike is removed; the function outputs count drops 2 → 1. Matrix corroboration logic is unaffected — it reads `flow.om_state` directly, which is still set on every OM poll. Log lines now read "Open-Meteo: Severe CAPE 2800 J/kg → SEVERE @ 14:00" (descriptive, no fake distance). Real strikes only come from AS3935 / TEST injects, as semantically correct.
 
 ### DXCC Tracker
 - **Credentials node** (`08dcd5378a79bb18`): set `cl_apikey`, `cl_email`, `cl_password`, `cl_callsign`, `tg_token`, `tg_chat_id`, `cfg_flows_dir`

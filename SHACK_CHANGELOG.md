@@ -5530,6 +5530,98 @@ Reconnect.
 
 ---
 
+## 2026-05-27
+
+### Lightning — Open-Meteo no longer emits a synthetic 0-km strike
+
+Closes HANDOVER follow-up #25.
+
+**The bug** (cosmetic, not safety): `Parse Open-Meteo → Strike`
+(`593f22a507b46335`) used to map current-hour thunderstorm
+(WMO weather_code ∈ {95, 96, 99}) to `km = 0`, plus a graduated
+ladder for rising CAPE (km=10 for ≥2500 J/kg, km=40 for ≥1500,
+km=100 for ≥800). It emitted a strike-shaped payload at that
+synthetic distance to the Parse Strike chain.
+
+The 2026-05-12 distance-graded matrix-fix already prevented
+these from firing disconnects (Trigger Disconnect early-rejects
+`source === 'Open-Meteo'`), so no false DC fired — but the
+event recorder ("Tap on Haversine output") still caught the
+strike message and wrote a `type:'strike' source:'Open-Meteo'
+km:0` line to `nr_lightning_events.jsonl`. The dashboard event
+log read "Open-Meteo: TS NOW → 0 km @ ..." which looks like
+"lightning directly overhead" but actually means "Open-Meteo
+forecast says probability of thunderstorms is high." Two
+different things; not what the operator expected to see.
+
+**The fix** (option (a) from the TODO):
+
+`Parse Open-Meteo → Strike` no longer emits a strike-shaped
+payload at all. Only emits:
+
+- `type: 'cape'` — feeds the CAPE tile on Master Dashboard / Vue
+  Lightning card (was already wired, unchanged)
+- `type: 'log'` — descriptive text line, wording rewritten
+  to NOT include a fake distance
+
+Outputs reduced 2 → 1. Wire to Parse Strike (`26ddff0cbbfe5fc1`)
+removed.
+
+The matrix corroboration logic in Trigger Disconnect is
+unaffected — it reads `flow.om_state` directly, and that's still
+set on every OM poll (alongside `om_state_until`, `om_cape_latest`,
+`om_wc_latest`). The om_state derivation logic (cold / lit / severe
+based on tsActive + CAPE threshold) didn't change.
+
+**New log-line wording** (mode → text mapping):
+
+| Condition | Pre-fix log line | New log line |
+|---|---|---|
+| Current-hour TS (wc=95/96/99) | `Open-Meteo: TS NOW (wc=95) → 0 km @ 14:00` | `Open-Meteo: Thunderstorm NOW (wc=95) → SEVERE @ 14:00` (suffix when om_state≠cold) |
+| Forecast-hour TS | `TS hour (wc=96) → 0 km` | `Thunderstorm forecast (wc=96) → LIT @ 14:00` |
+| Showers + high CAPE | `Shower+CAPE 1200 → 20 km` | `Showers + high CAPE 1200 J/kg @ 14:00` |
+| Severe CAPE only | `Severe CAPE 2700 → 10 km` | `Severe CAPE 2700 J/kg @ 14:00` |
+| Strong CAPE | `Strong CAPE 1800 → 40 km` | `Strong CAPE 1800 J/kg @ 14:00` |
+| Moderate CAPE | `Moderate CAPE 900 → 100 km` | `Moderate CAPE 900 J/kg @ 14:00` |
+| Calm | `Calm CAPE 200 (no action)` | `Calm · CAPE 200 J/kg @ 14:00` |
+
+The `→ STATE` suffix on TS conditions surfaces the matrix's view
+of severity directly in the log without using a misleading number.
+Node status badge also colour-codes by om_state now (red/severe,
+yellow/lit, green/cold) instead of by the fake distance.
+
+**Downstream effects** — semantically correct, no UX loss:
+
+- **Vue Lightning card** — CAPE tile + om_state were already
+  driven by the `type:'cape'` message via the existing builder;
+  no change.
+- **D1 `/ui` Master Dashboard** — the dashboard's `type:'cape'`
+  handler renders the CAPE tile; the `type:'strike'` handler
+  no longer sees OM events. Event log shows the descriptive log
+  lines instead.
+- **JSONL event log** (`nr_lightning_events.jsonl`) — OM events
+  no longer appear as `type:'strike'` entries. They never made
+  it past Trigger Disconnect anyway since 2026-05-12, so this
+  just drops a cosmetic noise stream. Real AS3935 strikes
+  continue to be logged correctly.
+- **Telegram alerts** — already ignored OM-only events (router
+  allowlist excludes `'strike'` type). No change.
+
+**Files touched:**
+
+- `flows.json` — `Parse Open-Meteo → Strike` func body fully
+  rewritten + outputs 2→1 + wires trimmed
+- `CLAUDE.md` — "Key Node IDs" table entry for `593f22a507b46335`
+  updated; new "Behaviour change vs pre-2026-05-27" paragraph
+  appended to the "Distance-graded disconnect" section
+- `HANDOVER.md` — TODO #25 struck through with closure note
+- `clublog_dxcc_tracker_v7.json` regenerated (no DXCC nodes
+  touched but mandatory per CLAUDE.md rule #4)
+
+Commit [`<filled below>`](https://github.com/vu2cpl/vu2cpl-shack/commit/).
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:
