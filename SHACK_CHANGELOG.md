@@ -5293,6 +5293,145 @@ reading the dashboard section sees the user-facing install path.
 
 Commit [`3b909df`](https://github.com/vu2cpl/vu2cpl-shack/commit/3b909df).
 
+### Lightning — FlexRadio TX inhibit on disconnect + Telegram retrigger alert
+
+Two interlocking features landed together because both touch the
+disconnect/reconnect chain, and the second materially improves the
+operator's experience of the first.
+
+#### TX inhibit chain (safety enhancement)
+
+When the matrix fires `Trigger Disconnect`, we already cut antenna
+power via Tasmota. We now ALSO send the FlexRadio a TX inhibit
+command (`interlock tx1_inhibit=1`) over its TCP API. The radio
+stays powered and RX-capable, but key-up does nothing — the
+operator can't accidentally transmit into a disconnected antenna.
+On reconnect / force-reconnect / bypass-on / manual override /
+HTTP ANT ON, we send `interlock tx1_inhibit=0` to clear it.
+
+**Why TX inhibit and not full radio power-off**: cutting radio
+power (the existing `RADIO_ENABLED=true` mode in Init Defaults)
+also kills RX — operator loses storm-band situational awareness +
+DX cluster spots during the very period they most want to be
+listening. TX inhibit gives the same safety guarantee without the
+RX blackout. SmartSDR has this exact button on the front panel as
+the red "TX Inhibit" toggle; we're driving the same property over
+the API.
+
+**Wiring** (Lightning Antenna Protector tab):
+
+New nodes:
+- **`tx_inhibit_setter_01`** (function "TX Inhibit Setter") — reads
+  `msg.cmd` from any incoming msg:
+  - `'DISCONNECT'` → emit `payload: 'interlock tx1_inhibit=1'`
+  - `'RECONNECT'` / `'BYPASS_ON'` → emit `'interlock tx1_inhibit=0'`
+  - else → `return null`
+  - Idempotent — same value re-fired is harmless, so DC retriggers
+    during the 20-min reconnect window safely re-send `=1`.
+- **`flexradio_tx_inhibit_01`** (`flexradio-request` "FlexRadio TX
+  Inhibit") — reuses the existing `flexradio-radio` config node
+  (`94d0df28ae5cccfc`) the FlexRadio tab already uses. Config nodes
+  are cross-tab; no new TCP connection.
+
+New wires (each additive — no existing wires removed):
+- `Trigger Disconnect` (out 0, msg.cmd='DISCONNECT') → Setter
+- `Execute Reconnect` (out 0, msg.cmd='RECONNECT') → Setter
+- `Force Reconnect` (out 0, msg.cmd='RECONNECT') → Setter
+- `HTTP → Antenna ON` (out 1, Tasmota msg) → Setter (after adding
+  `cmd: 'RECONNECT'` to that msg — one-line edit to the existing
+  function)
+- `Manual Override` (out 0, cmd='RECONNECT' or 'DISCONNECT') → Setter
+
+Bypass ON path doesn't get a direct wire — it routes through
+`Execute Reconnect` (Bypass Handler's output 3 fires Execute
+Reconnect's standard ON), so it picks up `cmd: 'RECONNECT'`
+automatically.
+
+**Failure modes — handled gracefully:**
+- Radio not connected: `flexradio-request` emits its standard
+  `radio not available or not connected` error. Disconnect chain
+  to Tasmota is on a parallel wire so antenna still goes OFF.
+- Multiple DCs in quick succession: each fires `=1`; radio is
+  idempotent.
+- Bypass timer expires with no real strike: matrix prevents DC
+  while bypass active, so inhibit never set, no clear needed.
+
+#### Telegram alert — retrigger differentiation
+
+Pre-fix: every disconnect during a storm sent the same `⚡ ANTENNA
+DISCONNECT` alert. A single 30-minute storm with strikes every 5
+minutes during the 20-min reconnect window produced 5+ duplicate
+DISCONNECT alerts in Telegram. Noisy and operationally useless —
+the antenna was already OFF, the operator already knew, the
+duplicate alerts buried any other shack notifications.
+
+**Fix path:** thread a `retrigger` boolean from Trigger Disconnect
+through to the Telegram formatter:
+
+1. **`Trigger Disconnect`** now sets `msg.retrigger = already`
+   (where `already = flow.get('antenna_off') || false` at function
+   entry). True iff antenna was off at the moment this DC fired.
+2. **`Format Log`** propagates `retrigger: !!msg.retrigger` into
+   the `event_record` that flows through `light_jsonl_append_01`
+   and on to the Telegram router.
+3. **`tg_lightning_router`** branches on `rec.retrigger` inside the
+   `disconnect` case:
+   - retrigger=false (first DC of this storm): existing alert
+     format, plus a new "TX <b>inhibited</b>" line.
+   - retrigger=true (subsequent DC, antenna already off): NEW
+     alert: `⚡ STORM CONTINUES · Source: ... · New strike at: N
+     km · Antenna already <b>OFF</b>; TX still inhibited. ·
+     Reconnect timer reset to <b>NN min</b> from now.` NN reads
+     `flow.reconnect_min` live so it reflects whatever the
+     operator has the slider set to.
+
+`reconnect` alert also gains a "TX <b>allowed</b> again" line so
+the on/off symmetry is visible to the Telegram reader.
+
+Net behaviour: one initial DISCONNECT alert per storm, then a
+STORM CONTINUES alert for every additional strike during the
+reconnect window (each useful — it confirms the storm hasn't
+ended), then one RECONNECT alert when the all-clear timer
+finally fires. Rate-limiting at 5-per-60s per type still applies,
+so very dense storm activity still gets capped to one summary
+notice.
+
+#### What needed editing
+
+- **`Trigger Disconnect`** (`d62fb0c3c40f03b7`): added `retrigger:
+  already` to the output-0 msg.
+- **`Format Log`** (`5bfc6db2af9dd24c`): added `retrigger:
+  !!msg.retrigger` to event_record.
+- **`HTTP → Antenna ON`** (`f2092c6e0d932c7b`): added `cmd:
+  'RECONNECT'` to the output-1 Tasmota msg so the Setter can
+  recognise the operator-override path.
+- **`tg_lightning_router`** (`tg_lightning_router`): disconnect
+  case now branches on rec.retrigger; reconnect case adds TX
+  allowed line.
+- Two new nodes inserted (Setter + flexradio-request).
+- Five new wires from existing sources to the Setter.
+
+502 → 504 nodes. clublog_dxcc_tracker_v7.json regenerated per
+CLAUDE.md rule #4 (no DXCC nodes touched but the regen is
+mandatory on every flows.json commit). CLAUDE.md Lightning
+Antenna Protector section grew two new subsections documenting
+the TX inhibit chain + Telegram retrigger logic.
+
+**Verification path** (operator-side, post-deploy):
+
+1. Fire `TEST ⚡ 6 km DISCONNECT` inject → antenna goes OFF via
+   Tasmota AND radio refuses TX (try keying — nothing happens).
+   SmartSDR shows the red TX Inhibit indicator. Telegram fires
+   the first-DC format alert with "TX inhibited" line.
+2. Within 20 min, fire another `TEST ⚡ 6 km` → no new Telegram
+   `DISCONNECT`. Instead get `STORM CONTINUES` with the timer-
+   reset wording. Radio still TX-inhibited.
+3. Wait for reconnect timer to fire (or click Force Reconnect).
+   Antenna ON, radio TX inhibit clears, SmartSDR's TX Inhibit
+   indicator goes dark, RECONNECT alert with "TX allowed again".
+
+Commit [`d87a708`](https://github.com/vu2cpl/vu2cpl-shack/commit/d87a708).
+
 ---
 
 ## Standard Commit Sequence (reminder)
