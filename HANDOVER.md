@@ -2,7 +2,7 @@
 
 **Period:** 2026-05-01 → 2026-05-26
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
-**Last commit at handover:** see latest — Open-Meteo no longer emits synthetic 0-km strike (HANDOVER #25 closed)
+**Last commit at handover:** `3ea8d33` — Lightning: Open-Meteo no longer emits synthetic 0-km strike (closes #25)
 
 ---
 

@@ -5618,7 +5618,7 @@ yellow/lit, green/cold) instead of by the fake distance.
 - `clublog_dxcc_tracker_v7.json` regenerated (no DXCC nodes
   touched but mandatory per CLAUDE.md rule #4)
 
-Commit [`<filled below>`](https://github.com/vu2cpl/vu2cpl-shack/commit/).
+Commit [`3ea8d33`](https://github.com/vu2cpl/vu2cpl-shack/commit/3ea8d33).
 
 ---
 
