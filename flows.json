@@ -10399,7 +10399,7 @@
     "type": "function",
     "z": "75e2cac8ab96f556",
     "name": "TX Inhibit Setter",
-    "func": "// TX Inhibit Setter \u2014 multi-form command spray (2026-05-27 hardening).\n// First two iterations didn't take. This version fires every known\n// TX-inhibit command form simultaneously and logs each reply via\n// the downstream logger node so we can identify which one the radio\n// actually understands.\nlet inhibit;\nif (msg.cmd === 'DISCONNECT')      inhibit = 1;\nelse if (msg.cmd === 'RECONNECT')  inhibit = 0;\nelse if (msg.cmd === 'BYPASS_ON')  inhibit = 0;\nelse return null;\n\n// All known FlexRadio TX-inhibit-related commands. Radio ignores\n// (or NACKs) the ones it does not recognise. We are deliberately\n// noisy here \u2014 once we identify the working form via journalctl,\n// trim this list down to just that one.\nlet cmds;\nif (inhibit) {\n    cmds = [\n        'xmit 0',                                  // universal: release PTT now\n        'interlock tx1_inhibit=1',                 // older API (interlock subsystem)\n        'radio set tx_inhibit=1',                  // SmartSDR v3+ (radio subsystem)\n        'transmit set inhibit=1',                  // transmit subsystem variant\n        'interlock tx1_inhibit_value=1'            // some firmware uses _value suffix\n    ];\n} else {\n    cmds = [\n        'interlock tx1_inhibit=0',\n        'radio set tx_inhibit=0',\n        'transmit set inhibit=0',\n        'interlock tx1_inhibit_value=0'\n    ];\n}\n\nconst out = {\n    payload: cmds,\n    _txInhibitValue: inhibit\n};\nnode.status({\n    fill: inhibit ? 'red' : 'green', shape: 'dot',\n    text: 'TX ' + (inhibit ? 'INHIBITED' : 'OK') + ' \u00b7 ' + cmds.length + ' cmds'\n});\nnode.warn('TX inhibit ' + (inhibit ? 'ON' : 'OFF') + ' for cmd=' + msg.cmd + ' \u00b7 firing: ' + JSON.stringify(cmds));\nreturn out;\n",
+    "func": "// TX Inhibit Setter \u2014 wired from Trigger Disconnect / Execute Reconnect /\n// Force Reconnect / HTTP\u2192Antenna ON / Manual Override.\n//\n// Command lineage discovered 2026-05-27 via spray-and-pray + status_code\n// inspection (status_code=0 means radio ack'd, 0x5000002D means rejected):\n//   xmit 0                            \u2192 0 ack (universal PTT release)\n//   interlock tx1_inhibit=N           \u2192 0x5000002D rejected\n//   radio set tx_inhibit=N            \u2192 0x5000002D rejected\n//   transmit set inhibit=N            \u2192 0 ack  \u2190 this is the working form\n//   interlock tx1_inhibit_value=N     \u2192 0x5000002D rejected\n//\n// We send `xmit 0` first on inhibit-ON so any in-progress TX drops\n// immediately (then the inhibit prevents future key-up). On inhibit-\n// OFF we only need to clear the inhibit flag.\n//\n// Idempotent: same value sent multiple times is harmless.\nlet inhibit;\nif (msg.cmd === 'DISCONNECT')      inhibit = 1;\nelse if (msg.cmd === 'RECONNECT')  inhibit = 0;\nelse if (msg.cmd === 'BYPASS_ON')  inhibit = 0;\nelse return null;\n\nconst cmds = inhibit\n    ? ['xmit 0', 'transmit set inhibit=1']    // stop now + inhibit future\n    : ['transmit set inhibit=0'];              // clear inhibit\n\nconst out = { payload: cmds, _txInhibitValue: inhibit };\nnode.status({\n    fill: inhibit ? 'red' : 'green', shape: 'dot',\n    text: 'TX ' + (inhibit ? 'INHIBITED' : 'OK')\n});\nreturn out;\n",
     "outputs": 1,
     "timeout": "",
     "noerr": 0,
@@ -10421,26 +10421,6 @@
     "name": "FlexRadio TX Inhibit",
     "radio": "94d0df28ae5cccfc",
     "x": 920,
-    "y": 700,
-    "wires": [
-      [
-        "tx_inhibit_logger_01"
-      ]
-    ]
-  },
-  {
-    "id": "tx_inhibit_logger_01",
-    "type": "function",
-    "z": "75e2cac8ab96f556",
-    "name": "TX Inhibit \u00b7 log radio reply",
-    "func": "// Dump the entire msg so we can see where flexradio-request put the\n// radio's reply. Earlier `msg.payload` came back empty; it might live\n// in msg.topic / msg.response / a custom field.\nconst ignore = new Set(['_msgid', 'parts']);\nconst keys = Object.keys(msg).filter(k => !ignore.has(k));\nconst parts = keys.map(k => {\n    const v = msg[k];\n    if (v === null) return k + '=null';\n    if (v === undefined) return k + '=undef';\n    if (typeof v === 'string') return k + '=' + JSON.stringify(v);\n    if (typeof v === 'object') return k + '=' + JSON.stringify(v).substring(0, 200);\n    return k + '=' + String(v);\n}).join(' \u00b7 ');\nnode.warn('flex reply msg: ' + (parts || '(no keys)'));\nnode.status({fill:'blue', shape:'dot', text:'reply @ ' + new Date().toLocaleTimeString()});\nreturn null;\n",
-    "outputs": 1,
-    "timeout": "",
-    "noerr": 0,
-    "initialize": "",
-    "finalize": "",
-    "libs": [],
-    "x": 1140,
     "y": 700,
     "wires": [
       []

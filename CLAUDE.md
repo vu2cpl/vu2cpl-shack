@@ -395,10 +395,11 @@ Weather data to Header template (`eee1a8b8552aa21f`): plain `wxData` object (no 
 Lightning disconnect now also sends a FlexRadio TX inhibit so the operator can't accidentally key into a disconnected antenna. Radio stays powered + RX-capable; only TX is blocked.
 
 - **`TX Inhibit Setter`** (`tx_inhibit_setter_01`, function) reads `msg.cmd` from each upstream source:
-  - `'DISCONNECT'` → emit `interlock tx1_inhibit=1`
-  - `'RECONNECT'` / `'BYPASS_ON'` → emit `interlock tx1_inhibit=0`
+  - `'DISCONNECT'` → emit `['xmit 0', 'transmit set inhibit=1']` (universal PTT release first, then inhibit future TX)
+  - `'RECONNECT'` / `'BYPASS_ON'` → emit `['transmit set inhibit=0']`
   - Anything else → return null (not relevant)
-  - Idempotent — re-firing same value is harmless, so DC retriggers during the 20-min reconnect window safely re-send `tx1_inhibit=1`.
+  - Idempotent — re-firing same value is harmless, so DC retriggers during the 20-min reconnect window safely re-send the inhibit command.
+  - **Command lineage** (discovered 2026-05-27 via spray-and-pray + `status_code` inspection): the working form is **`transmit set inhibit=N`** in the `transmit` subsystem. `interlock tx1_inhibit=N`, `radio set tx_inhibit=N`, and `interlock tx1_inhibit_value=N` all return error `0x5000002D` ("command not recognised") on FLEX-6600 firmware as of 2026-05-27. If you ever see this stop working after a SmartSDR firmware update, the spray-and-pray scaffolding is preserved in commit history at [`34c1db4`](https://github.com/vu2cpl/vu2cpl-shack/commit/34c1db4) — re-apply that, fire a TEST DISCONNECT, and grep journalctl for `status_code=0` to find the new working form.
 - **`FlexRadio TX Inhibit`** (`flexradio_tx_inhibit_01`, flexradio-request) — uses the same `flexradio-radio` config node (`94d0df28ae5cccfc`) the FlexRadio tab uses. Config nodes are cross-tab; no new TCP connection.
 - **Sources wired in** (each adds one new wire to its existing output): `Trigger Disconnect` (out 0, cmd:DISCONNECT) · `Execute Reconnect` (out 0, cmd:RECONNECT) · `Force Reconnect` (out 0, cmd:RECONNECT) · `HTTP → Antenna ON` (out 1, cmd:RECONNECT added to Tasmota msg) · `Manual Override` (out 0, cmd:RECONNECT|DISCONNECT). Bypass ON path routes through `Execute Reconnect` so it picks up `cmd:RECONNECT` automatically — no separate wire from Bypass Handler needed.
 - **TX inhibit and reconnect timer are decoupled** — the matrix decides DC, that fires `cmd:DISCONNECT` to the Setter, which inhibits TX. The reconnect timer expires → Execute Reconnect fires `cmd:RECONNECT` → Setter clears TX inhibit. If a new strike during the 20-min window re-fires DC, `flow.antenna_off` was already true, so `Trigger Disconnect` passes `retrigger:true` downstream. The TX Inhibit Setter still fires `inhibit=1` (idempotent) and the Telegram alert formatter (below) renders a different "STORM CONTINUES" message instead of duplicating the disconnect notification.
