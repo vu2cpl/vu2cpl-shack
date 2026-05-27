@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v6 · 2026-05-26 12:15 IST';
+window.__shackBuild = 'v7 · 2026-05-26 17:50 IST';
 
 // =====================================================================
 // Connection-status heartbeat — MULTI-PATH (belt and braces).
@@ -882,6 +882,8 @@ const SolarCard = {
           <span :style="{color: gColor({k:'sfi',v:state.sfi}), fontWeight:600}">SFI {{ state.sfi ?? '—' }}</span>
           <span>·</span>
           <span :style="{color: gColor({k:'k',v:state.k}), fontWeight:600}">K {{ state.k != null ? Number(state.k).toFixed(1) : '—' }}</span>
+          <span>·</span>
+          <span :style="{color: gColor({k:'a',v:state.a}), fontWeight:600}">A {{ state.a ?? '—' }}</span>
           <span v-if="state.muf != null">·</span>
           <span v-if="state.muf != null" :style="{color:'var(--accent)', fontWeight:600}">MUF {{ state.muf }}</span>
         </span>
