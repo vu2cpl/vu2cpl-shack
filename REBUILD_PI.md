@@ -198,6 +198,50 @@ projects: {
 }
 ```
 
+### Enable dashboard auth (2026-05-27 — TODO #32)
+
+In the same `settings.js`, uncomment and populate two blocks so the
+dashboards (`/ui`, `/shack`) and all HTTP control endpoints
+(`/lightning/*`, `/dxcc/*`, `/rotor/*`) require login. Reuse the
+existing `adminAuth.users[0].password` bcrypt hash — single credential
+across editor + dashboards keeps Safari's password manager happy.
+
+```javascript
+httpNodeAuth: { user: "vu2cpl", pass: "<your bcrypt hash from adminAuth>" },
+
+ui: {
+    path: "ui",
+    auth: {
+        type: "credentials",
+        users: [
+            {
+                username: "vu2cpl",
+                password: "<same bcrypt hash>",
+                permissions: "*"
+            }
+        ]
+    }
+},
+```
+
+Generate a fresh bcrypt hash if you don't have one:
+
+```bash
+node-red admin hash-pw
+# Enter the password; copy the resulting $2y$08$... hash
+# Use the same hash in all THREE places (adminAuth, httpNodeAuth, ui.auth)
+```
+
+Verify after restart:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:1880/ui
+# Expect 401 (unauthorized — auth working)
+curl -s -o /dev/null -w '%{http_code}\n' -u vu2cpl:WRONGPASS http://localhost:1880/ui
+# Expect 401 (wrong password rejected)
+# Browser test: open /ui → Safari prompts for credentials
+```
+
 Then restart Node-RED:
 
 ```bash

@@ -405,7 +405,19 @@ After everything is working:
    placeholder names, `tg_token` env-var references). Real values
    live only in `/etc/systemd/system/nodered.service.d/secrets.conf`.
 3. **Backup the secrets file** somewhere off the Pi.
-4. Adapt `CLAUDE.md` rule #3 (DXCC PDF regen on every flow commit)
+4. **Set your own dashboard auth credentials.** REBUILD_PI.md Step 4
+   covers enabling `httpNodeAuth` + `ui.auth.users` in `settings.js`
+   so the dashboards require login. The bcrypt hash committed in this
+   repo (if any test files reference it) is **VU2CPL's** — generate
+   your own for your fork:
+   ```bash
+   node-red admin hash-pw
+   ```
+   Use the resulting `$2y$08$...` hash in all three places (adminAuth,
+   httpNodeAuth, ui.auth.users) in your `settings.js`. Your `settings.js`
+   is NOT in the repo (per `.gitignore`), so your password hash never
+   leaks even if you push the fork publicly.
+5. Adapt `CLAUDE.md` rule #3 (DXCC PDF regen on every flow commit)
    for your fork — either keep it or drop the DXCC tab entirely.
 
 ---

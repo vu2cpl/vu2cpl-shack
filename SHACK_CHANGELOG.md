@@ -5921,6 +5921,109 @@ Closed via [`218a11a`](https://github.com/vu2cpl/vu2cpl-shack/commit/218a11a)
 with the audit detail captured in the row's closure note for future
 reference. Open TODOs **5 → 4**.
 
+### Dashboard auth — always-on via `httpNodeAuth` + `ui.auth.users` (closes #32)
+
+Original sketch in HANDOVER #32 called for **Caddy + Let's Encrypt +
+LAN-bypass + reverse proxy** — estimated 2–4 hours of work. Operator
+clarified the actual ask is much simpler: just **require username/
+password always**, no LAN-bypass nuance, no off-LAN access yet. That
+collapsed the design from "reverse proxy with conditional auth" to
+"flip the two switches Node-RED already exposes."
+
+**The two switches:**
+
+`~/.node-red/settings.js` ships with two auth blocks commented out
+(install default):
+
+```javascript
+//httpNodeAuth: {user:"user",pass:"$2a$08$..."},
+//ui: { path: "ui" },
+```
+
+`httpNodeAuth` protects **all `http in` endpoints** — the
+`/lightning/*`, `/dxcc/*`, `/rotor/*` controls the Vue cards fetch
+against. `ui:` configures the D1 dashboard, including its own
+`auth.users` array for credentials.
+
+**Implementation** (10 min):
+
+Uncomment both blocks, populate with credentials reusing the existing
+`adminAuth.users[0].password` bcrypt hash (single credential across
+editor + dashboards keeps Safari's password manager happy):
+
+```javascript
+httpNodeAuth: { user: "vu2cpl", pass: "$2y$08$..." },  // reuse adminAuth hash
+
+ui: {
+    path: "ui",
+    auth: {
+        type: "credentials",
+        users: [
+            { username: "vu2cpl",
+              password: "$2y$08$...",  // same hash
+              permissions: "*" }
+        ]
+    }
+},
+```
+
+Restart Node-RED. Done.
+
+**Verification (post-restart):**
+
+```
+$ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:1880/ui
+401         # ← prompts for password ✓
+$ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:1880/shack/
+401         # ← Vue dashboard also protected ✓
+$ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:1880/lightning/threshold
+401         # ← HTTP control endpoints also protected ✓
+$ curl -s -o /dev/null -w '%{http_code}\n' -u vu2cpl:WRONGPASS http://localhost:1880/ui
+401         # ← wrong password rejected ✓
+```
+
+**uibuilder `/shack`** works without setting `useSecurity: true` on the
+uibuilder node — its static files + socket.io endpoint are both served
+through Node-RED's HTTP layer, which `httpNodeAuth` covers uniformly.
+Once Safari has authenticated for `/shack`, subsequent `fetch()` calls
+from Vue cards (to `/lightning/*` etc.) automatically include the auth
+header (browser scopes basic-auth per origin).
+
+**Backup on Pi:** `~/.node-red/settings.js.bak.20260527_222201` — copy
+back + restart to roll back atomically if needed.
+
+**What this trades off vs the original Caddy plan:**
+
+| Caddy approach (deferred) | Always-on approach (shipped) |
+|---|---|
+| No prompt on LAN, prompt off-LAN | Prompt always (Safari remembers) |
+| HTTPS via Let's Encrypt | Plain HTTP — fine on LAN, **NOT safe over public internet** |
+| Reverse proxy moving part | No new software |
+| ~2–4 hours setup | 10 min edit + restart |
+
+**Upgrade path for off-LAN access** (not actually needed today but
+captured for future): add Caddy on top for TLS termination only, no
+auth logic — Node-RED already does auth. Router forwards 443 → Pi.
+Strictly upgrade-compatible with what shipped tonight.
+
+**Documentation updates:**
+
+- **REBUILD_PI.md Step 4** gains a new "Enable dashboard auth"
+  sub-section with the exact `httpNodeAuth` + `ui.auth.users` blocks
+  to paste, the `node-red admin hash-pw` command for generating a
+  fresh bcrypt hash, and the curl-based post-restart verification
+  steps. So a future bare-metal Pi rebuild ships with auth enabled
+  by default, not as an afterthought.
+- **FORK_GUIDE.md Stage N** gains a new item #4: forkers must
+  generate THEIR OWN bcrypt hash for their own credentials —
+  `settings.js` is `.gitignore`d so the hash never leaks even if
+  they push the fork publicly.
+- **HANDOVER #32** struck through with closure note explaining the
+  design collapse from Caddy → just-flip-the-switches, and the
+  upgrade path if Caddy is ever actually wanted later.
+
+Commit [`<filled below>`](https://github.com/vu2cpl/vu2cpl-shack/commit/).
+
 ---
 
 ## Standard Commit Sequence (reminder)
