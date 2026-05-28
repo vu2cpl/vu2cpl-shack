@@ -6022,7 +6022,106 @@ Strictly upgrade-compatible with what shipped tonight.
   design collapse from Caddy → just-flip-the-switches, and the
   upgrade path if Caddy is ever actually wanted later.
 
-Commit [`<filled below>`](https://github.com/vu2cpl/vu2cpl-shack/commit/).
+Commit [`c53ea0a`](https://github.com/vu2cpl/vu2cpl-shack/commit/c53ea0a).
+
+### DXCC Vue card — fix misleading "Worked / Confirmed" stat labels
+
+Operator spotted that the `/shack` DXCC card showed **"Worked 319 /
+Confirmed 2395"** — which is impossible if both are the same unit (you
+can't have more confirmed than worked). The two numbers were different
+quantities mislabelled as the same:
+
+| Club Log field | Value | What it actually is |
+|---|---|---|
+| `ws.entities` | 319 | distinct DXCC **entities** worked |
+| `ws.bandSlots` | 2432 | total entity-band **slots** worked |
+| `ws.confirmed` | 2395 | band **slots** confirmed (QSL/LoTW) |
+| `ws.unconfirmed` | 37 | band slots unconfirmed (2395+37 = 2432 ✓) |
+
+The card displayed `entities` under "Worked" and `confirmed` (slots)
+under "Confirmed" — apples-to-oranges. The D1 dashboard had this right
+all along (four separate labelled rows: Entities / Band slots /
+Confirmed ✓ / Unconfirmed ✗); only the Vue card conflated them.
+
+**Fix** (`88f0f99`):
+
+- `vue_dxcc_builder_01` now emits semantically-named fields:
+  `entities`, `bandSlots`, `confirmedSlots`, `unconfirmedSlots`
+  (legacy `totalWorked`/`totalConfirmed` aliases kept so the
+  collapsed-summary header's "319 worked" still works — entities IS
+  the right unit for that one-glance metric).
+- Card statusline relabelled to:
+  `Entities 319 · Slots 2395 / 2432 ✓ · Seed 21h ago`
+  with a hover tooltip spelling out the ratio: "Of 2432 band slots
+  worked, 2395 are confirmed via QSL/LoTW."
+
+Now the two numbers are coherent: 319 entities account for 2432
+entity-band combinations, of which 2395 are formally confirmed.
+Build stamp bumped v7 → v8.
+
+### Terminology — "Rotor" → "Rotator" repo-wide (brand "Rotor-EZ" kept)
+
+Operator request for locale/technical consistency. Strictly: a *rotor*
+is the spinning element inside a motor; a *rotator* is the device that
+turns an antenna. Hams use both colloquially, but the technical term
+ages better in shared docs. The Idiom Press **Rotor-EZ** brand name
+stays as-is.
+
+**Substitution** (`bc23255`) — safe because "Rotator" (R-O-T-A-T-O-R)
+doesn't contain "Rotor" (R-O-T-O-R) as a substring, so a plain
+string-replace doesn't recurse:
+
+```
+Rotor-EZ  → KEEP (brand)
+ROTOR     → ROTATOR
+Rotor     → Rotator
+rotor     → rotator
+```
+
+**Applied to** (105 lines across 9 files):
+
+- `flows.json` (38) — tab label, dashboard group, function-node IDs
+  (`rotator_go_fn`, `rotator_stop_fn`, `rotator_lpsp_fn`,
+  `rotator_builder_NN`, `rotator_tick_NN`, `rotator_*_http_in`,
+  `rotator_go_pwr_mqtt`, …), HTTP-in URL paths, MQTT bridge nodes,
+  variable names, comments, and all `wires` references (renamed
+  atomically by global string-replace so no dangling refs).
+- `uibuilder/shack/src/index.js` (22) — Vue component
+  `RotorCard → RotatorCard`, registration + `<RotatorCard/>`
+  template instance, card header text, CSS class refs, and all five
+  `fetch('/rotator/*')` URLs.
+- `uibuilder/shack/src/index.css` (27) — `.rotator-stage`,
+  `.rotator-compass`, `.rotator-aside`, `.rotator-timer`,
+  `.rotator-pwr-pill[--on/--off]`, `.rotator-preset-chip[__lbl/__deg/
+  --active]`, `.rotator-presets-row`, `.rotator-manual`. Selectors
+  stay in sync with the JS class assignments.
+- `README.md`, `CLAUDE.md`, `REBUILD_PI.md`, `FORK_GUIDE.md`,
+  `rebuild_pi.sh` — current-state doc references.
+
+**NOT applied to:** HANDOVER.md "What landed this week" historical
+rows + SHACK_CHANGELOG.md historical entries — they describe past
+work using contemporary names; rewriting in place would erase
+archeological context. Only HANDOVER's current TODO #31 cell was
+renamed (it describes a future task: now "Rotator → WebSocket
+gateway", and the future repo will be `vu2cpl/rotator-remote`).
+
+**Bonus — endpoint consistency resolved:** previously
+`/rotor/{go,stop,lpsp}` were inconsistent with `/rotator/power-toggle`
+(a discrepancy flagged in CLAUDE.md for weeks). All four are now
+`/rotator/*`. Verified post-restart: all four return 401 (auth-gated,
+route exists); Vue fetch calls + http-in node paths in lockstep.
+
+**Mid-task bug recovered:** the rename script's sentinel
+`BRAND_ROTOREZ_KEEP` (used to protect the brand name during
+substitution) itself contained "ROTOR", so the uppercase pass
+rewrote it to `BRAND_ROTATOREZ_KEEP` and the final unwind couldn't
+match the original sentinel — leaving 15 literal sentinel strings
+across 6 files where "Rotor-EZ" should be. A follow-up pass restored
+all 15. Lesson: pick sentinels that can't collide with the very
+patterns you're substituting.
+
+Build stamp v8 → v9, `index.js?v=9` cache-buster. Commit
+[`bc23255`](https://github.com/vu2cpl/vu2cpl-shack/commit/bc23255).
 
 ---
 

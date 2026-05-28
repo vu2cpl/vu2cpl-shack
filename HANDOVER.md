@@ -2,7 +2,7 @@
 
 **Period:** 2026-05-01 → 2026-05-26
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
-**Last commit at handover:** (this commit) — settings.js: enable httpNodeAuth + ui.auth (closes #32)
+**Last commit at handover:** `bc23255` — Rename: Rotor → Rotator everywhere (preserving brand name Rotor-EZ)
 
 ---
 
