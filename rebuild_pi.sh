@@ -449,7 +449,7 @@ EOF
     if ls /dev/serial/by-id/ 2>/dev/null | grep -qE 'FT232R|FTDI'; then
         ls -la /dev/serial/by-id/ | grep -E 'FT232R|FTDI' | sed 's/^/      /'
     else
-        warn "No FTDI USB serial devices visible — connect SPE / Rotor cables and re-run if needed"
+        warn "No FTDI USB serial devices visible — connect SPE / Rotator cables and re-run if needed"
     fi
 
     mark_stage "10_udev_rules"

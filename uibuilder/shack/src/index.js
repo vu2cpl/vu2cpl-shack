@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v8 · 2026-05-27 22:35 IST';
+window.__shackBuild = 'v9 · 2026-05-28 08:00 IST';
 
 // =====================================================================
 // Connection-status heartbeat — MULTI-PATH (belt and braces).
@@ -1031,20 +1031,20 @@ const SolarCard = {
   }
 };
 
-// === Rotor card ===
-const RotorCard = {
+// === Rotator card ===
+const RotatorCard = {
   template: `
     <div class="card">
       <div class="card__header" @click="expanded = !expanded">
         <span class="chev">{{ expanded ? '▼' : '▶' }}</span>
-        <span>Rotor</span>
+        <span>Rotator</span>
         <span v-if="!expanded" class="summary">
           <span :style="{color:'var(--accent)', fontWeight:600}">{{ headingFmt(state.heading) }} {{ cardinal(state.heading) }}</span>
           <span v-if="state.target != null && state.target !== state.heading">·</span>
           <span v-if="state.target != null && state.target !== state.heading" :style="{color:'var(--amber)', fontWeight:600}">→ {{ headingFmt(state.target) }}</span>
           <!-- Clickable power pill — does NOT bubble up to toggle collapse -->
-          <button class="rotor-pwr-pill"
-                  :class="state.power ? 'rotor-pwr-pill--on' : 'rotor-pwr-pill--off'"
+          <button class="rotator-pwr-pill"
+                  :class="state.power ? 'rotator-pwr-pill--on' : 'rotator-pwr-pill--off'"
                   @click.stop="togglePower()"
                   :title="state.power ? 'Click to power OFF' : 'Click to power ON'">
             ● {{ state.power ? 'ON' : 'OFF' }}
@@ -1055,8 +1055,8 @@ const RotorCard = {
       <div class="card__body" :class="{ 'is-collapsed': !expanded }">
 
         <!-- Big interactive compass — click anywhere on the face to set heading -->
-        <div class="rotor-stage">
-          <svg viewBox="0 0 220 220" class="rotor-compass"
+        <div class="rotator-stage">
+          <svg viewBox="0 0 220 220" class="rotator-compass"
                :style="{cursor: 'crosshair'}"
                @mousemove="onHover($event)"
                @mouseleave="hover.deg = null"
@@ -1111,18 +1111,18 @@ const RotorCard = {
                   font-family="JetBrains Mono,SFMono-Regular,monospace">→ {{ Math.round(hover.deg) }}°</text>
           </svg>
 
-          <div class="rotor-aside">
+          <div class="rotator-aside">
             <button class="btn" :class="state.power ? 'btn--green' : 'btn--red'" @click="togglePower()">
               {{ state.power ? '● ON' : '○ OFF' }}
             </button>
-            <div v-if="rotatorRemain" class="rotor-timer">⏱ {{ rotatorRemain }}</div>
+            <div v-if="rotatorRemain" class="rotator-timer">⏱ {{ rotatorRemain }}</div>
             <button class="btn btn--red"   @click="doStop()">■ STOP</button>
             <button class="btn btn--amber" @click="doLpSp()">{{ onLongPath ? 'SP' : 'LP' }}</button>
           </div>
         </div>
 
         <!-- Manual heading entry -->
-        <div class="rotor-manual">
+        <div class="rotator-manual">
           <input v-model.number="manualHdg" type="number" min="0" max="359" placeholder="0-359"
                  @keydown.enter="doGo()" />
           <button class="btn btn--green" @click="doGo()" :disabled="manualHdg == null">GO</button>
@@ -1135,14 +1135,14 @@ const RotorCard = {
             <span>DXCC Presets</span>
           </div>
           <div class="section__body" :class="{ 'is-collapsed': !showPresets }">
-            <div class="rotor-presets-row">
+            <div class="rotator-presets-row">
               <button v-for="p in presets" :key="p.lbl"
-                      class="rotor-preset-chip"
-                      :class="{ 'rotor-preset-chip--active': state.target === p.deg }"
+                      class="rotator-preset-chip"
+                      :class="{ 'rotator-preset-chip--active': state.target === p.deg }"
                       :style="{ '--chip-accent': octantColor(p.deg) }"
                       @click="goPreset(p.deg)">
-                <span class="rotor-preset-chip__lbl">{{ p.lbl }}</span>
-                <span class="rotor-preset-chip__deg">{{ p.deg }}°</span>
+                <span class="rotator-preset-chip__lbl">{{ p.lbl }}</span>
+                <span class="rotator-preset-chip__deg">{{ p.deg }}°</span>
               </button>
             </div>
           </div>
@@ -1254,17 +1254,17 @@ const RotorCard = {
       fetch('/rotator/power-toggle', { method: 'POST' }).catch(e => console.warn(e));
     }
     function doStop() {
-      fetch('/rotor/stop', { method: 'POST' }).catch(e => console.warn(e));
+      fetch('/rotator/stop', { method: 'POST' }).catch(e => console.warn(e));
     }
     const onLongPath = ref(false);
     function doLpSp() {
-      fetch('/rotor/lpsp', { method: 'POST' }).catch(e => console.warn(e));
+      fetch('/rotator/lpsp', { method: 'POST' }).catch(e => console.warn(e));
       onLongPath.value = !onLongPath.value;
     }
     function doGo() {
       const h = manualHdg.value;
       if (h == null || h < 0 || h > 359) return;
-      fetch('/rotor/go', {
+      fetch('/rotator/go', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ hdg: h })
@@ -1272,7 +1272,7 @@ const RotorCard = {
       state.target = h;
     }
     function goPreset(deg) {
-      fetch('/rotor/go', {
+      fetch('/rotator/go', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ hdg: deg })
@@ -1281,7 +1281,7 @@ const RotorCard = {
     }
 
     onMounted(() => {
-      uibuilder.onTopic('rotor', (msg) => {
+      uibuilder.onTopic('rotator', (msg) => {
         if (msg && msg.payload && typeof msg.payload === 'object') {
           Object.assign(state, msg.payload);
           refreshRotatorTimer();
@@ -2575,14 +2575,14 @@ const TopBar = {
 
 // === Root app ===
 const App = {
-  components: { TopBar, LightningCard, DXCCCard, NetworkCard, RPiCard, PowerCard, SolarCard, FlexCard, SPECard, LP700Card, RotorCard, GpsNtpCard, RBNCard },
+  components: { TopBar, LightningCard, DXCCCard, NetworkCard, RPiCard, PowerCard, SolarCard, FlexCard, SPECard, LP700Card, RotatorCard, GpsNtpCard, RBNCard },
   template: `
     <TopBar />
     <div class="dash-grid">
       <FlexCard />
       <LP700Card />
       <SPECard />
-      <RotorCard />
+      <RotatorCard />
       <LightningCard />
       <PowerCard />
       <SolarCard />

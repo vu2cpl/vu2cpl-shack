@@ -9,7 +9,7 @@
   {
     "id": "3d26c2c5270bdb37",
     "type": "tab",
-    "label": "Rotor",
+    "label": "Rotator",
     "disabled": false,
     "info": ""
   },
@@ -859,7 +859,7 @@
     "id": "78d79f019261723c",
     "type": "function",
     "z": "3d26c2c5270bdb37",
-    "name": "Rotor fmt + SVG update",
+    "name": "Rotator fmt + SVG update",
     "func": "\nvar hdg = 0;\nif(typeof msg.payload === 'object' && msg.payload.heading !== undefined){\n    hdg = parseFloat(msg.payload.heading);\n} else {\n    hdg = parseFloat(msg.payload);\n}\nif(isNaN(hdg)) return null;\n\nvar cx = 110, cy = 110;\nvar rad = (hdg - 90) * Math.PI / 180;\nvar r = 98;\nvar x2 = (cx + r * Math.cos(rad)).toFixed(1);\nvar y2 = (cy + r * Math.sin(rad)).toFixed(1);\n\nvar bx = cx + 70 * Math.cos(rad);\nvar by = cy + 70 * Math.sin(rad);\nvar lx = (bx - 8 * Math.sin(rad)).toFixed(1);\nvar ly = (by + 8 * Math.cos(rad)).toFixed(1);\nvar rx = (bx + 8 * Math.sin(rad)).toFixed(1);\nvar ry = (by - 8 * Math.cos(rad)).toFixed(1);\n\nvar updates = [\n    {command: 'update_attribute', elementId: 'rot-actual', attributeName: 'x2', attributeValue: x2},\n    {command: 'update_attribute', elementId: 'rot-actual', attributeName: 'y2', attributeValue: y2},\n    {command: 'update_attribute', elementId: 'rot-arrow', attributeName: 'points', attributeValue: x2+','+y2+' '+lx+','+ly+' '+rx+','+ry},\n    {command: 'update_text', elementId: 'rot-hdg-txt', textContent: Math.round(hdg)+'\u00b0'}\n];\n\n// Check if reached target - hide line after 3s\nvar target = flow.get('target_hdg');\nif(target !== undefined && Math.abs(hdg - target) <= 3){\n    flow.set('target_hdg', undefined);\n    // 3s delay then hide\n    setTimeout(function(){\n        node.send({payload: [{\n            command: 'update_attribute', elementId: 'rot-target',\n            attributeName: 'opacity', attributeValue: '0'\n        }]});\n    }, 3000);\n}\n\nmsg.payload = updates;\nreturn msg;\n",
     "outputs": 1,
     "noerr": 0,
@@ -1035,7 +1035,7 @@
     "type": "function",
     "z": "3d26c2c5270bdb37",
     "name": "Click \u2192 Heading",
-    "func": "\nvar cx = 110, cy = 110;\nvar presetMap = {\n    'btn-eu': 325, 'btn-n': 0, 'btn-us': 10, 'btn-ja': 60, 'btn-e': 90,\n    'btn-vk': 120, 'btn-zl': 170, 'btn-s': 180, 'btn-sa': 235, 'btn-w': 270\n};\n\n// Handle payload-only messages from Rotor Controls template (LP/SP, GO, STOP)\nif(!msg.event && msg.payload !== undefined){\n    if(msg.payload === 'toggle_180'){\n        var cur = flow.get('target_hdg');\n        if(cur === undefined) cur = flow.get('current_hdg') || 0;\n        var hdg = (parseInt(cur) + 180) % 360;\n        flow.set('target_hdg', hdg);\n        var work = ('00' + hdg).slice(-3);\n        return [{payload: 'AP1' + work + '\\r'}, null];\n    }\n    if(msg.payload === 'stop'){\n        flow.set('target_hdg', undefined);\n        var t1 = context.get('t');\n        if(t1) clearTimeout(t1);\n        return [{payload: 'stop'}, {payload: [{\n            command: 'update_attribute', elementId: 'rot-target',\n            attributeName: 'opacity', attributeValue: '0'\n        }]}];\n    }\n    var n = parseInt(msg.payload);\n    if(!isNaN(n) && n >= 0 && n <= 359){\n        flow.set('target_hdg', n);\n        var work2 = ('00' + n).slice(-3);\n        var rad2 = (n - 90) * Math.PI / 180;\n        var x2b = (cx + 98 * Math.cos(rad2)).toFixed(1);\n        var y2b = (cy + 98 * Math.sin(rad2)).toFixed(1);\n        return [{payload: 'AP1' + work2 + '\\r'}, {payload: [\n            {command: 'update_attribute', elementId: 'rot-target', attributeName: 'x2', attributeValue: x2b},\n            {command: 'update_attribute', elementId: 'rot-target', attributeName: 'y2', attributeValue: y2b},\n            {command: 'update_attribute', elementId: 'rot-target', attributeName: 'opacity', attributeValue: '0.7'}\n        ]}];\n    }\n    return [null, null];\n}\n\n// Preset direction buttons or click on compass\nvar hdg;\nif(presetMap[msg.elementId] !== undefined){\n    hdg = presetMap[msg.elementId];\n} else if(msg.event && msg.elementId === 'clickzone'){\n    var dx = msg.event.svgX - cx;\n    var dy = msg.event.svgY - cy;\n    if(Math.sqrt(dx*dx + dy*dy) > 103) return [null, null];\n    var angle = Math.atan2(dy, dx) * 180 / Math.PI;\n    hdg = Math.round((angle + 90 + 360) % 360);\n} else {\n    return [null, null];\n}\n\nflow.set('target_hdg', hdg);\nvar work = ('00' + hdg).slice(-3);\nvar cmdMsg = {payload: 'AP1' + work + '\\r'};\nvar rad = (hdg - 90) * Math.PI / 180;\nvar x2 = (cx + 98 * Math.cos(rad)).toFixed(1);\nvar y2 = (cy + 98 * Math.sin(rad)).toFixed(1);\nvar svgMsg = {payload: [\n    {command: 'update_attribute', elementId: 'rot-target', attributeName: 'x2', attributeValue: x2},\n    {command: 'update_attribute', elementId: 'rot-target', attributeName: 'y2', attributeValue: y2},\n    {command: 'update_attribute', elementId: 'rot-target', attributeName: 'opacity', attributeValue: '0.7'}\n]};\nvar t = context.get('t');\nif(t) clearTimeout(t);\ncontext.set('t', setTimeout(function(){\n    flow.set('target_hdg', undefined);\n    node.send([null, {payload: [{command:'update_attribute', elementId:'rot-target', attributeName:'opacity', attributeValue:'0'}]}]);\n}, 300000));\nreturn [cmdMsg, svgMsg];\n",
+    "func": "\nvar cx = 110, cy = 110;\nvar presetMap = {\n    'btn-eu': 325, 'btn-n': 0, 'btn-us': 10, 'btn-ja': 60, 'btn-e': 90,\n    'btn-vk': 120, 'btn-zl': 170, 'btn-s': 180, 'btn-sa': 235, 'btn-w': 270\n};\n\n// Handle payload-only messages from Rotator Controls template (LP/SP, GO, STOP)\nif(!msg.event && msg.payload !== undefined){\n    if(msg.payload === 'toggle_180'){\n        var cur = flow.get('target_hdg');\n        if(cur === undefined) cur = flow.get('current_hdg') || 0;\n        var hdg = (parseInt(cur) + 180) % 360;\n        flow.set('target_hdg', hdg);\n        var work = ('00' + hdg).slice(-3);\n        return [{payload: 'AP1' + work + '\\r'}, null];\n    }\n    if(msg.payload === 'stop'){\n        flow.set('target_hdg', undefined);\n        var t1 = context.get('t');\n        if(t1) clearTimeout(t1);\n        return [{payload: 'stop'}, {payload: [{\n            command: 'update_attribute', elementId: 'rot-target',\n            attributeName: 'opacity', attributeValue: '0'\n        }]}];\n    }\n    var n = parseInt(msg.payload);\n    if(!isNaN(n) && n >= 0 && n <= 359){\n        flow.set('target_hdg', n);\n        var work2 = ('00' + n).slice(-3);\n        var rad2 = (n - 90) * Math.PI / 180;\n        var x2b = (cx + 98 * Math.cos(rad2)).toFixed(1);\n        var y2b = (cy + 98 * Math.sin(rad2)).toFixed(1);\n        return [{payload: 'AP1' + work2 + '\\r'}, {payload: [\n            {command: 'update_attribute', elementId: 'rot-target', attributeName: 'x2', attributeValue: x2b},\n            {command: 'update_attribute', elementId: 'rot-target', attributeName: 'y2', attributeValue: y2b},\n            {command: 'update_attribute', elementId: 'rot-target', attributeName: 'opacity', attributeValue: '0.7'}\n        ]}];\n    }\n    return [null, null];\n}\n\n// Preset direction buttons or click on compass\nvar hdg;\nif(presetMap[msg.elementId] !== undefined){\n    hdg = presetMap[msg.elementId];\n} else if(msg.event && msg.elementId === 'clickzone'){\n    var dx = msg.event.svgX - cx;\n    var dy = msg.event.svgY - cy;\n    if(Math.sqrt(dx*dx + dy*dy) > 103) return [null, null];\n    var angle = Math.atan2(dy, dx) * 180 / Math.PI;\n    hdg = Math.round((angle + 90 + 360) % 360);\n} else {\n    return [null, null];\n}\n\nflow.set('target_hdg', hdg);\nvar work = ('00' + hdg).slice(-3);\nvar cmdMsg = {payload: 'AP1' + work + '\\r'};\nvar rad = (hdg - 90) * Math.PI / 180;\nvar x2 = (cx + 98 * Math.cos(rad)).toFixed(1);\nvar y2 = (cy + 98 * Math.sin(rad)).toFixed(1);\nvar svgMsg = {payload: [\n    {command: 'update_attribute', elementId: 'rot-target', attributeName: 'x2', attributeValue: x2},\n    {command: 'update_attribute', elementId: 'rot-target', attributeName: 'y2', attributeValue: y2},\n    {command: 'update_attribute', elementId: 'rot-target', attributeName: 'opacity', attributeValue: '0.7'}\n]};\nvar t = context.get('t');\nif(t) clearTimeout(t);\ncontext.set('t', setTimeout(function(){\n    flow.set('target_hdg', undefined);\n    node.send([null, {payload: [{command:'update_attribute', elementId:'rot-target', attributeName:'opacity', attributeValue:'0'}]}]);\n}, 300000));\nreturn [cmdMsg, svgMsg];\n",
     "outputs": 2,
     "noerr": 0,
     "x": 940,
@@ -1054,7 +1054,7 @@
     "type": "function",
     "z": "3d26c2c5270bdb37",
     "name": "Build Rotator String",
-    "func": "\nvar hdg = parseInt(msg.payload);\n\n// LP/SP toggle: add 180\u00b0 to current target\nif(msg.payload === 'toggle_180'){\n    // Try target_hdg first (last commanded heading), fall back to actual rotor heading\n    var cur = flow.get('target_hdg');\n    if(cur === undefined || cur === null) cur = flow.get('rotator_heading');\n    if(cur === undefined || cur === null){\n        node.warn('LP/SP: no current heading');\n        return [null, null];\n    }\n    hdg = (cur + 180) % 360;\n    msg.payload = hdg;\n}\n\nvar work = ('00' + (isNaN(hdg)?msg.payload:hdg)).slice(-3);\nvar svgMsg;\n\nif(msg.payload === 'stop' || msg.payload === 'STOP'){\n    msg.payload = ';';\n    flow.set('target_hdg', undefined);\n    svgMsg = {payload: [{\n        command: 'update_attribute', elementId: 'rot-target',\n        attributeName: 'opacity', attributeValue: '0'\n    }]};\n    var t = context.get('t');\n    if(t) clearTimeout(t);\n} else if(!isNaN(hdg) && hdg >= 0 && hdg <= 359){\n    msg.payload = 'AP1' + work + '\\r';\n    flow.set('target_hdg', hdg);\n    var cx = 110, cy = 110;\n    var rad = (hdg - 90) * Math.PI / 180;\n    var x2 = (cx + 98 * Math.cos(rad)).toFixed(1);\n    var y2 = (cy + 98 * Math.sin(rad)).toFixed(1);\n    svgMsg = {payload: [\n        {command: 'update_attribute', elementId: 'rot-target', attributeName: 'x2', attributeValue: x2},\n        {command: 'update_attribute', elementId: 'rot-target', attributeName: 'y2', attributeValue: y2},\n        {command: 'update_attribute', elementId: 'rot-target', attributeName: 'opacity', attributeValue: '0.7'}\n    ]};\n    // Fallback: hide after 5 min if rotator stalls\n    var t = context.get('t');\n    if(t) clearTimeout(t);\n    context.set('t', setTimeout(function(){\n        flow.set('target_hdg', undefined);\n        node.send([null, {payload: [{command:'update_attribute', elementId:'rot-target', attributeName:'opacity', attributeValue:'0'}]}]);\n    }, 300000));\n} else {\n    return [null, null];\n}\nreturn [msg, svgMsg];\n",
+    "func": "\nvar hdg = parseInt(msg.payload);\n\n// LP/SP toggle: add 180\u00b0 to current target\nif(msg.payload === 'toggle_180'){\n    // Try target_hdg first (last commanded heading), fall back to actual rotator heading\n    var cur = flow.get('target_hdg');\n    if(cur === undefined || cur === null) cur = flow.get('rotator_heading');\n    if(cur === undefined || cur === null){\n        node.warn('LP/SP: no current heading');\n        return [null, null];\n    }\n    hdg = (cur + 180) % 360;\n    msg.payload = hdg;\n}\n\nvar work = ('00' + (isNaN(hdg)?msg.payload:hdg)).slice(-3);\nvar svgMsg;\n\nif(msg.payload === 'stop' || msg.payload === 'STOP'){\n    msg.payload = ';';\n    flow.set('target_hdg', undefined);\n    svgMsg = {payload: [{\n        command: 'update_attribute', elementId: 'rot-target',\n        attributeName: 'opacity', attributeValue: '0'\n    }]};\n    var t = context.get('t');\n    if(t) clearTimeout(t);\n} else if(!isNaN(hdg) && hdg >= 0 && hdg <= 359){\n    msg.payload = 'AP1' + work + '\\r';\n    flow.set('target_hdg', hdg);\n    var cx = 110, cy = 110;\n    var rad = (hdg - 90) * Math.PI / 180;\n    var x2 = (cx + 98 * Math.cos(rad)).toFixed(1);\n    var y2 = (cy + 98 * Math.sin(rad)).toFixed(1);\n    svgMsg = {payload: [\n        {command: 'update_attribute', elementId: 'rot-target', attributeName: 'x2', attributeValue: x2},\n        {command: 'update_attribute', elementId: 'rot-target', attributeName: 'y2', attributeValue: y2},\n        {command: 'update_attribute', elementId: 'rot-target', attributeName: 'opacity', attributeValue: '0.7'}\n    ]};\n    // Fallback: hide after 5 min if rotator stalls\n    var t = context.get('t');\n    if(t) clearTimeout(t);\n    context.set('t', setTimeout(function(){\n        flow.set('target_hdg', undefined);\n        node.send([null, {payload: [{command:'update_attribute', elementId:'rot-target', attributeName:'opacity', attributeValue:'0'}]}]);\n    }, 300000));\n} else {\n    return [null, null];\n}\nreturn [msg, svgMsg];\n",
     "outputs": 2,
     "noerr": 0,
     "x": 450,
@@ -9599,11 +9599,11 @@
     ]
   },
   {
-    "id": "rotor_lpsp_http_in",
+    "id": "rotator_lpsp_http_in",
     "type": "http in",
     "z": "3d26c2c5270bdb37",
-    "name": "POST /rotor/lpsp",
-    "url": "/rotor/lpsp",
+    "name": "POST /rotator/lpsp",
+    "url": "/rotator/lpsp",
     "method": "post",
     "upload": false,
     "swaggerDoc": "",
@@ -9611,13 +9611,13 @@
     "y": 250,
     "wires": [
       [
-        "rotor_lpsp_response",
-        "rotor_lpsp_fn"
+        "rotator_lpsp_response",
+        "rotator_lpsp_fn"
       ]
     ]
   },
   {
-    "id": "rotor_lpsp_response",
+    "id": "rotator_lpsp_response",
     "type": "http response",
     "z": "3d26c2c5270bdb37",
     "name": "200 OK",
@@ -9628,7 +9628,7 @@
     "wires": []
   },
   {
-    "id": "rotor_lpsp_fn",
+    "id": "rotator_lpsp_fn",
     "type": "function",
     "z": "3d26c2c5270bdb37",
     "name": "LP/SP \u2192 toggle_180",
@@ -9647,11 +9647,11 @@
     ]
   },
   {
-    "id": "rotor_go_http_in",
+    "id": "rotator_go_http_in",
     "type": "http in",
     "z": "3d26c2c5270bdb37",
-    "name": "POST /rotor/go",
-    "url": "/rotor/go",
+    "name": "POST /rotator/go",
+    "url": "/rotator/go",
     "method": "post",
     "upload": false,
     "swaggerDoc": "",
@@ -9659,13 +9659,13 @@
     "y": 350,
     "wires": [
       [
-        "rotor_go_response",
-        "rotor_go_fn"
+        "rotator_go_response",
+        "rotator_go_fn"
       ]
     ]
   },
   {
-    "id": "rotor_go_response",
+    "id": "rotator_go_response",
     "type": "http response",
     "z": "3d26c2c5270bdb37",
     "name": "200 OK",
@@ -9676,7 +9676,7 @@
     "wires": []
   },
   {
-    "id": "rotor_go_fn",
+    "id": "rotator_go_fn",
     "type": "function",
     "z": "3d26c2c5270bdb37",
     "name": "GO + ensure power on",
@@ -9693,16 +9693,16 @@
         "40ef419559a726ff"
       ],
       [
-        "rotor_go_pwr_mqtt"
+        "rotator_go_pwr_mqtt"
       ]
     ]
   },
   {
-    "id": "rotor_stop_http_in",
+    "id": "rotator_stop_http_in",
     "type": "http in",
     "z": "3d26c2c5270bdb37",
-    "name": "POST /rotor/stop",
-    "url": "/rotor/stop",
+    "name": "POST /rotator/stop",
+    "url": "/rotator/stop",
     "method": "post",
     "upload": false,
     "swaggerDoc": "",
@@ -9710,13 +9710,13 @@
     "y": 450,
     "wires": [
       [
-        "rotor_stop_response",
-        "rotor_stop_fn"
+        "rotator_stop_response",
+        "rotator_stop_fn"
       ]
     ]
   },
   {
-    "id": "rotor_stop_response",
+    "id": "rotator_stop_response",
     "type": "http response",
     "z": "3d26c2c5270bdb37",
     "name": "200 OK",
@@ -9727,7 +9727,7 @@
     "wires": []
   },
   {
-    "id": "rotor_stop_fn",
+    "id": "rotator_stop_fn",
     "type": "function",
     "z": "3d26c2c5270bdb37",
     "name": "STOP \u2192 stop",
@@ -9746,7 +9746,7 @@
     ]
   },
   {
-    "id": "rotor_go_pwr_mqtt",
+    "id": "rotator_go_pwr_mqtt",
     "type": "mqtt out",
     "z": "3d26c2c5270bdb37",
     "name": "GO Power \u2192 MQTT",
@@ -9764,15 +9764,15 @@
     "wires": []
   },
   {
-    "id": "rotor_controls_combined_01",
+    "id": "rotator_controls_combined_01",
     "type": "ui_template",
     "z": "3d26c2c5270bdb37",
     "group": "84143f78d088f01d",
-    "name": "Rotor Controls (LP/SP + HDG + GO + STOP)",
+    "name": "Rotator Controls (LP/SP + HDG + GO + STOP)",
     "order": 2,
     "width": 8,
     "height": 1,
-    "format": "<div style=\"display:flex;gap:6px;align-items:center;width:100%;\">\n  <button id=\"lpsp-btn\" title=\"Toggle \u00b1180\u00b0 (long path / short path)\" style=\"padding:8px 8px;border:1.5px solid #00a5c9;background:#000510;color:#00e5ff;border-radius:3px;cursor:pointer;font-weight:bold;font-size:11px;flex-shrink:0;font-family:Consolas,monospace;\">LP/SP</button>\n  <input id=\"hdg-input\" type=\"number\" placeholder=\"0-359\" min=\"0\" max=\"359\" style=\"flex:1;min-width:0;width:60px;padding:8px 4px;border:1.5px solid #005c70;background:#000510;color:#00e5ff;border-radius:3px;font-size:13px;text-align:center;font-family:Consolas,monospace;\" />\n  <button id=\"go-btn\" style=\"padding:8px 10px;border:1.5px solid #00e5ff;background:#000510;color:#00e5ff;border-radius:3px;cursor:pointer;font-weight:bold;font-size:12px;flex-shrink:0;font-family:Consolas,monospace;\">GO</button>\n  <button id=\"stop-btn\" style=\"padding:8px 8px;border:1.5px solid #f85149;background:#1a0808;color:#f85149;border-radius:3px;cursor:pointer;font-weight:bold;font-size:11px;flex-shrink:0;font-family:Consolas,monospace;\">\u25a0 STOP</button>\n</div>\n<script>\n(function(){\n  function post(url, body){\n    return fetch(url, {\n      method: 'POST',\n      headers: body ? {'Content-Type':'application/json'} : {},\n      body: body ? JSON.stringify(body) : undefined\n    }).catch(function(e){ console.warn(url + ' failed:', e); });\n  }\n  document.getElementById('lpsp-btn').onclick = function(){\n    post('/rotor/lpsp');\n  };\n  document.getElementById('go-btn').onclick = function(){\n    var inp = document.getElementById('hdg-input');\n    var v = parseInt(inp.value);\n    if(isNaN(v) || v < 0 || v > 359) return;\n    post('/rotor/go', {hdg: v});\n    inp.value = '';\n  };\n  document.getElementById('stop-btn').onclick = function(){\n    post('/rotor/stop');\n  };\n  document.getElementById('hdg-input').addEventListener('keypress', function(e){\n    if(e.key === 'Enter') document.getElementById('go-btn').click();\n  });\n  // Aviation knob handler (called from SVG onclick)\n  window._rotatorPowerToggle = function(){\n    post('/rotator/power-toggle');\n  };\n})();\n</script>",
+    "format": "<div style=\"display:flex;gap:6px;align-items:center;width:100%;\">\n  <button id=\"lpsp-btn\" title=\"Toggle \u00b1180\u00b0 (long path / short path)\" style=\"padding:8px 8px;border:1.5px solid #00a5c9;background:#000510;color:#00e5ff;border-radius:3px;cursor:pointer;font-weight:bold;font-size:11px;flex-shrink:0;font-family:Consolas,monospace;\">LP/SP</button>\n  <input id=\"hdg-input\" type=\"number\" placeholder=\"0-359\" min=\"0\" max=\"359\" style=\"flex:1;min-width:0;width:60px;padding:8px 4px;border:1.5px solid #005c70;background:#000510;color:#00e5ff;border-radius:3px;font-size:13px;text-align:center;font-family:Consolas,monospace;\" />\n  <button id=\"go-btn\" style=\"padding:8px 10px;border:1.5px solid #00e5ff;background:#000510;color:#00e5ff;border-radius:3px;cursor:pointer;font-weight:bold;font-size:12px;flex-shrink:0;font-family:Consolas,monospace;\">GO</button>\n  <button id=\"stop-btn\" style=\"padding:8px 8px;border:1.5px solid #f85149;background:#1a0808;color:#f85149;border-radius:3px;cursor:pointer;font-weight:bold;font-size:11px;flex-shrink:0;font-family:Consolas,monospace;\">\u25a0 STOP</button>\n</div>\n<script>\n(function(){\n  function post(url, body){\n    return fetch(url, {\n      method: 'POST',\n      headers: body ? {'Content-Type':'application/json'} : {},\n      body: body ? JSON.stringify(body) : undefined\n    }).catch(function(e){ console.warn(url + ' failed:', e); });\n  }\n  document.getElementById('lpsp-btn').onclick = function(){\n    post('/rotator/lpsp');\n  };\n  document.getElementById('go-btn').onclick = function(){\n    var inp = document.getElementById('hdg-input');\n    var v = parseInt(inp.value);\n    if(isNaN(v) || v < 0 || v > 359) return;\n    post('/rotator/go', {hdg: v});\n    inp.value = '';\n  };\n  document.getElementById('stop-btn').onclick = function(){\n    post('/rotator/stop');\n  };\n  document.getElementById('hdg-input').addEventListener('keypress', function(e){\n    if(e.key === 'Enter') document.getElementById('go-btn').click();\n  });\n  // Aviation knob handler (called from SVG onclick)\n  window._rotatorPowerToggle = function(){\n    post('/rotator/power-toggle');\n  };\n})();\n</script>",
     "storeOutMessages": true,
     "fwdInMessages": false,
     "resendOnRefresh": false,
@@ -10074,7 +10074,7 @@
     "type": "function",
     "z": "b76a5310767803b4",
     "name": "Build Power state for Vue",
-    "func": "// flow.power_states is keyed by stat/<dev>/POWERn \u2192 'ON'|'OFF'\n// Plus flow.energy_state for the 16A master, flow.rotatorTimerEnd for rotor auto-off\nvar raw = flow.get('power_states') || {};\n// Vue indexes by cmnd topic. Map stat \u2192 cmnd by simple string swap.\nvar byCmnd = {};\nObject.keys(raw).forEach(function(k){\n    var cmnd = k.replace(/^stat\\//, 'cmnd/');\n    byCmnd[cmnd] = raw[k];\n    byCmnd[k] = raw[k];  // also keep the original in case some keys are already cmnd\n});\n\nvar e = flow.get('energy_state') || {};\nvar energy = {\n    voltage: e.voltage,\n    current: e.current,\n    power:   e.power,\n    today:   e.today\n};\n\nreturn {\n    topic: 'power',\n    payload: {\n        power: byCmnd,\n        energy: energy.voltage != null || energy.power != null ? energy : null,\n        rotatorTimerEnd: flow.get('rotatorTimerEnd') || null\n    }\n};\n",
+    "func": "// flow.power_states is keyed by stat/<dev>/POWERn \u2192 'ON'|'OFF'\n// Plus flow.energy_state for the 16A master, flow.rotatorTimerEnd for rotator auto-off\nvar raw = flow.get('power_states') || {};\n// Vue indexes by cmnd topic. Map stat \u2192 cmnd by simple string swap.\nvar byCmnd = {};\nObject.keys(raw).forEach(function(k){\n    var cmnd = k.replace(/^stat\\//, 'cmnd/');\n    byCmnd[cmnd] = raw[k];\n    byCmnd[k] = raw[k];  // also keep the original in case some keys are already cmnd\n});\n\nvar e = flow.get('energy_state') || {};\nvar energy = {\n    voltage: e.voltage,\n    current: e.current,\n    power:   e.power,\n    today:   e.today\n};\n\nreturn {\n    topic: 'power',\n    payload: {\n        power: byCmnd,\n        energy: energy.voltage != null || energy.power != null ? energy : null,\n        rotatorTimerEnd: flow.get('rotatorTimerEnd') || null\n    }\n};\n",
     "outputs": 1,
     "x": 360,
     "y": 900,
@@ -10265,10 +10265,10 @@
     ]
   },
   {
-    "id": "vue_rotor_tick_01",
+    "id": "vue_rotator_tick_01",
     "type": "inject",
     "z": "3d26c2c5270bdb37",
-    "name": "Push Rotor to Vue every 1s",
+    "name": "Push Rotator to Vue every 1s",
     "props": [
       {
         "p": "payload"
@@ -10285,16 +10285,16 @@
     "y": 1200,
     "wires": [
       [
-        "vue_rotor_builder_01"
+        "vue_rotator_builder_01"
       ]
     ]
   },
   {
-    "id": "vue_rotor_builder_01",
+    "id": "vue_rotator_builder_01",
     "type": "function",
     "z": "3d26c2c5270bdb37",
-    "name": "Build Rotor state for Vue",
-    "func": "// flow.rotator_heading is written by Slice heading on each poll.\n// flow.target_hdg is set by Build Rotator String when a heading is sent.\n// Power state mirrors the Tasmota powerstrip1/POWER2 outlet (rotator),\n// which Power tab tracks in flow.power_states (memory-only on Power tab).\n// Easier: read global.dxcc_xxx \u2014 no, that's not it. Use a global mirror.\n// Tasmota state for rotator outlet: stat/powerstrip1/POWER2 'ON' | 'OFF'.\n// The Power Control tab tracks it in its own flow scope. Bridge via global is\n// already done for AS3935; for rotator we'll use the flow.rotatorTimerEnd hint:\n// if a timer is active, the rotator power is ON.\nvar hdg = flow.get('rotator_heading');\nvar tgt = flow.get('target_hdg');\n\n// Power state \u2014 pull from global if present, else infer\nvar pwr = global.get('rotator_power');\nif (pwr == null) {\n    // Fallback: assume ON if heading is being received (rotor needs power to report)\n    pwr = (hdg != null);\n}\n\nreturn {\n    topic: 'rotor',\n    payload: {\n        heading:  hdg != null ? Number(hdg) : null,\n        target:   tgt != null ? Number(tgt) : null,\n        power:    !!pwr,\n        timerEnd: flow.get('rotatorTimerEnd') || null\n    }\n};\n",
+    "name": "Build Rotator state for Vue",
+    "func": "// flow.rotator_heading is written by Slice heading on each poll.\n// flow.target_hdg is set by Build Rotator String when a heading is sent.\n// Power state mirrors the Tasmota powerstrip1/POWER2 outlet (rotator),\n// which Power tab tracks in flow.power_states (memory-only on Power tab).\n// Easier: read global.dxcc_xxx \u2014 no, that's not it. Use a global mirror.\n// Tasmota state for rotator outlet: stat/powerstrip1/POWER2 'ON' | 'OFF'.\n// The Power Control tab tracks it in its own flow scope. Bridge via global is\n// already done for AS3935; for rotator we'll use the flow.rotatorTimerEnd hint:\n// if a timer is active, the rotator power is ON.\nvar hdg = flow.get('rotator_heading');\nvar tgt = flow.get('target_hdg');\n\n// Power state \u2014 pull from global if present, else infer\nvar pwr = global.get('rotator_power');\nif (pwr == null) {\n    // Fallback: assume ON if heading is being received (rotator needs power to report)\n    pwr = (hdg != null);\n}\n\nreturn {\n    topic: 'rotator',\n    payload: {\n        heading:  hdg != null ? Number(hdg) : null,\n        target:   tgt != null ? Number(tgt) : null,\n        power:    !!pwr,\n        timerEnd: flow.get('rotatorTimerEnd') || null\n    }\n};\n",
     "outputs": 1,
     "x": 360,
     "y": 1200,

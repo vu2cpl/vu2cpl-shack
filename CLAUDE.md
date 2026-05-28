@@ -105,7 +105,7 @@ git push
 | Tab Label | Tab ID | Nodes | Dashboard Group |
 |-----------|--------|-------|-----------------|
 | SPE | `648eb83c2566c7b6` | 29 | `vu2cpl_grp_spe` |
-| Rotor | `3d26c2c5270bdb37` | 24 | `84143f78d088f01d` |
+| Rotator | `3d26c2c5270bdb37` | 24 | `84143f78d088f01d` |
 | FlexRadio | `a0a882f85c89cffc` | 43 | `vu2cpl_grp_flex` |
 | LP-700-HID ws | `18fb42443172f33c` | 18 | `vu2cpl_grp_lp700` |
 | Solar | `590e889d44815afb` | 35 | `vu2cpl_grp_solar` |

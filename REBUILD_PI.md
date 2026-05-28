@@ -112,7 +112,7 @@ sudo apt install -y \
 
 # Enable I²C for the AS3935 sensor
 sudo raspi-config nonint do_i2c 0
-sudo raspi-config nonint do_serial_hw 0   # enable hardware UART (rotor / SPE)
+sudo raspi-config nonint do_serial_hw 0   # enable hardware UART (rotator / SPE)
 
 # Verify I²C bus
 ls /dev/i2c-1                              # should exist
@@ -202,7 +202,7 @@ projects: {
 
 In the same `settings.js`, uncomment and populate two blocks so the
 dashboards (`/ui`, `/shack`) and all HTTP control endpoints
-(`/lightning/*`, `/dxcc/*`, `/rotor/*`) require login. Reuse the
+(`/lightning/*`, `/dxcc/*`, `/rotator/*`) require login. Reuse the
 existing `adminAuth.users[0].password` bcrypt hash — single credential
 across editor + dashboards keeps Safari's password manager happy.
 

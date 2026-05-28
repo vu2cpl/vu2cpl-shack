@@ -164,7 +164,7 @@ Node-RED, the embedded web client, and any future Mac SwiftUI app
 all subscribe to telemetry concurrently. Updates at ~25 Hz. Buttons
 emit JSON command verbs (`channel_step`, `range_step`, etc.).
 
-### Rotor
+### Rotator
 
 Idiom Press Rotor-EZ on FTDI serial at 4800-8N1. Heading display +
 preset compass-rose buttons.

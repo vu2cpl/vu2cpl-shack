@@ -65,7 +65,7 @@ in column 2, decide between **(a) delete that flow tab entirely**, or
 | Power switching | Tasmota-flashed power strips (Sonoff, etc.) on MQTT | Required for any auto-disconnect to work. If you don't have any, disable the relevant flow tabs (All Power Strips, etc.) |
 | HF transceiver | FlexRadio FLEX-6xxx / 7xxx series with TCP API enabled | Delete the `FlexRadio` flow tab + remove `FlexCard` from `/shack`. The rest of the stack is unaffected |
 | HF amplifier | SPE Expert 1.5 KFA / 1.3K-FA / 2K-FA via FTDI serial | Delete the `SPE` flow tab + remove `SPECard` from `/shack` |
-| Antenna rotator | Idiom Press Rotor-EZ (via FTDI serial) | Delete the `Rotor` flow tab + remove `RotorCard` from `/shack` |
+| Antenna rotator | Idiom Press Rotor-EZ (via FTDI serial) | Delete the `Rotator` flow tab + remove `RotatorCard` from `/shack` |
 | Power / SWR meter | Telepost LP-700 / LP-500 via USB HID | Delete the `LP-700-HID ws` flow tab + remove `LP700Card` from `/shack`. Requires [`VU3ESV/LP-700-Server`](https://github.com/VU3ESV/LP-700-Server) WebSocket gateway too |
 | DX cluster + DXCC tracking | Active Club Log account + DX cluster access | Delete `DXCC Tracker` + `RBN Skimmer Monitor` flow tabs and their `/shack` cards if you don't operate DX |
 | RPi fleet | Other Raspberry Pis on your LAN you want to monitor | Delete `RPi Fleet Monitor` flow tab + `RPiCard`. Or keep it and add your Pis (see DEPLOY_PI.md) |
@@ -227,14 +227,14 @@ from `/shack`.
 
 ## Stage F — Antenna rotator
 
-The `Rotor` flow tab opens a serial connection to the Rotor-EZ via a
+The `Rotator` flow tab opens a serial connection to the Rotor-EZ via a
 specific `/dev/serial/by-id` path (see CLAUDE.md "Hardware Map → USB
 Serial Devices"). Change to your rotator's path. If you don't use
 Rotor-EZ, you'll need to rewrite the `Build Rotator String` function
 for your rotator's protocol.
 
-The `/shack` RotorCard hard-codes a preset list (EU, N, US, JA, VK,
-ZL, SA, W, E). Edit `src/index.js` → `RotorCard` → the `presets`
+The `/shack` RotatorCard hard-codes a preset list (EU, N, US, JA, VK,
+ZL, SA, W, E). Edit `src/index.js` → `RotatorCard` → the `presets`
 array to match your typical headings.
 
 **Verify:** Click a preset in `/shack` → rotator moves; numeric input
