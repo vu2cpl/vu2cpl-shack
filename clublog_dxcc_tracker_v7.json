@@ -949,12 +949,25 @@
     "type": "function",
     "z": "d110d176c0aad308",
     "name": "Parse cty.xml -> Prefix Maps",
-    "func": "var xml = (msg.payload || '').toString();\nif (!xml || xml.length < 500) {\n    node.error('cty.xml too short: ' + xml.length + ' chars');\n    node.status({fill:'red', shape:'dot', text:'Bad data'});\n    return null;\n}\n\nfunction child(block, tag) {\n    var re = new RegExp('<' + tag + '>([^<]*)<\\/' + tag + '>');\n    var m = block.match(re);\n    return m ? m[1].trim() : '';\n}\n\nfunction isCurrent(block) {\n    var end = child(block, 'end');\n    if (!end || end === '') return true;\n    try { return new Date(end.replace(' ', 'T') + 'Z') >= new Date(); } catch(e) { return true; }\n}\n\nvar prefixMap   = {};  // prefix string -> ADIF number (string)\nvar entityNames = {};  // ADIF number   -> entity name\nvar exceptions  = {};  // callsign      -> ADIF number (string)\n\n// Parse <entities>\nvar entRe = /<entity\\b[^>]*>([\\s\\S]*?)<\\/entity>/g;\nvar em;\nwhile ((em = entRe.exec(xml)) !== null) {\n    var b = em[1];\n    var adif    = child(b, 'adif');\n    var name    = child(b, 'name');\n    var deleted = child(b, 'deleted').toUpperCase();\n    if (adif && name && deleted !== 'TRUE') {\n        entityNames[adif] = name;\n    }\n}\n\n// Parse <prefixes>\nvar pfxRe = /<prefix\\b[^>]*>([\\s\\S]*?)<\\/prefix>/g;\nvar pm;\nwhile ((pm = pfxRe.exec(xml)) !== null) {\n    var b = pm[1];\n    var call = child(b, 'call').toUpperCase();\n    var adif = child(b, 'adif');\n    if (!call || !adif) continue;\n    if (!isCurrent(b)) continue;\n    prefixMap[call] = adif;\n}\n\n// Parse <exceptions>\nvar excRe = /<exception\\b[^>]*>([\\s\\S]*?)<\\/exception>/g;\nvar xm;\nwhile ((xm = excRe.exec(xml)) !== null) {\n    var b = xm[1];\n    var call = child(b, 'call').toUpperCase();\n    var adif = child(b, 'adif');\n    if (!call || !adif) continue;\n    if (!isCurrent(b)) continue;\n    exceptions[call] = adif;\n}\n\nvar pfxCount = Object.keys(prefixMap).length;\nvar excCount = Object.keys(exceptions).length;\nvar entCount = Object.keys(entityNames).length;\n\nif (pfxCount < 100) {\n    node.error('Too few prefixes: ' + pfxCount);\n    node.status({fill:'red', shape:'dot', text:'Parse failed'});\n    return null;\n}\n\nflow.set('dxccPrefixMap',  prefixMap);\nflow.set('dxccExceptions', exceptions);\nflow.set('dxccSeedNames',  entityNames);\n\nnode.status({fill:'green', shape:'dot',\n    text: entCount + ' entities | ' + pfxCount + ' prefixes | ' + excCount + ' exceptions'});\nreturn null;",
+    "func": "var xml = (msg.payload || '').toString();\nif (!xml || xml.length < 500) {\n    node.error('cty.xml too short: ' + xml.length + ' chars');\n    node.status({fill:'red', shape:'dot', text:'Bad data'});\n    return null;\n}\n\nfunction child(block, tag) {\n    var re = new RegExp('<' + tag + '>([^<]*)<\\/' + tag + '>');\n    var m = block.match(re);\n    return m ? m[1].trim() : '';\n}\n\nfunction isCurrent(block) {\n    var end = child(block, 'end');\n    if (!end || end === '') return true;\n    try { return new Date(end.replace(' ', 'T') + 'Z') >= new Date(); } catch(e) { return true; }\n}\n\nvar prefixMap   = {};  // prefix string -> ADIF number (string)\nvar entityNames = {};  // ADIF number   -> entity name\nvar exceptions  = {};  // callsign      -> ADIF number (string)\n\n// Parse <entities>\nvar entRe = /<entity\\b[^>]*>([\\s\\S]*?)<\\/entity>/g;\nvar em;\nwhile ((em = entRe.exec(xml)) !== null) {\n    var b = em[1];\n    var adif    = child(b, 'adif');\n    var name    = child(b, 'name');\n    var deleted = child(b, 'deleted').toUpperCase();\n    if (adif && name && deleted !== 'TRUE') {\n        entityNames[adif] = name;\n    }\n}\n\n// Parse <prefixes>\nvar pfxRe = /<prefix\\b[^>]*>([\\s\\S]*?)<\\/prefix>/g;\nvar pm;\nwhile ((pm = pfxRe.exec(xml)) !== null) {\n    var b = pm[1];\n    var call = child(b, 'call').toUpperCase();\n    var adif = child(b, 'adif');\n    if (!call || !adif) continue;\n    if (!isCurrent(b)) continue;\n    prefixMap[call] = adif;\n}\n\n// Parse <exceptions>\nvar excRe = /<exception\\b[^>]*>([\\s\\S]*?)<\\/exception>/g;\nvar xm;\nwhile ((xm = excRe.exec(xml)) !== null) {\n    var b = xm[1];\n    var call = child(b, 'call').toUpperCase();\n    var adif = child(b, 'adif');\n    if (!call || !adif) continue;\n    if (!isCurrent(b)) continue;\n    exceptions[call] = adif;\n}\n\nvar pfxCount = Object.keys(prefixMap).length;\nvar excCount = Object.keys(exceptions).length;\nvar entCount = Object.keys(entityNames).length;\n\nif (pfxCount < 100) {\n    node.error('Too few prefixes: ' + pfxCount);\n    node.status({fill:'red', shape:'dot', text:'Parse failed'});\n    return null;\n}\n\nflow.set('dxccPrefixMap',  prefixMap);\nflow.set('dxccExceptions', exceptions);\nflow.set('dxccSeedNames',  entityNames);\n\n// 2026-05-28 \u2014 persist parsed maps so a Node-RED restart while\n// Club Log is unreachable doesn't leave DXCC alert classification\n// dead. Bootstrap reads this file at startup before the live fetch\n// fires, so the system always boots with a usable prefix map.\ntry {\n    var flowsDir = flow.get('cfg_flows_dir') || (os.homedir() + '/.node-red');\n    var cachePath = flowsDir + '/nr_cty_maps.json';\n    var cacheObj = {\n        prefixMap:   prefixMap,\n        exceptions:  exceptions,\n        entityNames: entityNames,\n        parsedAt:    new Date().toISOString(),\n        stats:       { entities: entCount, prefixes: pfxCount, exceptions_: excCount }\n    };\n    fs.writeFileSync(cachePath, JSON.stringify(cacheObj));\n    node.status({fill:'green', shape:'dot',\n        text: entCount + ' ent | ' + pfxCount + ' pfx | ' + excCount + ' exc \u00b7 cached'});\n} catch (e) {\n    node.warn('cty cache write failed: ' + e.message);\n    node.status({fill:'green', shape:'dot',\n        text: entCount + ' ent | ' + pfxCount + ' pfx | ' + excCount + ' exc (cache write failed)'});\n}\nreturn null;",
     "outputs": 0,
     "noerr": 0,
     "initialize": "",
     "finalize": "",
-    "libs": [],
+    "libs": [
+      {
+        "var": "fs",
+        "module": "fs"
+      },
+      {
+        "var": "os",
+        "module": "os"
+      },
+      {
+        "var": "path",
+        "module": "path"
+      }
+    ],
     "x": 1080,
     "y": 100,
     "wires": []
@@ -1787,6 +1800,60 @@
     "y": 880,
     "wires": [
       []
+    ]
+  },
+  {
+    "id": "cty_bootstrap_fn_01",
+    "type": "function",
+    "z": "d110d176c0aad308",
+    "name": "Bootstrap cty.xml from file",
+    "func": "// 2026-05-28 - resilience fix. Reads nr_cty_maps.json (written by\n// Parse cty.xml -> Prefix Maps after each successful Club Log fetch)\n// and populates the three flow context keys the prefix-lookup function\n// needs. Fires at onceDelay:1 - well before the live Club Log fetch\n// at onceDelay:5 - so DXCC alert classification has a working prefix\n// map from the moment spots start arriving.\n//\n// If Club Log is unreachable at restart, the cached maps continue\n// to serve. If Club Log later succeeds, the live fetch overwrites\n// both flow context AND the cache file with fresher data.\n//\n// First-time deploys (no cache yet): no-op; the live fetch at +5s\n// populates from scratch and writes the cache for next time.\n\nvar flowsDir = flow.get('cfg_flows_dir') || (os.homedir() + '/.node-red');\nvar cachePath = flowsDir + '/nr_cty_maps.json';\n\n// Fallback path in case cfg_flows_dir isn't set yet (Credentials node\n// fires at onceDelay:0.5 - we run at 1 - timing is generally safe but\n// being defensive is cheap).\nvar paths = [\n    cachePath,\n    require('os').homedir() + '/.node-red/nr_cty_maps.json'\n];\n\nfor (var i = 0; i < paths.length; i++) {\n    try {\n        if (fs.existsSync(paths[i])) {\n            var raw = fs.readFileSync(paths[i], 'utf8');\n            var cached = JSON.parse(raw);\n            if (cached.prefixMap && cached.entityNames) {\n                flow.set('dxccPrefixMap',  cached.prefixMap);\n                flow.set('dxccExceptions', cached.exceptions || {});\n                flow.set('dxccSeedNames',  cached.entityNames);\n                var ageMs = Date.now() - new Date(cached.parsedAt || 0).getTime();\n                var ageMin = Math.floor(ageMs / 60000);\n                var ageStr = ageMin < 60 ? ageMin + 'm'\n                           : ageMin < 1440 ? Math.floor(ageMin/60) + 'h'\n                           : Math.floor(ageMin/1440) + 'd';\n                var s = cached.stats || {};\n                node.status({fill:'blue', shape:'dot',\n                    text: 'cached ' + (s.entities||'?') + 'ent ' + (s.prefixes||'?') + 'pfx (age ' + ageStr + ')'});\n                node.warn('cty bootstrap from cache: ' + paths[i] + ' (' + ageStr + ' old)');\n                return null;\n            }\n        }\n    } catch (e) {\n        node.warn('cty cache read failed at ' + paths[i] + ': ' + e.message);\n    }\n}\nnode.status({fill:'grey', shape:'ring', text:'no cty cache - waiting for live fetch'});\nreturn null;\n",
+    "outputs": 0,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [
+      {
+        "var": "fs",
+        "module": "fs"
+      },
+      {
+        "var": "os",
+        "module": "os"
+      },
+      {
+        "var": "path",
+        "module": "path"
+      }
+    ],
+    "x": 470,
+    "y": 200,
+    "wires": []
+  },
+  {
+    "id": "cty_bootstrap_tick_01",
+    "type": "inject",
+    "z": "d110d176c0aad308",
+    "name": "Load cty.xml from cache (early)",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "1",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 200,
+    "y": 200,
+    "wires": [
+      [
+        "cty_bootstrap_fn_01"
+      ]
     ]
   }
 ]
