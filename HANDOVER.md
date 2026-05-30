@@ -2,7 +2,7 @@
 
 **Period:** 2026-05-01 → 2026-05-26
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
-**Last commit at handover:** `dd0cfa3` — FORK_GUIDE: full rewrite for clarity (audience non-developer hams)
+**Last commit at handover:** `cf109fd` — REBUILD_PI + rebuild_pi.sh: fork-friendly updates + data-files audit
 
 ---
 

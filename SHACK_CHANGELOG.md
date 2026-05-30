@@ -6255,6 +6255,74 @@ Rewrite shifts ([`dd0cfa3`](https://github.com/vu2cpl/vu2cpl-shack/commit/dd0cfa
 The "Where to ask for help" section frames future doc bugs as
 issues to open against the repo — feedback loop closes naturally.
 
+### REBUILD_PI + rebuild_pi.sh — fork-friendly updates + data-files audit
+
+Audit prompt from operator: do REBUILD_PI.md and rebuild_pi.sh need
+updates given the recent cty.xml resilience fix, and can they be made
+usable by a forker (not just VU2CPL rebuilding the same Pi)?
+
+#### REBUILD_PI.md changes
+
+1. **New "If you're following this for YOUR station" callout** at the
+   top with a substitution table — Pi IP, hostname, user, timezone,
+   repo URL. Keeps the runbook concrete (literal values are easier
+   to read than abstract `${USER}@${IP}` placeholders) but makes the
+   substitution rule explicit. Points readers at FORK_GUIDE.md for the
+   deeper customisation pass after the rebuild completes.
+
+2. **"Files referenced" section split into two tables.** The original
+   listed only deployed Pi-side scripts. The new structure:
+   - **Pi-side scripts + systemd units** (deployed by Step 7) —
+     the existing list, unchanged.
+   - **Runtime data files** (auto-generated; live in flows dir) —
+     new section listing `nr_dxcc_seed.json`, `nr_dxcc_blacklist.json`,
+     `nr_cty_maps.json` (added today by the resilience fix), and
+     `nr_lightning_events.jsonl`. Each row has writer, purpose, rough
+     size, and a note on regeneration vs unrecoverable history.
+
+3. **New verification check #16** under Step 12 — confirms
+   `nr_cty_maps.json` exists post-first-fetch with size > 100 KB
+   and stats matching ~340 entities / ~2900 prefixes / ~9000
+   exceptions. Validates the resilience path actually wrote its
+   cache; gives a concrete `python3 -c '...'` one-liner for content
+   spot-check. "15-point checklist" → "16-point".
+
+#### rebuild_pi.sh changes
+
+1. **New "Fork configuration" block** at the top of the script with
+   four `readonly` constants:
+   ```bash
+   readonly EXPECTED_USER='vu2cpl'
+   readonly EXPECTED_HOSTNAME='noderedpi4'
+   readonly REPO_URL='git@github.com:vu2cpl/vu2cpl-shack.git'
+   readonly REPO_NAME='vu2cpl-shack'
+   ```
+   Defaults stay VU2CPL's so script behaviour is unchanged for the
+   primary use case. Comments above the block explain what each
+   variable controls (Pi user, hostname, fork URL, project dir
+   name).
+
+2. **Script body now uses these variables** instead of hardcoded
+   strings. 8 substitutions: preflight `id -un`/hostname checks,
+   ssh-keygen comment, `cd ~/.node-red/projects/<repo>`, cp/chown
+   of Pi-side scripts to `/home/<user>/`, chmod, sudoers entry,
+   crontab entry, `usermod -aG telepost`. For a forker, configuring
+   the script is now a 4-line edit at the top of the file.
+
+3. **Left as-is:** preamble docstring (showing VU2CPL defaults
+   descriptively), brand-name reference to the `vu2cpl-as3935-bridge`
+   upstream repo (different repo, brand name).
+
+No code-flow changes — this is a refactor for clarity. The script is
+still only tested against VU2CPL's setup; forkers should still run
+with `--status` and `--stage N` to step through carefully on first
+use. Everything genuinely generic (apt packages, mosquitto LAN
+config, Node-RED palette install, udev rules for FTDI/HID, file
+context store, LP-700 server install) applies to any station with
+zero changes.
+
+Commit [`cf109fd`](https://github.com/vu2cpl/vu2cpl-shack/commit/cf109fd).
+
 ---
 
 ## Standard Commit Sequence (reminder)
