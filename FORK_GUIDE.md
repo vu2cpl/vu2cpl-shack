@@ -1,147 +1,139 @@
-# Forking vu2cpl-shack for your own station
+# Running this shack stack at your station
 
-This repo is the live shack-automation stack of **VU2CPL · MK83TE ·
-Bengaluru**. It runs on a Raspberry Pi 4B and controls one specific
-hardware roster (FlexRadio FLEX-6600, SPE Expert 1.5 KFA, LP-700,
-Rotor-EZ, 21 Tasmota outlets, AS3935 lightning sensor over an ESP32
-bridge, DX cluster + DXCC tracker, RPi fleet monitor, GPS NTP).
+This guide is for **another ham operator** who wants to run this same
+shack-automation setup at their QTH — adapting it from VU2CPL's
+specifics (callsign, grid, hardware roster, MQTT broker IP) to your
+own.
 
-Most of that is portable. Some of it is location-, callsign-, or
-broker-specific and **must** be customised before the flow will do
-anything useful at your site. This document is the customisation
-runbook — the set of knobs to turn for your own station.
-
-> **You are NOT reading this if you are Manoj rebuilding his own Pi.**
-> That's [`REBUILD_PI.md`](REBUILD_PI.md) — same-Pi disaster recovery
-> with all the VU2CPL-specific values already baked in.
+You don't need to know git, GitHub forks, or Node-RED internals.
+What you DO need: an SSH login on your Pi, your station's basic
+info (callsign, grid square, antenna power switch details), and
+about 90 minutes to walk through the four steps below.
 
 ---
 
-## When to read this vs. REBUILD_PI
+## What you'll end up with
 
-| Scenario | Doc |
-|----------|-----|
-| Manoj's SD card died — bring `noderedpi4` back to life identically | **REBUILD_PI.md** alone |
-| You're a different operator cloning to your own station | **FORK_GUIDE.md (this)** + REBUILD_PI.md |
-| You're onboarding another Pi to *Manoj's* fleet (telemetry + reboot) | **DEPLOY_PI.md** |
+After you finish this guide:
 
-For Scenario 2: it's easiest to follow **REBUILD_PI.md end-to-end
-first** to get a working clone of VU2CPL's setup, then come back to
-this doc and walk through Stage A → Stage Z below to rebadge it for
-your station. (Don't try to do customisation *during* the rebuild —
-chasing two unknowns at once turns "it doesn't work" into "and I
-don't know why" much faster.)
-
----
-
-## Suggested working approach
-
-1. **Fork** `github.com/vu2cpl/vu2cpl-shack` to your own GitHub account.
-2. Clone your fork on the Pi (REBUILD_PI Step 5 — substitute your URL).
-3. Bring the stack up by following REBUILD_PI Steps 1–13.
-4. Verify the `/ui` and `/shack` dashboards load (you'll see VU2CPL's
-   default values everywhere — that's expected at this stage).
-5. Walk through Stages A–Z below in order. Each stage is small (one
-   node or one config block) and ends with "verify it took."
-6. `nrsave "fork: <stage X>"` after each change so you can bisect any
-   regression.
-7. Once everything is rebadged, push to your fork.
+- **Web dashboard at `http://<your-pi-ip>:1880/shack`** — phone /
+  tablet / Mac / Windows. Installable as a home-screen app on
+  iPhone & iPad.
+- Lightning auto-disconnect of your antenna when storms come
+  near, with operator override and bypass.
+- FlexRadio / SPE amp / LP-700 meter / antenna rotator readouts
+  and controls (skip whichever you don't have).
+- DXCC tracker that fires Telegram alerts for new entities/bands/
+  modes from real-time cluster spots.
+- Solar conditions, RPi fleet monitor, network ping, GPS-NTP card.
+- All behind a single username/password login.
 
 ---
 
-## Hardware compatibility — read this first
+## What you need before starting
 
-This stack assumes the following hardware. If you're missing something
-in column 2, decide between **(a) delete that flow tab entirely**, or
-**(b) leave it disabled** until you add the hardware.
-
-| Subsystem | Assumed hardware | If you don't have it |
-|-----------|------------------|----------------------|
-| MQTT broker | Mosquitto on the Pi | Required — install Mosquitto (REBUILD_PI Step 3) |
-| Lightning protection | AS3935 chip via ESP32 bridge | Disable `Lightning Antenna Protector` tab; remove `Lightning` card from `/shack` |
-| Local lightning sensor | AS3935 + ESP32 ([`vu2cpl-as3935-bridge`](https://github.com/vu2cpl/vu2cpl-as3935-bridge)) OR Pi-side `as3935_mqtt.py` daemon | Same as above — AS3935 is core to the lightning chain |
-| Open-Meteo weather | Internet access from the Pi | Required for CAPE-based lightning prediction; otherwise disable the OM polling inject |
-| Telegram alerts | Your bot token + chat ID | Optional — leave `cfg_tg_token` empty in Init Defaults; Telegram Alert Router will skip silently |
-| Power switching | Tasmota-flashed power strips (Sonoff, etc.) on MQTT | Required for any auto-disconnect to work. If you don't have any, disable the relevant flow tabs (All Power Strips, etc.) |
-| HF transceiver | FlexRadio FLEX-6xxx / 7xxx series with TCP API enabled | Delete the `FlexRadio` flow tab + remove `FlexCard` from `/shack`. The rest of the stack is unaffected |
-| HF amplifier | SPE Expert 1.5 KFA / 1.3K-FA / 2K-FA via FTDI serial | Delete the `SPE` flow tab + remove `SPECard` from `/shack` |
-| Antenna rotator | Idiom Press Rotor-EZ (via FTDI serial) | Delete the `Rotator` flow tab + remove `RotatorCard` from `/shack` |
-| Power / SWR meter | Telepost LP-700 / LP-500 via USB HID | Delete the `LP-700-HID ws` flow tab + remove `LP700Card` from `/shack`. Requires [`VU3ESV/LP-700-Server`](https://github.com/VU3ESV/LP-700-Server) WebSocket gateway too |
-| DX cluster + DXCC tracking | Active Club Log account + DX cluster access | Delete `DXCC Tracker` + `RBN Skimmer Monitor` flow tabs and their `/shack` cards if you don't operate DX |
-| RPi fleet | Other Raspberry Pis on your LAN you want to monitor | Delete `RPi Fleet Monitor` flow tab + `RPiCard`. Or keep it and add your Pis (see DEPLOY_PI.md) |
-| GPS NTP | Dedicated GPS-disciplined NTP Pi (see [`pi-gps-ntp-server`](https://github.com/vu2cpl/pi-gps-ntp-server)) | Delete `GPS NTP (card)` flow tab + `GpsNtpCard` from `/shack`. Or substitute your own NTP source's MQTT publisher |
-
-Anything not listed (network monitor, solar conditions, power-strip
-panels) is hardware-independent and will work as-is.
+- **Raspberry Pi 4B** (or newer) running Pi OS Lite 64-bit, with
+  SSH access. Login is `vu2cpl` in this guide — change to whatever
+  user you set up.
+- **Internet** at your Pi.
+- **Your callsign** and **6-character grid square**
+  (e.g. `MK83TE` for Bengaluru). If you don't know your grid,
+  use [maidenhead-locator.com](http://www.k7fry.com/grid/).
+- **MQTT broker IP** — usually the Pi itself if you'll run
+  Mosquitto there (recommended). Default `192.168.1.169`; change
+  to your Pi's IP.
+- **Tasmota-flashed power switch** for your antenna (and optionally
+  the radio). Note its MQTT topic name (e.g. `powerstrip1` /
+  `POWER5`).
+- **Optional**: Club Log account + API key, Telegram bot token +
+  chat ID, FlexRadio, SPE amp, LP-700 meter, rotator.
 
 ---
 
-## Stage A — Network & MQTT broker
+## The four steps
 
-If your Pi's IP is **not** `192.168.1.169`, change it everywhere.
+### Step 1 — Get the code (5 minutes)
 
-| Where | What |
-|-------|------|
-| `CLAUDE.md` | Replace every `192.168.1.169` with your Pi's IP |
-| `REBUILD_PI.md` | Same |
-| Node-RED editor → all `mqtt-broker` config nodes | Edit Server field to your broker IP |
-| Pi-side `monitor.sh` | The `-h` arg in `mosquitto_pub` calls |
-| Pi-side `power_spe_on.py` if relevant | None |
+On your Pi, in your home directory:
 
-**Verify:** `mosquitto_sub -h <your-ip> -t '#' -C 5` shows traffic.
+```bash
+git clone https://github.com/vu2cpl/vu2cpl-shack.git
+```
 
-The broker has no auth in this stack (LAN-only, no exposure). If you
-need auth, add `username` / `password` to every `mqtt-broker` config
-node and the publisher scripts.
+That gives you a folder `vu2cpl-shack` with everything in it.
+You don't need to fork it on GitHub unless you plan to contribute
+changes back — for personal use, the plain clone is enough.
 
----
+To update later (when new features land), you'll just run:
 
-## Stage B — Lightning Antenna Protector (Init Defaults)
+```bash
+cd ~/vu2cpl-shack
+git pull
+```
 
-The Lightning tab is configured **entirely** from one node:
-**`Init Defaults ✏️ EDIT HERE`** (id `ec1fd4dece8c4dc0`) on the
-`Lightning Antenna Protector` flow tab. Open it in the editor.
+### Step 2 — Install Node-RED and the rest (60 minutes, one-time)
+
+Follow [`REBUILD_PI.md`](REBUILD_PI.md) end-to-end. That document
+handles: apt packages, Mosquitto MQTT broker, Node-RED itself, the
+required palette (uibuilder + dashboard + flexradio + others),
+file-context store, Pi-side scripts (lightning sensor daemon, RPi
+agent), systemd services, udev rules, dashboard auth.
+
+There's a `rebuild_pi.sh` script that automates most of it.
+
+When REBUILD_PI.md is done, you should be able to open
+`http://<your-pi-ip>:1880/shack` and see the dashboard load
+**with VU2CPL's values in it** — your callsign in the header,
+your antenna power switch, your DXCC stats etc. are NOT in there
+yet. That's what Step 3 fixes.
+
+### Step 3 — Tell it about YOUR station (30 minutes, one-time)
+
+This is the customisation step. The good news: 90% of what you
+need to change lives in **two Node-RED nodes** + **one settings
+file**. Find each, edit, deploy.
+
+Open the Node-RED editor at `http://<your-pi-ip>:1880` and log
+in with the credentials you set up during REBUILD_PI Step 4
+(dashboard auth).
+
+#### 3a — Lightning + station identity
+
+Go to the **Lightning Antenna Protector** flow tab. Find the node
+labelled **`Init Defaults ✏️ EDIT HERE`** (icon: blue function
+node, prominently labelled at top of tab). Double-click to open.
+
+Edit the constants at the top of the function:
 
 ```javascript
-const MQTT_BROKER   = '192.168.1.169';   // ← your broker
-const CALLSIGN      = 'VU2CPL';          // ← your callsign
-const GRID_SQUARE   = 'MK83TE';          // ← your 6-char Maidenhead grid
+const MQTT_BROKER   = '192.168.1.169';     // ← your Pi's IP
+const CALLSIGN      = 'VU2CPL';            // ← YOUR CALLSIGN
+const GRID_SQUARE   = 'MK83TE';            // ← YOUR 6-char grid
 
-// Antenna power switch (Tasmota MQTT device name + relay)
-const POWER_STRIP   = 'powerstrip1';     // ← your Tasmota topic name
-const POWER_CH      = 'POWER5';          // ← which relay (POWER1..5)
+// Which Tasmota relay controls your antenna power
+const POWER_STRIP   = 'powerstrip1';       // ← your Tasmota topic name
+const POWER_CH      = 'POWER5';            // ← which relay (POWER1..5)
 
-// Radio power switch (optional)
-const RADIO_ENABLED = false;             // ← true if you want auto-power-off the rig too
+// Optional: same for the radio (set RADIO_ENABLED=true to use)
+const RADIO_ENABLED = false;
 const RADIO_LABEL   = 'Flex Radio';
 const RADIO_STRIP   = '4relayboard';
 const RADIO_CH      = 'POWER1';
 
-// Thresholds
-const THRESHOLD_KM   = 40;               // ← your disconnect distance
-const RECONNECT_MIN  = 20;               // ← minutes-clear before reconnect
+// When to disconnect antenna and how long to wait before reconnect
+const THRESHOLD_KM   = 40;          // disconnect distance, km
+const RECONNECT_MIN  = 20;          // minutes-clear before reconnect
 ```
 
-Grid square → lat/lon happens automatically (Maidenhead 6-char). The
-distance-graded disconnect matrix (close/medium/far × cold/lit/severe)
-and all 7 cfg keys at the bottom of the node are operationally tuned
-for Bengaluru's monsoon storm patterns — your site may want different
-values. Read the matrix description in CLAUDE.md "Lightning Antenna
-Protector" → "Distance-graded disconnect" before changing them.
+The lat/lon for Open-Meteo weather polling is **derived automatically**
+from your grid square — no manual calculation needed.
 
-**Verify:** Deploy → node status badge should show
-`broker:<your-ip>  <YOURCALL> <YOURGRID> → <lat>,<lon>  ant:...`.
+Click **Done**, then **Deploy** (top-right).
 
----
+#### 3b — DXCC tracker credentials (skip if you don't use DX clusters)
 
-## Stage C — DXCC Tracker + Telegram credentials
-
-DXCC tab has a dedicated **`⚙️ Credentials (edit once)`** node
-(id `08dcd5378a79bb18`). Most fields read from systemd environment
-variables (set in `/etc/systemd/system/nodered.service.d/secrets.conf`)
-so you never commit them to git. REBUILD_PI Stage 10 walks through the
-secrets file creation; for the fork you just need to substitute your
-own values:
+Edit `/etc/systemd/system/nodered.service.d/secrets.conf` on the
+Pi:
 
 ```bash
 sudo nano /etc/systemd/system/nodered.service.d/secrets.conf
@@ -156,106 +148,117 @@ Environment="TELEGRAM_TOKEN=<your-telegram-bot-token>"
 Environment="TELEGRAM_CHAT_ID=<your-telegram-chat-id>"
 ```
 
+Save, then:
+
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl restart nodered
 ```
 
-In the Credentials node, inline (not secret) values to edit:
+In the **DXCC Tracker** flow tab, open the **`⚙️ Credentials
+(edit once)`** node. Just verify the callsign is yours:
 
 ```javascript
-// callsign + login SSID for cluster connections
-const CL_CALLSIGN     = 'VU2CPL';        // ← your callsign (no SSID)
-const CL_LOGIN_SSID   = '-1';            // ← your SSID suffix; clusters log you in as VU2CPL-1
-// (keep -1 unless another instance of you is already logged in as VU2CPL bare)
-
-// DXCC seed + blacklist file paths — leave as-is, they auto-resolve via os.homedir()
+const CL_CALLSIGN     = 'VU2CPL';     // ← YOUR callsign (no SSID)
+const CL_LOGIN_SSID   = '-1';         // ← your SSID suffix
+                                      //   (keep -1 unless another
+                                      //    instance of you is on)
 ```
 
-**DX cluster selection.** The `DXCC Tracker` tab has 4 `tcp in` cluster
-nodes wired to `Login + Parse + Dedup`. Defaults: N2WQ (`cluster.n2wq.com:8300`),
-VU2OY (`vu2oy.ddns.net:7550`), VU2CPL (`vu2cpl.ddns.net:7300` — CwSkimmer-auth),
-VE7CC (`ve7cc.net:23`). Replace any of these with your local / regional
-clusters. The 4th-cluster slot is the easiest to swap; the first three
-are wired into the alert-classify pipeline by name.
+Click Done → Deploy.
 
-**Verify:** Deploy → DXCC tab status badge shows live spot counts. Open
-`/ui` DXCC table or `/shack` DXCC card → spots arrive within seconds.
+#### 3c — Tell the dashboard your callsign
 
----
+Edit `~/vu2cpl-shack/uibuilder/shack/src/index.js`. Find the
+**TopBar** Vue component (search for `class="callsign"`).
 
-## Stage D — FlexRadio
+```javascript
+<span class="callsign">VU2CPL</span>           // ← YOUR callsign
+<div class="sub">MK83TE · Bengaluru · ...</div> // ← YOUR grid · city
+```
 
-Edit the `FlexRadio` flow tab's TCP connection node (Discover node
-finds the radio's IP via UDP). If your radio is not on the same LAN
-broadcast domain, change the IP in the `flexradio-conn` config node
-to a fixed address.
+Save the file. No restart needed — uibuilder serves it live;
+just refresh `/shack` in your browser.
 
-**Verify:** Status badge on `flexradio` nodes shows green; slice state
-appears in the `/ui` FlexRadio panel and `/shack` FlexCard.
+### Step 4 — Use it
 
-If you don't have a FlexRadio at all: right-click the `FlexRadio` flow
-tab → Delete; in `/shack/src/index.js` remove `<FlexCard />` and the
-`FlexCard` component definition.
+Open `http://<your-pi-ip>:1880/shack` on each device:
 
----
+- **Mac Safari 17+**: File → Add to Dock → Add
+- **iPad / iPhone Safari**: Share → Add to Home Screen → Add
+- **Android Chrome**: ⋮ → Install app → Install
+- **Windows / Linux Chrome / Edge**: address-bar install icon → Install
 
-## Stage E — SPE amplifier
+Each device prompts for the password once and remembers it.
 
-The `SPE` flow tab and the `spe-remote` service (running on the Pi)
-own the FTDI serial connection to the amp. The Python service auto-
-detects the port via the `/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_*`
-symlinks. Your amp's FTDI chip will have a different serial number —
-update the `usb-FTDI_FT232R_USB_UART_<YOURSERIAL>-if00-port0` path in
-the `spe-remote` config (if it exists; otherwise the service auto-
-picks the first FTDI port).
-
-If your SPE is a 2K-FA model rather than the 1.5K-FA, the
-`ws_format_state` function in flows.json detects this via
-`d.model_id === '20K'` and adjusts pwrMaxMap. No change needed unless
-you're on a different SPE model entirely (1K-FA etc.) — in which case
-add the right power scale to that map.
-
-**Verify:** SPE panel on `/ui` and SPECard on `/shack` show live power
-readings when keyed up. Auto-ranging bar on `/shack` scales through
-the `[5, 10, 25, 50, 100, 250, 500, 1k, 1.5k, 2k, 5k]` ladder.
-
-If you don't have an SPE: delete the `SPE` flow tab; remove `SPECard`
-from `/shack`.
+That's it. You're running.
 
 ---
 
-## Stage F — Antenna rotator
+## Optional — hardware you DON'T have
 
-The `Rotator` flow tab opens a serial connection to the Rotor-EZ via a
-specific `/dev/serial/by-id` path (see CLAUDE.md "Hardware Map → USB
-Serial Devices"). Change to your rotator's path. If you don't use
-Rotor-EZ, you'll need to rewrite the `Build Rotator String` function
-for your rotator's protocol.
+The default flow includes tabs for every piece of hardware in
+VU2CPL's shack. If you don't have one of them, the dashboard card
+will just show "—" everywhere — harmless. But if you'd rather hide
+the card entirely, you can:
 
-The `/shack` RotatorCard hard-codes a preset list (EU, N, US, JA, VK,
-ZL, SA, W, E). Edit `src/index.js` → `RotatorCard` → the `presets`
-array to match your typical headings.
+- **Don't have a FlexRadio?** Delete the `FlexRadio` flow tab in
+  the Node-RED editor + remove `<FlexCard />` from `App` template
+  in `uibuilder/shack/src/index.js`.
+- **Don't have an SPE amp?** Same pattern, `SPE` tab + `<SPECard />`.
+- **Don't have a rotator?** `Rotator` tab + `<RotatorCard />`.
+- **Don't have an LP-700?** `LP-700-HID ws` tab + `<LP700Card />`.
+- **Don't use DX clusters?** `DXCC Tracker` + `RBN Skimmer Monitor`
+  tabs + `<DXCCCard />` + `<RBNCard />`.
+- **Don't have a GPS NTP server?** `GPS NTP (card)` tab + `<GpsNtpCard />`.
 
-**Verify:** Click a preset in `/shack` → rotator moves; numeric input
-+ GO works; LP/SP toggle changes the long-path vs short-path.
-
----
-
-## Stage G — LP-700 power/SWR meter
-
-Requires [`VU3ESV/LP-700-Server`](https://github.com/VU3ESV/LP-700-Server)
-running as `lp700-server.service` on the Pi. The Node-RED LP-700 tab
-is a WebSocket client to `ws://localhost:8089/ws`. If your gateway runs
-on a different host/port, update the ws-client config node.
-
-**Verify:** LP-700 panel shows live AVG/PEAK watts + SWR + range.
+After deleting/removing, save and deploy.
 
 ---
 
-## Stage H — Tasmota power devices
+## Optional — make the dashboard look like *your* station
 
-The `All Power Strips` flow tab listens on these MQTT topics:
+By default, the home-screen icon shows VU2CPL's logo. To rebadge
+for your station:
+
+1. Edit `~/vu2cpl-shack/uibuilder/shack/src/icon.svg` and
+   `icon-maskable.svg` — open in any text editor, replace `VU2CPL`
+   text with your callsign.
+
+2. Regenerate the PNG raster files (one-time, requires `rsvg-convert`
+   and Python's `PIL` library):
+
+   ```bash
+   cd ~/vu2cpl-shack/uibuilder/shack/src/
+   rsvg-convert -w 180 icon.svg          -o apple-touch-icon-180.png
+   rsvg-convert -w  16 icon.svg          -o favicon-16.png
+   rsvg-convert -w  32 icon.svg          -o favicon-32.png
+   rsvg-convert -w  48 icon.svg          -o favicon-48.png
+   rsvg-convert -w 192 icon-maskable.svg -o icon-192.png
+   rsvg-convert -w 512 icon-maskable.svg -o icon-512.png
+   python3 -c "from PIL import Image; imgs=[Image.open(f'favicon-{s}.png') for s in (16,32,48)]; imgs[0].save('favicon.ico', sizes=[(16,16),(32,32),(48,48)], append_images=imgs[1:])"
+   ```
+
+3. Bump the `?v=N` cache-buster in `index.html` to force browsers
+   to re-fetch.
+
+4. On iPad/iPhone: delete the old home-screen icon, re-add fresh.
+
+Edit `manifest.json` so the PWA install name shows your station:
+
+```json
+{
+  "name": "MYCALL Shack",
+  "short_name": "Shack",
+  ...
+}
+```
+
+---
+
+## Power switching — your Tasmota devices
+
+The default flow expects these Tasmota MQTT topics:
 
 ```
 stat/powerstrip1/POWER1..5
@@ -265,341 +268,134 @@ stat/4relayboard/POWER1..4
 stat/16Amasterswitch/POWER1
 ```
 
-For each of **your** Tasmota devices:
+For each of YOUR Tasmota devices:
 
-1. Decide a topic name (e.g. `tasmota-livingroom`, `kitchen-strip`, etc.)
-2. On the Tasmota web UI → Configuration → MQTT → set Topic to that name + restart
-3. In Node-RED `All Power Strips` flow tab, find the MQTT-in nodes for
-   `powerstrip1` etc. and change the topic to yours
-4. In the `/shack` PowerCard, edit the 4-rows-of-5 layout in
-   `src/index.js` → `PowerCard` to match your device count
+1. Pick a topic name on your Tasmota web UI →
+   Configuration → MQTT → Topic field (e.g. `kitchen-strip`,
+   `shack-power`). Restart Tasmota.
+2. In Node-RED, find the matching `mqtt in` nodes on the
+   `All Power Strips` flow tab and change their topics to yours.
+3. In the **Power Control Panel** ui_template (or `<PowerCard />`
+   in Vue), edit the device list to match your hardware count.
 
-Set `Timezone +XX:YY` on each device (REBUILD_PI Stage 11 covers this
-for IST = +05:30 — substitute your local offset). The energy aggregator
-on `16Amasterswitch` rolls over daily totals at local midnight, so the
-TZ must be correct.
-
-**Verify:** Toggle a plug from `/shack` PowerCard → relay clicks → state
-syncs back within ~200 ms.
+Set the **timezone** on each device (web UI Console:
+`Timezone +05:30` for India, `Timezone +00:00` for UTC, etc.) so
+the daily energy counters roll over at your local midnight.
 
 ---
 
-## Stage I — `/shack` Vue dashboard
+## Other clusters / radios / hardware
 
-`/shack` is the modern dashboard. The Vue source lives in
-`uibuilder/shack/src/`:
+If your hardware differs from VU2CPL's exact roster, here's a
+quick map of which Node-RED nodes to edit:
 
-```
-index.html             ← 35 lines, references the 3 scripts
-vue.global.prod.js     ← Vue 3 runtime, self-hosted (no CDN)
-index.js               ← all 12 cards in one file, ~2,500 lines
-index.css              ← design system + per-card styles
-manifest.json          ← PWA install metadata
-icon.svg, *.png        ← PWA icons (rebadge for your station!)
-```
+| Hardware | Node-RED location |
+|---|---|
+| FlexRadio IP / model | `FlexRadio` tab → `flexradio-conn` config node |
+| SPE amp serial path | `SPE` tab → `spe-remote` Pi-side service config |
+| Rotator serial path | `Rotator` tab → serial-in/out node config |
+| LP-700 server URL | `LP-700-HID ws` tab → websocket-client config |
+| DX clusters | `DXCC Tracker` tab → 4 `tcp in` nodes (replace hosts) |
+| Telegram alerts | Empty `TELEGRAM_TOKEN` env = silent skip (Step 3b) |
+| GPS NTP topic | `GPS NTP (card)` → `mqtt in shack/gpsntp/chrony` |
 
-**To rebadge:**
-
-1. **PWA icons** — `icon.svg` and `icon-maskable.svg` are hand-drawn
-   SVGs with "VU2CPL / SHACK" lettering on a dark `#0d1117`
-   background. Edit the SVG (any text editor or Inkscape) to swap
-   the callsign. Then regenerate the PNG set:
-
-   ```bash
-   cd uibuilder/shack/src
-   rsvg-convert -w 16  icon.svg -o favicon-16.png
-   rsvg-convert -w 32  icon.svg -o favicon-32.png
-   rsvg-convert -w 48  icon.svg -o favicon-48.png
-   rsvg-convert -w 180 icon.svg -o apple-touch-icon-180.png
-   rsvg-convert -w 192 icon-maskable.svg -o icon-192.png
-   rsvg-convert -w 512 icon-maskable.svg -o icon-512.png
-   python3 -c "from PIL import Image; imgs=[Image.open(f'favicon-{s}.png') for s in (16,32,48)]; imgs[0].save('favicon.ico', sizes=[(16,16),(32,32),(48,48)], append_images=imgs[1:])"
-   ```
-
-   Bump the `?v=N` cache-buster in `index.html` so browsers re-fetch.
-
-2. **TopBar callsign + subtitle** — `index.js` → `TopBar` component:
-   change `<span class="callsign">VU2CPL</span>` and `<div class="sub">
-   MK83TE · Bengaluru · Shack Control</div>` to your values.
-
-3. **Manifest** — `manifest.json` already says "VU2CPL Shack" / "Shack".
-   Change `name` and `short_name` for your station name.
-
-4. **Cards you don't need** — delete the component definition and the
-   `<XCard />` reference in the `App` template + the import in the
-   `components: {...}` registration.
-
-**Verify:** Hit `http://<your-pi>:1880/shack` → top bar shows your
-callsign, browser tab shows your icon. On iPhone/iPad: Safari Share →
-Add to Home Screen → installs as your station name with your icon.
-
-If `/shack` is blank or 404: see REBUILD_PI Step 12 check #4 for
-diagnostics.
-
-**Per-device PWA install for your users** (Mac dock, iPad/iPhone
-home screen, Android app drawer, Windows/Linux app launcher) is
-covered separately in **Stage O — Roll out `/shack` to your users**
-below. Operator-only icon and callsign rebadging stays here.
+For per-tab deep details, the **CLAUDE.md** file in the repo has
+node IDs, gotchas, and operational lore — it's the dev/operator
+reference (somewhat dense; for VU2CPL-specific history).
 
 ---
 
-## Stage J — RPi Fleet Monitor
+## Updating later
 
-The `RPi Fleet Monitor` tab subscribes to `rpi/<host>/*` MQTT topics
-published by `monitor.sh` on each fleet Pi. Defaults in Manoj's fleet:
-`noderedpi4`, `gpsntp`, `openwebrxplus`, `HassPi`.
-
-To onboard your own Pis: follow [`DEPLOY_PI.md`](DEPLOY_PI.md) for each
-Pi (copy `monitor.sh` + cron + `rpi_agent.py` + systemd). Then in the
-`Route CMD: HTTP or MQTT` function node (id `a0695975fec84e2c`), edit
-the `httpDevices` map to add your hostnames.
-
-To remove the fleet monitor entirely: delete the `RPi Fleet Monitor`
-flow tab and the `RPiCard` from `/shack`.
-
----
-
-## Stage K — Internet & network monitor
-
-The `Internet and network monitor` tab pings public targets
-(Cloudflare, Google DNS) + your LAN gateway. Edit the `ping` config
-nodes to substitute your gateway IP. Public targets are usually fine
-as-is.
-
----
-
-## Stage L — GPS NTP card
-
-If you don't run a stratum-1 GPS NTP server like [`pi-gps-ntp-server`](https://github.com/vu2cpl/pi-gps-ntp-server),
-delete the `GPS NTP (card)` flow tab and remove `GpsNtpCard` from
-`/shack`. Or wire your own NTP source's MQTT publisher to the same
-`shack/gpsntp/chrony` topic with the same payload shape (see
-CLAUDE.md "Chrony / GPS Time Server card" for the payload spec).
-
----
-
-## Stage M — Open-Meteo location
-
-The `Poll Open-Meteo (5 min)` inject node on the Lightning tab fetches
-weather + lightning data for fixed coordinates. The lat/lon are
-**auto-derived from your `GRID_SQUARE`** in Init Defaults, so as long
-as Stage B is correct, you don't need to touch the URL here.
-
-If your station is at a coordinate that doesn't fit a clean Maidenhead
-square (e.g. a portable / contest site), edit the
-`Build Open-Meteo URL` function node to hardcode the lat/lon instead
-of reading from flow context.
-
----
-
-## Stage N — Backups & secrets
-
-After everything is working:
-
-1. **Push your fork** to your own GitHub account. The `.gitignore`
-   excludes `nr_dxcc_seed.json`, `nr_dxcc_blacklist.json`,
-   `nr_lightning_events.jsonl` — these are runtime caches /
-   private and won't leak.
-2. **Confirm secrets aren't in flows.json** — `grep -i 'api_key\|password\|token' flows.json`
-   should return nothing meaningful (legitimate matches: `cl_apikey`
-   placeholder names, `tg_token` env-var references). Real values
-   live only in `/etc/systemd/system/nodered.service.d/secrets.conf`.
-3. **Backup the secrets file** somewhere off the Pi.
-4. **Set your own dashboard auth credentials.** REBUILD_PI.md Step 4
-   covers enabling `httpNodeAuth` + `ui.auth.users` in `settings.js`
-   so the dashboards require login. The bcrypt hash committed in this
-   repo (if any test files reference it) is **VU2CPL's** — generate
-   your own for your fork:
-   ```bash
-   node-red admin hash-pw
-   ```
-   Use the resulting `$2y$08$...` hash in all three places (adminAuth,
-   httpNodeAuth, ui.auth.users) in your `settings.js`. Your `settings.js`
-   is NOT in the repo (per `.gitignore`), so your password hash never
-   leaks even if you push the fork publicly.
-5. Adapt `CLAUDE.md` rule #3 (DXCC PDF regen on every flow commit)
-   for your fork — either keep it or drop the DXCC tab entirely.
-
----
-
-## Stage O — Roll out `/shack` to your users
-
-Once your fork is configured (A–N done), `/shack` is the dashboard
-your family / co-ops / club mates actually use. They don't need to
-know anything about Node-RED, MQTT, or git — they just need:
-
-1. The dashboard URL
-2. How to "install" it on their device so it looks/behaves like a
-   native app, not a browser tab
-
-This stage is the per-device roll-out checklist. Operator-only steps
-(callsign / icon rebadging) are in **Stage I** above.
-
-### Operator pre-flight — verify `/shack` actually works
-
-Before handing the URL to users:
+When new features land in the repo:
 
 ```bash
-# On the Pi
-curl -sI http://localhost:1880/shack | head -1
-# Must return: HTTP/1.1 200 OK
+cd ~/vu2cpl-shack
+git pull
 ```
+
+If `flows.json` changed:
 
 ```bash
-# In a browser on the LAN (e.g. Mac)
-# Open: http://<your-pi-ip>:1880/shack
-# Verify:
-#   - Your callsign appears in the TopBar (not VU2CPL)
-#   - LIVE pill goes green within ~5 seconds
-#   - All cards render (collapsed by default; click chevrons to expand)
-#   - Browser tab icon is your rebadged favicon (not the Node-RED red dot)
+ssh vu2cpl@<your-pi-ip>
+cd ~/.node-red/projects/vu2cpl-shack
+git pull
+sudo systemctl restart nodered
 ```
 
-If `/shack` returns 404: `node-red-contrib-uibuilder` isn't installed
-or the `Vue Dashboard` flow tab isn't deployed. See
-[`REBUILD_PI.md`](REBUILD_PI.md) Step 12 check #4.
+If only Vue dashboard files changed (`uibuilder/shack/src/*.js`,
+`*.css`, `*.html`), no restart needed — just refresh `/shack`
+in your browser.
 
-If cards show `—` instead of live data: see Stage A above — most
-likely a flow node still has the VU2CPL MQTT broker IP hard-coded.
-
-### Hand-out — the URL + one-line description
-
-What users need from you:
-
-```
-URL:  http://<your-pi-ip>:1880/shack
-Tip:  Install as a home-screen / dock app for the best experience —
-      see your platform below.
-```
-
-That's it. No login. Anyone on the LAN with the URL gets in.
-
-> If you want LAN-only access enforced at the network layer, that's
-> already the case — the Pi listens on a private RFC1918 address and
-> is not exposed to the internet unless you've set up port forwarding
-> (and you shouldn't, no auth).
-
-### Install on Mac (Safari 17+ on macOS Sonoma+)
-
-PWA appears in the dock, runs in its own window, behaves like a
-native app:
-
-1. Open `http://<your-pi-ip>:1880/shack` in **Safari**
-2. **File** menu → **Add to Dock…**
-3. Confirm name (defaults to "Shack" from your `manifest.json`) →
-   click **Add**
-
-**To remove later:** right-click the dock icon → **Options** →
-**Remove from Dock**.
-
-### Install on iPad / iPhone (Safari)
-
-Runs fullscreen, no Safari chrome, respects notch / Dynamic Island:
-
-1. Open the URL in **Safari** (not Chrome or Firefox — only Safari
-   can install PWAs to the home screen on iOS)
-2. Tap the **Share** button (square with up-arrow) at the bottom
-3. Scroll down in the share sheet → **Add to Home Screen**
-4. Confirm name → tap **Add**
-
-The icon appears on the home screen with your rebadged station logo.
-
-**To remove later:** tap-and-hold the icon → **Delete from Home Screen**
-→ **Delete**.
-
-### Install on Android (Chrome / Edge)
-
-1. Open the URL in **Chrome**
-2. Three-dot menu (top-right) → **Install app** (or **Add to Home
-   Screen** on older builds)
-3. **Install**
-
-Result: appears in the app drawer + home screen.
-
-### Install on Windows / Linux desktop (Chrome / Edge)
-
-1. Open the URL in Chrome or Edge
-2. Look for the **install icon** in the address bar — small monitor
-   with a down-arrow on the right side of the URL field. Or use the
-   three-dot menu → **Apps** → **Install this site as an app**
-3. **Install**
-
-Result: standalone app window launchable from the Start menu /
-launcher.
-
-### What users see after install
-
-- **Live/offline pill** next to the callsign at the top
-  - 🟢 **LIVE** — websocket connected, msgs flowing within the last 8s
-  - 🔴 **OFFLINE** — Wi-Fi flap, Pi reboot, or Node-RED restart.
-    Auto-reconnects when the link comes back; no user action needed.
-  - Long-press / hover the pill for a tooltip with the last-msg age.
-- **Auto-updates** — `index.html` ships with `Cache-Control:
-  no-store, no-cache, must-revalidate` meta tags, so when you push
-  new front-end code to your fork, users' next app open picks it up
-  automatically. No reinstall needed.
-- **Responsive layout** — column-masonry CSS reflows the cards to
-  fit any width: 1 column on iPhone portrait, 2 on iPad portrait,
-  3 on a laptop, 4 on a wide monitor. No orientation switches or
-  manual zoom needed.
-- **Collapsed by default** — every card opens with a one-line
-  summary in its header (e.g. *Lightning · ANT ON · 0 km · CAPE 1340
-  J/kg*). Tap the chevron to expand. State per card; nothing remembered
-  across app restarts.
-
-### Troubleshooting per-device install
-
-| Symptom | Fix |
-|---------|-----|
-| iOS Safari "Add to Home Screen" shows the wrong icon (Node-RED red dot, or a partial favicon) | Stale Safari favicon cache. Settings → Safari → Advanced → Website Data → search your Pi's IP → swipe-delete. Reopen `/shack`, re-add to home screen. |
-| Mac dock icon launches but pill stays red | The dock-icon webview cached the old HTML pre-`Cache-Control` headers. Right-click icon → Remove from Dock, reopen `/shack` in Safari, re-add. |
-| iPhone shows pill OFFLINE even though Mac shows LIVE | iOS Safari's HTTP cache doesn't always honour `max-age=0`. Settings → Safari → Advanced → Website Data → search IP → swipe-delete. Then reopen. After the first post-fix open, the no-cache meta tags take effect and this won't recur. |
-| Pill stays OFFLINE forever, on every device | Real Node-RED-side issue, not a client cache problem. Check `Vue Dashboard` flow tab is deployed; uibuilder is installed; `vue_*_tick_NN` injects are firing (Node-RED editor status). |
-| Sunrise / sunset times overflow off-screen on iPhone portrait | Should be auto-handled by the `@media (max-width: 480px)` rule in `index.css`. If not, your fork may have an older `index.css` — `git pull` on the Pi to get the latest. |
+Your customisations in **Init Defaults** (callsign, grid, MQTT
+broker) won't be overwritten by `git pull` because the values you
+edited live in your local copy of the file. But if there's a
+merge conflict on `flows.json`, that's a sign the upstream changed
+the same lines you edited — resolve by keeping your values and
+accepting upstream changes for everything else.
 
 ---
 
-## Things you can safely ignore in CLAUDE.md
+## Auth — set YOUR password, not VU2CPL's
 
-CLAUDE.md is full of VU2CPL-specific operational lore (the AS3935
-GPIO4-vs-GPIO17 saga, the 2026-05-13 distance-graded-disconnect
-regression, the SPE WS migration history, etc.). Most of it is
-"how Manoj's stack got to where it is" — useful background but **not
-something you need to act on for a fork**.
+REBUILD_PI.md Step 4's "Enable dashboard auth" sub-section walks
+you through this. Critical: **generate your own bcrypt hash**.
+The hash committed in this repo (if visible anywhere — it
+shouldn't be, `.gitignore` excludes `settings.js`) is **VU2CPL's**.
 
-What IS relevant from CLAUDE.md when forking:
+```bash
+node-red admin hash-pw
+# Enter your chosen password; copy the $2y$08$... hash to all
+# three places in ~/.node-red/settings.js:
+#   adminAuth.users[0].password
+#   httpNodeAuth.pass
+#   ui.auth.users[0].password
+sudo systemctl restart nodered
+```
 
-- **CRITICAL RULES** section (top) — universal
-- **CODING PATTERNS** section (Dashboard interactions, Telegram URL
-  pattern, fwdInMessages, large function nodes) — universal
-- **OPEN BUGS / PENDING TODO** — Manoj's TODO, ignore
-- **GIT WORKFLOW** — adapt the `nrsave` function to your repo URL
+Then verify:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:1880/ui
+# Expect 401 - auth working
+```
+
+Your `settings.js` is `.gitignore`d, so your password hash never
+leaks even if you push your customised fork publicly.
 
 ---
 
-## Troubleshooting forks
+## Troubleshooting
 
 | Symptom | Likely cause |
-|---------|--------------|
-| `/ui` loads but dashboards show only `—` | MQTT broker IP wrong in some flow nodes (Stage A incomplete) |
-| Lightning auto-disconnect doesn't fire | `POWER_STRIP` / `POWER_CH` in Init Defaults doesn't match your Tasmota device (Stage B) |
-| DXCC tab status red, no spots | Cluster IPs unreachable from your network, or callsign rejected by clusters (Stage C: try a different cluster) |
-| Telegram alerts silent | Empty `TELEGRAM_TOKEN` env (intentional — Stage C: set it if you want alerts) |
-| `/shack` shows the old VU2CPL icon | PWA cache; bump `?v=N` in index.html, restart browser. On Safari macOS: Cmd+Q + relaunch (favicon cache lives in-process) |
-| Power-strip toggle clicks but state doesn't sync back | Tasmota device's Topic doesn't match what flow expects (Stage H) |
-
-For everything else: open an issue on your fork OR cross-reference
-with `SHACK_CHANGELOG.md` — the changelog documents every operational
-lesson VU2CPL has learned, indexed by date. Your bug is probably in
-there.
+|---|---|
+| Dashboard shows `—` everywhere | MQTT broker IP wrong in some flow nodes (Step 3a). Check `MQTT_BROKER` in Init Defaults. |
+| Lightning auto-disconnect doesn't fire | `POWER_STRIP` / `POWER_CH` in Init Defaults doesn't match your Tasmota device topic. |
+| DXCC tab shows status badges red, no spots | Cluster IPs unreachable from your network. Verify with `nc cluster.host port` from your Pi. |
+| Telegram alerts silent | Empty `TELEGRAM_TOKEN` env var — intentional if you don't want them. Otherwise check Step 3b. |
+| `/shack` shows VU2CPL icon on home-screen | PWA cache. Bump `?v=N` in `index.html`. iPhone: Safari → Settings → Advanced → Website Data → search your Pi's IP → delete. |
+| Power-strip toggle clicks but state doesn't sync back | Tasmota device's MQTT Topic field doesn't match what the flow expects. |
+| `/shack` 404s | `node-red-contrib-uibuilder` not installed, or `Vue Dashboard` flow tab not deployed. See REBUILD_PI.md Step 12 check #4. |
 
 ---
 
-## Contributing back
+## Doc map (for context)
 
-If you find a bug that's not VU2CPL-specific (e.g. a generic flow-
-context race condition, a `/shack` card layout issue, a typo in
-REBUILD_PI), please open a PR on `vu2cpl/vu2cpl-shack` upstream.
-VU2CPL-specific fixes (your callsign, your hardware) stay in your fork.
+| Doc | What it's for |
+|---|---|
+| **FORK_GUIDE.md** (you are here) | Run this stack at YOUR station |
+| **REBUILD_PI.md** | Bring up the Pi from scratch — both VU2CPL's and yours |
+| **DEPLOY_PI.md** | Onboard ANOTHER Pi as a fleet member (monitoring + reboot) |
+| **README.md** | Overview of the whole repo |
+| **CLAUDE.md** | Deep operator/developer reference (mostly VU2CPL lore) |
+
+---
+
+## Where to ask for help
+
+If something in here isn't clear, that's a doc bug — please open an
+issue against [`vu2cpl/vu2cpl-shack`](https://github.com/vu2cpl/vu2cpl-shack/issues)
+saying what you tried and what was confusing. The guide gets better
+with each ham who reads it.
 
 73 and happy automating.
