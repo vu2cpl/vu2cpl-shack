@@ -6123,6 +6123,138 @@ patterns you're substituting.
 Build stamp v8 → v9, `index.js?v=9` cache-buster. Commit
 [`bc23255`](https://github.com/vu2cpl/vu2cpl-shack/commit/bc23255).
 
+### DXCC cty.xml — persist parsed maps + bootstrap-from-cache (resilience fix)
+
+Operator caught a real silent-failure mode: cty.xml prefix maps were
+held in flow context **memory only**, never written to disk. The
+failure mode:
+
+1. Node-RED restarts (deploy, reboot, package update, anything)
+2. `Load cty.xml on startup` inject fires at +5s post-deploy
+3. Live Club Log fetch from `cdn.clublog.org/cty.php` fails — DNS
+   hiccup, CDN flap, rate-limit ban, home internet down
+4. `Retry cty.xml (60s)` keeps trying every minute in background
+5. Meanwhile: `DXCC Prefix Lookup + Alert Classify` early-exits on
+   every spot with status `Waiting for cty.xml...`
+6. From the outside the system looks healthy — cluster TCP sessions
+   alive, spots arriving in logs, DXCC dashboard says "online" —
+   but **every spot is silently dropped at the prefix-lookup stage**
+   and no alerts fire
+
+Worst class of failure: no banner, no Telegram alert about the
+problem, just silent omission. The system is half-resilient —
+`nr_dxcc_seed.json` (worked/confirmed data) IS persisted and has
+bootstrap-from-file fallback (closed in #18 weeks ago); cty.xml had
+the same pattern available but never got it.
+
+#### Two complementary changes
+
+**1. `Parse cty.xml → Prefix Maps`** (`5f26764c3416b75e`) now writes
+parsed maps to `nr_cty_maps.json` after each successful Club Log
+fetch. JSON cache: `prefixMap` + `exceptions` + `entityNames` +
+`parsedAt` timestamp + stats. Adds `libs:[fs,os,path]` declaration
+to the function node. Pattern matches the existing `Fetch All
+Modes + Parse` → `nr_dxcc_seed.json` write that's been working
+for weeks.
+
+**2. New `Bootstrap cty.xml from file`** (`cty_bootstrap_fn_01`) +
+inject (`cty_bootstrap_tick_01`) at `onceDelay:1` — well before
+the live fetch at `onceDelay:5`. Reads `nr_cty_maps.json` if
+present, populates `flow.dxccPrefixMap` / `dxccExceptions` /
+`dxccSeedNames` immediately. Sets node status to `cached N ent
+(age X)` with relative-time age display.
+
+Result: **the system always boots with a usable prefix map**
+(from cache), and the live fetch refreshes it. If the live fetch
+fails, cached data keeps serving while the retry loop runs in
+background. First-time deploys with no cache yet: bootstrap is a
+no-op; live fetch populates from scratch and writes the cache for
+next time.
+
+#### Bug recovered mid-deploy
+
+Commit `6a1caa5` shipped with a `require('os').homedir()` call in
+the bootstrap function's fallback path. Node-RED function nodes
+don't have `require()` available — the `libs:[]` declaration is
+the substitute. ReferenceError caught in journalctl:
+
+```
+[error] [function:Bootstrap cty.xml from file]
+        ReferenceError: ReferenceError: require is not defined (line 22, col 5)
+```
+
+This was caught **by the very condition the resilience fix is
+meant to address** — Club Log was unreachable at restart, the live
+fetch failed (expected), but the bootstrap also failed (the bug),
+so DXCC alerts went silent. Fix in `58f7761`: just use the already-
+imported `os` reference from the libs declaration.
+
+Verified post-fix: next restart fired bootstrap successfully at
++1s, read 168 KB cache, populated all three maps. Live fetch at
++5s refreshed normally. Spot check from cache: VU → ADIF 324
+(India ✓), K → 291 (USA ✓), G → 223 (England ✓). 2934 prefixes,
+8987 callsign exceptions, 340 entity names.
+
+Commits [`6a1caa5`](https://github.com/vu2cpl/vu2cpl-shack/commit/6a1caa5)
+(resilience fix) + [`58f7761`](https://github.com/vu2cpl/vu2cpl-shack/commit/58f7761)
+(bug fix).
+
+### FORK_GUIDE — full rewrite for clarity
+
+Operator feedback: the existing 605-line guide (Stages A through O)
+was too complicated to comprehend on a first read. It assumed
+comfort with git, Node-RED, systemd internals — most ham operators
+wanting to run this stack don't have that background.
+
+Rewrite shifts ([`dd0cfa3`](https://github.com/vu2cpl/vu2cpl-shack/commit/dd0cfa3)):
+
+- **Drop the "fork on GitHub" framing.** Plain `git clone` is enough
+  for personal use; GitHub account only needed if you want to
+  contribute back. Filename kept as `FORK_GUIDE.md` for backwards
+  compat with existing doc-map links.
+- **15 Stages A-O collapsed to 4 numbered Steps** with three named
+  sub-steps. Reader can now hold the structure in head.
+- **New "What you'll end up with" intro** so reader knows the
+  destination before the journey starts.
+- **Customisation reframed as "The Big Three" edits**: 90% of what
+  you need to change lives in 2 Node-RED nodes (Lightning Init
+  Defaults + DXCC Credentials) plus one settings file (TopBar
+  callsign in `index.js`).
+- **Advanced material pushed below.** PWA icon regeneration with
+  `rsvg-convert` + PIL, per-tab hardware deletes, per-cluster
+  edits — all moved to clearly-labelled "Optional" sections that
+  beginners can ignore until they want them.
+- **Friendlier language throughout.** "Stage B — Lightning Antenna
+  Protector (Init Defaults)" becomes "3a — Lightning + station
+  identity." Stage-letter system gone.
+
+605 → 401 lines (−204, −33%). New structure:
+
+```
+1. What you'll end up with
+2. What you need before starting
+3. The four steps
+   ├─ Step 1 — Get the code (5 min)
+   ├─ Step 2 — Install Node-RED and the rest (60 min, one-time)
+   ├─ Step 3 — Tell it about YOUR station (30 min, one-time)
+   │   ├─ 3a — Lightning + station identity
+   │   ├─ 3b — DXCC credentials (skippable)
+   │   └─ 3c — Tell the dashboard your callsign
+   └─ Step 4 — Use it (PWA install per platform)
+4. Optional — hardware you DON'T have
+5. Optional — make the dashboard look like YOUR station
+6. Power switching — your Tasmota devices
+7. Other clusters / radios / hardware
+8. Updating later (just git pull + restart)
+9. Auth — set YOUR password, not VU2CPL's
+10. Troubleshooting
+11. Doc map
+12. Where to ask for help
+```
+
+The "Where to ask for help" section frames future doc bugs as
+issues to open against the repo — feedback loop closes naturally.
+
 ---
 
 ## Standard Commit Sequence (reminder)
