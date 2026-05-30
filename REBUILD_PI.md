@@ -23,6 +23,27 @@ shack, assuming reasonable internet and existing GitHub SSH keys.
 
 ---
 
+## If you're following this for YOUR station (not VU2CPL's)
+
+This runbook stays concrete — it uses VU2CPL's literal values
+throughout (Pi IP, hostname, user, timezone) because abstract
+placeholders are harder to read than real strings. **Substitute as
+you read** wherever you see:
+
+| VU2CPL value | Your value |
+|---|---|
+| `192.168.1.169` | your Pi's IP (set as a DHCP reservation on your router) |
+| `noderedpi4` | your Pi's hostname (anything works; affects MQTT topic prefixes like `rpi/noderedpi4/cpu`) |
+| User `vu2cpl` | your Pi user (most paths use `/home/vu2cpl/…`) |
+| `Timezone +05:30` (IST) | your local timezone offset |
+| `git@github.com:vu2cpl/vu2cpl-shack.git` | your fork URL — or keep VU2CPL's to track upstream without forking |
+
+For the deeper "what to edit AFTER the rebuild" guide (callsign, grid,
+Tasmota topics, dashboard rebadging, Club Log credentials), see
+[`FORK_GUIDE.md`](FORK_GUIDE.md). That runs once REBUILD_PI is done.
+
+---
+
 ## Faster path — the rebuild script
 
 After Step 1 (OS install) and SSH access, you can run
@@ -537,7 +558,7 @@ Each reply should be `{"Timezone":"+05:30"}`.
 
 ## Step 12 — Final verification
 
-A 15-point checklist. Hit each one.
+A 16-point checklist. Hit each one.
 
 | # | Check | Pass criterion |
 |---|-------|----------------|
@@ -556,6 +577,7 @@ A 15-point checklist. Hit each one.
 | 13 | Lightning auto-disconnect | Click `TEST ⚡ 6 km DISCONNECT` inject → antenna + radio go OFF |
 | 14 | Lightning event log file | File `~/.node-red/projects/vu2cpl-shack/nr_lightning_events.jsonl` exists and contains recent events: `tail -f ~/.node-red/projects/vu2cpl-shack/nr_lightning_events.jsonl` should show JSON event records. The path is hardcoded in the **Init Defaults** node on the Lightning tab. This JSONL file persists across Node-RED restarts |
 | 15 | Chrony / GPS card live | Dashboard tab `Shack Monitoring tools` → `Network Monitor` group shows `Chrony status card` updating every minute. Requires `gpsntp.local` to be up + its publisher cron firing (`/usr/local/bin/gpsntp-mqtt-publish.sh`). If silent: `mosquitto_sub -h localhost -t shack/gpsntp/chrony -v` should print one retained payload immediately + a fresh one each minute |
+| 16 | DXCC cty.xml cache exists | File `~/.node-red/projects/vu2cpl-shack/nr_cty_maps.json` exists and is reasonably-sized (~170 KB). It's written by `Parse cty.xml → Prefix Maps` after the first successful Club Log fetch (~5-10 s post-deploy). Verifies the resilience path — if you restart Node-RED later while Club Log is unreachable, the bootstrap reads this cache at `onceDelay:1` so DXCC prefix resolution keeps working. Check: `ls -la ~/.node-red/projects/vu2cpl-shack/nr_cty_maps.json` (size > 100 KB, mtime within last few minutes if you just restarted). Spot-check content: `python3 -c 'import json; d=json.load(open("/home/vu2cpl/.node-red/projects/vu2cpl-shack/nr_cty_maps.json")); print(d["stats"])'` should print `{"entities": ~340, "prefixes": ~2900, "exceptions_": ~9000}`. |
 
 If 1–8 pass but 9 fails: re-check Step 9 (lp700-server install).
 If 4 fails (`/shack` 404 or blank): check `node-red-contrib-uibuilder` is installed (`grep uibuilder ~/.node-red/package.json`); confirm the `Shack Vue` uibuilder node on the `Vue Dashboard` flow tab is deployed; check that `~/.node-red/projects/vu2cpl-shack/uibuilder/shack/src/` contains `index.html`, `index.js`, `index.css`, `vue.global.prod.js`. No Node-RED restart needed for front-end file changes — uibuilder serves them directly from disk.
@@ -581,6 +603,8 @@ If 15 fails but other cards are fine: not a noderedpi4 problem — it's gpsntp.l
 
 ## Files referenced by this runbook
 
+### Pi-side scripts + systemd units (deployed during Step 7)
+
 | Repo file | Deployment target |
 |-----------|-------------------|
 | `as3935_mqtt.py` | `/home/vu2cpl/as3935_mqtt.py` |
@@ -592,6 +616,25 @@ If 15 fails but other cards are fine: not a noderedpi4 problem — it's gpsntp.l
 | `power_spe_on.py` | `/home/vu2cpl/power_spe_on.py` |
 | `enable_file_context.sh` | run once in-place from the repo |
 | `flows.json` | loaded by Node-RED when the project is active |
+
+### Runtime data files (auto-generated; live in the flows directory)
+
+These are written by Node-RED at runtime, not deployed by the rebuild
+script. All live in `~/.node-red/projects/vu2cpl-shack/`. The first
+three are gitignored (per-station data, regenerable). The JSONL one
+is the historical event log.
+
+| File | Written by | Purpose |
+|---|---|---|
+| `nr_dxcc_seed.json` | `Fetch All Modes + Parse` (daily 02:00 cron) | DXCC worked/confirmed table from Club Log. Bootstrap reads it on startup so the DXCC tab works even when Club Log is unreachable. ~700 KB. |
+| `nr_dxcc_blacklist.json` | DXCC blacklist add/remove handlers | Callsigns the operator has muted from alerts. Survives restarts. |
+| `nr_cty_maps.json` | `Parse cty.xml → Prefix Maps` (after every successful Club Log fetch) | Parsed prefix → DXCC entity map. Bootstrap reads it at `onceDelay:1` so prefix resolution works **even if Club Log is unreachable at restart** — eliminates a silent-failure mode. ~170 KB. (Added 2026-05-28.) |
+| `nr_lightning_events.jsonl` | `Append Lightning JSONL` | Historical strike/disconnect/reconnect/bypass/sensor event log. One JSON object per line. Never rotated by Node-RED. |
+
+All four are safe to delete — they regenerate from upstream sources
+(Club Log, the next OM poll, the next cluster spot). Backups are nice
+to have but not required; the JSONL is the only one with truly
+unrecoverable history.
 
 ---
 

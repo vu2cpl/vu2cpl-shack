@@ -26,9 +26,37 @@
 
 set -euo pipefail
 
-readonly STATE_FILE=/tmp/rebuild_pi.state
+# ═════════════════════════════════════════════════════════════════════════════
+# Fork configuration — change these for your own station
+# ═════════════════════════════════════════════════════════════════════════════
+#
+# Defaults are VU2CPL's. If you're running this script for your OWN Pi
+# (not VU2CPL's), edit the four lines below before running.
+#
+# - EXPECTED_USER:     your Pi user. Most paths assume /home/<user>/.
+# - EXPECTED_HOSTNAME: your Pi hostname. Used in MQTT topic prefixes
+#                     (e.g. rpi/<hostname>/cpu) and the cluster
+#                     telemetry publisher script.
+# - REPO_URL:          your fork's git@github.com:user/repo.git, or
+#                     keep VU2CPL's URL if you don't plan to fork
+#                     (you'll just track upstream).
+# - REPO_NAME:         the directory name under ~/.node-red/projects/.
+#                     Usually matches the repo name. Affects Node-RED's
+#                     project autodiscovery.
+#
+# Everything else in this script (apt packages, mosquitto config,
+# Node-RED palette, udev rules, file context store, etc.) is generic
+# and applies to any station.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+readonly EXPECTED_USER='vu2cpl'
+readonly EXPECTED_HOSTNAME='noderedpi4'
 readonly REPO_URL='git@github.com:vu2cpl/vu2cpl-shack.git'
-readonly REPO_DIR="$HOME/.node-red/projects/vu2cpl-shack"
+readonly REPO_NAME='vu2cpl-shack'
+# ═════════════════════════════════════════════════════════════════════════════
+
+readonly STATE_FILE=/tmp/rebuild_pi.state
+readonly REPO_DIR="$HOME/.node-red/projects/$REPO_NAME"
 readonly LP700_DIR="$HOME/LP-700-Server"
 
 # Stage names (must match the order they execute)
@@ -83,19 +111,19 @@ unmark_stage()  { sed -i "/^$1$/d" "$STATE_FILE" 2>/dev/null || true; }
 preflight() {
     banner "Pre-flight checks"
 
-    # Must be vu2cpl, not root
-    if [[ "$(id -un)" != "vu2cpl" ]]; then
-        fail "Run as user 'vu2cpl', not '$(id -un)'. Sudo will be requested when needed."
+    # Must be the configured user, not root
+    if [[ "$(id -un)" != "$EXPECTED_USER" ]]; then
+        fail "Run as user '$EXPECTED_USER', not '$(id -un)'. Sudo will be requested when needed."
     fi
-    ok "Running as vu2cpl"
+    ok "Running as $EXPECTED_USER"
 
     # Hostname
-    if [[ "$(hostname)" != "noderedpi4" ]]; then
-        warn "Hostname is '$(hostname)', expected 'noderedpi4'."
+    if [[ "$(hostname)" != "$EXPECTED_HOSTNAME" ]]; then
+        warn "Hostname is '$(hostname)', expected '$EXPECTED_HOSTNAME'."
         warn "Some scripts (monitor.sh, MQTT topics) will publish under the current hostname."
         prompt_continue "Continue anyway?"
     else
-        ok "Hostname: noderedpi4"
+        ok "Hostname: $EXPECTED_HOSTNAME"
     fi
 
     # Internet
@@ -297,7 +325,7 @@ stage_06_github_ssh() {
 
     if [[ ! -f ~/.ssh/id_ed25519 ]]; then
         step "Generate ed25519 keypair"
-        ssh-keygen -t ed25519 -C "vu2cpl@$(hostname)" -f ~/.ssh/id_ed25519 -N ""
+        ssh-keygen -t ed25519 -C "$EXPECTED_USER@$(hostname)" -f ~/.ssh/id_ed25519 -N ""
     else
         ok "Keypair already exists"
     fi
@@ -344,7 +372,7 @@ stage_07_clone_repo() {
 
 # nrsave — regen DXCC tab extract + stage flows.json + commit (CLAUDE.md rule #4)
 nrsave() {
-    cd ~/.node-red/projects/vu2cpl-shack || return 1
+    cd "$REPO_DIR" || return 1
     python3 -c 'import json; d=json.load(open("flows.json")); v=[n for n in d if n.get("z")=="d110d176c0aad308" or n.get("id")=="d110d176c0aad308"]; json.dump(v,open("clublog_dxcc_tracker_v7.json","w"),indent=2)' || return 1
     git add flows.json clublog_dxcc_tracker_v7.json
     git commit -m "$1"
@@ -384,10 +412,10 @@ stage_09_pi_scripts() {
     # User-space scripts
     for f in as3935_mqtt.py as3935_tune.py rpi_agent.py monitor.sh power_spe_on.py; do
         step "Deploy $f"
-        sudo cp "$f" "/home/vu2cpl/$f"
-        sudo chown vu2cpl:vu2cpl "/home/vu2cpl/$f"
+        sudo cp "$f" "/home/$EXPECTED_USER/$f"
+        sudo chown "$EXPECTED_USER":"$EXPECTED_USER" "/home/$EXPECTED_USER/$f"
     done
-    sudo chmod +x /home/vu2cpl/monitor.sh /home/vu2cpl/as3935_tune.py
+    sudo chmod +x "/home/$EXPECTED_USER/monitor.sh" "/home/$EXPECTED_USER/as3935_tune.py"
 
     # Systemd units
     step "Install systemd units"
@@ -397,7 +425,7 @@ stage_09_pi_scripts() {
 
     # Sudoers
     step "Install sudoers entry"
-    echo 'vu2cpl ALL=(ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown' | \
+    echo "$EXPECTED_USER ALL=(ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown" | \
         sudo tee /etc/sudoers.d/rpi-agent > /dev/null
     sudo chmod 440 /etc/sudoers.d/rpi-agent
     sudo visudo -c >/dev/null || fail "sudoers syntax error"
@@ -405,7 +433,7 @@ stage_09_pi_scripts() {
     # Crontab
     step "Schedule monitor.sh in user crontab"
     (crontab -l 2>/dev/null | grep -v 'monitor.sh' ; \
-     echo '* * * * *  /home/vu2cpl/monitor.sh') | crontab -
+     echo "* * * * *  /home/$EXPECTED_USER/monitor.sh") | crontab -
 
     # Enable + start rpi-agent only.
     # as3935.service is intentionally NOT enabled — the ESP32 bridge
@@ -440,7 +468,7 @@ SUBSYSTEM=="hidraw", ATTRS{idVendor}=="04d8", ATTRS{idProduct}=="0001", \
     GROUP="telepost", MODE="0660"
 EOF
     sudo groupadd -f telepost
-    sudo usermod -aG telepost vu2cpl
+    sudo usermod -aG telepost "$EXPECTED_USER"
     sudo udevadm control --reload-rules
     sudo udevadm trigger
     ok "udev rules reloaded"
