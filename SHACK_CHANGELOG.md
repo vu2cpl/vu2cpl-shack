@@ -6887,6 +6887,76 @@ change); this commit moves it to whatever the upcoming hash is.
 
 ---
 
+## 2026-06-03 — Cross-doc consistency audit + sweep
+
+Operator escalation (rightly): "why are we having these kind of
+errors still?????" — after the `/tmp/` REBUILD_PI fix landed. The
+pattern across 24 hours had been "user reports bug → I patch one
+file → user spot-checks → finds next bug → repeat." Each patch
+was tactically correct but I never did a holistic sweep of ALL
+docs after the big changes (Stage 13, ANT toggle, manual_off,
+ant-off endpoint, Manual Override deletion, FORK_GUIDE rewrite).
+
+### What the audit found
+
+| # | Bug | Where | Cause |
+|---|-----|-------|-------|
+| 1 | `Manual Override` listed as live source of TX inhibit setter | `CLAUDE.md` "FlexRadio TX inhibit chain" sources list | Node deleted today (commit `beb82d9`) but the architectural doc not updated; missing `HTTP → Antenna OFF` as the new 5th source |
+| 2 | `manual_off` cleared by "Manual Override ON" | `CLAUDE.md` "Manual disconnect = sticky-off" subsection | Same root cause — Manual Override deleted but the clearing-paths sentence still listed it |
+| 3 | OPEN BUGS table only listed #1 | `CLAUDE.md` "OPEN BUGS / PENDING TODO" | Stale ever since #6 and #31 were opened (May/June 2026); never re-synced with HANDOVER #1/#6/#31 |
+| 4 | `13 stages` should be `14 stages` | `FORK_GUIDE.md` line 194 | Stage 13 added today; the prose count next to the stage table wasn't updated |
+| 5 | `Stages 2–13` should be `Stages 2–14` | `REBUILD_PI.md` line 50 | Same root cause as #4 |
+| 6 | `/tmp/vu2cpl-shack` clone target | `REBUILD_PI.md` (fixed in earlier commit `cb3403b`) | Pre-existing wrong path that survived two recent rewrites |
+| 7 | `~/vu2cpl-shack/` editing paths | `FORK_GUIDE.md` (fixed in earlier commit `2caceeb`) | Pre-existing wrong path |
+
+Bugs 1–5 fixed in this commit. Bugs 6–7 were fixed earlier today.
+
+### Structural cause
+
+Three contributing factors:
+
+1. **No automated cross-doc drift checker.** Every doc-related
+   commit could in principle leave another doc stale.
+2. **Multiple docs cover overlapping territory.** FORK_GUIDE,
+   REBUILD_PI, CLAUDE, and README all reference paths, stages,
+   nodes, and endpoints — every change to one is a drift candidate
+   for the other three.
+3. **High change velocity in the last 24 hours.** Stage 13 added,
+   Manual Override deleted, ANT toggle added, `manual_off` made
+   reachable via dashboard, FORK_GUIDE rewritten end-to-end, the
+   `/tmp/` path bug fixed — six structural changes in one day,
+   each one a drift-creator.
+
+### Going forward — audit checklist as standard CDP step
+
+Adding a **cross-doc consistency audit** to the CDP rule for any
+substantive change. Before pushing docs, grep across all `*.md`
+files for:
+
+| Audit | grep target | Why |
+|-------|-------------|-----|
+| Path consistency | `/tmp/vu2cpl-shack`, `~/vu2cpl-shack` (without `.node-red`), other ad-hoc paths | Catch wrong-location clone instructions |
+| Stage count drift | `13 stages`, `Stages 2.13`, `14 stages`, `Stages 2.14` | Catch stage-count text/table mismatch when Stage 13 customisation was added |
+| Deleted nodes still referenced | Node ID literals (e.g. `22e5df9713499f53`), node names (e.g. `Manual Override`) | Catch architectural docs referencing nodes that no longer exist |
+| Stale interaction-count | `two interactive`, `pauses for two` | Catch interactive-prompt count drift when Stage 13 (3rd prompt point) landed |
+| New features under-documented | New endpoint URLs (e.g. `/lightning/ant-off`), new node IDs (e.g. `lightning_antoff_fn_01`), new event types (e.g. `manual_on`, `manual_off`, `auto_strike_while_manual_off`) | Catch CLAUDE.md sections that summarize the architecture not getting the new entry |
+| TODO list drift | `^\| [0-9]+ \|` in `CLAUDE.md` "OPEN BUGS" vs `HANDOVER.md` "Open follow-ups" | Catch the two TODO lists getting out of sync |
+
+The exact grep patterns are recorded in this entry so future
+sessions can re-run the audit programmatically. When a major
+change lands, this audit runs as the last step of the CDP cycle
+**before** the final `git push`.
+
+### Self-correction
+
+To the operator: I should have done this audit when you said
+"comprehensive" for FORK_GUIDE. Going forward, "comprehensive"
+means the entire doc set, not just one file. The CDP rule's
+"Document" step is now codified to include this cross-doc grep
+before push.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:

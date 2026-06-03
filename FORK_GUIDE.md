@@ -191,7 +191,7 @@ Enter, `Ctrl+X` in `nano`).
 bash rebuild_pi.sh
 ```
 
-The script runs **13 stages** in order. Each one is idempotent — if it
+The script runs **14 stages** in order. Each one is idempotent — if it
 was already done (state file at `~/.rebuild_pi.state`), it prints
 "already done — skipping" and moves on. So you can re-run safely.
 

@@ -2,7 +2,7 @@
 
 **Period:** 2026-05-01 → 2026-05-26
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
-**Last commit at handover:** `cb3403b` — REBUILD_PI.md: fix Faster path clone target
+**Last commit at handover:** `<this commit>` — Cross-doc consistency audit + sweep (5 drift bugs fixed)
 
 ---
 

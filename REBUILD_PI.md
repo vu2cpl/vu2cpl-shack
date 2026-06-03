@@ -47,7 +47,7 @@ Tasmota topics, dashboard rebadging, Club Log credentials), see
 ## Faster path — the rebuild script
 
 After Step 1 (OS install) and SSH access, you can run
-[`rebuild_pi.sh`](rebuild_pi.sh) which automates Stages 2–13 of this
+[`rebuild_pi.sh`](rebuild_pi.sh) which automates Stages 2–14 of this
 runbook. Stage-based, idempotent, resumable, fail-fast.
 
 ```bash

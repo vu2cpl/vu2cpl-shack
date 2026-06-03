@@ -433,10 +433,14 @@ restart) in addition to the existing `flow.antenna_off`. While
   `light_jsonl_append_01`. JSONL → `tg_lightning_router` →
   Telegram: 🟣 **MANUAL HOLD** alert with distance / source / time.
 
-`manual_off` is cleared by Manual Override ON, Force Reconnect,
-HTTP→Antenna ON, and Execute Reconnect (which is the path Bypass-ON
-takes, so Bypass auto-clears manual hold per operator's design
-choice).
+`manual_off` is **set** by `HTTP → Antenna OFF` (`/lightning/ant-off`,
+fired by the dashboard ANT toggle when clicked while on). It is
+**cleared** by `HTTP → Antenna ON` (`/lightning/ant-on`, fired by
+the dashboard ANT toggle when clicked while off), Force Reconnect,
+and Execute Reconnect (which is the path Bypass-ON takes, so Bypass
+auto-clears manual hold per operator's design choice). The 2026-06-03
+"Dashboard ANT toggle drives manual-off" subsection above documents
+the full UI wiring.
 
 **Pre-fix bug this closes:** without `manual_off`, an operator who
 pre-emptively disconnected before a storm would see their manual
@@ -463,7 +467,7 @@ Lightning disconnect now also sends a FlexRadio TX inhibit so the operator can't
   - Idempotent — re-firing same value is harmless, so DC retriggers during the 20-min reconnect window safely re-send the inhibit command.
   - **Command lineage** (discovered 2026-05-27 via spray-and-pray + `status_code` inspection): the working form is **`transmit set inhibit=N`** in the `transmit` subsystem. `interlock tx1_inhibit=N`, `radio set tx_inhibit=N`, and `interlock tx1_inhibit_value=N` all return error `0x5000002D` ("command not recognised") on FLEX-6600 firmware as of 2026-05-27. If you ever see this stop working after a SmartSDR firmware update, the spray-and-pray scaffolding is preserved in commit history at [`34c1db4`](https://github.com/vu2cpl/vu2cpl-shack/commit/34c1db4) — re-apply that, fire a TEST DISCONNECT, and grep journalctl for `status_code=0` to find the new working form.
 - **`FlexRadio TX Inhibit`** (`flexradio_tx_inhibit_01`, flexradio-request) — uses the same `flexradio-radio` config node (`94d0df28ae5cccfc`) the FlexRadio tab uses. Config nodes are cross-tab; no new TCP connection.
-- **Sources wired in** (each adds one new wire to its existing output): `Trigger Disconnect` (out 0, cmd:DISCONNECT) · `Execute Reconnect` (out 0, cmd:RECONNECT) · `Force Reconnect` (out 0, cmd:RECONNECT) · `HTTP → Antenna ON` (out 1, cmd:RECONNECT added to Tasmota msg) · `Manual Override` (out 0, cmd:RECONNECT|DISCONNECT). Bypass ON path routes through `Execute Reconnect` so it picks up `cmd:RECONNECT` automatically — no separate wire from Bypass Handler needed.
+- **Sources wired in** (each adds one new wire to its existing output): `Trigger Disconnect` (out 0, cmd:DISCONNECT) · `Execute Reconnect` (out 0, cmd:RECONNECT) · `Force Reconnect` (out 0, cmd:RECONNECT) · `HTTP → Antenna ON` (out 1, cmd:RECONNECT added to Tasmota msg) · `HTTP → Antenna OFF` (`lightning_antoff_fn_01`, out 1, cmd:DISCONNECT added to Tasmota msg) — added 2026-06-03 when the dashboard ANT toggle landed. Bypass ON path routes through `Execute Reconnect` so it picks up `cmd:RECONNECT` automatically — no separate wire from Bypass Handler needed. (`Manual Override` function node was the original 5th source but was deleted 2026-06-03; its trigger path was unreachable because nothing on the dashboard ever emitted `topic:'manual_override'`.)
 - **TX inhibit and reconnect timer are decoupled** — the matrix decides DC, that fires `cmd:DISCONNECT` to the Setter, which inhibits TX. The reconnect timer expires → Execute Reconnect fires `cmd:RECONNECT` → Setter clears TX inhibit. If a new strike during the 20-min window re-fires DC, `flow.antenna_off` was already true, so `Trigger Disconnect` passes `retrigger:true` downstream. The TX Inhibit Setter still fires `inhibit=1` (idempotent) and the Telegram alert formatter (below) renders a different "STORM CONTINUES" message instead of duplicating the disconnect notification.
 
 #### Telegram alert — retrigger differentiation (2026-05-26)
@@ -773,7 +777,14 @@ historical context lives in `SHACK_CHANGELOG.md`, indexed by date.
 
 | # | Item | Status |
 |---|------|--------|
-| 1 | Mac SwiftUI app (`~/projects/vu2cpl-shack-app/`): scaffold not yet started. Native macOS menu-bar app to replace the browser dashboard. Five tabs (Power, Radio, Solar, Lightning, Settings); see "MAC APP" section above for the full spec + build order. Long-term project, not started. | Pending |
+| 1 | **Move AS3935 antenna outdoors** — ESP32 bridge (`vu2cpl-as3935-bridge` v0.2.0) running on the bench, ready for field install. Remaining work: enclosure seal, 18650+TP4056+solar power chain, shade mount, post-install TUN_CAP retune to regain rated 40 km range. See HANDOVER #1. | Hardware |
+| 6 | **Mac SwiftUI app (`~/projects/vu2cpl-shack-app/`)** — scaffold not yet started. Native macOS menu-bar app to replace the browser dashboard. Five tabs (Power, Radio, Solar, Lightning, Settings); see "MAC APP" section above for the full spec + build order. Long-term project. See HANDOVER #6. | Pending |
+| 31 | **Rotator → WebSocket gateway** — same pattern as SPE (`spe-remote.service`) and LP-700 (`lp700-server.service`). Currently the Rotator flow tab holds the Rotor-EZ FTDI port directly; lifting it into a Python websockets gateway service would unblock multi-client (browser + Mac app) access and remove the "restart Node-RED to free the serial port" friction. Medium effort, non-blocking. See HANDOVER #31 for the full spec. | Pending |
+
+> Canonical TODO list is in **HANDOVER.md "Open follow-ups"**. This
+> table is a mirror — re-sync whenever you change one or the other.
+> Closed items have full closure notes in HANDOVER (with strikethrough
+> + commit hashes) and SHACK_CHANGELOG (with dated entries).
 
 ---
 
