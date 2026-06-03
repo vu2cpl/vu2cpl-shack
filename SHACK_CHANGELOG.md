@@ -6743,6 +6743,99 @@ Doc-only change. No Pi restart needed.
 
 ---
 
+## 2026-06-03 — rebuild_pi.sh: NEW Stage 13 — interactive station customization
+
+Follow-on to the comprehensive FORK_GUIDE rewrite (`97a942c`).
+Forker friction in Part A5 (Init Defaults editing in the Node-RED
+editor + TopBar editing via SSH+nano) was the largest remaining
+manual step after `rebuild_pi.sh` finished. This commit closes
+that gap into the script.
+
+### What was wrong
+
+Stages 1–12 of `rebuild_pi.sh` brought a forker from blank Pi to a
+running Node-RED with the full stack of palettes, services, udev
+rules, and secrets. Stage 13 (verify) reported pass/fail. **But the
+dashboard still showed VU2CPL's callsign, grid, and MQTT broker IP
+everywhere** because Init Defaults values are in `flows.json`
+(committed) and TopBar callsign is in `index.js` (committed).
+Forkers had to open the editor, find the right node, edit constants,
+deploy — then SSH back in, open `index.js`, find TopBar, edit it,
+hard-refresh. The FORK_GUIDE walked through it but it was still 15
+minutes of error-prone manual work per fresh install.
+
+### Design
+
+Inserted a new **Stage 13 — station customization** between secrets
+(12) and verify (now 14). Stage 13 is interactive, runs as part of
+the main pipeline (so forkers experience it right after stage 12
+without thinking about it), and is idempotent so re-runs are safe.
+
+| Step | Behaviour |
+|------|-----------|
+| **Idempotency check 1** | Reads current `CALLSIGN` from Init Defaults via Python. If it's already non-VU2CPL (forker already ran this), prints "already customised" and marks done. |
+| **Idempotency check 2** | If the script's CONFIG block (`EXPECTED_USER`, `EXPECTED_HOSTNAME`) still matches VU2CPL's defaults AND `CALLSIGN` is `VU2CPL`, this is VU2CPL's own Pi — no customization needed. Marks done and skips. **This is what prevents the upstream operator from being prompted to re-customize their own Pi when running the updated script.** Forkers who edited the CONFIG block (which the new FORK_GUIDE A3 instructs them to do) will not match this and will get the prompts. |
+| **Prompts** | Callsign (alphanumeric + slash, 3–10 chars, force uppercase) · 6-char Maidenhead grid (regex-validated, force `XX99xx` casing) · MQTT broker IP (default: Pi's own LAN IP via `hostname -I`) · Tasmota antenna power-strip topic · Antenna `POWER1..POWER5` channel · Disconnect threshold km (default 40) · Reconnect timer minutes (default 20) · QTH text for the TopBar sub line |
+| **Validation** | Bash `while` loops reject invalid input with red error message and re-prompt. Defaults shown in the prompt text; pressing Enter accepts the default. |
+| **Confirmation** | Summary of all values printed, then `[Y/n]` confirm before any file is touched. |
+| **Backups** | `flows.json` and `uibuilder/shack/src/index.js` copied to `.bak.YYYYMMDD_HHMMSS` before patching. |
+| **Patching** | Python heredocs (env-var bridge for safety) perform regex substitution on the Init Defaults function body (7 const declarations) and the Vue TopBar (`<span class="callsign">` + `<div class="sub">`). Optional patch of `manifest.json` `name` / `short_name` for the PWA install. |
+| **Cleanup** | Patch env vars unset. Final messages remind the operator to `sudo systemctl restart nodered` once the rest of the install completes. |
+
+### FORK_GUIDE.md follow-up
+
+- **A4 stage table** — row 13 is now "station customisation" with
+  detailed description; old verify row renumbered to 14.
+- **A5 preamble** — new callout: "Most of this section is now
+  automated by Stage 13" pointing forkers at A5.2 (DXCC creds —
+  still manual since secrets.conf is its own path) and A5.4
+  (Tasmota topics for non-antenna devices — too device-specific to
+  prompt for during install) as the remaining manual steps.
+- **A5.1** and **A5.3** headers gain "— manual fallback" suffix with
+  a callout: "Stage 13 does this automatically. Read on only if
+  you skipped Stage 13, or want to change values later." Sections
+  themselves are unchanged so forkers who hit edge cases (script
+  failed at stage 13, or they want to change values months later)
+  still have the manual instructions intact.
+
+### Migration for existing installs
+
+| Where you are | What happens when you `git pull` + re-run `bash rebuild_pi.sh` |
+|---|---|
+| **VU2CPL's own Pi** (operator: this includes `noderedpi4`) | Stage 13 detects defaults match + callsign is VU2CPL → marks done + skips. Stage 14 (verify) re-runs once (state file has the old `13_verify` entry; new STAGES array has `14_verify` which is unmarked). Verify is idempotent; takes 2 minutes. No prompts. No file changes. |
+| **Forker who already customised manually** (callsign != VU2CPL in Init Defaults) | Stage 13 detects already-customised → marks done + skips. Stage 14 re-runs verify. No prompts. |
+| **Forker on a fresh install with new script** | Stage 13 prompts → patches → done. The painful A5.1+A5.3 manual steps are gone. |
+
+### Safety + reversibility
+
+Backups always written before any change. If the patch goes wrong
+(values rejected by Node-RED, or operator picks bad values):
+
+```bash
+cd ~/.node-red/projects/vu2cpl-shack
+ls -lt flows.json.bak.* | head -3            # find your backup
+cp flows.json.bak.<timestamp> flows.json
+cp uibuilder/shack/src/index.js.bak.<timestamp> uibuilder/shack/src/index.js
+sudo systemctl restart nodered
+```
+
+Or just re-run `bash rebuild_pi.sh --stage 13` with corrected values
+— the new values overwrite (after one more backup).
+
+### Why this matters
+
+A forker who used to spend ~15 minutes manually editing Init
+Defaults in the Node-RED editor + opening SSH+nano to patch TopBar
+now spends ~90 seconds answering Stage 13's prompts. The friction
+that triggered "WHAT RUBBISH, I NEED A COMPREHENSIVE GUIDE" was
+exactly this — the gap between "the script finished" and "the
+dashboard says my callsign." With Stage 13, the script genuinely
+finishes the install end-to-end for the common case.
+
+Commit `9be2bde`. Doc + script change; no Pi restart needed.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:
