@@ -290,8 +290,44 @@ stage_04_nodered_palette() {
 stage_05_settings_js() {
     banner "Stage 5 — settings.js (Projects feature) (REBUILD_PI.md Step 4)"
 
-    local settings="$HOME/.node-red/settings.js"
-    [[ -f "$settings" ]] || fail "$settings not found — Stage 3 should have created it"
+    # Resolve the path Node-RED actually uses. The systemd unit's User=
+    # is the source of truth — not necessarily the user running this
+    # script. We could be the same user; we could also be a forker who
+    # changed their user-creation flow, or someone running this from a
+    # different shell session.
+    local nr_user nr_home settings
+    nr_user=$(systemctl show nodered -p User --value 2>/dev/null)
+    nr_user="${nr_user:-$ACTUAL_USER}"
+    nr_home=$(getent passwd "$nr_user" | cut -d: -f6)
+    nr_home="${nr_home:-$HOME}"
+    settings="$nr_home/.node-red/settings.js"
+
+    # If settings.js doesn't exist yet (fresh install — Stage 3's
+    # `systemctl enable --now` started Node-RED, but the first-run
+    # userDir bootstrap can lag by a few seconds, especially on a
+    # slow SD card), wait up to 30 s for it to appear before giving up.
+    if [[ ! -f "$settings" ]]; then
+        step "settings.js not found at $settings — waiting up to 30 s for Node-RED to bootstrap it"
+        # Ensure the service is actually running first
+        sudo systemctl restart nodered
+        local waited=0
+        while [[ ! -f "$settings" ]] && (( waited < 30 )); do
+            sleep 2
+            waited=$((waited + 2))
+        done
+    fi
+
+    if [[ ! -f "$settings" ]]; then
+        c_red "  Still no $settings after 30 s wait."
+        c_red "  Diagnostics:"
+        c_red "    systemd User=  : $nr_user"
+        c_red "    Home dir       : $nr_home"
+        c_red "    Service status : $(systemctl is-active nodered)"
+        c_red "    Recent journal :"
+        sudo journalctl -u nodered -n 10 --no-pager 2>&1 | sed 's/^/      /'
+        fail "settings.js still missing — Node-RED's first-run userDir bootstrap did not happen. Try 'sudo systemctl restart nodered && sleep 30 && ls $settings' manually."
+    fi
+    ok "settings.js found at $settings (Node-RED user: $nr_user)"
 
     if grep -q '"manual"' "$settings" && grep -q 'projects:' "$settings"; then
         ok "Projects feature already enabled"
