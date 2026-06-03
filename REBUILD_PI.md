@@ -67,13 +67,12 @@ bash ~/.node-red/projects/vu2cpl-shack/rebuild_pi.sh
 > callsign, hostname, fork URL) will be lost. Single path from
 > the start.
 
-> **Forking?** Before running the script, edit the **Fork
-> configuration** block near the top of `rebuild_pi.sh` (4
-> `readonly` constants: `EXPECTED_USER`, `EXPECTED_HOSTNAME`,
-> `REPO_URL`, `REPO_NAME`). Without these edits, Stage 13
-> (station customisation) auto-detects "VU2CPL's own Pi" and
-> skips the prompts — your dashboard would stay branded as
-> VU2CPL's. See FORK_GUIDE.md Part A3 for details.
+> **Forking?** The script auto-detects your Pi's username and
+> hostname — no pre-config edits required. Your callsign / grid /
+> MQTT broker come in via Stage 13's interactive prompts. The only
+> reason to edit `rebuild_pi.sh` is if you have your own GitHub
+> fork — change `REPO_URL` near the top of the script to your
+> fork's URL. See FORK_GUIDE.md Part A3 for details.
 
 The script pauses for three interactive steps:
 - Stage 6 — paste the new SSH public key into your GitHub account

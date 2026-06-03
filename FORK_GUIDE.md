@@ -94,19 +94,22 @@ Have these ready before Part A5 (customization):
 
 ### Decisions you'll make during install
 
-The `rebuild_pi.sh` script lets you override these at the top of the
-file. Default values are VU2CPL's. Change them in the script's CONFIG
-block BEFORE running `rebuild_pi.sh`:
+**You don't need to pre-configure the script.** It auto-detects your
+Pi's username and hostname from `id -un` and `hostname` — whatever
+user you SSH in as is the user it configures the Pi for. All file
+paths, sudoers entries, MQTT topic prefixes, and ssh-key comments
+derive from those automatically.
+
+**One optional edit** if you happen to have your own GitHub fork
+(most forkers don't bother — `git pull` from upstream forever works
+fine for personal use):
 
 ```bash
-readonly EXPECTED_USER='vu2cpl'            # ← your Pi's user
-readonly EXPECTED_HOSTNAME='noderedpi4'    # ← your Pi's hostname
-readonly REPO_URL='git@github.com:vu2cpl/vu2cpl-shack.git'  # ← your fork URL
-readonly REPO_NAME='vu2cpl-shack'          # ← project dir name
+readonly REPO_URL='https://github.com/vu2cpl/vu2cpl-shack.git'  # ← your fork URL
 ```
 
-If you keep VU2CPL's defaults the script will refuse to run on a
-non-matching system. Edit before running.
+Leave it alone otherwise. The script clones from VU2CPL's upstream
+and `git pull` brings in new features.
 
 ---
 
@@ -158,10 +161,16 @@ sudo systemctl stop nodered 2>/dev/null
 mv ~/vu2cpl-shack ~/.node-red/projects/vu2cpl-shack
 ```
 
-## A3. Edit `rebuild_pi.sh` for your station (2 minutes)
+## A3. (Optional) Edit `rebuild_pi.sh` for your GitHub fork (1 minute)
 
-If you want to use the script as-is, **but** with your callsign / Pi
-user / hostname / fork URL instead of VU2CPL's defaults:
+**Most forkers skip this step entirely.** The script auto-detects
+your Pi's username + hostname from the running system — no editing
+needed. Your callsign / grid / MQTT broker / Tasmota topic come in
+during Stage 13's interactive prompts.
+
+The only reason to edit `rebuild_pi.sh` at all is if you have your
+own GitHub fork of this repo and want the script to clone from
+yours instead of VU2CPL's:
 
 ```bash
 cd ~/.node-red/projects/vu2cpl-shack
@@ -171,19 +180,14 @@ nano rebuild_pi.sh
 Find the **Fork configuration** block near the top (around line 50):
 
 ```bash
-readonly EXPECTED_USER='vu2cpl'
-readonly EXPECTED_HOSTNAME='noderedpi4'
-readonly REPO_URL='git@github.com:vu2cpl/vu2cpl-shack.git'
-readonly REPO_NAME='vu2cpl-shack'
+readonly REPO_URL='https://github.com/vu2cpl/vu2cpl-shack.git'
 ```
 
-Change to match your setup. **You only edit 4 lines.** Save (`Ctrl+O`,
-Enter, `Ctrl+X` in `nano`).
+Change to your fork's URL. Save (`Ctrl+O`, Enter, `Ctrl+X` in `nano`).
 
-> **Don't have your own GitHub fork?** Keep `REPO_URL` as VU2CPL's HTTPS
-> URL (`https://github.com/vu2cpl/vu2cpl-shack.git`) and you can pull
-> updates from upstream forever. You only need to fork on GitHub if
-> you plan to push changes back.
+> If you don't have your own GitHub fork, **leave this alone** —
+> `git pull` from VU2CPL's upstream works forever for personal use.
+> You only need a fork if you plan to push changes back.
 
 ## A4. Run the install script (60–75 minutes)
 

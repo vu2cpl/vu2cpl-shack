@@ -17,8 +17,8 @@
 #
 #  Pre-requisites (out of script scope):
 #    - Pi OS Lite 64-bit installed (Step 1 of REBUILD_PI.md)
-#    - Hostname `noderedpi4`, user `vu2cpl`, SSH access
-#    - Pi has DHCP reservation @ 192.168.1.169
+#    - SSH access as a regular (non-root) user. Whatever username and
+#      hostname your Pi has is what this script configures the Pi for.
 #    - Internet reachable
 #
 #  See REBUILD_PI.md for the manual fallback procedure.
@@ -27,32 +27,36 @@
 set -euo pipefail
 
 # ═════════════════════════════════════════════════════════════════════════════
-# Fork configuration — change these for your own station
+# Fork configuration — almost nothing to edit
 # ═════════════════════════════════════════════════════════════════════════════
 #
-# Defaults are VU2CPL's. If you're running this script for your OWN Pi
-# (not VU2CPL's), edit the four lines below before running.
+# By default this script clones from VU2CPL's upstream repo. If you
+# have your own GitHub fork (e.g., because you want to push changes
+# back), set REPO_URL to your fork's URL. Otherwise leave it alone —
+# `git pull` from upstream forever works fine for personal use.
 #
-# - EXPECTED_USER:     your Pi user. Most paths assume /home/<user>/.
-# - EXPECTED_HOSTNAME: your Pi hostname. Used in MQTT topic prefixes
-#                     (e.g. rpi/<hostname>/cpu) and the cluster
-#                     telemetry publisher script.
-# - REPO_URL:          your fork's git@github.com:user/repo.git, or
-#                     keep VU2CPL's URL if you don't plan to fork
-#                     (you'll just track upstream).
-# - REPO_NAME:         the directory name under ~/.node-red/projects/.
-#                     Usually matches the repo name. Affects Node-RED's
-#                     project autodiscovery.
+# - REPO_URL:   your fork's HTTPS or SSH URL, or keep VU2CPL's.
+# - REPO_NAME:  the directory name under ~/.node-red/projects/.
+#               Almost no reason to change this.
 #
-# Everything else in this script (apt packages, mosquitto config,
-# Node-RED palette, udev rules, file context store, etc.) is generic
-# and applies to any station.
+# **You do NOT need to edit user or hostname.** The script auto-detects
+# whatever user you're SSH'd in as (`id -un`) and whatever hostname
+# the Pi has (`hostname`). All file paths, sudoers entries, MQTT
+# topic prefixes, ssh-key comments, etc. derive from those.
+#
+# Everything else (apt packages, mosquitto config, Node-RED palette,
+# udev rules, file context store, etc.) is generic.
 #
 # ─────────────────────────────────────────────────────────────────────────────
-readonly EXPECTED_USER='vu2cpl'
-readonly EXPECTED_HOSTNAME='noderedpi4'
-readonly REPO_URL='git@github.com:vu2cpl/vu2cpl-shack.git'
+readonly REPO_URL='https://github.com/vu2cpl/vu2cpl-shack.git'
 readonly REPO_NAME='vu2cpl-shack'
+
+# Auto-detected from the actual system — nothing to edit here.
+# Used for all file paths, ssh-key comments, chown / chmod, MQTT
+# hostname references. Whatever user + hostname you SSH in as is
+# the user + hostname this script configures the Pi for.
+readonly ACTUAL_USER="$(id -un)"
+readonly ACTUAL_HOSTNAME="$(hostname)"
 # ═════════════════════════════════════════════════════════════════════════════
 
 readonly STATE_FILE=/tmp/rebuild_pi.state
@@ -112,19 +116,25 @@ unmark_stage()  { sed -i "/^$1$/d" "$STATE_FILE" 2>/dev/null || true; }
 preflight() {
     banner "Pre-flight checks"
 
-    # Must be the configured user, not root
-    if [[ "$(id -un)" != "$EXPECTED_USER" ]]; then
-        fail "Run as user '$EXPECTED_USER', not '$(id -un)'. Sudo will be requested when needed."
+    # Must NOT be root — sudo is requested when needed
+    if [[ "$ACTUAL_USER" == 'root' ]]; then
+        fail "Don't run this script as root. SSH in as your regular Pi user; sudo is requested when needed."
     fi
-    ok "Running as $EXPECTED_USER"
+    ok "Running as: $ACTUAL_USER"
 
-    # Hostname
-    if [[ "$(hostname)" != "$EXPECTED_HOSTNAME" ]]; then
-        warn "Hostname is '$(hostname)', expected '$EXPECTED_HOSTNAME'."
-        warn "Some scripts (monitor.sh, MQTT topics) will publish under the current hostname."
+    # Hostname is informational — auto-detected; whatever it is is what
+    # the script configures (MQTT topics, ssh-key comment, etc.).
+    ok "Hostname:   $ACTUAL_HOSTNAME"
+
+    # Best-effort Raspberry Pi detection — warn only, don't block
+    if ! grep -qiE 'raspberry|bcm27|bcm28' /proc/cpuinfo 2>/dev/null \
+       && ! grep -qiE 'raspberry' /proc/device-tree/model 2>/dev/null; then
+        warn "This doesn't look like a Raspberry Pi. The script targets Pi OS"
+        warn "specifically — apt packages, udev rules, GPIO assumptions, etc."
+        warn "may not apply cleanly elsewhere."
         prompt_continue "Continue anyway?"
     else
-        ok "Hostname: $EXPECTED_HOSTNAME"
+        ok "Raspberry Pi detected"
     fi
 
     # Internet
@@ -326,7 +336,7 @@ stage_06_github_ssh() {
 
     if [[ ! -f ~/.ssh/id_ed25519 ]]; then
         step "Generate ed25519 keypair"
-        ssh-keygen -t ed25519 -C "$EXPECTED_USER@$(hostname)" -f ~/.ssh/id_ed25519 -N ""
+        ssh-keygen -t ed25519 -C "$ACTUAL_USER@$(hostname)" -f ~/.ssh/id_ed25519 -N ""
     else
         ok "Keypair already exists"
     fi
@@ -413,10 +423,10 @@ stage_09_pi_scripts() {
     # User-space scripts
     for f in as3935_mqtt.py as3935_tune.py rpi_agent.py monitor.sh power_spe_on.py; do
         step "Deploy $f"
-        sudo cp "$f" "/home/$EXPECTED_USER/$f"
-        sudo chown "$EXPECTED_USER":"$EXPECTED_USER" "/home/$EXPECTED_USER/$f"
+        sudo cp "$f" "/home/$ACTUAL_USER/$f"
+        sudo chown "$ACTUAL_USER":"$ACTUAL_USER" "/home/$ACTUAL_USER/$f"
     done
-    sudo chmod +x "/home/$EXPECTED_USER/monitor.sh" "/home/$EXPECTED_USER/as3935_tune.py"
+    sudo chmod +x "/home/$ACTUAL_USER/monitor.sh" "/home/$ACTUAL_USER/as3935_tune.py"
 
     # Systemd units
     step "Install systemd units"
@@ -426,7 +436,7 @@ stage_09_pi_scripts() {
 
     # Sudoers
     step "Install sudoers entry"
-    echo "$EXPECTED_USER ALL=(ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown" | \
+    echo "$ACTUAL_USER ALL=(ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown" | \
         sudo tee /etc/sudoers.d/rpi-agent > /dev/null
     sudo chmod 440 /etc/sudoers.d/rpi-agent
     sudo visudo -c >/dev/null || fail "sudoers syntax error"
@@ -434,7 +444,7 @@ stage_09_pi_scripts() {
     # Crontab
     step "Schedule monitor.sh in user crontab"
     (crontab -l 2>/dev/null | grep -v 'monitor.sh' ; \
-     echo "* * * * *  /home/$EXPECTED_USER/monitor.sh") | crontab -
+     echo "* * * * *  /home/$ACTUAL_USER/monitor.sh") | crontab -
 
     # Enable + start rpi-agent only.
     # as3935.service is intentionally NOT enabled — the ESP32 bridge
@@ -469,7 +479,7 @@ SUBSYSTEM=="hidraw", ATTRS{idVendor}=="04d8", ATTRS{idProduct}=="0001", \
     GROUP="telepost", MODE="0660"
 EOF
     sudo groupadd -f telepost
-    sudo usermod -aG telepost "$EXPECTED_USER"
+    sudo usermod -aG telepost "$ACTUAL_USER"
     sudo udevadm control --reload-rules
     sudo udevadm trigger
     ok "udev rules reloaded"
@@ -580,6 +590,10 @@ except Exception:
 PYEOF
 )
 
+    # Idempotency: if the current callsign in Init Defaults is already
+    # something other than VU2CPL, someone has run this stage (or
+    # edited Init Defaults by hand). Skip — re-run with --stage 13 if
+    # you want to change values.
     if [[ "$current_callsign" != 'VU2CPL' && -n "$current_callsign" ]]; then
         ok "Init Defaults already customised (callsign=$current_callsign)"
         ok "  Re-run with: bash rebuild_pi.sh --stage 13"
@@ -588,14 +602,15 @@ PYEOF
         return 0
     fi
 
-    # If the operator IS VU2CPL (EXPECTED_USER + HOSTNAME match defaults
-    # AND current callsign is still VU2CPL), this is the upstream's own
-    # Pi — no customization needed. Mark as done and skip.
-    if [[ "$EXPECTED_USER" == 'vu2cpl' && "$EXPECTED_HOSTNAME" == 'noderedpi4' \
-          && "$current_callsign" == 'VU2CPL' ]]; then
-        ok "This is VU2CPL's own Pi (CONFIG defaults match) — nothing to customise"
-        ok "  Forkers: edit the CONFIG block at the top of this script so the"
-        ok "  script knows it's running on YOUR Pi, then re-run --stage 13."
+    # If the running user is 'vu2cpl' AND callsign is still 'VU2CPL',
+    # this is almost certainly upstream's own Pi (operator: VU2CPL).
+    # No customization needed. (Forkers cloning to a Pi user named
+    # 'vu2cpl' as their own login: edit your callsign in Stage 13 OR
+    # type a non-VU2CPL value when prompted on next run.)
+    if [[ "$ACTUAL_USER" == 'vu2cpl' && "$current_callsign" == 'VU2CPL' ]]; then
+        ok "Running as user 'vu2cpl' with callsign=VU2CPL — upstream's own Pi"
+        ok "  Nothing to customise. (If you ARE a forker who happens to use"
+        ok "  the username 'vu2cpl', run: bash rebuild_pi.sh --stage 13)"
         mark_stage "13_customize_station"
         return 0
     fi

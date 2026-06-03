@@ -6957,6 +6957,74 @@ before push.
 
 ---
 
+## 2026-06-03 — rebuild_pi.sh: drop EXPECTED_USER + EXPECTED_HOSTNAME (auto-detect)
+
+Operator: "why insist on vu2cpl username and hostname as
+noderedpi4? in the rebuild script?"
+
+Real design bug, not a typo. The script's preflight() **failed**
+hard if `id -un != 'vu2cpl'`, blocking any forker from running
+the script until they edited the CONFIG block. The fix the
+operator's earlier Stage 13 design relied on (`EXPECTED_USER ==
+'vu2cpl'` + `EXPECTED_HOSTNAME == 'noderedpi4'` → "upstream's own
+Pi, skip prompts") was conflating two concerns: what user/hostname
+the Pi *actually* uses (should auto-detect) versus whether this
+is upstream's own Pi (relevant only to Stage 13 idempotency).
+
+### What changed in the script
+
+| Before | After |
+|---|---|
+| `readonly EXPECTED_USER='vu2cpl'` (forker must edit before script will run) | **dropped** |
+| `readonly EXPECTED_HOSTNAME='noderedpi4'` (used for preflight + Stage 13 idempotency) | **dropped** |
+| `readonly ACTUAL_USER="$(id -un)"` | **new — auto-detected** |
+| `readonly ACTUAL_HOSTNAME="$(hostname)"` | **new — auto-detected** |
+| preflight: `fail` if `id -un != EXPECTED_USER` | preflight: `fail` only if running as root; otherwise pass through |
+| preflight: `warn` if `hostname != EXPECTED_HOSTNAME`, prompt continue | preflight: log hostname for info; new best-effort Raspberry Pi detection via `/proc/cpuinfo` + `/proc/device-tree/model` warns (doesn't block) if not on a Pi |
+| 11 internal references to `$EXPECTED_USER` (sudoers, ssh-key comment, file copy, chown, chmod, crontab, telepost group, etc.) | All substituted to `$ACTUAL_USER` |
+| Stage 13 idempotency: `EXPECTED_USER == 'vu2cpl' && EXPECTED_HOSTNAME == 'noderedpi4' && CALLSIGN == 'VU2CPL'` → skip | Simplified: `ACTUAL_USER == 'vu2cpl' && CALLSIGN == 'VU2CPL'` → skip. The hostname check went away — if a forker happens to also have hostname `noderedpi4` (unlikely with custom Pi OS imager hostnames) but a different user, the user-mismatch is enough to trigger prompts. If a forker has user `vu2cpl` AND callsign still `VU2CPL` (i.e., they haven't customised), the prompt skip is still incorrect but they'll notice the dashboard branding and re-run `--stage 13`. |
+
+CONFIG block now only has `REPO_URL` + `REPO_NAME` — and the
+comments are explicit: "**you do NOT need to edit user or
+hostname**. The script auto-detects whatever user you're SSH'd
+in as." Effectively only `REPO_URL` is meaningful, and only for
+forkers who have their own GitHub fork (most don't bother —
+`git pull` from upstream works fine).
+
+Preamble docstring also updated — the old "Pre-requisites: Hostname
+`noderedpi4`, user `vu2cpl`, SSH access" line replaced with "SSH
+access as a regular (non-root) user. Whatever username and
+hostname your Pi has is what this script configures the Pi for."
+
+### What changed in the docs
+
+| Doc | Change |
+|---|---|
+| `FORK_GUIDE.md` "Decisions you'll make during install" | Was "Change them in the script's CONFIG block BEFORE running" with 4 variables shown. Now: "You don't need to pre-configure the script. It auto-detects your Pi's username and hostname … One optional edit if you happen to have your own GitHub fork: `REPO_URL`." |
+| `FORK_GUIDE.md` Part A3 | Was "Edit `rebuild_pi.sh` for your station (2 minutes)" with 4-line edit walkthrough. Now "(Optional) Edit `rebuild_pi.sh` for your GitHub fork (1 minute)" with a single `REPO_URL` edit; opens with "**Most forkers skip this step entirely.**" |
+| `REBUILD_PI.md` "Forking?" callout | Was "edit the **Fork configuration** block near the top of `rebuild_pi.sh` (4 `readonly` constants: …)". Now "The script auto-detects your Pi's username and hostname — no pre-config edits required. … The only reason to edit `rebuild_pi.sh` is if you have your own GitHub fork." |
+
+### Backwards compatibility
+
+For VU2CPL (operator on `noderedpi4` as user `vu2cpl`):
+- Auto-detected `ACTUAL_USER='vu2cpl'`, `ACTUAL_HOSTNAME='noderedpi4'`
+- preflight passes silently (not root)
+- Internal paths unchanged (`/home/vu2cpl/...`, etc.)
+- Stage 13 idempotency: `ACTUAL_USER == 'vu2cpl'` AND callsign still `VU2CPL` → skip. **Same behaviour as before** for the operator.
+
+For a forker on their own Pi:
+- Auto-detected `ACTUAL_USER='kc1abc'` (or whatever), `ACTUAL_HOSTNAME='myshack'`
+- preflight passes (was failing before forcing them to edit CONFIG)
+- Internal paths: `/home/kc1abc/...`, sudoers for `kc1abc`, etc. **All derived automatically.**
+- Stage 13 prompts fire (user != vu2cpl → idempotency check fails → prompt)
+
+The script is now genuinely "git clone + bash rebuild_pi.sh" for
+forkers, no pre-edits required.
+
+Commit `<next>`. Doc + script change; no Pi restart needed.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:
