@@ -2,7 +2,7 @@
 
 **Period:** 2026-05-01 → 2026-05-26
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
-**Last commit at handover:** `eec48de` — Docs CDP + script docstring fix: Stage 6 + timeout sweep
+**Last commit at handover:** `e5f799e` — Stage 5 uibuilder.uibRoot fix (closes the noderedpi5 fresh-install saga)
 
 ---
 

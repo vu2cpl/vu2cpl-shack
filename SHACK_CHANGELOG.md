@@ -7244,6 +7244,80 @@ enough information to act on.
 
 ---
 
+## 2026-06-03 — rebuild_pi.sh: the noderedpi5 saga — Stages 9, 11, 7, 14, 5 ×3
+
+Multi-commit thread closing out the fresh-install bring-up on
+`noderedpi5`. Every step taught the script something it didn't
+know before. Recording the whole arc here so this pattern doesn't
+have to be re-discovered next time.
+
+### The failures, in order
+
+| # | Commit | Stage | What failed | Why |
+|---|--------|-------|-------------|-----|
+| 1 | `f332ba8` | 9 | `/etc/sudoers.d/debian_frontend: bad permissions` | `sudo visudo -c` (no `-f`) validates the WHOLE `/etc/sudoers` tree; failed on a pre-existing system file with 644 instead of 440 perms. Fix: validate ONLY our `rpi-agent` file. Surface pre-existing issues elsewhere as `warn`, not block. |
+| 2 | `9f6a71c` | 11 | `./redeploy.sh: No such file or directory` | LP-700-Server upstream repo restructured: `redeploy.sh` moved into `deploy/` AND changed to a dev-machine SSH push tool. Fix: opt-in prompt (most forkers don't own one), arch-detect (`uname -m`), download pre-built binary from GitHub release, run `sudo ./deploy/install.sh`. |
+| 3 | `4745b8d` | 7 (1st attempt) | "all stages done. but no /ui or shack" | Stage 7 cloned the repo but never told Node-RED which project to activate. Fix: write `.config.projects.json` with `activeProject` set. |
+| 4 | `7e6e863` | 14 | Stage 14 reported success even when dashboards didn't load | Stage 14 was checking infrastructure (Node-RED running, MQTT alive), not the end-user goal. Fix: 6-bug rewrite — split critical vs optional checks, drop hardcoded `192.168.1.169`, add /shack check, fix `mark_stage "13_verify"` → `"14_verify"` typo, add project-active + flow-parsed checks, add hardware-skippable variants. |
+| 5 | `e77dad0` | 7 (2nd attempt) | "still no ui or shack" | My `.config.projects.json` was written to `~/.node-red/projects/.config.projects.json`. **Wrong path.** Node-RED reads it from `~/.node-red/.config.projects.json` (sibling of settings.js, NOT under projects/). Verified against working noderedpi4 install. Fix: correct path + add `credentialSecret: false` (matches noderedpi4 exactly). |
+| 6 | `7a54616` | 5 (v2 attempt) | "still no ui or shack" | The v1 Stage 5 patcher inserted `projects: { enabled: true }` at the **top level** of `module.exports`. Node-RED reads `editorTheme.projects.enabled`, not top-level `projects.enabled`. Fix: detect uncommented `editorTheme: {` block and insert projects inside it. |
+| 7 | `5c58c27` | 5 (v3, the real fix) | "still no ui or shack" — `node -e ...editorTheme.projects.enabled` returned `false` | v2's "insert at top of editorTheme" was overridden by Node-RED's DEFAULT `projects: { enabled: false }` block FURTHER DOWN inside editorTheme. JS object-literal "later-key-wins" semantics. Fix: don't insert. Regex-match any `projects: { ... enabled: false }` block and **flip the boolean**. `[^}]*?` non-greedy ensures the `enabled` is inside the same projects block. Idempotent: multi-flips all matching blocks to `true`. |
+| 8 | `e5f799e` | 5 (extension) | `/ui` works but `/shack` 404 | uibuilder v7.6.2 (noderedpi4) auto-detects Node-RED Projects → reads from `projects/<name>/uibuilder/`. uibuilder v7.7.1 (noderedpi5) **dropped this auto-detection** → falls back to `userDir/uibuilder/` → no `shack/` source there → 404. Fix: explicitly set `uibuilder.uibRoot` in settings.js to `__dirname + '/projects/<REPO_NAME>/uibuilder'`. Makes the path explicit, doesn't depend on auto-detection. |
+
+### The recurring pattern
+
+Three of the eight bugs followed identical structure: **the script's
+"I'm done" check was less rigorous than what real end-to-end success
+required.** Each stage was checking "did I write the file" or "did
+the command exit 0" rather than "is the thing the operator cares
+about actually working."
+
+Stage 5 was the worst case — three iterations because:
+- v1's grep-based detection (`if grep -q 'projects:' ...`) couldn't tell that "projects: exists but at the wrong nesting level" was the same as "broken"
+- v2's "insert inside editorTheme" assumed the editorTheme block didn't already have a competing `projects:` block (it did — Node-RED's default template)
+- v3 was the first to use `node -e ...` to **evaluate** settings.js the way Node-RED actually does, and to verify the value after the patch
+
+The lesson is now codified in Stage 5 (and Stage 14): **patch → re-evaluate → fail loudly if the actual evaluated state doesn't match expectations.** No more "stage marked done but the thing it was supposed to enable isn't actually enabled."
+
+### Class-of-bug lesson — feature flags via deeply-nested config
+
+Node-RED's `editorTheme.projects.enabled` is a feature flag buried
+three levels deep in a JavaScript object literal that also accepts
+arbitrary top-level keys for forward-compat. **You cannot safely
+patch this with grep+sed.** The right tools:
+
+1. **Evaluate**, don't grep: `node -e 'console.log(require("./settings.js").editorTheme?.projects?.enabled)'` gives you the value Node-RED actually reads.
+2. **Verify after patch**: re-evaluate, fail if value doesn't match expectation.
+3. **Surgical flips, not insertions**: when a default value already exists, flipping it is safer than inserting a parallel one (JS later-wins makes parallel-insert silently broken).
+4. **Explicit configs over auto-detection**: uibuilder's project auto-detection went away in a minor version bump. Anything the script depends on that "just works" via auto-detection is a future bug. Make it explicit.
+
+Same lesson applies to LP-700-Server's repo restructure (commit 2):
+upstream changed without breaking the install API, but did break our
+script. Lesson: prefer release-artifact downloads (stable URL via
+the releases API) over assumptions about repo structure.
+
+### Commits
+
+- `f332ba8` — Stage 9 sudoers: validate only our file
+- `9f6a71c` — Stage 11 LP-700: adapt to restructured upstream + opt-in
+- `4745b8d` — Stage 7: activate project (wrong path)
+- `7e6e863` — Stage 14: actually verify end-to-end
+- `e77dad0` — Stage 7: correct .config.projects.json path
+- `7a54616` — Stage 5 v2: editorTheme nesting (still broken)
+- `5c58c27` — Stage 5 v3: flip-not-insert + verify-after-patch (the real Projects fix)
+- `e5f799e` — Stage 5: explicit uibuilder.uibRoot
+
+### Operator outcome
+
+`http://noderedpi5-ip/shack` confirmed loading. All Stage 14 critical
+checks pass: project active, flows parsed, `/shack` + `/ui` respond,
+`rpi-agent` active. Optional checks (LP-700, AS3935, GPS-NTP) skip
+gracefully where the hardware isn't on this Pi.
+
+Doc-only change here. No Pi restart needed.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:
