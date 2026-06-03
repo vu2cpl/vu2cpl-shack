@@ -390,6 +390,42 @@ Weather data to Header template (`eee1a8b8552aa21f`): plain `wxData` object (no 
 - AS3935 ESP32 bridge cmd channel: `lightning/as3935/cmd` (in), `lightning/as3935/cmd/ack` (out, not retained). `set` keys: nf, wdth, srej, tun_cap, mask_dist, min_num_lightning, afe_gb (`"indoor"`/`"outdoor"`), modem_sleep. Actions: republish_status, calibrate_tun_cap, reboot, factory_reset_wifi. NVS-persisted; status republished after each successful set. Controlled from the **AS3935 Control Panel** ui_template on the `AS3935 Tuning` flow tab (`fe70cfdcdfa19aa4`)
 - Weather: Parse Weather has 2 outputs — output 1 → Header (plain wxData), output 2 → Master Dashboard ({type:'weather'})
 
+#### Manual disconnect = sticky-off (2026-06-03)
+
+Clicking Manual Disconnect on the dashboard now sets a sticky
+`flow.manual_off` flag (file-context-scoped so it survives Node-RED
+restart) in addition to the existing `flow.antenna_off`. While
+`manual_off` is true:
+
+- **`Trigger Disconnect` early-exits** after the bypass guard with a
+  red-ring "MANUAL OFF · src km — alert only" status. Skips the
+  MQTT OFF re-send, skips the reconnect-timer reset, skips the TX
+  inhibit re-fire (already inhibited).
+- It still emits an `event_record` of type
+  `auto_strike_while_manual_off` on a **new output 2** (Trigger
+  Disconnect bumped from 2 → 3 outputs) wired to
+  `light_jsonl_append_01`. JSONL → `tg_lightning_router` →
+  Telegram: 🟣 **MANUAL HOLD** alert with distance / source / time.
+
+`manual_off` is cleared by Manual Override ON, Force Reconnect,
+HTTP→Antenna ON, and Execute Reconnect (which is the path Bypass-ON
+takes, so Bypass auto-clears manual hold per operator's design
+choice).
+
+**Pre-fix bug this closes:** without `manual_off`, an operator who
+pre-emptively disconnected before a storm would see their manual
+DC silently overridden by the first AS3935 hit — Trigger Disconnect
+ran the matrix, fired the disconnect chain, and Reconnect Timer
+re-armed itself for 20 min. Antenna auto-reconnected mid-storm.
+The 2026-05-26 retrigger-text differentiation masked this because
+the Telegram alert *looked* different ("STORM CONTINUES") but the
+timer was still being reset.
+
+**Scope-alignment convention** (per HANDOVER #19 lesson): all
+`manual_off` reads and writes use the explicit `'file'` scope.
+Default memory scope `flow.get('manual_off')` returns `undefined`
+on a fresh install which is treated as `false` (safe).
+
 #### FlexRadio TX inhibit chain (2026-05-26)
 
 Lightning disconnect now also sends a FlexRadio TX inhibit so the operator can't accidentally key into a disconnected antenna. Radio stays powered + RX-capable; only TX is blocked.

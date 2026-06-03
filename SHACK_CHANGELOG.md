@@ -6325,6 +6325,85 @@ Commit [`cf109fd`](https://github.com/vu2cpl/vu2cpl-shack/commit/cf109fd).
 
 ---
 
+## 2026-06-03 — Manual disconnect = sticky-off (HANDOVER #33)
+
+Operator-flagged safety hole closed. Before this fix: clicking Manual
+Disconnect on the dashboard correctly cancels the reconnect timer —
+antenna stays off. **But** if any auto-strike arrives during the
+manual-off state, `Trigger Disconnect` runs the matrix, fires the
+disconnect chain, and `Reconnect Timer` re-arms its 20-min countdown
+behind the operator's back. 20 minutes later → antenna auto-reconnects
+mid-storm. The 2026-05-26 retrigger-text differentiation masked the
+bug — Telegram said "STORM CONTINUES" but the timer was still being
+reset under the hood.
+
+### Design (operator-clarified)
+
+- Manual DC is a **sticky** state — `flow.manual_off = true`. Distinct
+  from `antenna_off` (which is "any kind of off"). Distinct from Bypass
+  switch (which is "ignore lightning, keep antenna ON" — the opposite
+  intent).
+- Survives Node-RED restart via the `file` context store. Closes a
+  safety hole where pre-emptive DC before any AS3935 hit could be
+  silently cleared by a Node-RED hiccup, letting the operator TX
+  into a disconnected antenna.
+- Auto-strikes while `manual_off` is true do **alert-only** with a new
+  event type `auto_strike_while_manual_off`. No MQTT OFF re-send, no
+  timer manipulation, no TX inhibit re-fire. Telegram message uses a
+  new 🟣 MANUAL HOLD format distinct from the existing ⚡ DISCONNECT /
+  ⚡ STORM CONTINUES / ✅ RECONNECT alerts.
+- Bypass-ON **clears** `manual_off` — operator hitting Bypass is
+  explicitly overriding the manual hold. Falls out naturally from
+  Execute Reconnect clearing manual_off (Bypass Handler output 3
+  wires to Execute Reconnect).
+
+### Implementation — 6 surgical edits
+
+| Node | Change |
+|------|--------|
+| `Manual Override` (`22e5df9713499f53`) | Adds `flow.set('manual_off', !on, 'file')` next to the existing antenna_off set. |
+| `Trigger Disconnect` (`d62fb0c3c40f03b7`) | New early-exit after the bypass guard. When `manual_off === true`, emits `event_record` of type `auto_strike_while_manual_off` on a **new output 2** wired to `light_jsonl_append_01`. Fire-disconnect return updated to 3-output form `[msg, {payload:'reset'}, null]`. Node `outputs` bumped 2 → 3. |
+| `Force Reconnect` (`dfad237cceca95b4`) | Adds `flow.set('manual_off', false, 'file')`. |
+| `HTTP → Antenna ON` (`f2092c6e0d932c7b`) | Adds `flow.set('manual_off', false, 'file')`. |
+| `Execute Reconnect` (`bfbe99e98a8c6ce8`) | Adds `flow.set('manual_off', false, 'file')`. Covers both timer-expiry and Bypass-ON paths. |
+| `Telegram Alert Router` (`tg_lightning_router`) | Allow-list adds `'auto_strike_while_manual_off'`. Formatter renders 🟣 MANUAL HOLD with distance / source / "Antenna remains OFF (manual); TX still inhibited" / time. |
+
+No new nodes, no new endpoints, no new dashboard buttons. The existing
+Manual Override toggle already drives the new behaviour.
+
+### Scope alignment
+
+Per HANDOVER #19 (DXCC filter persistence) lesson — all `manual_off`
+reads use `flow.get('manual_off', 'file')` and all writes use
+`flow.set('manual_off', value, 'file')`. The `file` context store is
+already configured in `settings.js` from the same #19 work.
+`flow.get(...)` on a never-written key returns `undefined`, which is
+treated as falsy → falls through to the matrix. Safe on a fresh
+install.
+
+### Test plan
+
+1. Click Manual Disconnect on the dashboard → antenna OFF, timer shows
+   "Cancelled", `flow.manual_off === true` in file context.
+2. Fire TEST close-zone strike inject → Trigger Disconnect status shows
+   "MANUAL OFF · TEST 5km — alert only", no MQTT to powerstrip (verify
+   on `cmnd/powerstrip1/POWER5` topic), no timer countdown, Telegram
+   fires with 🟣 MANUAL HOLD message.
+3. Click Manual Reconnect → antenna ON, `manual_off === false`.
+4. **Key safety test:** set Manual Disconnect → `sudo systemctl
+   restart nodered` → check `flow.get('manual_off','file')` still
+   `true` after restart → fire TEST inject → still alert-only.
+5. Set Manual Disconnect → click Bypass-ON → antenna ON,
+   `manual_off === false`, TX uninhibited.
+
+Commit [`82c85ea`](https://github.com/vu2cpl/vu2cpl-shack/commit/82c85ea).
+Pi restarted 2026-06-03 08:05 IST, all flow connectors (4 cluster TCPs,
+2 MQTT brokers, rotator serial, FlexRadio discovery) came back up
+clean. cty.xml bootstrap-from-cache also fired (yesterday's resilience
+work proving itself across a restart).
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:
