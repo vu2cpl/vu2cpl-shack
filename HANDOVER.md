@@ -2,7 +2,7 @@
 
 **Period:** 2026-05-01 → 2026-05-26
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
-**Last commit at handover:** `989dde0` — Docs audit: 5 drift bugs fixed across CLAUDE/FORK_GUIDE/REBUILD_PI
+**Last commit at handover:** `56b0c87` — rebuild_pi.sh: drop EXPECTED_USER/HOSTNAME (auto-detect)
 
 ---
 
