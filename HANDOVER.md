@@ -2,7 +2,7 @@
 
 **Period:** 2026-05-01 → 2026-05-26
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
-**Last commit at handover:** `304d504` — rebuild_pi.sh: detect+fix Node-RED running as wrong user (Pi-OS-Imager pi-user trap) + state file move + Stage 3 timeout
+**Last commit at handover:** `eec48de` — Docs CDP + script docstring fix: Stage 6 + timeout sweep
 
 ---
 
