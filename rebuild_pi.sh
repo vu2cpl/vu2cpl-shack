@@ -1025,40 +1025,38 @@ except Exception:
 PYEOF
 )
 
-    # Idempotency: if the current callsign in Init Defaults is already
-    # something other than VU2CPL, someone has run this stage (or
-    # edited Init Defaults by hand). Skip silently — re-run with
-    # --stage 13 if you want to change values.
-    if [[ "$current_callsign" != 'VU2CPL' && -n "$current_callsign" ]]; then
-        ok "Init Defaults already customised (callsign=$current_callsign)"
-        ok "  Re-run with: bash rebuild_pi.sh --stage 13"
-        ok "  …if you want to change values later."
-        mark_stage "13_customize_station"
-        return 0
-    fi
+    # ALWAYS prompt when this stage runs. The state-file marker handles
+    # the "skip already-done in the main pipeline" case automatically.
+    # When the operator invokes --stage 13 explicitly, the marker is
+    # removed by main(), the stage runs, and we prompt here — they
+    # clearly want to change values.
+    #
+    # We display the current callsign so the operator knows the current
+    # state. Default answer is N (skip) so a quick Enter keeps things
+    # as they are; pressing y proceeds to the full prompt sequence.
 
-    # Otherwise: ALWAYS prompt. Don't auto-skip based on
-    # ACTUAL_USER=='vu2cpl' — the same operator can have multiple Pis
-    # (noderedpi4 = primary station, noderedpi5 = test/backup) with
-    # different MQTT brokers, hostnames, Tasmota topics, etc. Each Pi
-    # may need its own customization or may want to keep defaults.
-    # The operator knows their context; the script just asks.
+    echo
+    if [[ "$current_callsign" != 'VU2CPL' && -n "$current_callsign" ]]; then
+        c_yellow "  Init Defaults currently has callsign=$current_callsign"
+        c_yellow "  (already customized from upstream's VU2CPL)."
+    else
+        c_yellow "  Init Defaults currently has upstream defaults"
+        c_yellow "  (callsign=VU2CPL, broker=192.168.1.169, etc.)."
+    fi
     echo
     c_yellow "  This stage patches station identity into flows.json (Init"
     c_yellow "  Defaults) and the Vue dashboard TopBar:"
     c_yellow "    callsign, grid, MQTT broker IP, Tasmota antenna topic,"
     c_yellow "    POWER channel, disconnect threshold, reconnect timer, QTH."
     echo
-    c_yellow "  Skip if THIS Pi should keep upstream defaults — e.g. you're"
-    c_yellow "  VU2CPL bringing up a secondary/test Pi that should mirror"
-    c_yellow "  noderedpi4's identity, or you'll edit Init Defaults in the"
-    c_yellow "  Node-RED editor manually later."
+    c_yellow "  Press y to re-customize (or to customize from defaults)."
+    c_yellow "  Press Enter to keep current values."
     echo
     local proceed
-    read -r -p "  Customize station identity for this Pi? [y/N] " proceed
+    read -r -p "  (Re-)customize station identity for this Pi? [y/N] " proceed
     proceed="${proceed:-N}"
     if [[ ! "$proceed" =~ ^[Yy] ]]; then
-        ok "Skipped station customization — keeping upstream defaults"
+        ok "Skipped — keeping current values"
         ok "  Re-run later with: bash rebuild_pi.sh --stage 13"
         mark_stage "13_customize_station"
         return 0
