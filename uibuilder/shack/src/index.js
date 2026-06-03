@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v9 · 2026-05-28 08:00 IST';
+window.__shackBuild = 'v10 · 2026-06-03 ANT toggle';
 
 // =====================================================================
 // Connection-status heartbeat — MULTI-PATH (belt and braces).
@@ -107,7 +107,10 @@ const LightningCard = {
         <span v-if="!expanded" class="summary">
           <span v-if="state.bypassActive" :style="{color:'var(--amber-fg)'}">🔕 BYPASS</span>
           <span v-if="state.bypassActive">·</span>
-          <span :style="{color: state.antennaOn ? 'var(--green)' : 'var(--red)', fontWeight:700}">
+          <span class="ant-chip"
+                :style="{color: state.antennaOn ? 'var(--green)' : 'var(--red)', fontWeight:700}"
+                @click.stop="action('antennaToggle')"
+                :title="state.antennaOn ? 'Click to disconnect antenna' : 'Click to reconnect antenna'">
             {{ state.antennaOn ? 'ANT ON' : 'ANT OFF' }}
           </span>
           <template v-if="state.closestKm != null">
@@ -135,7 +138,8 @@ const LightningCard = {
 
         <!-- Action buttons -->
         <div style="display:flex;gap:6px;">
-          <button class="btn btn--green" style="flex:1;" @click="action('antennaOn')">ANTENNA ON</button>
+          <button class="btn" :class="state.antennaOn ? 'btn--green' : 'btn--red'"
+                  style="flex:1;" @click="action('antennaToggle')">{{ state.antennaOn ? 'ANTENNA ON' : 'ANTENNA OFF' }}</button>
           <button class="btn" :class="state.bypassActive ? 'btn--amber' : 'btn--ghost'"
                   style="flex:1;" @click="action('bypassToggle')">BYPASS {{ state.bypassActive ? 'ON' : 'OFF' }}</button>
         </div>
@@ -513,6 +517,16 @@ const LightningCard = {
     // setTunable takes a 3rd `key` argument naming the AS3935 register to change.
     function action(type, value, key) {
       // --- HTTP-direct (operational) ---
+      // antennaToggle: collapsed-view ANT chip + expanded-view ANT button.
+      // Drives /lightning/ant-off (sticky manual_off; see HANDOVER #33) or
+      // /lightning/ant-on depending on current state. Confirms first.
+      if (type === 'antennaToggle') {
+        const goingOn = !state.antennaOn;
+        const prompt  = goingOn ? 'Reconnect antenna?' : 'Disconnect antenna?';
+        if (!confirm(prompt)) return;
+        const url     = goingOn ? '/lightning/ant-on' : '/lightning/ant-off';
+        return fetch(url, { method: 'POST' }).catch(e => console.warn(e));
+      }
       if (type === 'antennaOn') {
         return fetch('/lightning/ant-on', { method: 'POST' }).catch(e => console.warn(e));
       }

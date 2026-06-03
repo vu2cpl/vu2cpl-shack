@@ -209,6 +209,19 @@ html, body {
 .btn--blue  { border-color: #1f6feb;         background: #0d2238;         color: #79c0ff;      }
 .btn--ghost { border-color: var(--border);   background: transparent;     color: var(--muted); }
 
+/* Collapsed-view ANT chip — click-to-toggle indicator in LightningCard header */
+.ant-chip {
+  cursor: pointer;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  transition: background 120ms, border-color 120ms;
+}
+.ant-chip:hover {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.15);
+}
+
 /* === Banner (bypass-active style) === */
 .banner {
   display: flex;
