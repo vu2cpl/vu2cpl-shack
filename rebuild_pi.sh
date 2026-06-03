@@ -575,6 +575,34 @@ stage_07_clone_repo() {
         git clone "$REPO_URL" "$REPO_DIR"
     fi
 
+    # Activate the project in Node-RED. Without this file, Node-RED with
+    # the Projects feature on (Stage 5) shows an "Open Existing Project /
+    # Create New" dialog and NEVER loads the project's flows.json. Result:
+    # /ui and /shack 404 even though the repo is cloned and the palette
+    # nodes are installed. This was the final missing step that left
+    # the operator's noderedpi5 install with "no /ui or shack" after all
+    # 14 stages reported complete.
+    local projects_conf="$HOME/.node-red/projects/.config.projects.json"
+    if [[ ! -f "$projects_conf" ]] || ! grep -q "\"activeProject\":\\s*\"$REPO_NAME\"" "$projects_conf"; then
+        step "Activate project '$REPO_NAME' in Node-RED"
+        cat > "$projects_conf" <<EOF
+{
+    "activeProject": "$REPO_NAME",
+    "projects": {
+        "$REPO_NAME": {}
+    }
+}
+EOF
+        # Restart Node-RED so it picks up the active project
+        sudo systemctl restart nodered
+        sleep 5
+        timeout 60 bash -c 'until curl -sf http://localhost:1880 >/dev/null; do sleep 2; done' \
+            || warn "Node-RED slow to restart after project activation — check 'sudo journalctl -u nodered -n 50'"
+        ok "Project activated; Node-RED restarted"
+    else
+        ok "Project '$REPO_NAME' already active"
+    fi
+
     if ! grep -q '^nrsave()' ~/.bashrc 2>/dev/null; then
         step "Add nrsave shell function to ~/.bashrc (CLAUDE.md rule #4: regen DXCC tab extract on every flows.json commit)"
         cat >> ~/.bashrc <<'EOF'
