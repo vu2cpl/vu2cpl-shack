@@ -455,32 +455,89 @@ PYEOF
 stage_06_github_ssh() {
     banner "Stage 6 — GitHub SSH key (REBUILD_PI.md Step 5)"
 
+    # Optional stage — only needed if you plan to `git push` back to your
+    # GitHub fork. Forkers who only `git pull` from upstream can skip this.
+    echo
+    c_yellow "  This stage sets up a GitHub SSH key for git PUSH operations."
+    c_yellow "  If you only plan to git PULL updates from upstream (most forkers),"
+    c_yellow "  you can safely skip this stage entirely."
+    echo
+    local need_push
+    read -r -p "  Do you plan to push changes back to GitHub? [y/N] " need_push
+    need_push="${need_push:-N}"
+    if [[ ! "$need_push" =~ ^[Yy] ]]; then
+        ok "Skipping Stage 6 — git pull from upstream works without an SSH key"
+        ok "  If you need push later: bash rebuild_pi.sh --stage 6"
+        mark_stage "06_github_ssh"
+        return 0
+    fi
+
     if [[ ! -f ~/.ssh/id_ed25519 ]]; then
         step "Generate ed25519 keypair"
         ssh-keygen -t ed25519 -C "$ACTUAL_USER@$(hostname)" -f ~/.ssh/id_ed25519 -N ""
     else
-        ok "Keypair already exists"
+        ok "Keypair already exists at ~/.ssh/id_ed25519"
     fi
 
-    echo
-    c_yellow "  ┌─ Add this public key to GitHub: ─────────────────────────────────"
-    c_yellow "  │ Settings → SSH and GPG keys → New SSH key → paste:"
-    c_yellow "  │"
-    sed 's/^/  │ /' ~/.ssh/id_ed25519.pub
-    c_yellow "  │"
-    c_yellow "  └──────────────────────────────────────────────────────────────────"
+    show_pubkey() {
+        echo
+        c_yellow "  ┌─ Add this public key to GitHub: ─────────────────────────────────"
+        c_yellow "  │ https://github.com/settings/ssh/new"
+        c_yellow "  │ (Title can be anything; paste the line below as the Key:)"
+        c_yellow "  │"
+        sed 's/^/  │ /' ~/.ssh/id_ed25519.pub
+        c_yellow "  │"
+        c_yellow "  └──────────────────────────────────────────────────────────────────"
+    }
 
+    show_pubkey
     prompt_continue "Once added, hit Enter to verify GitHub access"
 
-    step "Test SSH to GitHub"
-    if ssh -T -o StrictHostKeyChecking=accept-new git@github.com 2>&1 | grep -q "successfully authenticated"; then
-        ok "GitHub SSH auth OK"
-    else
-        fail "GitHub auth failed — pubkey not added or wrong account"
-    fi
+    # Retry loop — capture actual SSH output for diagnostics
+    local attempt=1 max_attempts=3 ssh_output ssh_status
+    while (( attempt <= max_attempts )); do
+        step "Test SSH to GitHub (attempt $attempt/$max_attempts)"
+        ssh_output=$(ssh -T -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 \
+                          git@github.com 2>&1 || true)
 
-    mark_stage "06_github_ssh"
-    ok "Stage 6 complete"
+        if echo "$ssh_output" | grep -q "successfully authenticated"; then
+            local gh_user
+            gh_user=$(echo "$ssh_output" | sed -n 's/^Hi \([^!]*\)!.*/\1/p')
+            ok "GitHub SSH auth OK (authenticated as GitHub user: $gh_user)"
+            mark_stage "06_github_ssh"
+            ok "Stage 6 complete"
+            return 0
+        fi
+
+        # Failure — show what GitHub actually said
+        c_red ""
+        c_red "  GitHub SSH test failed. Output was:"
+        echo "$ssh_output" | sed 's/^/      /' | head -8
+        echo
+        c_yellow "  Common causes:"
+        c_yellow "    1. Pubkey not added yet (or added to the wrong GitHub account)."
+        c_yellow "    2. Copy/paste truncated the key — verify the full line is there."
+        c_yellow "    3. Network firewall blocking outbound SSH to github.com:22."
+        show_pubkey
+        echo
+
+        if (( attempt < max_attempts )); then
+            local choice
+            read -r -p "  [r]etry / [s]kip (git push won't work) / [q]uit ? " choice
+            case "$choice" in
+                r|R|'') attempt=$((attempt + 1)); continue ;;
+                s|S)
+                    warn "Skipping Stage 6. git pull will work; git push won't."
+                    warn "If you need push later: bash rebuild_pi.sh --stage 6"
+                    mark_stage "06_github_ssh"
+                    return 0
+                    ;;
+                q|Q|*) fail "Aborted at Stage 6." ;;
+            esac
+        else
+            fail "GitHub auth failed after $max_attempts attempts. Verify the pubkey is added to the correct GitHub account, then: bash rebuild_pi.sh --stage 6"
+        fi
+    done
 }
 
 # ─── Stage 7: Clone the repo ─────────────────────────────────────────────────
