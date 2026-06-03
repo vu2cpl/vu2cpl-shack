@@ -2,7 +2,7 @@
 
 **Period:** 2026-05-01 → 2026-05-26
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
-**Last commit at handover:** `f93a7ce` — FORK_GUIDE: fix path bug + add upgrade-from-old-version scenario
+**Last commit at handover:** `97a942c` — FORK_GUIDE: comprehensive end-to-end rewrite (401 -> 807 lines)
 
 ---
 
