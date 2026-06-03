@@ -54,21 +54,33 @@ After you finish this guide:
 
 ### Step 1 — Get the code (5 minutes)
 
-On your Pi, in your home directory:
+On your Pi, clone the repo into Node-RED's projects directory.
+**This exact path matters** — Node-RED's `/shack` dashboard is served
+from there, and `rebuild_pi.sh` (Step 2) looks for the repo there too.
 
 ```bash
-git clone https://github.com/vu2cpl/vu2cpl-shack.git
+mkdir -p ~/.node-red/projects
+git clone https://github.com/vu2cpl/vu2cpl-shack.git \
+  ~/.node-red/projects/vu2cpl-shack
 ```
 
-That gives you a folder `vu2cpl-shack` with everything in it.
-You don't need to fork it on GitHub unless you plan to contribute
-changes back — for personal use, the plain clone is enough.
+That gives you `~/.node-red/projects/vu2cpl-shack/` with everything
+in it. You don't need to fork it on GitHub unless you plan to
+contribute changes back — for personal use, the plain clone is
+enough.
+
+> **⚠️ If you previously cloned to `~/vu2cpl-shack/`** (some older
+> versions of this guide pointed you there): that's the wrong
+> location. Node-RED won't see your edits. Either move it:
+> `mv ~/vu2cpl-shack ~/.node-red/projects/vu2cpl-shack`
+> or delete it and re-clone with the command above.
 
 To update later (when new features land), you'll just run:
 
 ```bash
-cd ~/vu2cpl-shack
+cd ~/.node-red/projects/vu2cpl-shack
 git pull
+sudo systemctl restart nodered     # if flows.json changed
 ```
 
 ### Step 2 — Install Node-RED and the rest (60 minutes, one-time)
@@ -169,8 +181,8 @@ Click Done → Deploy.
 
 #### 3c — Tell the dashboard your callsign
 
-Edit `~/vu2cpl-shack/uibuilder/shack/src/index.js`. Find the
-**TopBar** Vue component (search for `class="callsign"`).
+Edit `~/.node-red/projects/vu2cpl-shack/uibuilder/shack/src/index.js`.
+Find the **TopBar** Vue component (search for `class="callsign"`).
 
 ```javascript
 <span class="callsign">VU2CPL</span>           // ← YOUR callsign
@@ -221,15 +233,15 @@ After deleting/removing, save and deploy.
 By default, the home-screen icon shows VU2CPL's logo. To rebadge
 for your station:
 
-1. Edit `~/vu2cpl-shack/uibuilder/shack/src/icon.svg` and
-   `icon-maskable.svg` — open in any text editor, replace `VU2CPL`
+1. Edit `~/.node-red/projects/vu2cpl-shack/uibuilder/shack/src/icon.svg`
+   and `icon-maskable.svg` — open in any text editor, replace `VU2CPL`
    text with your callsign.
 
 2. Regenerate the PNG raster files (one-time, requires `rsvg-convert`
    and Python's `PIL` library):
 
    ```bash
-   cd ~/vu2cpl-shack/uibuilder/shack/src/
+   cd ~/.node-red/projects/vu2cpl-shack/uibuilder/shack/src/
    rsvg-convert -w 180 icon.svg          -o apple-touch-icon-180.png
    rsvg-convert -w  16 icon.svg          -o favicon-16.png
    rsvg-convert -w  32 icon.svg          -o favicon-32.png
@@ -310,29 +322,179 @@ reference (somewhat dense; for VU2CPL-specific history).
 When new features land in the repo:
 
 ```bash
-cd ~/vu2cpl-shack
-git pull
-```
-
-If `flows.json` changed:
-
-```bash
-ssh vu2cpl@<your-pi-ip>
+ssh <your-user>@<your-pi-ip>
 cd ~/.node-red/projects/vu2cpl-shack
 git pull
-sudo systemctl restart nodered
+sudo systemctl restart nodered    # only if flows.json changed
 ```
 
 If only Vue dashboard files changed (`uibuilder/shack/src/*.js`,
-`*.css`, `*.html`), no restart needed — just refresh `/shack`
-in your browser.
+`*.css`, `*.html`), no restart needed — just **hard-refresh**
+`/shack` in your browser (Safari: hold Shift, click reload; Chrome
+desktop: `Cmd+Shift+R` / `Ctrl+Shift+R`).
 
 Your customisations in **Init Defaults** (callsign, grid, MQTT
-broker) won't be overwritten by `git pull` because the values you
-edited live in your local copy of the file. But if there's a
-merge conflict on `flows.json`, that's a sign the upstream changed
-the same lines you edited — resolve by keeping your values and
-accepting upstream changes for everything else.
+broker) won't be overwritten by `git pull` *as long as nobody
+upstream edited the same lines you did*. If `git pull` reports a
+merge conflict on `flows.json`, that's a sign upstream touched
+your customised section. The next section walks through that.
+
+---
+
+## Already running an older version? Just want the latest dashboard
+
+If you've been running a previous version of this stack and want
+to pull in the latest dashboard + flow changes without redoing
+the whole REBUILD_PI / Step 3 customisation cycle — this is the
+short path.
+
+### Before you start
+
+You'll need:
+
+- **SSH access** to your Pi.
+- **5–10 minutes**.
+- Your station's **customisations** (callsign, grid, MQTT broker
+  IP, Tasmota topic names, Club Log credentials) memorised or
+  written down — you may have to re-type a few values if git
+  reports a merge conflict.
+
+If you have **never customised** the flow (still showing VU2CPL's
+values), this is a 30-second pull. If you have customised, expect
+~5 minutes for conflict resolution on `flows.json`.
+
+### The five steps
+
+**1. Find where your repo lives.** If you followed an old version
+of this guide, your repo may be in the wrong location:
+
+```bash
+# On the Pi:
+ls -d ~/vu2cpl-shack 2>/dev/null              # old (wrong) location
+ls -d ~/.node-red/projects/vu2cpl-shack       # correct location
+```
+
+If only the **old** location exists, move it to the right place
+first (Node-RED won't see edits in the wrong location):
+
+```bash
+# Stop Node-RED so it doesn't lock files
+sudo systemctl stop nodered
+mv ~/vu2cpl-shack ~/.node-red/projects/vu2cpl-shack
+sudo systemctl start nodered
+```
+
+If both exist, the one Node-RED is *actually serving* is
+`~/.node-red/projects/vu2cpl-shack/`. The one in `~/` is dead
+weight; you can `rm -rf ~/vu2cpl-shack` to clean up later.
+
+**2. Note your local edits.** Run:
+
+```bash
+cd ~/.node-red/projects/vu2cpl-shack
+git status
+```
+
+If the output says `nothing to commit, working tree clean`,
+skip straight to step 3 — your customisations are baked into
+the committed flows.json and `git pull` will handle them
+automatically (or surface conflicts).
+
+If there are *unstaged* changes, write down what file they're in
+(usually `flows.json` if you edited via the Node-RED editor +
+`nrsave`). Then stash them:
+
+```bash
+git stash push -m "my local customisations before upgrade"
+```
+
+**3. Pull the latest.**
+
+```bash
+git pull
+```
+
+If the pull succeeds cleanly, jump to step 5.
+
+If `git pull` reports `CONFLICT (content): Merge conflict in flows.json`,
+that's upstream touching a line you edited (most commonly: a new
+config key was added to `Init Defaults`, and your file already had
+edits in the same block).
+
+**4. Resolve the flows.json conflict.** The simplest, lowest-risk
+path — accept upstream's version, then re-edit your callsign / grid
+/ MQTT broker via the Node-RED editor:
+
+```bash
+# Accept upstream wholesale
+git checkout --theirs flows.json
+git add flows.json
+git commit -m "Resolve upgrade conflict — accept upstream flows.json"
+```
+
+Then open the Node-RED editor (`http://<your-pi-ip>:1880`) and
+re-apply your customisations to **Init Defaults** (Step 3a in this
+guide). Takes 2 minutes; you only need to retype your callsign,
+grid, MQTT broker IP, and POWER_STRIP/POWER_CH. The lat/lon
+derives automatically from grid.
+
+If you had stashed local edits in step 2, you can recover them with:
+
+```bash
+git stash pop                    # may show conflicts — that's OK
+git diff flows.json              # see what your stash wanted to change
+```
+
+…then manually re-apply just the values you care about via the
+editor, and `git checkout flows.json` once you're satisfied.
+
+**5. Restart Node-RED + hard-refresh the dashboard.**
+
+```bash
+sudo systemctl restart nodered
+```
+
+Wait ~10 seconds for it to finish loading flows. Then:
+
+- **Hard-refresh `/shack`** in every device that runs the dashboard.
+  Safari: hold **Shift** + click the reload button. iPhone/iPad
+  Safari: close all tabs, reopen; or Settings → Safari → Advanced
+  → Website Data → search your Pi's IP → delete entry.
+- **Re-add to home screen** on iPhone/iPad if the PWA icon
+  is stale (delete the old icon, re-add from Safari Share menu).
+
+You should see the new build stamp in the dashboard footer —
+something like `v10 · 2026-06-03 ANT toggle` — which confirms the
+latest JS is loaded.
+
+### Things to verify after upgrade
+
+| Check | How |
+|---|---|
+| Flow loaded clean | `sudo journalctl -u nodered -n 50` — look for `Started flows` with no errors. |
+| Init Defaults values stuck | Open the **Lightning Antenna Protector** flow tab → Init Defaults node → confirm your callsign / grid / MQTT broker are still your values, not VU2CPL's. |
+| Dashboard shows your data | `/shack` header shows YOUR callsign, not VU2CPL. If it shows VU2CPL, Step 3c (TopBar edit) didn't survive — re-apply. |
+| New endpoints registered | If the upgrade introduced new HTTP endpoints (check `SHACK_CHANGELOG.md` for the dated entries), test them with `curl -X POST http://localhost:1880/lightning/<endpoint>` from the Pi. |
+| MQTT auth / Tasmota topics intact | Trigger any power button on the dashboard — should toggle the corresponding Tasmota device. If not, your Tasmota topic names may have been clobbered by the upgrade (re-apply them in the editor). |
+
+### When NOT to use this short path
+
+If the upgrade you're pulling involves **new palette nodes** (e.g.
+a new contrib node you don't have installed), or **new systemd
+services** (e.g. a new Pi-side daemon), this short path will
+leave gaps. In that case, skim the changelog entries between your
+old commit and `main`, and run the relevant sections of
+`REBUILD_PI.md` to fill in the missing pieces:
+
+```bash
+# Find your old commit hash (the one you were running before pull)
+cd ~/.node-red/projects/vu2cpl-shack
+git log --oneline @{1}..@         # commits added by this pull
+```
+
+Scan the commit messages for words like "new service", "new
+palette", "install", or "udev" — those are the ones that
+need REBUILD_PI follow-up.
 
 ---
 

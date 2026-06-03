@@ -6527,8 +6527,87 @@ hits the toggle) vs MANUAL HOLD (which fires when a strike arrives
   (operator's daily-driver per global CLAUDE.md). Blocks until
   responded; cancel does nothing.
 
-Commit [`beb82d9`](https://github.com/vu2cpl/vu2cpl/vu2cpl-shack/commit/beb82d9).
+Commit [`beb82d9`](https://github.com/vu2cpl/vu2cpl-shack/commit/beb82d9).
 Pi restarted 2026-06-03 08:53 IST, all flow connectors back up clean.
+
+---
+
+## 2026-06-03 — FORK_GUIDE: path bug fix + upgrade-from-old-version scenario
+
+Operator-reported feedback from forkers: "even after rewriting,
+other users not able to update the dashboard."
+
+### Diagnosed bug — path mismatch
+
+FORK_GUIDE Step 1 told forkers to clone to `~/vu2cpl-shack/` (in
+their home directory), but `rebuild_pi.sh` clones to
+`~/.node-red/projects/vu2cpl-shack/` — and **that's where Node-RED
+actually serves `/shack` from**. All the editing instructions in
+the guide referenced the wrong path (`~/vu2cpl-shack/uibuilder/...`).
+
+Forkers ended up with two copies of the repo on their Pi: one in
+`~/` they edited and one in `~/.node-red/projects/` that Node-RED
+actually used. Refreshing `/shack` after editing the home-dir copy
+showed no change, and forkers concluded "dashboard updates don't
+work" — the silent footgun.
+
+### Fix — single-path everywhere
+
+| Section | Change |
+|---|---|
+| **Step 1** | Clone now targets `~/.node-red/projects/vu2cpl-shack/` directly (via `mkdir -p ~/.node-red/projects && git clone … ~/.node-red/projects/vu2cpl-shack`). Added a callout for existing forkers who cloned to the wrong location, with `mv` / `rm -rf` recovery commands. The "to update later" sub-block in Step 1 now points at the correct path. |
+| **Step 3c (TopBar callsign)** | Editing path updated. |
+| **Optional rebrand (icon.svg)** | Two path references updated. |
+| **Updating later** | Cleaned up — was telling forkers to `cd ~/vu2cpl-shack` first, then later `ssh + cd ~/.node-red/projects/...` (the dual-path nonsense). Now one block, one path, with the restart-only-if-flows-changed note and the hard-refresh hint. Cross-references the new upgrade-scenario section for conflict handling. |
+
+`rebuild_pi.sh` itself didn't need any changes — its `[[ -d "$REPO_DIR/.git" ]]` check (line 359) already handles the pre-cloned case idempotently.
+
+### New section — "Already running an older version? Just want the latest dashboard"
+
+Operator's second ask: a forker is running an older version of the
+stack and wants to upgrade just the dashboard / flow code without
+redoing the whole REBUILD_PI / Step 3 customisation cycle.
+
+The new section walks through five steps:
+
+1. **Find where your repo lives** — covers both the correct location
+   and the wrong-old-location (`~/vu2cpl-shack/`) recovery with
+   `sudo systemctl stop nodered && mv … && start nodered`.
+
+2. **Note your local edits** — `git status` + conditional `git stash`
+   if anything's unstaged. Distinguishes "never customised" (30s
+   pull) from "customised" (5-min conflict-resolution flow).
+
+3. **`git pull`** — happy path (clean merge → jump to step 5) vs
+   conflict path (`CONFLICT (content): Merge conflict in flows.json`).
+
+4. **Resolve the flows.json conflict** — recommends the simplest
+   path: `git checkout --theirs flows.json` (accept upstream
+   wholesale), then re-apply customisations via the Node-RED
+   editor's Init Defaults node. Optional `git stash pop` workflow
+   for forkers who want to recover their old values for reference.
+
+5. **Restart Node-RED + hard-refresh** — `sudo systemctl restart nodered`, then Safari Shift+reload for desktop / Settings → Safari → Website Data → delete for mobile / re-add to home screen for PWA. Verifies the upgrade via the new build stamp in the dashboard footer.
+
+Plus a "Things to verify after upgrade" 5-row checklist (flow
+loaded clean / Init Defaults values stuck / dashboard shows your
+data / new endpoints registered / Tasmota topics intact) and a
+"When NOT to use this short path" callout pointing forkers at
+REBUILD_PI follow-up when the upgrade includes new palette nodes
+or new systemd services, with `git log --oneline @{1}..@` to
+inspect what landed.
+
+### Why the new section helps
+
+The original FORK_GUIDE assumed forkers were doing a fresh install.
+Forkers using a stable-ish setup don't want to redo Step 3 every
+time VU2CPL pushes a feature — they want a 5-minute upgrade path.
+The new section closes that gap while being explicit about when
+the short path isn't enough (palette / service changes need
+REBUILD_PI follow-up).
+
+Doc-only change — no Pi restart needed; the Pi will pull this as
+part of the normal doc CDP cycle.
 
 ---
 
