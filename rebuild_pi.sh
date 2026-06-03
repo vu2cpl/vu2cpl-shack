@@ -1151,40 +1151,108 @@ PYEOF
 stage_14_verify() {
     banner "Stage 14 — Final verification (REBUILD_PI.md Step 12)"
 
-    local pass=0 fail=0
+    local pass=0 fail=0 skip=0
 
-    check() {
-        local label="$1" cmd="$2"
+    # Critical checks: things that MUST work for the dashboards to function.
+    # Failure here means the install is incomplete and the operator needs
+    # to act (warn-level, not auto-fix from here).
+    check_critical() {
+        local label="$1" cmd="$2" hint="$3"
         if eval "$cmd" >/dev/null 2>&1; then
             ok "$label"
             ((pass++))
         else
-            warn "$label  ← FAILED"
+            c_red "  ✗ $label"
+            [[ -n "$hint" ]] && c_red "      → $hint"
             ((fail++))
         fi
     }
 
-    check "Pi reachable on LAN"     "ping -c 1 -W 1 192.168.1.169"
-    check "Node-RED editor :1880"   "curl -sf http://localhost:1880"
-    check "Node-RED dashboard /ui"  "curl -sf http://localhost:1880/ui"
-    check "Mosquitto broker alive"  "timeout 3 mosquitto_sub -h localhost -t '\$SYS/#' -C 1"
-    # as3935.service is intentionally disabled — check the topic from
-    # the ESP32 bridge instead (lightning/as3935/hb test below).
-    check "rpi-agent.service active" "systemctl is-active --quiet rpi-agent"
-    check "lp700-server /healthz"   "curl -sf http://localhost:8089/healthz"
-    check "rpi/$(hostname) telemetry" "timeout 65 mosquitto_sub -h localhost -t 'rpi/$(hostname)/cpu' -C 1"
-    check "lightning/as3935/hb"     "timeout 35 mosquitto_sub -h localhost -t 'lightning/as3935/hb' -C 1"
-    check "shack/gpsntp/chrony"     "timeout 65 mosquitto_sub -h localhost -t 'shack/gpsntp/chrony' -C 1"
+    # Optional checks: hardware/services that may not be present on this
+    # Pi. If they pass, great. If they fail, that's "you don't have it
+    # connected yet" — not a script problem.
+    check_optional() {
+        local label="$1" cmd="$2" not_present_hint="$3"
+        if eval "$cmd" >/dev/null 2>&1; then
+            ok "$label"
+            ((pass++))
+        else
+            c_yellow "  ⊘ $label (skipped — $not_present_hint)"
+            ((skip++))
+        fi
+    }
 
+    # ─── Core infrastructure ─────────────────────────────────────────
+    check_critical "Node-RED editor responds at :1880" \
+        "curl -sf --max-time 5 http://localhost:1880" \
+        "Service may have failed to start. Check: sudo systemctl status nodered"
+
+    check_critical "Mosquitto broker reachable" \
+        "timeout 3 mosquitto_sub -h localhost -t '\$SYS/#' -C 1" \
+        "Broker may not be running. Check: sudo systemctl status mosquitto"
+
+    # ─── Project + flows actually loaded (the missing-link checks) ───
+    local projects_conf="$HOME/.node-red/projects/.config.projects.json"
+    check_critical "Node-RED project '$REPO_NAME' is active" \
+        "[[ -f '$projects_conf' ]] && grep -q '\"activeProject\":\\s*\"$REPO_NAME\"' '$projects_conf'" \
+        "Project not activated. Re-run: bash rebuild_pi.sh --stage 7"
+
+    check_critical "Node-RED 'Started flows' in recent log" \
+        "sudo journalctl -u nodered --since '5 minutes ago' --no-pager | grep -q 'Started flows'" \
+        "Flow file did not parse. Check: sudo journalctl -u nodered -n 100 | grep -iE 'error|unknown type'"
+
+    # ─── Dashboards reachable (the end-user goal) ────────────────────
+    # /shack is the canonical Vue dashboard; /ui is the legacy D1 path.
+    # Both should respond once flows are loaded. A 200 OR 401 (auth on)
+    # counts as up — the endpoint is registered.
+    check_critical "Vue dashboard /shack responds (200 or 401)" \
+        "curl -sf -o /dev/null -w '%{http_code}' --max-time 5 http://localhost:1880/shack | grep -qE '^(200|401)\$'" \
+        "Dashboard not served. Likely flows didn't load. Check journalctl for 'Started flows'."
+
+    check_critical "D1 dashboard /ui responds (200 or 401)" \
+        "curl -sf -o /dev/null -w '%{http_code}' --max-time 5 http://localhost:1880/ui | grep -qE '^(200|401)\$'" \
+        "D1 dashboard not served. Likely flows didn't load (same root cause as /shack failure)."
+
+    # ─── Pi-side services ────────────────────────────────────────────
+    check_critical "rpi-agent.service is active" \
+        "systemctl is-active --quiet rpi-agent" \
+        "Reboot/shutdown buttons won't work. Check: sudo systemctl status rpi-agent"
+
+    check_optional "rpi/$(hostname) telemetry on broker" \
+        "timeout 65 mosquitto_sub -h localhost -t 'rpi/$(hostname)/cpu' -C 1" \
+        "monitor.sh cron hasn't fired yet (wait ~60 s after install)"
+
+    # ─── Optional hardware-dependent services ────────────────────────
+    # These FAIL silently if the hardware isn't present — that's expected.
+    check_optional "lp700-server /healthz" \
+        "curl -sf --max-time 3 http://localhost:8089/healthz" \
+        "LP-700 not installed (Stage 11 opt-out) or meter not yet connected"
+
+    check_optional "lightning/as3935/hb topic" \
+        "timeout 35 mosquitto_sub -h localhost -t 'lightning/as3935/hb' -C 1" \
+        "ESP32 AS3935 bridge not running or not yet publishing"
+
+    check_optional "shack/gpsntp/chrony topic" \
+        "timeout 65 mosquitto_sub -h localhost -t 'shack/gpsntp/chrony' -C 1" \
+        "GPS-NTP Pi not running or not publishing telemetry"
+
+    # ─── Summary ─────────────────────────────────────────────────────
     echo
     if [[ $fail -gt 0 ]]; then
-        c_yellow "  $pass pass, $fail fail. See REBUILD_PI.md §Common failure modes."
+        c_red "  $pass pass · $fail FAIL · $skip skipped (optional)"
+        c_red "  Install is NOT complete. Address the FAIL items above."
+        echo
+        c_red "  Common recovery paths:"
+        c_red "    'Project not active'   -> bash rebuild_pi.sh --stage 7"
+        c_red "    'Flow didn't parse'    -> sudo journalctl -u nodered -n 100"
+        c_red "    'Dashboard not served' -> usually downstream of the above two"
     else
-        c_green  "  All $pass checks passed. Shack is up."
+        c_green "  $pass pass · $skip skipped (optional)"
+        c_green "  All critical checks passed. Open http://$(hostname -I | awk '{print $1}'):1880/shack"
     fi
 
-    mark_stage "13_verify"
-    ok "Stage 13 complete"
+    mark_stage "14_verify"
+    ok "Stage 14 complete"
 }
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
