@@ -579,18 +579,24 @@ stage_07_clone_repo() {
     # the Projects feature on (Stage 5) shows an "Open Existing Project /
     # Create New" dialog and NEVER loads the project's flows.json. Result:
     # /ui and /shack 404 even though the repo is cloned and the palette
-    # nodes are installed. This was the final missing step that left
-    # the operator's noderedpi5 install with "no /ui or shack" after all
-    # 14 stages reported complete.
-    local projects_conf="$HOME/.node-red/projects/.config.projects.json"
+    # nodes are installed.
+    #
+    # IMPORTANT: the file is ~/.node-red/.config.projects.json (sibling of
+    # settings.js), NOT ~/.node-red/projects/.config.projects.json. The
+    # `credentialSecret: false` value tells Node-RED to skip the
+    # credentials-encryption-key requirement (otherwise it stops at
+    # "credentials encrypted with unknown key" on first load).
+    local projects_conf="$HOME/.node-red/.config.projects.json"
     if [[ ! -f "$projects_conf" ]] || ! grep -q "\"activeProject\":\\s*\"$REPO_NAME\"" "$projects_conf"; then
         step "Activate project '$REPO_NAME' in Node-RED"
         cat > "$projects_conf" <<EOF
 {
-    "activeProject": "$REPO_NAME",
     "projects": {
-        "$REPO_NAME": {}
-    }
+        "$REPO_NAME": {
+            "credentialSecret": false
+        }
+    },
+    "activeProject": "$REPO_NAME"
 }
 EOF
         # Restart Node-RED so it picks up the active project
@@ -1192,7 +1198,9 @@ stage_14_verify() {
         "Broker may not be running. Check: sudo systemctl status mosquitto"
 
     # ─── Project + flows actually loaded (the missing-link checks) ───
-    local projects_conf="$HOME/.node-red/projects/.config.projects.json"
+    # Note: the file lives at ~/.node-red/.config.projects.json (sibling
+    # of settings.js), NOT under ~/.node-red/projects/.
+    local projects_conf="$HOME/.node-red/.config.projects.json"
     check_critical "Node-RED project '$REPO_NAME' is active" \
         "[[ -f '$projects_conf' ]] && grep -q '\"activeProject\":\\s*\"$REPO_NAME\"' '$projects_conf'" \
         "Project not activated. Re-run: bash rebuild_pi.sh --stage 7"
