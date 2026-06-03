@@ -448,45 +448,42 @@ stage_05_settings_js() {
         step "Patch settings.js to enable Projects (editorTheme.projects.enabled=true)"
         cp "$settings" "${settings}.bak.$(date +%Y%m%d-%H%M%S)"
 
-        # Node-RED reads editorTheme.projects.enabled — NOT a top-level
-        # projects key. An earlier version of this stage inserted the
-        # block at the top level by mistake; that block (if present)
-        # remains harmless dead code while the real fix nests under
-        # editorTheme. Two patch strategies:
+        # Node-RED's DEFAULT settings.js already contains a
+        # `projects: { ... enabled: false, workflow: { mode: "manual" } }`
+        # block nested inside editorTheme. Earlier versions of this stage
+        # tried to INSERT new blocks (first at top level, then inside
+        # editorTheme at the top) — but JavaScript object-literal
+        # "later-key-wins" semantics meant the default block further down
+        # always silently overrode our insertion. The fix is *not* to
+        # insert anything new — just flip the existing default's
+        # `enabled: false` to `enabled: true`.
         #
-        #   1. If settings.js has an uncommented `editorTheme: {` block,
-        #      insert `projects: {...}` immediately after the opening
-        #      brace. Surgical; preserves whatever else is in there.
-        #
-        #   2. Otherwise, append a new top-level
-        #      `editorTheme: { projects: {...} },` block before the
-        #      closing brace of module.exports. JavaScript object literal
-        #      evaluation gives later-declared keys precedence, so a
-        #      stray earlier commented-out editorTheme is irrelevant.
+        # The regex matches any `projects: { ... enabled: false }` block,
+        # using `[^}]*?` to ensure `enabled` is inside the SAME projects
+        # block (not after it). Multi-flip: if the file has multiple
+        # projects: blocks (e.g. leftovers from prior patcher attempts),
+        # all are flipped to true. Idempotent — does nothing if every
+        # projects: block already says enabled: true.
         python3 <<PYEOF || fail "settings.js patch failed"
 import re, sys
 path = "$settings"
 with open(path) as f:
     txt = f.read()
 
-# Look for an UNcommented \`editorTheme: {\` line.
-# A line is uncommented if its first non-whitespace chars are NOT //
-lines = txt.split('\n')
-inject_line = None
-for i, line in enumerate(lines):
-    stripped = line.lstrip()
-    if stripped.startswith('//') or stripped.startswith('/*'):
-        continue
-    if re.match(r'editorTheme\s*:\s*\{', stripped):
-        inject_line = i
-        break
+# Flip any `projects: { ... enabled: false }` to enabled: true. The
+# `[^}]*?` non-greedy match ensures we stay inside the same projects
+# block (no closing brace allowed before enabled).
+pattern = re.compile(r"(projects\s*:\s*\{[^}]*?\benabled\s*:\s*)false\b", re.DOTALL)
+new_txt, count = pattern.subn(r"\1true", txt)
 
-projects_block_inside = """        projects: {
-            enabled: true,
-            workflow: { mode: "manual" }
-        },"""
-
-projects_block_standalone = """
+if count > 0:
+    with open(path, 'w') as f:
+        f.write(new_txt)
+    print(f"  Flipped {count} projects.enabled false -> true")
+else:
+    # No existing projects block to flip. Append a top-level editorTheme
+    # (last-resort fallback for a heavily customized settings.js).
+    fallback = """
     editorTheme: {
         projects: {
             enabled: true,
@@ -494,25 +491,23 @@ projects_block_standalone = """
         }
     },
 """
-
-if inject_line is not None:
-    # Insert projects: as the first key inside the existing editorTheme: { ... }
-    lines.insert(inject_line + 1, projects_block_inside)
-    txt = '\n'.join(lines)
-    print("  Patched: inserted projects block inside existing editorTheme block")
-else:
-    # Add a new top-level editorTheme: { projects: {...} } before final }
-    new_txt, n = re.subn(r"(\n\}\s*;?\s*)\$", projects_block_standalone + r"\1", txt)
+    new_txt, n = re.subn(r"(\n\}\s*;?\s*)\$", fallback + r"\1", txt)
     if n != 1:
         print("  ERROR: could not locate module.exports closing brace", file=sys.stderr)
         sys.exit(1)
-    txt = new_txt
-    print("  Patched: added new top-level editorTheme block")
-
-with open(path, 'w') as f:
-    f.write(txt)
+    with open(path, 'w') as f:
+        f.write(new_txt)
+    print("  No projects block found — appended fallback editorTheme block")
 PYEOF
-        ok "settings.js patched (editorTheme.projects.enabled now true)"
+
+        # Verify Node-RED actually sees enabled=true now
+        local verify_state
+        verify_state=$(cd "$nr_home/.node-red" 2>/dev/null && \
+            node -e 'try { const s = require("./settings.js"); console.log(s.editorTheme && s.editorTheme.projects && s.editorTheme.projects.enabled); } catch(e) { console.log("error:" + e.message); }' 2>&1)
+        if [[ "$verify_state" != "true" ]]; then
+            fail "settings.js patch applied but editorTheme.projects.enabled is still '$verify_state'. File may have unexpected structure. Manual fix: open $settings and ensure editorTheme.projects.enabled = true at the LAST projects: block."
+        fi
+        ok "settings.js patched + verified (editorTheme.projects.enabled=true)"
     fi
 
     step "Restart Node-RED to pick up the change (waiting up to 60 s)"
