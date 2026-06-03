@@ -52,13 +52,35 @@ runbook. Stage-based, idempotent, resumable, fail-fast.
 
 ```bash
 # On the new Pi, after first boot + SSH:
-git clone https://github.com/vu2cpl/vu2cpl-shack.git /tmp/vu2cpl-shack
-bash /tmp/vu2cpl-shack/rebuild_pi.sh
+mkdir -p ~/.node-red/projects
+git clone https://github.com/vu2cpl/vu2cpl-shack.git \
+  ~/.node-red/projects/vu2cpl-shack
+bash ~/.node-red/projects/vu2cpl-shack/rebuild_pi.sh
 ```
 
-The script pauses for two interactive steps:
+> **Why this exact path?** Node-RED's Projects feature serves
+> `/shack` from `~/.node-red/projects/<repo>/`, and the script's
+> `$REPO_DIR` is set there too. Cloning to `/tmp/` or your home
+> dir means the script's stage 7 will clone a **second** copy
+> into `~/.node-red/projects/`, and any edits you made to the
+> original clone's `rebuild_pi.sh` CONFIG block (for your
+> callsign, hostname, fork URL) will be lost. Single path from
+> the start.
+
+> **Forking?** Before running the script, edit the **Fork
+> configuration** block near the top of `rebuild_pi.sh` (4
+> `readonly` constants: `EXPECTED_USER`, `EXPECTED_HOSTNAME`,
+> `REPO_URL`, `REPO_NAME`). Without these edits, Stage 13
+> (station customisation) auto-detects "VU2CPL's own Pi" and
+> skips the prompts — your dashboard would stay branded as
+> VU2CPL's. See FORK_GUIDE.md Part A3 for details.
+
+The script pauses for three interactive steps:
 - Stage 6 — paste the new SSH public key into your GitHub account
 - Stage 12 — paste Club Log API key, password, Telegram token (no echo)
+- Stage 13 — station identity prompts (callsign / grid / MQTT broker /
+  Tasmota antenna topic + channel / threshold / reconnect / QTH text);
+  auto-skipped on VU2CPL's own Pi via the CONFIG-block detection
 
 Everything else runs automatically. Re-run safely after Ctrl-C or reboot:
 state is tracked in `/tmp/rebuild_pi.state`. Single-stage re-run with

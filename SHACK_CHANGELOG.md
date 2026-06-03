@@ -6836,6 +6836,57 @@ Commit `9be2bde`. Doc + script change; no Pi restart needed.
 
 ---
 
+## 2026-06-03 — REBUILD_PI.md: fix "Faster path" clone target (was /tmp/, now correct)
+
+Spotted by the operator while re-reading docs after the Stage 13
+rollout: the REBUILD_PI.md "Faster path — the rebuild script"
+section told forkers to clone to `/tmp/vu2cpl-shack/` and run the
+script from there. Wrong on two counts:
+
+1. **`/tmp/` is wiped on reboot.** Any local edits the forker made
+   to `rebuild_pi.sh` (the new FORK_GUIDE Part A3 fork-config
+   block, in particular) would vanish at first reboot.
+2. **The script's stage 7 clones AGAIN to `~/.node-red/projects/vu2cpl-shack/`.**
+   So the forker ends up with **two copies** of the repo, with the
+   `/tmp/` clone's edits sitting in a different directory than
+   the canonical clone. Subsequent stages `cd $REPO_DIR` operate
+   on the projects-dir clone, not the `/tmp/` one — so anything
+   the forker thought they'd customised wouldn't apply.
+
+This directly contradicted the new FORK_GUIDE A2 (clone to
+`~/.node-red/projects/vu2cpl-shack/`), exactly the kind of
+doc-drift the comprehensive rewrite was meant to eliminate.
+
+### Fix
+
+`REBUILD_PI.md` "Faster path" block now reads:
+
+```bash
+mkdir -p ~/.node-red/projects
+git clone https://github.com/vu2cpl/vu2cpl-shack.git \
+  ~/.node-red/projects/vu2cpl-shack
+bash ~/.node-red/projects/vu2cpl-shack/rebuild_pi.sh
+```
+
+Added two callouts:
+
+1. **"Why this exact path?"** — explains the second-clone-from-stage-7
+   trap and why single-path-from-the-start matters.
+2. **"Forking?"** — points at FORK_GUIDE A3 for the 4-line CONFIG
+   block edits needed before running the script. Without those
+   edits Stage 13 auto-skips and the dashboard stays branded as
+   VU2CPL's.
+
+Also bumped the "script pauses for **two** interactive steps" line
+to three, adding Stage 13 (station customisation) to the list with
+the auto-skip-on-VU2CPL-Pi note.
+
+Single doc edit, no other files. CDP cycle wraps with the existing
+HANDOVER tip pointer at `9be2bde` (still the most recent code
+change); this commit moves it to whatever the upcoming hash is.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:
