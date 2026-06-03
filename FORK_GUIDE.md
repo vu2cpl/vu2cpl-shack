@@ -209,7 +209,8 @@ was already done (state file at `~/.rebuild_pi.state`), it prints
 | 10 — udev rules | Installs udev rules for LP-700 (`telepost` group) and FTDI serial devices. | <1 min |
 | 11 — lp700-server | Clones [`VU3ESV/LP-700-Server`](https://github.com/VU3ESV/LP-700-Server) and installs the WebSocket gateway as a systemd unit (only if you have an LP-700 / LP-500). | 5 min |
 | 12 — secrets | Prompts you for Club Log API key, Club Log password, Telegram bot token. Writes them to `/etc/systemd/system/nodered.service.d/secrets.conf` (root-readable only). | 1 min |
-| 13 — verification | Runs the 16-point post-install checklist and reports pass/fail. | 2 min |
+| 13 — station customisation | **Prompts you for callsign, grid, MQTT broker IP, Tasmota antenna topic + channel, threshold, reconnect timer, QTH text.** Patches Init Defaults in `flows.json` and the TopBar in the Vue dashboard. Also updates `manifest.json`'s `name` for the PWA install. This closes the manual A5.1 + A5.3 + A5.4 steps below into the script. Idempotent — detects whether already customised and skips re-prompting. | 2 min |
+| 14 — verification | Runs the 16-point post-install checklist and reports pass/fail. | 2 min |
 
 **While the script runs**, you'll see colored output: green ✓ for
 done, yellow for warnings, red for errors. Stage 12 pauses to prompt
@@ -246,10 +247,22 @@ bottom of this guide.
 
 ## A5. Tell it about YOUR station (15 minutes)
 
-Now your Pi is fully installed but still showing VU2CPL's values
-everywhere. You'll edit 3 places to flip it to yours.
+> **Most of this section is now automated by Stage 13.** If you let
+> `rebuild_pi.sh` complete normally, the script already prompted
+> you for callsign / grid / MQTT broker / Tasmota topic / threshold /
+> reconnect timer / QTH text, patched Init Defaults + the Vue
+> TopBar, and updated `manifest.json`. **Skim A5.1 + A5.3 to confirm
+> the values look right** — then continue with A5.2 (DXCC creds)
+> and A5.4 (Tasmota topics for each device beyond your antenna
+> switch). Sections below are the manual fallback if you ever
+> need to change values later (re-run with `bash rebuild_pi.sh
+> --stage 13` to re-prompt interactively, or edit by hand as
+> described).
 
-### A5.1 — Init Defaults (Lightning + identity)
+### A5.1 — Init Defaults (Lightning + identity) — manual fallback
+
+> Stage 13 of `rebuild_pi.sh` does this automatically. Read on
+> only if you skipped Stage 13, or want to change values later.
 
 1. Open the Node-RED editor in your browser:
    ```
@@ -341,7 +354,10 @@ or want to update them later:
 > Telegram Router prints a warning to the Node-RED log on every event
 > and skips sending. Harmless; no alerts.
 
-### A5.3 — Dashboard callsign in the Vue header
+### A5.3 — Dashboard callsign in the Vue header — manual fallback
+
+> Stage 13 of `rebuild_pi.sh` does this automatically. Read on
+> only if you skipped Stage 13, or want to change values later.
 
 The big callsign + grid display in the top-left of the `/shack`
 dashboard:

@@ -73,7 +73,8 @@ readonly STAGES=(
     "10_udev_rules"
     "11_lp700_server"
     "12_secrets"
-    "13_verify"
+    "13_customize_station"
+    "14_verify"
 )
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -549,10 +550,266 @@ EOF
     ok "Stage 12 complete"
 }
 
-# ─── Stage 13: verification (matches REBUILD_PI.md Step 12 + #13) ───────────
+# ─── Stage 13: station customization (Init Defaults + TopBar) ───────────────
+#
+# Closes the "now edit Init Defaults via the editor and TopBar via SSH"
+# gap that forkers stumbled on (FORK_GUIDE Part A5). Prompts for callsign,
+# grid, MQTT broker, Tasmota antenna topic + channel, threshold + reconnect
+# timer. Patches flows.json (Init Defaults node) and uibuilder/shack/src/
+# index.js (TopBar) in-place. Idempotent: re-detects VU2CPL defaults; if
+# callsign is already non-VU2CPL, skips with a notice (re-run with
+# --stage 13 to change values later).
 
-stage_13_verify() {
-    banner "Stage 13 — Final verification (REBUILD_PI.md Step 12)"
+stage_13_customize_station() {
+    banner "Stage 13 — Station customization (Init Defaults + TopBar)"
+
+    cd "$REPO_DIR" || fail "REPO_DIR not found"
+
+    # Detect if already customised — read current CALLSIGN from Init Defaults
+    local current_callsign
+    current_callsign=$(python3 - <<'PYEOF' 2>/dev/null
+import json, re
+try:
+    d = json.load(open('flows.json'))
+    init = next((n for n in d if n.get('id')=='ec1fd4dece8c4dc0'), None)
+    if init:
+        m = re.search(r"const CALLSIGN\s*=\s*'([^']+)'", init.get('func',''))
+        print(m.group(1) if m else '')
+except Exception:
+    pass
+PYEOF
+)
+
+    if [[ "$current_callsign" != 'VU2CPL' && -n "$current_callsign" ]]; then
+        ok "Init Defaults already customised (callsign=$current_callsign)"
+        ok "  Re-run with: bash rebuild_pi.sh --stage 13"
+        ok "  …if you want to change values later."
+        mark_stage "13_customize_station"
+        return 0
+    fi
+
+    # If the operator IS VU2CPL (EXPECTED_USER + HOSTNAME match defaults
+    # AND current callsign is still VU2CPL), this is the upstream's own
+    # Pi — no customization needed. Mark as done and skip.
+    if [[ "$EXPECTED_USER" == 'vu2cpl' && "$EXPECTED_HOSTNAME" == 'noderedpi4' \
+          && "$current_callsign" == 'VU2CPL' ]]; then
+        ok "This is VU2CPL's own Pi (CONFIG defaults match) — nothing to customise"
+        ok "  Forkers: edit the CONFIG block at the top of this script so the"
+        ok "  script knows it's running on YOUR Pi, then re-run --stage 13."
+        mark_stage "13_customize_station"
+        return 0
+    fi
+
+    echo
+    c_yellow "  Tell the system about YOUR station. This patches Init Defaults"
+    c_yellow "  in flows.json + the Vue TopBar. Press Ctrl+C to abort."
+    echo
+
+    local callsign grid mqtt_ip power_strip power_ch threshold_km reconnect_min qth_text
+
+    # Callsign — alphanumeric + /, 3-10 chars, force uppercase
+    while true; do
+        read -r -p "  Callsign (e.g. K1ABC):                                  " callsign
+        callsign=$(echo "$callsign" | tr '[:lower:]' '[:upper:]')
+        if [[ "$callsign" =~ ^[A-Z0-9/]{3,10}$ ]]; then break; fi
+        c_red "    Invalid — alphanumeric + slash, 3-10 chars"
+    done
+
+    # Grid — Maidenhead 6-char (letters A-R, digits 0-9, subsquare A-X)
+    while true; do
+        read -r -p "  6-char Maidenhead grid (e.g. FN42aa):                    " grid
+        grid=$(echo "$grid" | sed -E 's/^(..)/\U\1/; s/(..)$/\L\1/')
+        if [[ "$grid" =~ ^[A-R][A-R][0-9][0-9][a-x][a-x]$ ]]; then break; fi
+        c_red "    Invalid grid — must be 6-char Maidenhead (e.g. FN42aa, MK83te)"
+    done
+
+    # MQTT broker IP — default to Pi's own LAN IP
+    local default_ip
+    default_ip=$(hostname -I 2>/dev/null | awk '{print $1}')
+    while true; do
+        read -r -p "  MQTT broker IP (default ${default_ip:-192.168.1.100}): " mqtt_ip
+        mqtt_ip="${mqtt_ip:-${default_ip:-192.168.1.100}}"
+        if [[ "$mqtt_ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then break; fi
+        c_red "    Invalid IP — must be dotted-quad (e.g. 192.168.1.100)"
+    done
+
+    # Tasmota antenna power-strip topic
+    while true; do
+        read -r -p "  Tasmota antenna power-strip topic (default powerstrip1): " power_strip
+        power_strip="${power_strip:-powerstrip1}"
+        if [[ "$power_strip" =~ ^[a-zA-Z0-9_-]+$ ]]; then break; fi
+        c_red "    Invalid topic — alphanumeric, dashes, underscores only"
+    done
+
+    # Antenna POWER channel
+    while true; do
+        read -r -p "  Antenna POWER channel (POWER1..POWER5, default POWER5):  " power_ch
+        power_ch="${power_ch:-POWER5}"
+        power_ch=$(echo "$power_ch" | tr '[:lower:]' '[:upper:]')
+        if [[ "$power_ch" =~ ^POWER[1-5]$ ]]; then break; fi
+        c_red "    Invalid — must be POWER1..POWER5"
+    done
+
+    # Distance / timer with defaults
+    while true; do
+        read -r -p "  Disconnect threshold km (default 40):                   " threshold_km
+        threshold_km="${threshold_km:-40}"
+        if [[ "$threshold_km" =~ ^[0-9]+$ ]] && (( threshold_km > 0 && threshold_km < 200 )); then break; fi
+        c_red "    Invalid — positive integer < 200"
+    done
+
+    while true; do
+        read -r -p "  Reconnect timer minutes (default 20):                   " reconnect_min
+        reconnect_min="${reconnect_min:-20}"
+        if [[ "$reconnect_min" =~ ^[0-9]+$ ]] && (( reconnect_min > 0 && reconnect_min < 240 )); then break; fi
+        c_red "    Invalid — positive integer < 240"
+    done
+
+    # QTH text (free-form, for TopBar sub line)
+    read -r -p "  QTH location text for header (e.g. 'New York · USA'):     " qth_text
+    qth_text="${qth_text:-Your QTH}"
+
+    echo
+    c_yellow "  Summary:"
+    echo "    Callsign:           $callsign"
+    echo "    Grid:               $grid"
+    echo "    MQTT broker:        $mqtt_ip"
+    echo "    Antenna topic:      $power_strip / $power_ch"
+    echo "    Threshold / timer:  ${threshold_km}km / ${reconnect_min}min"
+    echo "    QTH text:           $qth_text"
+    echo
+    local confirm
+    read -r -p "  Patch files with these values? [Y/n] " confirm
+    confirm="${confirm:-Y}"
+    if [[ ! "$confirm" =~ ^[Yy] ]]; then
+        c_yellow "  Skipped. Run --stage 13 again when ready."
+        return 1
+    fi
+
+    # Backup before patching
+    local ts
+    ts=$(date +%Y%m%d_%H%M%S)
+    step "Backing up flows.json -> flows.json.bak.${ts}"
+    cp flows.json "flows.json.bak.${ts}"
+    step "Backing up index.js -> index.js.bak.${ts}"
+    cp uibuilder/shack/src/index.js "uibuilder/shack/src/index.js.bak.${ts}"
+
+    # Patch flows.json (Init Defaults) — export vars for Python heredoc
+    export PATCH_CALLSIGN="$callsign"
+    export PATCH_GRID="$grid"
+    export PATCH_MQTT="$mqtt_ip"
+    export PATCH_STRIP="$power_strip"
+    export PATCH_CH="$power_ch"
+    export PATCH_THRESHOLD="$threshold_km"
+    export PATCH_RECONNECT="$reconnect_min"
+    export PATCH_QTH="$qth_text"
+
+    step "Patching flows.json Init Defaults"
+    python3 - <<'PYEOF' || fail "flows.json patch failed"
+import json, os, re, sys
+CALLSIGN  = os.environ['PATCH_CALLSIGN']
+GRID      = os.environ['PATCH_GRID']
+MQTT      = os.environ['PATCH_MQTT']
+STRIP     = os.environ['PATCH_STRIP']
+CH        = os.environ['PATCH_CH']
+THRESHOLD = os.environ['PATCH_THRESHOLD']
+RECONNECT = os.environ['PATCH_RECONNECT']
+
+with open('flows.json') as f:
+    d = json.load(f)
+init = next((n for n in d if n.get('id') == 'ec1fd4dece8c4dc0'), None)
+if not init:
+    print('ERROR: Init Defaults node (ec1fd4dece8c4dc0) not found', file=sys.stderr)
+    sys.exit(1)
+
+func = init['func']
+patches = [
+    (r"const MQTT_BROKER\s*=\s*'[^']*'",   f"const MQTT_BROKER = '{MQTT}'"),
+    (r"const CALLSIGN\s*=\s*'[^']*'",      f"const CALLSIGN    = '{CALLSIGN}'"),
+    (r"const GRID_SQUARE\s*=\s*'[^']*'",   f"const GRID_SQUARE = '{GRID}'"),
+    (r"const POWER_STRIP\s*=\s*'[^']*'",   f"const POWER_STRIP = '{STRIP}'"),
+    (r"const POWER_CH\s*=\s*'[^']*'",      f"const POWER_CH    = '{CH}'"),
+    (r"const THRESHOLD_KM\s*=\s*\d+",      f"const THRESHOLD_KM = {THRESHOLD}"),
+    (r"const RECONNECT_MIN\s*=\s*\d+",     f"const RECONNECT_MIN = {RECONNECT}"),
+]
+for pat, rep in patches:
+    func, n = re.subn(pat, rep, func)
+    if n != 1:
+        print(f'  WARN: pattern matched {n}x (expected 1): {pat}')
+init['func'] = func
+with open('flows.json', 'w') as f:
+    json.dump(d, f, indent=4)
+print('  flows.json patched')
+PYEOF
+    ok "flows.json Init Defaults patched"
+
+    step "Patching uibuilder/shack/src/index.js TopBar"
+    python3 - <<'PYEOF' || fail "index.js patch failed"
+import os, re, sys
+CALLSIGN = os.environ['PATCH_CALLSIGN']
+GRID     = os.environ['PATCH_GRID']
+QTH      = os.environ['PATCH_QTH']
+
+path = 'uibuilder/shack/src/index.js'
+with open(path) as f:
+    s = f.read()
+
+# Patch TopBar callsign span
+s2, n = re.subn(r'<span class="callsign">[^<]*</span>',
+                f'<span class="callsign">{CALLSIGN}</span>', s)
+if n == 0:
+    print('  WARN: TopBar <span class="callsign"> not found — may have moved')
+else:
+    print(f'  TopBar callsign updated ({n} replacement)')
+    s = s2
+
+# Patch sub line (contains grid + city text)
+s2, n = re.subn(r'<div class="sub">[^<]*</div>',
+                f'<div class="sub">{GRID} · {QTH}</div>', s)
+if n == 0:
+    print('  WARN: TopBar <div class="sub"> not found — may have moved')
+else:
+    print(f'  TopBar sub line updated ({n} replacement)')
+    s = s2
+
+with open(path, 'w') as f:
+    f.write(s)
+PYEOF
+    ok "index.js TopBar patched"
+
+    # Optional: patch manifest.json name if it exists
+    if [[ -f uibuilder/shack/src/manifest.json ]]; then
+        step "Patching manifest.json name"
+        python3 - <<PYEOF || true
+import json
+try:
+    with open('uibuilder/shack/src/manifest.json') as f:
+        m = json.load(f)
+    m['name'] = '${callsign} Shack'
+    m['short_name'] = 'Shack'
+    with open('uibuilder/shack/src/manifest.json', 'w') as f:
+        json.dump(m, f, indent=2)
+    print('  manifest.json patched (name=${callsign} Shack)')
+except Exception as e:
+    print(f'  WARN: manifest.json patch skipped: {e}')
+PYEOF
+    fi
+
+    unset PATCH_CALLSIGN PATCH_GRID PATCH_MQTT PATCH_STRIP PATCH_CH
+    unset PATCH_THRESHOLD PATCH_RECONNECT PATCH_QTH
+
+    ok "Backups kept: flows.json.bak.${ts}, index.js.bak.${ts}"
+    ok "Run 'sudo systemctl restart nodered' once the install finishes,"
+    ok "then hard-refresh /shack to see your station identity."
+
+    mark_stage "13_customize_station"
+    ok "Stage 13 complete"
+}
+
+# ─── Stage 14: verification (matches REBUILD_PI.md Step 12 + #13) ───────────
+
+stage_14_verify() {
+    banner "Stage 14 — Final verification (REBUILD_PI.md Step 12)"
 
     local pass=0 fail=0
 
