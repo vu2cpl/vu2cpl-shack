@@ -12,7 +12,7 @@
 #     bash rebuild_pi.sh --status    # print stages completed
 #     bash rebuild_pi.sh --help
 #
-#  State file: /tmp/rebuild_pi.state — persists across re-runs (not reboots).
+#  State file: $HOME/.rebuild_pi.state — persists across re-runs AND reboots.
 #  Idempotent: every stage is safe to re-run.
 #
 #  Pre-requisites (out of script scope):

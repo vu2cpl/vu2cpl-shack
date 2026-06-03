@@ -7127,6 +7127,123 @@ Doc-only change here. No Pi restart needed.
 
 ---
 
+## 2026-06-03 — rebuild_pi.sh: comprehensive robustness sweep — Stage 6 + timeout audit
+
+Operator hit two more fresh-install failures on `noderedpi5`:
+
+```
+Stage 6:  ✗ GitHub auth failed — pubkey not added or wrong account
+            (but `ssh -T git@github.com` directly: "Hi vu2cpl! …successfully authenticated")
+
+Preflight: curl: (28) Resolving timed out after 5000 milliseconds
+            ✗ github.com unreachable — check network
+            (but git pull works fine)
+```
+
+Both were the same class of bug: **too-tight timeouts and
+fail-on-first-attempt behaviour** in the script. Once they
+surfaced, I did a comprehensive audit of every `timeout`,
+`max-time`, and `fail "..."` call point in the script to catch
+the rest of the class.
+
+### Fix 1 — Stage 6 (GitHub SSH key): opt-in, retry, diagnostic
+
+Previous behaviour: generate key → display → prompt → one SSH
+test → fail hard on first miss with no diagnostic. Three problems:
+
+1. **Most forkers don't push to GitHub.** They `git pull` from
+   upstream (HTTPS — no SSH needed). For them, Stage 6 was
+   gratuitous friction that could fail spuriously.
+2. **The fail discarded the actual GitHub response**, so operators
+   couldn't tell whether the key was on the wrong account, the
+   paste truncated, or the network blocked SSH.
+3. **No retry window.** Freshly added keys can take 5-30 seconds
+   to propagate at GitHub. The script's instant test could miss
+   that window.
+
+Rewrote Stage 6:
+
+- **Opt-in prompt at the top:** "Do you plan to push changes
+  back to GitHub? [y/N]" — default N. If skipped, marks the stage
+  done with the note "git pull from upstream works without an
+  SSH key. If you need push later: bash rebuild_pi.sh --stage 6"
+- **Captures `ssh -T` output** and prints it on every failure
+  along with a 3-cause hint list (key not added / wrong account,
+  paste truncated, firewall) AND the pubkey re-displayed so the
+  operator can re-copy without scrolling.
+- **3-attempt retry loop** with `[r]etry / [s]kip / [q]uit` at
+  each failure. Skip behaves like the opt-out path.
+- **On success**, parses `Hi <user>!` out of the SSH response and
+  reports `authenticated as GitHub user: <name>` — catches the
+  "I added it to the wrong account" case immediately.
+
+### Fix 2 — preflight curl github.com: retry loop with diagnostics
+
+Previous: `curl -sS --max-time 5 -o /dev/null https://github.com`
+— fail on first attempt. 5 s is too tight for a DNS-cold first
+request on a Pi with slow DNS or WiFi (operator's case: DNS
+resolution alone took >5 s).
+
+New:
+
+- **3 attempts**, `--max-time 15 --connect-timeout 10` each, 2 s
+  sleep between.
+- On final fail, prints diagnostics: default route, `/etc/resolv.conf`
+  nameservers, `ping -c1 -W2 github.com` output. Gives the operator
+  actionable information.
+- Reports number of attempts on success (operator can see "took 2
+  attempts" and know DNS was slow but recovered).
+
+### Fix 3 — Stage 5 restart wait: same 5 s timeout bug
+
+After the audit, found that Stage 5's "Restart Node-RED to pick up
+the change" wait used the same broken `timeout 5 bash -c '...'`
+pattern that bit Stage 3 earlier. It hadn't been hit yet, but
+would have been on any fresh-Pi install where settings.js patching
+triggered a restart on a slow SD card.
+
+Bumped to `timeout 60` with 2 s polls between attempts. Same
+journalctl hint on fail.
+
+### Comprehensive timeout audit — full state after fixes
+
+| Spot | Timeout / behaviour | Why this is appropriate |
+|------|---------------------|--------------------------|
+| Preflight curl github.com | 3 × 15 s w/ retry + diagnostics | DNS-cold first request + WiFi can take >5 s; retries handle propagation |
+| Stage 3 `:1880` listen | 90 s, 2 s polls, journalctl hint | Fresh Node-RED bootstrap on slow SD card can take 30-60 s |
+| Stage 3/5 ensure_nodered_user_matches | Auto-fix via systemd drop-in, 60 s bootstrap wait | Drop-in install + restart + first-run dir creation |
+| Stage 5 settings.js detection | systemd-derived path + 30 s polling retry + restart attempt | First-run can lag listen on `:1880`; retry covers it |
+| Stage 5 restart `:1880` listen | 60 s, 2 s polls, journalctl hint | Same class as Stage 3; restart bootstrap can be slow |
+| Stage 6 GitHub SSH | Opt-in, 3 retries, actual GitHub error shown, skip option | Key propagation + wrong-account + paste truncation cases |
+| Stage 9 telemetry smoke test | 5 s warn-only (not `fail`), with "wait 60 s for cron tick" hint | monitor.sh runs every minute; first publish may not yet be there |
+| Stage 14 MQTT verifications | 3 s localhost / 35 s (AS3935 30 s cadence + 5 s buffer) / 65 s (1-minute cron + buffer) | Each matches its source's publish cadence |
+
+Every fail-on-timeout path now has either a retry loop or an
+actionable error message + diagnostic. No more "X failed" with no
+indication of why or what to do next.
+
+### Commits
+
+- `39c9490` — Stage 6: opt-in, retry loop, GitHub-response diagnostic, skip option
+- `00f7774` — Preflight curl: 3 × 15 s retry + diagnostics; Stage 5 restart: 5 s → 60 s
+
+Doc-only change here. No Pi restart needed.
+
+### Class-of-bug lesson
+
+Every `timeout X` / `--max-time X` / `fail` call point in a setup
+script is a potential failure on the slowest plausible runtime
+environment. Slowest plausible for this script: fresh Pi 4B on
+WiFi, slow Class 10 SD card, DNS-cold, ~50 km from the GitHub
+edge. Today: every previously-too-tight timeout has been audited
+and bumped if appropriate, or wrapped in retry+diagnostic if not.
+
+For the operator on `noderedpi5`, the take-away: every previously
+spurious "X failed" message would now self-recover or print
+enough information to act on.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:
