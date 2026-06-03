@@ -59,7 +59,9 @@ readonly ACTUAL_USER="$(id -un)"
 readonly ACTUAL_HOSTNAME="$(hostname)"
 # ═════════════════════════════════════════════════════════════════════════════
 
-readonly STATE_FILE=/tmp/rebuild_pi.state
+# State file lives in $HOME so it survives reboots (Pi reboots during install
+# would otherwise wipe /tmp/ and force re-running stages 1-13 from scratch).
+readonly STATE_FILE="$HOME/.rebuild_pi.state"
 readonly REPO_DIR="$HOME/.node-red/projects/$REPO_NAME"
 readonly LP700_DIR="$HOME/LP-700-Server"
 
@@ -110,6 +112,77 @@ prompt_continue() {
 stage_done()    { grep -qx "$1" "$STATE_FILE" 2>/dev/null; }
 mark_stage()    { mkdir -p "$(dirname "$STATE_FILE")"; echo "$1" >> "$STATE_FILE"; }
 unmark_stage()  { sed -i "/^$1$/d" "$STATE_FILE" 2>/dev/null || true; }
+
+# Ensure Node-RED's systemd unit runs as $ACTUAL_USER.
+#
+# Why this can drift: Pi OS Imager often pre-creates a 'pi' user even when
+# you customize the imager for a different username. The Node-RED installer
+# may then default to 'pi' instead of the user who actually ran the installer.
+# Result: Node-RED runs as 'pi' (writes to /home/pi/.node-red/) while the
+# operator works as 'vu2cpl' (with the repo at /home/vu2cpl/.node-red/projects/).
+# Stage 5+ then fail because settings.js is in the wrong user's home.
+#
+# This helper detects the mismatch, installs a systemd drop-in to override
+# User= and WorkingDirectory=, and restarts Node-RED. Idempotent — does
+# nothing if Node-RED already runs as $ACTUAL_USER.
+ensure_nodered_user_matches() {
+    local nr_user
+    nr_user=$(systemctl show nodered -p User --value 2>/dev/null)
+    [[ -z "$nr_user" ]] && return 0   # nodered.service not installed yet — nothing to do
+    [[ "$nr_user" == "$ACTUAL_USER" ]] && return 0   # already correct
+
+    warn "Node-RED currently runs as systemd User='$nr_user'"
+    warn "but you're running this script as '$ACTUAL_USER'."
+    warn "This causes Node-RED to use /home/$nr_user/.node-red/ for its userDir,"
+    warn "while everything else this script does lives under /home/$ACTUAL_USER/."
+    echo
+    c_yellow "  Fix automatically? This will:"
+    c_yellow "    1. Stop Node-RED"
+    c_yellow "    2. Move /home/$nr_user/.node-red/ to /home/$nr_user/.node-red.bak.<ts>"
+    c_yellow "    3. Install systemd drop-in: /etc/systemd/system/nodered.service.d/user.conf"
+    c_yellow "       setting User=$ACTUAL_USER, WorkingDirectory=/home/$ACTUAL_USER"
+    c_yellow "    4. Restart Node-RED (creates fresh /home/$ACTUAL_USER/.node-red/)"
+    echo
+    read -r -p "  Proceed? [Y/n] " confirm
+    confirm="${confirm:-Y}"
+    if [[ ! "$confirm" =~ ^[Yy] ]]; then
+        fail "User mismatch unresolved. Fix manually (see SHACK_CHANGELOG) and re-run."
+    fi
+
+    step "Stopping Node-RED"
+    sudo systemctl stop nodered || true
+
+    if [[ -d "/home/$nr_user/.node-red" ]]; then
+        local ts; ts=$(date +%Y%m%d_%H%M%S)
+        step "Backing up /home/$nr_user/.node-red -> /home/$nr_user/.node-red.bak.$ts"
+        sudo mv "/home/$nr_user/.node-red" "/home/$nr_user/.node-red.bak.$ts"
+    fi
+
+    step "Writing systemd drop-in /etc/systemd/system/nodered.service.d/user.conf"
+    sudo mkdir -p /etc/systemd/system/nodered.service.d
+    sudo tee /etc/systemd/system/nodered.service.d/user.conf > /dev/null <<EOF
+[Service]
+User=$ACTUAL_USER
+WorkingDirectory=/home/$ACTUAL_USER
+EOF
+
+    step "Reloading systemd + restarting Node-RED"
+    sudo systemctl daemon-reload
+    sudo systemctl restart nodered
+
+    step "Waiting up to 60 s for Node-RED to bootstrap userDir as $ACTUAL_USER"
+    local waited=0
+    while [[ ! -f "/home/$ACTUAL_USER/.node-red/settings.js" ]] && (( waited < 60 )); do
+        sleep 3
+        waited=$((waited + 3))
+    done
+
+    if [[ -f "/home/$ACTUAL_USER/.node-red/settings.js" ]]; then
+        ok "Node-RED now runs as $ACTUAL_USER (settings.js bootstrapped)"
+    else
+        fail "Node-RED restart didn't create /home/$ACTUAL_USER/.node-red/settings.js within 60 s. Check 'sudo journalctl -u nodered -n 50'."
+    fi
+}
 
 # ─── Pre-flight ───────────────────────────────────────────────────────────────
 
@@ -243,9 +316,17 @@ stage_03_nodered_install() {
     sudo systemctl enable --now nodered
     sleep 5
 
-    step "Verify Node-RED listening on :1880"
-    timeout 5 bash -c 'until curl -sf http://localhost:1880 >/dev/null; do sleep 1; done' \
-        || fail "Node-RED not responding on :1880 after 5 s"
+    # Catch the User= mismatch *before* we verify it's listening on :1880 —
+    # if the wrong user owned the install, the helper will recreate the
+    # userDir under the correct one.
+    ensure_nodered_user_matches
+
+    # Fresh installs on slow SD cards: first-ever Node-RED start can take
+    # 30-60 s to bootstrap userDir + parse default flows. The 5-second
+    # timeout this used to be is too tight.
+    step "Verify Node-RED listening on :1880 (waiting up to 90 s)"
+    timeout 90 bash -c 'until curl -sf http://localhost:1880 >/dev/null; do sleep 2; done' \
+        || fail "Node-RED not responding on :1880 after 90 s. Check 'sudo journalctl -u nodered -n 50'."
     ok "Node-RED reachable at http://localhost:1880"
 
     mark_stage "03_nodered_install"
@@ -290,11 +371,15 @@ stage_04_nodered_palette() {
 stage_05_settings_js() {
     banner "Stage 5 — settings.js (Projects feature) (REBUILD_PI.md Step 4)"
 
+    # If Node-RED runs as a different user than the script-runner, fix that
+    # first (idempotent — does nothing if already aligned). This catches the
+    # very common Pi-OS-Imager scenario where 'pi' was auto-created and the
+    # Node-RED installer defaulted to it instead of the operator's actual user.
+    ensure_nodered_user_matches
+
     # Resolve the path Node-RED actually uses. The systemd unit's User=
     # is the source of truth — not necessarily the user running this
-    # script. We could be the same user; we could also be a forker who
-    # changed their user-creation flow, or someone running this from a
-    # different shell session.
+    # script. (Post-helper they should now match, but this stays robust.)
     local nr_user nr_home settings
     nr_user=$(systemctl show nodered -p User --value 2>/dev/null)
     nr_user="${nr_user:-$ACTUAL_USER}"
