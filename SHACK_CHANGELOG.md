@@ -6611,6 +6611,138 @@ part of the normal doc CDP cycle.
 
 ---
 
+## 2026-06-03 — FORK_GUIDE: comprehensive end-to-end rewrite
+
+Operator escalation: "WHAT RUBBISH, I NEED A COMPREHENSIVE GUIDE.
+NOT BITS AND PIECES, I HAVE ASKED AT LEAST 3-4 TIMES IN AS MANY
+DAYS." Across multiple recent sessions I'd been patching FORK_GUIDE
+incrementally — path bug fixed earlier today, then upgrade scenario
+added, then palette gap surfaced when the operator spot-checked.
+Each pass exposed another gap because the document wasn't designed
+to be exhaustive from the start. Time to stop bandages and ship one
+self-contained document.
+
+### Approach
+
+Rewrote FORK_GUIDE.md as a **single end-to-end guide** that no
+longer punts to REBUILD_PI.md for the meat of the install. A forker
+can read top-to-bottom and complete: fresh install, upgrade,
+customization, troubleshooting — without bouncing to other files
+(except E4 doc map for deeper reference).
+
+401 lines → 807 lines, but the depth is what was missing. Sections
+are gated ("skip if not relevant") so the actual reading path for
+any single user is shorter than 807 lines.
+
+### New structure
+
+```
+# Running this shack stack at your station
+## Quick start (3-line cheat sheet for impatient experts)
+## What you end up with (feature inventory)
+## Before you start (hardware + credentials + decisions checklists)
+
+# Part A — Fresh install (90 minutes)
+  A1. Get the Pi ready (Pi OS, SSH, network)
+  A2. Clone the repo to the correct location
+  A3. Edit rebuild_pi.sh for your station (4-line fork config)
+  A4. Run the install script (13 stages, each described)
+      + "What to do if a stage fails" subsection
+  A5. Tell it about YOUR station
+      A5.1 Init Defaults (Lightning + identity)
+      A5.2 DXCC credentials (skip if no DX clusters)
+      A5.3 Dashboard callsign (Vue TopBar)
+      A5.4 Tasmota device topics
+  A6. Install the PWA on each device
+  A7. Verify the install
+
+# Part B — Upgrade an existing install
+  B1. Find where your repo lives (correct vs wrong path recovery)
+  B2. Save your customizations
+  B3. Pull the latest
+  B4. Refresh palette nodes (bash rebuild_pi.sh --stage 4)
+      + WHY palette ≠ flows.json explanation
+  B5. Refresh Pi-side scripts and systemd units (if needed)
+  B6. Resolve flows.json conflicts
+  B7. Restart + hard-refresh
+  B8. Verify after upgrade
+
+# Part C — Hardware variations
+  C1. Hardware you DON'T have (per-card removal table)
+  C2. Different cluster hosts, FlexRadio model, etc.
+
+# Part D — Optional customization
+  D1. Rebrand: icons, name, colors
+  D2. Add your own card
+
+# Part E — Reference
+  E1. What lives where (cheat sheet) — file paths inventory
+  E2. Auth & secrets — what's safe to push
+  E3. Troubleshooting (13-row symptom→fix table)
+  E4. Doc map
+  E5. Where to ask for help
+```
+
+### What's new vs the previous version
+
+- **Palette refresh gap closed** — Part B4 now explicitly explains
+  that palette nodes don't come from flows.json, gives the exact
+  command (`bash rebuild_pi.sh --stage 4`), and documents how to
+  detect when it's needed (`journalctl … grep "Unknown type"`).
+- **Pi-side scripts / systemd / udev refresh gap closed** — Part B5
+  covers the rarer upgrades that need stages 9/10/11 re-run.
+- **Quick start cheat sheet** at the top for experienced installers
+  who just want the 3 commands.
+- **Hardware + credentials + decisions checklists** up front so the
+  forker can prep before starting.
+- **13 install stages each described** in Part A4 in 2-3 sentences
+  with typical time, instead of punting to REBUILD_PI.md.
+- **"What lives where" cheat sheet** (E1) with every file path
+  including runtime data files (`nr_dxcc_seed.json`,
+  `nr_cty_maps.json`, etc.) — answers the "where's my data?"
+  question forkers always have.
+- **13-row troubleshooting table** (E3) covering the symptoms
+  operators have actually reported: dashboard shows —, auto-DC
+  doesn't fire, DXCC cluster red, Telegram silent, PWA icon stale,
+  Power-strip state doesn't sync, /shack 404, editor login fails,
+  HTTP 401, D1 vs /shack auth split, `Unknown type` errors,
+  `ENOENT` runtime data, antenna stuck OFF after reboot (manual_off
+  sticky behaviour — points at the dashboard toggle), stage failures,
+  Cmd+Shift+R doesn't work in Safari.
+- **manual_off sticky behaviour documented** in troubleshooting —
+  operators will hit this after a Pi reboot if they had manually
+  disconnected. The 'antenna stuck OFF' entry explains it's
+  intentional and points at the dashboard toggle.
+- **Hard refresh instructions per browser** — Safari Shift+click,
+  Chrome `Cmd/Ctrl+Shift+R`. Explicit "Cmd+Shift+R doesn't work
+  in Safari" troubleshooting row.
+
+### What this guide deliberately does NOT cover
+
+- Adding new flows from scratch in Node-RED (referred to CLAUDE.md
+  for developer reference).
+- Modifying existing flows beyond editing constants in Init Defaults.
+- Vue component development beyond the "copy an existing card as a
+  template" pattern (D2).
+
+These are out of scope for a forker who just wants to run the stack.
+The doc map (E4) routes them to CLAUDE.md and SHACK_CHANGELOG.md.
+
+### Why this took so long
+
+The previous rewrites (605 → 401 lines, then incremental patches)
+were optimizing for brevity. But forkers needed *exhaustive*, not
+brief — they need every step spelled out because they can't tell
+which step is the one they're missing. The 807-line version is
+longer but each forker reads only the part relevant to them
+(fresh install OR upgrade OR rebrand), so the *effective* length
+they encounter is similar to the previous version while the
+coverage is much more comprehensive.
+
+Doc-only change. No Pi restart needed.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:
