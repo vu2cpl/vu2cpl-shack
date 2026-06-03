@@ -803,10 +803,17 @@ stage_09_pi_scripts() {
         echo
     fi
 
-    # Crontab
+    # Crontab — handle fresh Pi (no existing crontab) gracefully.
+    # `crontab -l` exits 1 when no crontab exists; under set -e + pipefail
+    # this kills the script silently. Capture the current crontab (or
+    # empty), filter out any prior monitor.sh entry, append ours, install.
     step "Schedule monitor.sh in user crontab"
-    (crontab -l 2>/dev/null | grep -v 'monitor.sh' ; \
-     echo "* * * * *  /home/$ACTUAL_USER/monitor.sh") | crontab -
+    local existing_cron
+    existing_cron=$(crontab -l 2>/dev/null || true)
+    {
+        echo "$existing_cron" | grep -v 'monitor.sh' || true
+        echo "* * * * *  /home/$ACTUAL_USER/monitor.sh"
+    } | crontab -
 
     # Enable + start rpi-agent only.
     # as3935.service is intentionally NOT enabled — the ESP32 bridge
