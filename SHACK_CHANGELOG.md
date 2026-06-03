@@ -6404,6 +6404,134 @@ work proving itself across a restart).
 
 ---
 
+## 2026-06-03 — Dashboard ANT toggle drives manual_off (second pass)
+
+Yesterday morning's manual_off plumbing was correct but **unreachable
+from the UI** — the only existing antenna control was the one-way
+"ANTENNA ON" button (D1) and a read-only "ANT ON / ANT OFF" status
+chip (Vue collapsed view). There was no way for the operator to
+manually disconnect the antenna from either dashboard. The orphan
+`Manual Override` function node had been in flows.json since some
+prior UI cleanup, but nothing was emitting the `topic:'manual_override'`
+message it required, so it was dead code.
+
+This commit makes the manual_off path reachable.
+
+### Design
+
+Per operator's "keep it simple" constraint: **2 controls only** on
+the Lightning Master Dashboard — `[ANT toggle]` + `[BYPASS toggle]`.
+No third "Manual Override" button (the historical UI that was
+removed). The orphan Manual Override function node is deleted.
+
+The single ANT toggle:
+- **D1 Master Dashboard:** existing "ANTENNA ON" button replaced with
+  bidirectional `antToggle`. Green border + "ANTENNA ON" when antenna
+  is on; red border + "ANTENNA OFF" when off. Click → confirm dialog
+  → fetch.
+- **Vue /shack LightningCard:** the **collapsed-view ANT chip** in the
+  card header is now clickable (`@click.stop` so it doesn't also
+  expand the card). The **expanded-view ANTENNA ON button** also
+  becomes bidirectional (`btn--green` ↔ `btn--red`). Both call the
+  same `action('antennaToggle')` handler.
+
+Confirm dialog wording:
+- Going OFF → "Disconnect antenna?"
+- Going ON → "Reconnect antenna?"
+
+Matches the existing SPE + Power Control button confirm pattern —
+one extra tap prevents accidental disconnect mid-QSO from a stray
+mobile tap.
+
+### Backend — symmetric ant-on / ant-off chain
+
+| Endpoint | What it does |
+|----------|--------------|
+| `POST /lightning/ant-on` (modified) | Sets `antenna_off=false`, `manual_off=false`, fires Tasmota ON, cancels Reconnect Timer, clears TX inhibit. **NEW:** emits `manual_on` event_record on output 3 → JSONL → Telegram. Outputs bumped 3 → 4. |
+| `POST /lightning/ant-off` (NEW) | Mirror of ant-on. Sets `antenna_off=true`, `manual_off=true` (file scope, sticky), fires Tasmota OFF, cancels Reconnect Timer, fires TX inhibit. Emits `manual_off` event_record on output 3 → JSONL → Telegram. |
+
+3 new nodes added on Lightning tab: `lightning_antoff_http_in_01`,
+`lightning_antoff_fn_01`, `lightning_antoff_res_01`. Same shape as the
+existing ant-on chain.
+
+### Telegram alerts — 2 new event types
+
+- `manual_off` → 🟣 "ANTENNA OFF (manual) · Operator disconnected via
+  dashboard · Antenna: OFF · TX inhibited · Time …"
+- `manual_on` → ✅ "ANTENNA ON (manual) · Operator reconnected via
+  dashboard · Antenna: ON · TX allowed again · Time …"
+
+The 🟣 MANUAL HOLD alert (for auto-strikes while operator has
+manually disconnected) shipped in the first pass and is unchanged —
+distinct from the `manual_off` alert (which fires *when* operator
+hits the toggle) vs MANUAL HOLD (which fires when a strike arrives
+*during* manual-off state).
+
+### Deletions
+
+- `Manual Override` function node `22e5df9713499f53` deleted from
+  the Lightning tab.
+- Master Dashboard's outgoing wires updated — `22e5df9713499f53`
+  removed from its output 0 wire list (now wires to `88ce7a0b9c27747d`
+  + `82f732a0dac14945` only).
+- D1 Master Dashboard: dead `_antOn` JS handler removed. Orphan
+  `antStatus` element references already gone since the 2026-05-27
+  switchBox cleanup (`setAnt()` was writing into the void); now
+  `setAnt()` drives the live `antToggle` element.
+
+### Files touched
+
+- `flows.json` — 1 node deleted + 3 nodes added + 3 nodes modified
+  (ant-on, Master Dashboard, Telegram Router).
+- `uibuilder/shack/src/index.js` — LightningCard template (collapsed
+  chip + expanded button) + action handler. Build stamp v9 → v10.
+- `uibuilder/shack/src/index.css` — new `.ant-chip` hover style.
+- `uibuilder/shack/src/index.html` — cache buster `index.js?v=9 → 10`
+  and `index.css?v=3 → 4`.
+
+### Test plan
+
+1. **D1 dashboard load** — Lightning card shows green "ANTENNA ON" button.
+2. **D1 click while ON** → confirm "Disconnect antenna?" → confirm OK
+   → button flips to red "ANTENNA OFF" within ~1s (waiting for stat_ant
+   message echo). Tasmota plug actually turned off (verify via Power
+   Control tab or `mosquitto_sub` on `stat/powerstrip1/POWER5`).
+   Telegram: 🟣 ANTENNA OFF (manual) message.
+3. **D1 fire TEST close-zone strike** → status badge shows "MANUAL
+   OFF · TEST 5km — alert only". Telegram: 🟣 MANUAL HOLD message.
+   No second disconnect; no MQTT to powerstrip; no timer.
+4. **D1 click while OFF** → confirm "Reconnect antenna?" → OK → button
+   flips back to green "ANTENNA ON". Tasmota plug on. Telegram:
+   ✅ ANTENNA ON (manual).
+5. **Vue collapsed view** — close the LightningCard (click chevron).
+   The "ANT ON" / "ANT OFF" chip in the header is now clickable.
+   Hover shows the `.ant-chip` highlight + tooltip. Click on
+   collapsed chip → confirm → toggles state. Card does **NOT** also
+   expand (the `@click.stop` does its job).
+6. **Vue expanded view** — same toggle behaviour on the big button.
+7. **Restart safety test** (the safety-critical case): set ANT OFF
+   on dashboard → `sudo systemctl restart nodered` → after restart,
+   button should still render red "ANTENNA OFF" (state.antennaOn
+   stays false because `flow.manual_off` is `true` in file context).
+   Fire TEST inject → still alert-only.
+
+### Edge cases handled
+
+- Initial state on D1 dashboard load (before first stat_ant message
+  arrives): button defaults to green "ANTENNA ON" — matches
+  pre-change behaviour.
+- Vue `@click.stop` on the collapsed chip prevents the click from
+  also bubbling up to the `card__header`'s `@click="expanded =
+  !expanded"` handler.
+- `confirm()` dialog uses native browser modal — works in Safari
+  (operator's daily-driver per global CLAUDE.md). Blocks until
+  responded; cancel does nothing.
+
+Commit [`beb82d9`](https://github.com/vu2cpl/vu2cpl/vu2cpl-shack/commit/beb82d9).
+Pi restarted 2026-06-03 08:53 IST, all flow connectors back up clean.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:

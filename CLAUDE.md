@@ -306,7 +306,8 @@ Agent endpoints: `POST /reboot`, `POST /shutdown`
 
 | Method | Path | Tab | Purpose |
 |--------|------|-----|---------|
-| POST | `/lightning/ant-on` | Lightning | Force antenna ON |
+| POST | `/lightning/ant-on` | Lightning | Force antenna ON; clears `manual_off`; emits `manual_on` event_record |
+| POST | `/lightning/ant-off` | Lightning | Force antenna OFF; sets `manual_off=true` (sticky, file scope); emits `manual_off` event_record |
 | POST | `/lightning/radio-on` | Lightning | Force radio ON |
 | POST | `/lightning/threshold` | Lightning | Save disconnect distance |
 | POST | `/lightning/reconnect` | Lightning | Save reconnect timer |
@@ -389,6 +390,31 @@ Weather data to Header template (`eee1a8b8552aa21f`): plain `wxData` object (no 
 - AS3935 distance 63 = out of range → treated as 0 km (close zone → always disconnect)
 - AS3935 ESP32 bridge cmd channel: `lightning/as3935/cmd` (in), `lightning/as3935/cmd/ack` (out, not retained). `set` keys: nf, wdth, srej, tun_cap, mask_dist, min_num_lightning, afe_gb (`"indoor"`/`"outdoor"`), modem_sleep. Actions: republish_status, calibrate_tun_cap, reboot, factory_reset_wifi. NVS-persisted; status republished after each successful set. Controlled from the **AS3935 Control Panel** ui_template on the `AS3935 Tuning` flow tab (`fe70cfdcdfa19aa4`)
 - Weather: Parse Weather has 2 outputs — output 1 → Header (plain wxData), output 2 → Master Dashboard ({type:'weather'})
+
+#### Dashboard ANT toggle drives manual-off (2026-06-03, second pass)
+
+Both dashboards now have a **single bidirectional ANT toggle** in the
+Lightning card — collapsed-view chip in Vue, button in D1. Click flips
+the antenna state with a confirm dialog. Internally:
+
+- ON click → `POST /lightning/ant-on` → existing handler, now also
+  emits `manual_on` event_record (Telegram fires ✅ "ANTENNA ON
+  (manual)"). Clears `flow.manual_off`.
+- OFF click → `POST /lightning/ant-off` (NEW endpoint, symmetric to
+  ant-on). Sets `flow.manual_off=true` (file-scoped, sticky), fires
+  Tasmota OFF + TX inhibit, cancels Reconnect Timer, emits
+  `manual_off` event_record (Telegram fires 🟣 "ANTENNA OFF
+  (manual)").
+
+End state: 2 controls only on the Lightning card — ANT toggle +
+BYPASS toggle. The orphan **Manual Override** function node
+(`22e5df9713499f53`, unreachable since some prior UI cleanup) was
+**deleted** as part of this change. Its incoming wires from Master
+Dashboard were also removed.
+
+The `manual_off` plumbing below (Trigger Disconnect early-exit, etc.)
+is now reachable via the UI. Before this change, the sticky-off
+backend had no trigger path.
 
 #### Manual disconnect = sticky-off (2026-06-03)
 
