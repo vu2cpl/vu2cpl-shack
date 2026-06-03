@@ -210,11 +210,31 @@ preflight() {
         ok "Raspberry Pi detected"
     fi
 
-    # Internet
-    if ! curl -sS --max-time 5 -o /dev/null https://github.com; then
-        fail "github.com unreachable — check network."
+    # Internet — 5 s was too tight for DNS-cold first request on a Pi
+    # with slow DNS or WiFi. Try 3 times with 15 s timeout each before
+    # giving up. ConnectTimeout separates DNS/connect from full transfer.
+    step "Internet reachability check (github.com)"
+    local net_attempt=1 net_max=3 net_ok=false
+    while (( net_attempt <= net_max )); do
+        if curl -sS --max-time 15 --connect-timeout 10 \
+                -o /dev/null https://github.com 2>/dev/null; then
+            net_ok=true
+            break
+        fi
+        if (( net_attempt < net_max )); then
+            warn "Attempt $net_attempt failed — retrying (DNS may need to warm up)"
+            sleep 2
+        fi
+        net_attempt=$((net_attempt + 1))
+    done
+    if ! $net_ok; then
+        c_red "  Diagnostics:"
+        c_red "    Default route   : $(ip route show default 2>/dev/null | head -1 | sed 's/^/                      /')"
+        c_red "    DNS servers     : $(grep nameserver /etc/resolv.conf 2>/dev/null | head -3 | tr '\n' ' ')"
+        c_red "    Direct ping test: $(ping -c1 -W2 github.com 2>&1 | head -2 | tail -1)"
+        fail "github.com unreachable after $net_max attempts. Check Wi-Fi/Ethernet, DNS, and any captive-portal interception."
     fi
-    ok "Internet reachable"
+    ok "Internet reachable (took $net_attempt attempt$([[ $net_attempt -gt 1 ]] && echo s))"
 
     # Sudo without password? (We'll need it many times.)
     if ! sudo -n true 2>/dev/null; then
@@ -439,11 +459,11 @@ PYEOF
         ok "settings.js patched"
     fi
 
-    step "Restart Node-RED to pick up the change"
+    step "Restart Node-RED to pick up the change (waiting up to 60 s)"
     sudo systemctl restart nodered
     sleep 5
-    timeout 5 bash -c 'until curl -sf http://localhost:1880 >/dev/null; do sleep 1; done' \
-        || fail "Node-RED not responding after restart"
+    timeout 60 bash -c 'until curl -sf http://localhost:1880 >/dev/null; do sleep 2; done' \
+        || fail "Node-RED not responding after restart. Check 'sudo journalctl -u nodered -n 50'."
     ok "Node-RED back up"
 
     mark_stage "05_settings_js"
