@@ -7021,7 +7021,109 @@ For a forker on their own Pi:
 The script is now genuinely "git clone + bash rebuild_pi.sh" for
 forkers, no pre-edits required.
 
-Commit `<next>`. Doc + script change; no Pi restart needed.
+Commit `56b0c87`. Doc + script change; no Pi restart needed.
+
+---
+
+## 2026-06-03 — rebuild_pi.sh: Pi-OS-Imager `pi` user trap + state file relocation
+
+Operator hit two real fresh-install failures on `noderedpi5` while
+testing the `--auto-detect-user` script changes. Both are now
+covered in script.
+
+### Failure 1 — Node-RED installed for the wrong user
+
+Symptom (verbatim from operator):
+
+```
+✗ /home/vu2cpl/.node-red/settings.js not found — Stage 3 should have created it
+```
+
+Root cause: **Pi OS Imager pre-creates a `pi` user** even when you
+customise the imager to add a different username (`vu2cpl` in this
+case). The Node-RED installer (`update-nodejs-and-nodered`) then
+chose `pi` as the systemd `User=` instead of the operator's actual
+user. Result: Node-RED was writing to `/home/pi/.node-red/`, but
+the script + the repo + everything else lived under
+`/home/vu2cpl/`. Stage 5 (settings.js patcher) couldn't find
+settings.js because it was in the wrong user's home dir, and the
+script's `[[ -f ... ]]` test also failed due to permission masking
+on `pi`'s home subtree.
+
+#### Fix — new `ensure_nodered_user_matches()` helper
+
+Reads `systemctl show nodered -p User --value`. If the systemd
+User= doesn't match `ACTUAL_USER`, prompts the operator `[Y/n]` to
+auto-fix:
+
+1. `sudo systemctl stop nodered`
+2. Backs up `/home/<wrong-user>/.node-red/` to `.node-red.bak.<ts>`
+3. Writes a systemd drop-in:
+   ```
+   /etc/systemd/system/nodered.service.d/user.conf
+   [Service]
+   User=<correct-user>
+   WorkingDirectory=/home/<correct-user>
+   ```
+4. `daemon-reload` + restart
+5. Polls up to 60 s for `/home/<correct-user>/.node-red/settings.js`
+   to appear (first-run bootstrap on a slow SD card)
+
+Idempotent — does nothing when already aligned. Called from:
+
+- **Stage 3** (right after `systemctl enable --now nodered`,
+  before the `:1880` reachability check) — catches the fresh-install
+  case on the first pass.
+- **Stage 5** (start of stage) — defense-in-depth for resumed
+  installs where Stage 3 was already marked done in the state file
+  from a prior buggy run.
+
+Backwards-compat for VU2CPL on noderedpi4 (`User=vu2cpl` and
+`ACTUAL_USER=vu2cpl`): the helper returns immediately. Identical
+behaviour.
+
+### Failure 2 — Stage 3 `:1880` timeout too tight
+
+The old 5-second timeout for first-ever Node-RED start was failing
+intermittently on fresh installs on slow SD cards (Node-RED's
+first-run userDir bootstrap can take 30–60 s). Bumped to 90 s with
+a 2 s poll interval. Plus the failure message now points at
+`sudo journalctl -u nodered -n 50` so the operator knows where to
+look.
+
+### Failure 3 — state file in `/tmp/`
+
+Pi reboot mid-install would wipe `/tmp/rebuild_pi.state`, forcing
+the operator to replay stages 1-N from scratch. State file moved
+to `$HOME/.rebuild_pi.state`. Persists across reboots. Same
+file-locking semantics; same `--reset` flag clears it.
+
+### Test result
+
+Operator confirmed on `noderedpi5` after applying the immediate
+recovery (manually writing the drop-in then re-running `--stage 5`):
+
+```
+✓ settings.js found at /home/vu2cpl/.node-red/settings.js (Node-RED user: vu2cpl)
+✓ Projects feature already enabled
+→ Restart Node-RED to pick up the change
+✓ Node-RED back up
+✓ Stage 5 complete
+```
+
+The script-level auto-fix (commits `ce80438` + `304d504`) means a
+future forker hitting the same Pi-OS-Imager `pi` user trap gets a
+`[Y/n]` prompt and self-recovery instead of a `fail`.
+
+### Commits
+
+- `ce80438` — Stage 5 derives settings.js path from systemd User= +
+  retries 30 s for bootstrap lag.
+- `304d504` — `ensure_nodered_user_matches` helper; called from
+  Stage 3 + Stage 5; state file moved to `$HOME`; Stage 3 timeout
+  5 s → 90 s.
+
+Doc-only change here. No Pi restart needed.
 
 ---
 
