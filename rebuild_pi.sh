@@ -434,29 +434,85 @@ stage_05_settings_js() {
     fi
     ok "settings.js found at $settings (Node-RED user: $nr_user)"
 
-    if grep -q '"manual"' "$settings" && grep -q 'projects:' "$settings"; then
-        ok "Projects feature already enabled"
-    else
-        step "Patch settings.js to enable Projects (mode: manual)"
-        sudo cp "$settings" "${settings}.bak.$(date +%Y%m%d-%H%M%S)"
+    # Use Node itself to evaluate settings.js — it's just a JS module —
+    # and check the current value of editorTheme.projects.enabled. This
+    # is more reliable than grep-pattern matching, especially for the
+    # nested case where projects can live inside editorTheme: { ... }.
+    local projects_state
+    projects_state=$(cd "$nr_home/.node-red" 2>/dev/null && \
+        node -e 'try { const s = require("./settings.js"); console.log(s.editorTheme && s.editorTheme.projects && s.editorTheme.projects.enabled); } catch(e) { console.log("error:" + e.message); }' 2>&1)
 
-        # Insert projects block before the closing brace of module.exports
-        python3 <<PYEOF
+    if [[ "$projects_state" == "true" ]]; then
+        ok "Projects feature already enabled (editorTheme.projects.enabled=true)"
+    else
+        step "Patch settings.js to enable Projects (editorTheme.projects.enabled=true)"
+        cp "$settings" "${settings}.bak.$(date +%Y%m%d-%H%M%S)"
+
+        # Node-RED reads editorTheme.projects.enabled — NOT a top-level
+        # projects key. An earlier version of this stage inserted the
+        # block at the top level by mistake; that block (if present)
+        # remains harmless dead code while the real fix nests under
+        # editorTheme. Two patch strategies:
+        #
+        #   1. If settings.js has an uncommented `editorTheme: {` block,
+        #      insert `projects: {...}` immediately after the opening
+        #      brace. Surgical; preserves whatever else is in there.
+        #
+        #   2. Otherwise, append a new top-level
+        #      `editorTheme: { projects: {...} },` block before the
+        #      closing brace of module.exports. JavaScript object literal
+        #      evaluation gives later-declared keys precedence, so a
+        #      stray earlier commented-out editorTheme is irrelevant.
+        python3 <<PYEOF || fail "settings.js patch failed"
 import re, sys
 path = "$settings"
-with open(path) as f: txt = f.read()
-if 'projects:' not in txt:
-    block = """
-    projects: {
-        enabled: true,
-        workflow: { mode: "manual" }
+with open(path) as f:
+    txt = f.read()
+
+# Look for an UNcommented \`editorTheme: {\` line.
+# A line is uncommented if its first non-whitespace chars are NOT //
+lines = txt.split('\n')
+inject_line = None
+for i, line in enumerate(lines):
+    stripped = line.lstrip()
+    if stripped.startswith('//') or stripped.startswith('/*'):
+        continue
+    if re.match(r'editorTheme\s*:\s*\{', stripped):
+        inject_line = i
+        break
+
+projects_block_inside = """        projects: {
+            enabled: true,
+            workflow: { mode: "manual" }
+        },"""
+
+projects_block_standalone = """
+    editorTheme: {
+        projects: {
+            enabled: true,
+            workflow: { mode: "manual" }
+        }
     },
 """
-    # Insert just before the final closing brace of module.exports = {...}
-    txt = re.sub(r"(\n\}\s*;?\s*)$", block + r"\1", txt)
-    with open(path, 'w') as f: f.write(txt)
+
+if inject_line is not None:
+    # Insert projects: as the first key inside the existing editorTheme: { ... }
+    lines.insert(inject_line + 1, projects_block_inside)
+    txt = '\n'.join(lines)
+    print("  Patched: inserted projects block inside existing editorTheme block")
+else:
+    # Add a new top-level editorTheme: { projects: {...} } before final }
+    new_txt, n = re.subn(r"(\n\}\s*;?\s*)\$", projects_block_standalone + r"\1", txt)
+    if n != 1:
+        print("  ERROR: could not locate module.exports closing brace", file=sys.stderr)
+        sys.exit(1)
+    txt = new_txt
+    print("  Patched: added new top-level editorTheme block")
+
+with open(path, 'w') as f:
+    f.write(txt)
 PYEOF
-        ok "settings.js patched"
+        ok "settings.js patched (editorTheme.projects.enabled now true)"
     fi
 
     step "Restart Node-RED to pick up the change (waiting up to 60 s)"
