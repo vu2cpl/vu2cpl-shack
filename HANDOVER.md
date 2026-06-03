@@ -2,7 +2,7 @@
 
 **Period:** 2026-05-01 → 2026-05-26
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
-**Last commit at handover:** `e5f799e` — Stage 5 uibuilder.uibRoot fix (closes the noderedpi5 fresh-install saga)
+**Last commit at handover:** `7a930d1` — Docs CDP wrap for the noderedpi5 fresh-install saga (commit msg subject is stale; body is correct)
 
 ---
 
