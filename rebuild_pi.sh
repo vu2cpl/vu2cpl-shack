@@ -510,6 +510,59 @@ PYEOF
         ok "settings.js patched + verified (editorTheme.projects.enabled=true)"
     fi
 
+    # ─── uibuilder.uibRoot — point at the project's uibuilder dir ───
+    # uibuilder v7.6.x auto-detects project mode. uibuilder v7.7.x
+    # (seen on noderedpi5, 2026-06-03) doesn't — it uses the userDir
+    # default (~/.node-red/uibuilder/) which has no /shack source, so
+    # /shack returns 404 even though the project is active.
+    #
+    # Setting uibuilder.uibRoot explicitly in settings.js makes it
+    # project-aware regardless of version.
+    local uib_state
+    uib_state=$(cd "$nr_home/.node-red" 2>/dev/null && \
+        node -e 'try { const s = require("./settings.js"); console.log(s.uibuilder && s.uibuilder.uibRoot ? "set" : "unset"); } catch(e) { console.log("error:" + e.message); }' 2>&1)
+
+    if [[ "$uib_state" == "set" ]]; then
+        ok "uibuilder.uibRoot already set in settings.js"
+    else
+        step "Add uibuilder.uibRoot pointing at project ($REPO_NAME)"
+        export REBUILD_REPO_NAME="$REPO_NAME"
+        export REBUILD_SETTINGS_PATH="$settings"
+        python3 <<'PYEOF' || fail "uibuilder.uibRoot patch failed"
+import os, re, sys
+path = os.environ['REBUILD_SETTINGS_PATH']
+repo_name = os.environ['REBUILD_REPO_NAME']
+
+with open(path) as f:
+    txt = f.read()
+
+uib_block = f"""
+    uibuilder: {{
+        uibRoot: __dirname + '/projects/{repo_name}/uibuilder'
+    }},
+"""
+
+new_txt, n = re.subn(r"(\n\}\s*;?\s*)$", uib_block + r"\1", txt)
+if n != 1:
+    print("  ERROR: could not locate module.exports closing brace", file=sys.stderr)
+    sys.exit(1)
+
+with open(path, 'w') as f:
+    f.write(new_txt)
+print(f"  Added uibuilder.uibRoot -> projects/{repo_name}/uibuilder")
+PYEOF
+        unset REBUILD_REPO_NAME REBUILD_SETTINGS_PATH
+
+        # Verify
+        local uib_verify
+        uib_verify=$(cd "$nr_home/.node-red" 2>/dev/null && \
+            node -e 'try { const s = require("./settings.js"); console.log(s.uibuilder && s.uibuilder.uibRoot); } catch(e) { console.log("error:" + e.message); }' 2>&1)
+        if [[ "$uib_verify" != *"projects/$REPO_NAME/uibuilder" ]]; then
+            fail "uibuilder.uibRoot patch applied but verify returned '$uib_verify'. Expected path ending in projects/$REPO_NAME/uibuilder."
+        fi
+        ok "uibuilder.uibRoot patched + verified ($uib_verify)"
+    fi
+
     step "Restart Node-RED to pick up the change (waiting up to 60 s)"
     sudo systemctl restart nodered
     sleep 5
