@@ -7318,6 +7318,106 @@ Doc-only change here. No Pi restart needed.
 
 ---
 
+## 2026-06-03 — rebuild_pi.sh: Stage 13 always-prompt + Stage 9 crontab fix
+
+Three commits closing out remaining UX issues on the `noderedpi5`
+install after the main project-activation saga.
+
+### `1e3e69a` — Stage 13 drops `ACTUAL_USER=='vu2cpl'` auto-skip
+
+Operator: "why is this not offering any customisation options?"
+
+The old Stage 13 had a "Running as user 'vu2cpl' with callsign=VU2CPL
+→ skip" path that fired even when the operator clearly wanted to
+customize. The reasoning was "this must be VU2CPL's primary Pi
+(`noderedpi4`) where defaults are correct." But the same operator can
+have multiple Pis (`noderedpi4` = primary, `noderedpi5` = test/backup)
+that need different MQTT broker IPs, hostnames, Tasmota topics, etc.
+
+Fix: replaced with an opt-in prompt. *The operator knows their
+context; the script just asks.*
+
+### `514af17` — Stage 13 also drops `callsign != VU2CPL` auto-skip
+
+Operator: "it allowed customisation only once. after that it just says
+its already customised?"
+
+Caught a second auto-skip in the same stage. After the operator
+customized once (callsign now ≠ VU2CPL), `--stage 13` re-runs hit a
+DIFFERENT auto-skip: "Init Defaults already customised, re-run with
+`--stage 13`." But they WERE running with `--stage 13`. Catch-22.
+
+Root cause: two layers of idempotency were redundantly fighting each
+other:
+
+| Layer | Purpose | Behaviour |
+|---|---|---|
+| **State-file marker** | Main pipeline skips already-done stages | Correctly bypassed by `--stage N` (which calls `unmark_stage` first) |
+| **Stage function's value-based auto-skip** | "Belt-and-suspenders" | Fired after the state-file marker was unmarked, blocking re-runs |
+
+The state-file marker alone is sufficient. The value-based auto-skip
+was redundant *and* wrong.
+
+Fix: removed the value-based auto-skip. Stage 13 now **always**
+prompts when it runs, showing the current callsign in the prompt
+text so the operator knows the current state. Default answer is N,
+so the main-pipeline case is still a fast Enter-tap to no-op.
+
+### `75dfe77` — Stage 9 crontab survives "no existing crontab"
+
+Operator: Stage 9 exited silently right after `→ Schedule monitor.sh
+in user crontab` — no error, no completion message. Script just
+returned to the prompt.
+
+Root cause: a `set -euo pipefail` interaction in this pipeline:
+
+```bash
+(crontab -l 2>/dev/null | grep -v 'monitor.sh' ; echo "* * * * *  …") | crontab -
+```
+
+On a fresh Pi, `crontab -l` exits 1 (no crontab). The inner pipe's
+pipefail returns non-zero. `set -e` exits the subshell **before** the
+`echo` runs. Subshell output is empty. Outer `crontab -` installs an
+empty crontab and exits non-zero. Pipefail catches the subshell's
+exit. Script aborts silently because `crontab -l`'s stderr was
+redirected to `/dev/null` and `set -e` doesn't print on abort.
+
+Fix: capture the existing crontab with `|| true` first, then process:
+
+```bash
+existing_cron=$(crontab -l 2>/dev/null || true)
+{
+    echo "$existing_cron" | grep -v 'monitor.sh' || true
+    echo "* * * * *  /home/$ACTUAL_USER/monitor.sh"
+} | crontab -
+```
+
+Same class of bug as Stage 14's earlier `13_verify` typo: silent
+failure that left the install half-finished. Audited for similar
+patterns elsewhere in the script — no other pipelines have the
+"first command might fail on fresh install + pipefail kills us"
+shape unprotected.
+
+### Doc updates landing alongside
+
+REBUILD_PI.md: the "Faster path" callout's bullet for Stage 13
+updated to describe the new opt-in prompt behaviour. State-file
+path also updated from `/tmp/rebuild_pi.state` (stale; moved to
+`$HOME` earlier) to `$HOME/.rebuild_pi.state`.
+
+FORK_GUIDE.md A4 stage table: Stage 13 row updated to reflect
+"always asks, default N" semantics. Stage 14 row updated to
+mention the critical-vs-optional split that landed in `7e6e863`.
+
+REBUILD_PI.md Step 12 "16-point checklist" note clarified — the
+manual checklist is wider than what `--stage 14` runs
+programmatically (script's 7 critical + 4 optional vs the
+operator's full-stack view), and that's by design.
+
+Doc CDP wrap covers all three code commits + the three doc fixes.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:

@@ -77,14 +77,16 @@ bash ~/.node-red/projects/vu2cpl-shack/rebuild_pi.sh
 The script pauses for three interactive steps:
 - Stage 6 — paste the new SSH public key into your GitHub account
 - Stage 12 — paste Club Log API key, password, Telegram token (no echo)
-- Stage 13 — station identity prompts (callsign / grid / MQTT broker /
-  Tasmota antenna topic + channel / threshold / reconnect / QTH text);
-  auto-skipped on VU2CPL's own Pi via the CONFIG-block detection
+- Stage 13 — opt-in prompt: "(Re-)customize station identity for this
+  Pi? [y/N]". Default N keeps current values (upstream defaults or
+  whatever you set previously). Press y to (re-)enter callsign /
+  grid / MQTT broker / Tasmota antenna topic + channel / threshold /
+  reconnect / QTH text. Always asks; never auto-decides.
 
 Everything else runs automatically. Re-run safely after Ctrl-C or reboot:
-state is tracked in `/tmp/rebuild_pi.state`. Single-stage re-run with
-`bash rebuild_pi.sh --stage 9`. Wipe state and start over with
-`--reset`.
+state is tracked in `$HOME/.rebuild_pi.state` (survives reboots).
+Single-stage re-run with `bash rebuild_pi.sh --stage 9`. Wipe state and
+start over with `--reset`.
 
 The runbook below stays as the **manual fallback** when the script
 breaks, and as the source-of-truth for what each stage does. Both must
@@ -579,7 +581,9 @@ Each reply should be `{"Timezone":"+05:30"}`.
 
 ## Step 12 — Final verification
 
-A 16-point checklist. Hit each one.
+A 16-point checklist for the operator's full-stack verification.
+
+*Note: when `rebuild_pi.sh --stage 14` runs the same verification programmatically, it uses a smaller split (7 critical + 4 optional) tuned to the script's perspective — every Pi has Node-RED/Mosquitto/rpi-agent, but LP-700/AS3935/GPS-NTP are operator-specific. The manual checklist below adds the wider lens that's useful when verifying by hand.*
 
 | # | Check | Pass criterion |
 |---|-------|----------------|

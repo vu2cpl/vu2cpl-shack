@@ -213,8 +213,8 @@ was already done (state file at `~/.rebuild_pi.state`), it prints
 | 10 — udev rules | Installs udev rules for LP-700 (`telepost` group) and FTDI serial devices. | <1 min |
 | 11 — lp700-server | Clones [`VU3ESV/LP-700-Server`](https://github.com/VU3ESV/LP-700-Server) and installs the WebSocket gateway as a systemd unit (only if you have an LP-700 / LP-500). | 5 min |
 | 12 — secrets | Prompts you for Club Log API key, Club Log password, Telegram bot token. Writes them to `/etc/systemd/system/nodered.service.d/secrets.conf` (root-readable only). | 1 min |
-| 13 — station customisation | **Prompts you for callsign, grid, MQTT broker IP, Tasmota antenna topic + channel, threshold, reconnect timer, QTH text.** Patches Init Defaults in `flows.json` and the TopBar in the Vue dashboard. Also updates `manifest.json`'s `name` for the PWA install. This closes the manual A5.1 + A5.3 + A5.4 steps below into the script. Idempotent — detects whether already customised and skips re-prompting. | 2 min |
-| 14 — verification | Runs the 16-point post-install checklist and reports pass/fail. | 2 min |
+| 13 — station customisation | **Always asks "(Re-)customize station identity for this Pi? [y/N]".** Press y → prompts you for callsign, grid, MQTT broker IP, Tasmota antenna topic + channel, threshold, reconnect timer, QTH text. Press Enter → keeps current values. On y: patches Init Defaults in `flows.json` and the TopBar in the Vue dashboard. Also updates `manifest.json`'s `name` for the PWA install. This closes the manual A5.1 + A5.3 + A5.4 steps below into the script. | 2 min |
+| 14 — verification | Runs a post-install checklist split into critical (Node-RED responds / project active / flows parsed / `/shack` + `/ui` reachable / `rpi-agent` active / Mosquitto alive) and optional (LP-700 healthz, AS3935 telemetry, GPS-NTP telemetry — skip-not-fail when hardware isn't present). | 2 min |
 
 **While the script runs**, you'll see colored output: green ✓ for
 done, yellow for warnings, red for errors. Stage 12 pauses to prompt
