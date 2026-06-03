@@ -634,10 +634,36 @@ stage_09_pi_scripts() {
 
     # Sudoers
     step "Install sudoers entry"
+    local sudoers_file="/etc/sudoers.d/rpi-agent"
     echo "$ACTUAL_USER ALL=(ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown" | \
-        sudo tee /etc/sudoers.d/rpi-agent > /dev/null
-    sudo chmod 440 /etc/sudoers.d/rpi-agent
-    sudo visudo -c >/dev/null || fail "sudoers syntax error"
+        sudo tee "$sudoers_file" > /dev/null
+    sudo chmod 440 "$sudoers_file"
+
+    # Validate ONLY our file. `sudo visudo -c` (no -f) checks the whole
+    # /etc/sudoers tree and can fail on pre-existing issues elsewhere
+    # (e.g. /etc/sudoers.d/debian_frontend often ships with 644 perms
+    # instead of 440 — not our file to fix, but it breaks -c).
+    if ! sudo visudo -c -f "$sudoers_file" >/dev/null 2>&1; then
+        sudo rm -f "$sudoers_file"
+        fail "Our sudoers entry failed validation. ACTUAL_USER='$ACTUAL_USER' — check for special chars."
+    fi
+
+    # Detect pre-existing problems elsewhere in /etc/sudoers.d/. Don't
+    # fail — those are out of this script's scope to fix automatically
+    # (could be system packages we don't own). Just surface them as a
+    # warning so the operator knows.
+    local other_visudo
+    other_visudo=$(sudo visudo -c 2>&1 || true)
+    if echo "$other_visudo" | grep -qE "bad permissions|parse error|syntax error" \
+       && ! echo "$other_visudo" | grep -qE "$sudoers_file"; then
+        echo
+        warn "Pre-existing issues in /etc/sudoers.d/ detected (not from this script):"
+        echo "$other_visudo" | grep -E "bad permissions|parse error|syntax error" \
+            | sed 's/^/      /'
+        warn "Common fix for 'bad permissions': sudo chmod 440 /etc/sudoers.d/<filename>"
+        warn "Our rpi-agent file is fine. Continuing — but fix those separately."
+        echo
+    fi
 
     # Crontab
     step "Schedule monitor.sh in user crontab"
