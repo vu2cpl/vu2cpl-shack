@@ -724,22 +724,95 @@ EOF
 stage_11_lp700_server() {
     banner "Stage 11 — lp700-server gateway (REBUILD_PI.md Step 9)"
 
+    # Already running? Done.
     if systemctl is-active --quiet lp700-server 2>/dev/null; then
         ok "lp700-server already active"
-    else
-        if [[ ! -d "$LP700_DIR" ]]; then
-            step "Clone VU3ESV/LP-700-Server"
-            git clone https://github.com/VU3ESV/LP-700-Server.git "$LP700_DIR"
-        fi
-        step "Run redeploy.sh"
-        cd "$LP700_DIR" && ./redeploy.sh
+        mark_stage "11_lp700_server"
+        return 0
     fi
 
-    step "Verify /healthz"
-    if curl -sf http://localhost:8089/healthz >/dev/null; then
+    # Opt-in: most forkers don't own an LP-700 / LP-500. Skip if absent.
+    echo
+    c_yellow "  lp700-server is the WebSocket gateway for the Telepost LP-700"
+    c_yellow "  (or LP-500) power/SWR meter. Skip if you don't have one."
+    echo
+    local has_lp700
+    read -r -p "  Do you have an LP-700 / LP-500 meter on this Pi? [y/N] " has_lp700
+    has_lp700="${has_lp700:-N}"
+    if [[ ! "$has_lp700" =~ ^[Yy] ]]; then
+        ok "Skipping Stage 11 — no LP-700 hardware"
+        mark_stage "11_lp700_server"
+        return 0
+    fi
+
+    # Clone (or detect existing)
+    if [[ ! -d "$LP700_DIR" ]]; then
+        step "Clone VU3ESV/LP-700-Server"
+        git clone https://github.com/VU3ESV/LP-700-Server.git "$LP700_DIR"
+    else
+        ok "Repo already present at $LP700_DIR — pulling latest"
+        (cd "$LP700_DIR" && git pull --ff-only) || warn "git pull failed; continuing with current checkout"
+    fi
+
+    cd "$LP700_DIR"
+
+    # Detect architecture and map to the release's binary suffix.
+    # Release v0.2.1+ ships: linux-arm64 (Pi 3/4/5 + 64-bit OS),
+    # linux-armv7 (Pi Zero/1 + 32-bit OS, also works for ARMv6).
+    local arch_suffix
+    case "$(uname -m)" in
+        aarch64|arm64)        arch_suffix="linux-arm64" ;;
+        armv7l|armv6l|armhf)  arch_suffix="linux-armv7" ;;
+        *)
+            warn "Unsupported architecture: $(uname -m). Skipping lp700-server."
+            mark_stage "11_lp700_server"
+            return 0
+            ;;
+    esac
+
+    # Pull the binary URL out of the latest release's asset list.
+    step "Locating $arch_suffix binary in latest release"
+    local release_url
+    release_url=$(curl -sS --max-time 15 \
+        "https://api.github.com/repos/VU3ESV/LP-700-Server/releases/latest" 2>/dev/null \
+        | grep -oE "https://[^\"]*lp700-server-$arch_suffix" | head -1)
+    if [[ -z "$release_url" ]]; then
+        fail "Could not find lp700-server-$arch_suffix in latest release. The repo may have restructured again — check https://github.com/VU3ESV/LP-700-Server/releases manually."
+    fi
+    ok "Found: $release_url"
+
+    step "Downloading binary -> dist/lp700-server-$arch_suffix"
+    mkdir -p dist
+    curl -sSL --max-time 60 -o "dist/lp700-server-$arch_suffix" "$release_url" \
+        || fail "Download failed. Check connectivity to github.com."
+    chmod +x "dist/lp700-server-$arch_suffix"
+    ok "Binary downloaded ($(du -h "dist/lp700-server-$arch_suffix" | cut -f1))"
+
+    # install.sh creates the 'lp700' user, installs the binary +
+    # config.toml + systemd unit + udev rule, reloads systemd + udev,
+    # and enables/starts the service.
+    step "Running deploy/install.sh (creates user, installs systemd unit, starts service)"
+    sudo ./deploy/install.sh || fail "deploy/install.sh failed — check the output above."
+
+    step "Verify /healthz (waiting up to 30 s)"
+    local hz_ok=false hz_waited=0
+    while (( hz_waited < 30 )); do
+        if curl -sf --max-time 3 http://localhost:8089/healthz >/dev/null; then
+            hz_ok=true
+            break
+        fi
+        sleep 2
+        hz_waited=$((hz_waited + 2))
+    done
+
+    if $hz_ok; then
         ok "lp700-server /healthz responds"
     else
-        warn "lp700-server /healthz not responding — check journalctl -u lp700-server"
+        warn "lp700-server /healthz not responding after 30 s."
+        warn "  Check: sudo journalctl -u lp700-server -n 30"
+        warn "  Common cause: no LP-700 connected yet (the service starts but"
+        warn "  the meter isn't reachable). Connect the meter via USB, then"
+        warn "  'sudo systemctl restart lp700-server'."
     fi
 
     mark_stage "11_lp700_server"
