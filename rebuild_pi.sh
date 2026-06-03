@@ -1027,8 +1027,8 @@ PYEOF
 
     # Idempotency: if the current callsign in Init Defaults is already
     # something other than VU2CPL, someone has run this stage (or
-    # edited Init Defaults by hand). Skip — re-run with --stage 13 if
-    # you want to change values.
+    # edited Init Defaults by hand). Skip silently — re-run with
+    # --stage 13 if you want to change values.
     if [[ "$current_callsign" != 'VU2CPL' && -n "$current_callsign" ]]; then
         ok "Init Defaults already customised (callsign=$current_callsign)"
         ok "  Re-run with: bash rebuild_pi.sh --stage 13"
@@ -1037,15 +1037,29 @@ PYEOF
         return 0
     fi
 
-    # If the running user is 'vu2cpl' AND callsign is still 'VU2CPL',
-    # this is almost certainly upstream's own Pi (operator: VU2CPL).
-    # No customization needed. (Forkers cloning to a Pi user named
-    # 'vu2cpl' as their own login: edit your callsign in Stage 13 OR
-    # type a non-VU2CPL value when prompted on next run.)
-    if [[ "$ACTUAL_USER" == 'vu2cpl' && "$current_callsign" == 'VU2CPL' ]]; then
-        ok "Running as user 'vu2cpl' with callsign=VU2CPL — upstream's own Pi"
-        ok "  Nothing to customise. (If you ARE a forker who happens to use"
-        ok "  the username 'vu2cpl', run: bash rebuild_pi.sh --stage 13)"
+    # Otherwise: ALWAYS prompt. Don't auto-skip based on
+    # ACTUAL_USER=='vu2cpl' — the same operator can have multiple Pis
+    # (noderedpi4 = primary station, noderedpi5 = test/backup) with
+    # different MQTT brokers, hostnames, Tasmota topics, etc. Each Pi
+    # may need its own customization or may want to keep defaults.
+    # The operator knows their context; the script just asks.
+    echo
+    c_yellow "  This stage patches station identity into flows.json (Init"
+    c_yellow "  Defaults) and the Vue dashboard TopBar:"
+    c_yellow "    callsign, grid, MQTT broker IP, Tasmota antenna topic,"
+    c_yellow "    POWER channel, disconnect threshold, reconnect timer, QTH."
+    echo
+    c_yellow "  Skip if THIS Pi should keep upstream defaults — e.g. you're"
+    c_yellow "  VU2CPL bringing up a secondary/test Pi that should mirror"
+    c_yellow "  noderedpi4's identity, or you'll edit Init Defaults in the"
+    c_yellow "  Node-RED editor manually later."
+    echo
+    local proceed
+    read -r -p "  Customize station identity for this Pi? [y/N] " proceed
+    proceed="${proceed:-N}"
+    if [[ ! "$proceed" =~ ^[Yy] ]]; then
+        ok "Skipped station customization — keeping upstream defaults"
+        ok "  Re-run later with: bash rebuild_pi.sh --stage 13"
         mark_stage "13_customize_station"
         return 0
     fi
