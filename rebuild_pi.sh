@@ -259,6 +259,27 @@ stage_01_apt_packages() {
     sudo apt update -qq
     sudo DEBIAN_FRONTEND=noninteractive apt -y -qq dist-upgrade
 
+    # If dist-upgrade installed a new kernel, /lib/modules/$(uname -r)/ no
+    # longer matches the running kernel — any later `modprobe` (including the
+    # i2c-dev step below) will fail with "FATAL: Module … not found". Catch it
+    # here, before the operator hits the confusing message, and abort cleanly
+    # so they can reboot + resume.
+    if [[ -f /var/run/reboot-required ]] || [[ -f /run/reboot-required ]]; then
+        c_red "  ✗ Kernel/firmware updated — reboot required before continuing"
+        c_yellow "    The dist-upgrade picked up a new kernel. Until you reboot:"
+        c_yellow "      • modprobe i2c-dev will return 'FATAL: Module not found'"
+        c_yellow "        (running kernel's /lib/modules/ dir is stale)"
+        c_yellow "      • dtparam=i2c_arm flip from raspi-config won't take effect"
+        c_yellow "      • Other udev-managed devices may misbehave"
+        c_yellow "    Recovery:"
+        c_yellow "        sudo reboot"
+        c_yellow "      After boot:"
+        c_yellow "        cd ~/.node-red/projects/vu2cpl-shack"
+        c_yellow "        bash rebuild_pi.sh      # resumes Stage 1 (dist-upgrade is idempotent)"
+        # Don't mark_stage — we want Stage 1 to replay on resume.
+        exit 0
+    fi
+
     step "Install runtime packages"
     sudo apt install -y -qq \
         git \

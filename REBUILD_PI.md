@@ -144,6 +144,16 @@ stay in sync — the script's banners reference these section numbers.
 After the reboot, SSH back in:
 
 ```bash
+sudo apt update
+sudo apt -y dist-upgrade
+
+# IMPORTANT: if dist-upgrade installed a new kernel, REBOOT NOW
+# before running anything else. Check:
+ls /var/run/reboot-required 2>/dev/null && echo "← reboot pending; sudo reboot"
+# If pending: sudo reboot, then SSH back in.
+# (Without this, any later `modprobe` returns "FATAL: Module … not
+# found" — running kernel's /lib/modules/ dir is stale until reboot.)
+
 sudo apt install -y \
   git \
   mosquitto mosquitto-clients \
@@ -164,12 +174,19 @@ ls /dev/i2c-1                              # should exist; if missing, reboot an
 sudo i2cdetect -y 1                        # AS3935 should appear at 0x03 (or 0x01/0x02)
 ```
 
+> **If `modprobe` returns `FATAL: Module i2c-dev not found`**: the
+> dist-upgrade above installed a new kernel and you haven't rebooted
+> yet. `/lib/modules/$(uname -r)/` no longer matches the running
+> kernel. Fix: `sudo reboot`, then re-run from `sudo modprobe i2c-dev`.
+
 > **If `/dev/i2c-1` still doesn't appear** after `modprobe + reboot`:
 > only the **legacy Pi-side `as3935.service` daemon** needs it, and
 > that daemon has been **standby fallback** since 2026-05-11 (the
 > ESP32 bridge in `vu2cpl-as3935-bridge` is the live publisher).
 > Skip this step and continue — normal shack operation is unaffected.
-> `rebuild_pi.sh` Stage 1 now warns-not-fails on the same condition.
+> `rebuild_pi.sh` Stage 1 now warns-not-fails on the same condition,
+> and aborts cleanly with a reboot-recovery message when it detects
+> the post-dist-upgrade kernel-pending state.
 
 ---
 

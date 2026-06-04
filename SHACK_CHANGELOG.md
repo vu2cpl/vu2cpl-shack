@@ -7554,6 +7554,103 @@ hardware" — text is consistent, no change needed.
 
 ---
 
+## 2026-06-04 — rebuild_pi.sh Stage 1: detect pending-reboot after dist-upgrade
+
+Follow-up to the I²C-verify softening earlier today. Operator hit
+a **different** failure mode on the next attempt:
+
+```
+modprobe: FATAL: Module i2c-dev not found
+```
+
+### Root cause
+
+Stage 1 does `apt -y dist-upgrade` as its very first step. On a
+fresh Pi-OS install that step **almost always picks up a new
+`raspberrypi-kernel*` package** — the upstream firmware/kernel
+moves faster than the imager's bundled snapshot. After the
+upgrade lands:
+
+- New kernel's modules are written to
+  `/lib/modules/<new-kernel-version>/`
+- Old kernel is still running (`uname -r` returns the OLD version)
+- `/lib/modules/$(uname -r)/` is therefore stale or empty
+- `modprobe` looks under that path → finds nothing → returns
+  `FATAL: Module i2c-dev not found`
+
+Same mechanism breaks ANY post-dist-upgrade `modprobe`, not just
+`i2c-dev`. Pi OS drops a marker file at `/var/run/reboot-required`
+(or `/run/reboot-required`) to signal exactly this condition.
+
+### Fix
+
+Stage 1 now checks for the reboot-required marker **immediately
+after `dist-upgrade`**, before any later step can hit the
+confusing modprobe FATAL. If the marker exists:
+
+- Print a red ✗ explaining the kernel-was-updated state
+- Spell out what's broken (modprobe, dtparam from raspi-config,
+  any udev-managed device) so the operator doesn't waste time
+  chasing individual symptoms
+- Print the exact recovery sequence (`sudo reboot` → `git pull
+  + bash rebuild_pi.sh`)
+- **Exit 0 without marking Stage 1 complete** — so the resume
+  after reboot replays Stage 1 (dist-upgrade is idempotent;
+  nothing new to install second time round)
+
+Net effect: instead of running on through `step "Install runtime
+packages"` and hitting the modprobe FATAL further down with no
+useful context, the operator gets a single clear "reboot then
+resume" message right where it makes sense — at the end of the
+dist-upgrade step.
+
+### Why not auto-reboot?
+
+Considered. Rejected because:
+
+- Stage 1 is interactive (the operator is watching the install
+  banner); pulling the rug out is rude
+- The operator may have other tasks open in the SSH session
+- The script's design philosophy is "narrate clearly, let the
+  operator decide" — same philosophy as Stages 6 / 11 / 13's
+  opt-in prompts
+
+The recovery sequence is a copy-paste; explicit > clever.
+
+### Companion: the I²C-verify softening landed earlier today still applies
+
+When the operator follows the recovery path (reboot, re-run
+Stage 1), the post-reboot run will:
+
+1. Skip the reboot-required check (marker file is gone)
+2. Re-run dist-upgrade idempotently (no new packages)
+3. Run raspi-config's dtparam flip (idempotent — already set)
+4. Reach the I²C verify step. Now `modprobe i2c-dev` succeeds
+   (modules dir matches running kernel) AND `/dev/i2c-1`
+   materialises (dtparam takes effect on the running kernel
+   tree).
+5. Mark Stage 1 complete, proceed to Stage 2.
+
+For a fleet-monitor-only Pi without AS3935 hardware: same as
+before — the I²C verify warns-not-fails on the missing device
+node, prints the legacy-daemon-is-fallback context, and Stage 1
+still marks complete.
+
+### Documentation drift checked
+
+- REBUILD_PI.md Step 2 — manual path: the same reboot-required
+  case applies to a forker doing the manual rebuild. Added a
+  callout right after `dist-upgrade` documenting the check + the
+  fix, matching the script's behaviour.
+- FORK_GUIDE.md — Stage 1 row text ("5 min") could be misleading
+  if a reboot is required. Left as-is; the wall-clock impact is
+  marginal (reboot ≈ 30 s) and the row already covers the
+  common case. The "Troubleshooting" table at the end already
+  has a kernel-update-pending row pattern; not re-touched this
+  pass.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:
