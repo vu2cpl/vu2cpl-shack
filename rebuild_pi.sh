@@ -210,6 +210,24 @@ preflight() {
         ok "Raspberry Pi detected"
     fi
 
+    # Surface the Pi-OS release — surprisingly useful for debugging because
+    # several raspi-config subcommands and config-file paths differ between
+    # releases (bullseye = /boot/config.txt + do_serial; bookworm/trixie =
+    # /boot/firmware/config.txt + do_serial_hw). Showing the codename here
+    # makes those mismatches obvious at a glance.
+    if [[ -r /etc/os-release ]]; then
+        local os_pretty os_codename
+        os_pretty=$(grep -E '^PRETTY_NAME=' /etc/os-release | cut -d'"' -f2)
+        os_codename=$(grep -E '^VERSION_CODENAME=' /etc/os-release | cut -d= -f2)
+        ok "Pi OS:      ${os_pretty:-unknown} (${os_codename:-?})"
+        if [[ "$os_codename" == 'bullseye' || "$os_codename" == 'buster' ]]; then
+            warn "$os_codename is past Pi OS's current-stable line"
+            warn "(current = bookworm or trixie). Most things still work, but a few"
+            warn "raspi-config subcommands and boot-config paths differ. The script"
+            warn "has fallbacks where it can; you may hit edge cases otherwise."
+        fi
+    fi
+
     # Internet — 5 s was too tight for DNS-cold first request on a Pi
     # with slow DNS or WiFi. Try 3 times with 15 s timeout each before
     # giving up. ConnectTimeout separates DNS/connect from full transfer.
@@ -293,8 +311,31 @@ stage_01_apt_packages() {
         bash-completion
 
     step "Enable I²C + hardware UART"
-    sudo raspi-config nonint do_i2c 0
-    sudo raspi-config nonint do_serial_hw 0
+    sudo raspi-config nonint do_i2c 0 \
+        || warn "raspi-config do_i2c returned non-zero — may need 'sudo raspi-config' interactive: Interface Options → I²C → Enable"
+
+    # raspi-config's serial-enable subcommand changed names between Pi-OS
+    # releases. Bookworm+ exposes do_serial_hw (single-purpose, enables just
+    # the hardware UART). Bullseye and earlier use do_serial with a combined
+    # 2-bit arg: 0=cons+hw, 1=nothing, 2=hw only, 3=cons only. We try the
+    # modern call first; on "not found" fall back to the bullseye form.
+    if sudo raspi-config nonint do_serial_hw 0 2>/dev/null; then
+        : # bookworm path worked
+    elif sudo raspi-config nonint do_serial 2 2>/dev/null; then
+        : # bullseye fallback: cons off + hw on
+        c_yellow "    (Used bullseye-era 'do_serial 2' fallback — older raspi-config)"
+    else
+        warn "Could not enable hardware UART non-interactively"
+        c_yellow "    Tried both bookworm (do_serial_hw 0) and bullseye (do_serial 2) forms;"
+        c_yellow "    neither was recognised. The rotator + SPE amplifier use /dev/ttyAMA0 /"
+        c_yellow "    /dev/ttyS0, so without the UART enabled they won't be reachable."
+        c_yellow "    Recovery (manual):"
+        c_yellow "      sudo raspi-config"
+        c_yellow "        → Interface Options → Serial Port"
+        c_yellow "        → \"Would you like a login shell over serial?\"  → No"
+        c_yellow "        → \"Would you like the serial port hardware to be enabled?\" → Yes"
+        c_yellow "        → Finish → reboot"
+    fi
 
     # Some Pi-OS images don't auto-load i2c-dev after raspi-config's dtparam flip;
     # and udev can take a beat to populate /dev/i2c-1 even when it does.

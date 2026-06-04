@@ -7651,6 +7651,96 @@ still marks complete.
 
 ---
 
+## 2026-06-04 — rebuild_pi.sh Stage 1: bullseye fallback for raspi-config do_serial; preflight shows OS
+
+Third Stage-1 fix today, this time on a different Pi — `adersh`
+forking the repo onto a Pi OS Bullseye host. The script ran clean
+through preflight + apt steps, then died here:
+
+```
+  → Enable I²C + hardware UART
+/usr/bin/raspi-config: 2909: do_serial_hw: not found
+```
+
+### Root cause
+
+`raspi-config nonint do_serial_hw 0` is **bookworm+**. On bullseye
+(and buster), the equivalent is `do_serial` with combined
+arg semantics:
+
+| arg | login shell over serial | hardware UART |
+|-----|-------------------------|---------------|
+| 0   | on                      | on            |
+| 1   | off                     | off           |
+| 2   | off                     | **on** ← what we want |
+| 3   | on                      | off           |
+
+The script issued `do_serial_hw 0`, raspi-config's bash function
+table didn't have that name, returned `127 "not found"`, and
+`set -e` killed the run.
+
+### Fix — Stage 1
+
+Try the modern call first; on failure, fall back to the bullseye
+form; on both failing, warn with a manual recovery sequence
+(operator runs `sudo raspi-config` interactively → Interface
+Options → Serial Port → No / Yes). Same warn-not-fail pattern
+as today's other Stage-1 fixes — the script keeps going and
+marks the stage complete, because the hardware-UART enable is
+only needed for the rotator + SPE amplifier paths (a fleet-
+monitor-only Pi without serial hardware doesn't need it at all).
+
+`do_i2c 0` also got a `|| warn …` guard for symmetry — it's
+been stable across releases but if a future Pi OS renames it
+the script now degrades gracefully instead of dying silently.
+
+### Bonus — preflight surfaces Pi-OS version
+
+While in the area, added an `/etc/os-release` lookup right after
+the Raspberry-Pi detection line. Preflight now prints:
+
+```
+✓ Pi OS:      Raspbian GNU/Linux 11 (bullseye) (bullseye)
+```
+
+— so the next debugging pass can SEE the OS version at a glance
+instead of inferring it from package-version timestamps after a
+failure. If the codename is `bullseye` or `buster`, an extra
+soft warning fires noting these are past Pi OS's current-stable
+line; the script has fallbacks where it can but the operator
+should be aware that edge cases may surface.
+
+This is the kind of cheap, high-leverage observability that
+should have been in the script from day one. Same lesson the
+noderedpi5 saga kept reinforcing: when a `fail` fires with no
+context, every minute the operator spends inferring "WHY did
+this fail?" is a minute the script should have spent telling
+them up front.
+
+### Documentation drift check
+
+REBUILD_PI.md Step 2 currently uses `do_serial_hw` in the manual
+path. Most forkers will be on bookworm/trixie now (bullseye
+reached end-of-life late 2024), so the manual path is fine for
+the common case. Left as-is to avoid bloating with version-
+gating that the script already handles for the rare bullseye
+forker.
+
+### What the forker should do next
+
+```bash
+cd ~/.node-red/projects/vu2cpl-shack
+git pull
+bash rebuild_pi.sh    # resumes from Stage 1
+```
+
+Stage 1 will replay (apt steps are idempotent), the bullseye
+fallback will fire and proceed, and Stages 2–14 continue
+normally. Expect a soft warning about bullseye being past Pi
+OS current-stable — informational only, not blocking.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:
