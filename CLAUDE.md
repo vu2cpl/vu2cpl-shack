@@ -225,7 +225,7 @@ Agent endpoints: `POST /reboot`, `POST /shutdown`
 | `38a6451a95a57685` | DXCC Dashboard | Main ui_template |
 | `b981643f37259f89` | DXCC Prefix Lookup + Alert Classify | Core classification logic |
 | `1a13cd6d9aabaa54` | Bootstrap Worked Table | Loads from file store / seed |
-| `9fd52c02a8486dce` | Fetch All Modes + Parse | Club Log API fetch |
+| `aa7434df62b95ebc` | Fetch All Modes + Parse lotw only | Club Log API fetch (LoTW-confirmed slice; replaced the older all-modes `9fd52c02a8486dce` which was deleted 2026-06-04 — see SHACK_CHANGELOG) |
 | `6e60f619acad462e` | Build Club Log API Request | Builds API URL |
 | `bf47f506a324b481` | Blacklist Manager | Manages blocked callsigns |
 | `2286f0a512733e92` | Format Alert for Dashboard Table | Alert HTML formatting |

@@ -7418,6 +7418,73 @@ Doc CDP wrap covers all three code commits + the three doc fixes.
 
 ---
 
+## 2026-06-04 — flows.json audit: 8 dead nodes pruned + 2 unnamed groups renamed
+
+Audit pass on `flows.json` (509 nodes scanned) for stale code,
+disabled-but-still-wired functions, orphan nodes whose producers
+were deleted in earlier cleanups, and never-instantiated subflows.
+Result: 8 nodes deleted (509 → 501), 3 dead wires pruned, 2
+unnamed groups given descriptive names. Zero behaviour change —
+every deletion either runtime-disabled (`d:true`) or had no
+upstream producer reaching it.
+
+### Deletions
+
+| Node ID | Type | Name | Why dead |
+|---|---|---|---|
+| `66ca1554.e4c85c` | subflow def | red trigger | Never instantiated |
+| `a7edb3ab6224c12f` | subflow def | red trigger (1) | Never instantiated |
+| `f0932848.b39158` | function | send X TRIGGER | Inside dead subflow #1 |
+| `82b5c109e09d7a14` | function | send X TRIGGER | Inside dead subflow #2 |
+| `d5eca40d3503035d` | function (d=true) | Format Telegram Alert | Superseded by `94b77826079bad57` (Format Telegram Alert Dedup 10 minute); upstream `b981643f37259f89` (DXCC Classify) and `1000e598fc8e322e` (🔔 Test Telegram) already wire to the live one |
+| `9fd52c02a8486dce` | function (d=true) | Fetch All Modes + Parse | Superseded by `aa7434df62b95ebc` (lotw only); upstream `6e60f619acad462e` (Build Club Log API Request) already wires to the live one |
+| `8778c5c78701ce17` | function | Flex Frequency Display | Orphan 7-segment-LED formatter, zero upstream wires |
+| `0c1611c32c969490` | function | Skimmer Config (VU2CPL + VU2OY) | Orphan flow-var setter (`flow.set('sk1_call', …)`); all 4 consumers (`Parse Calibration CSV`, `Watchdog Check`, `RBN State Aggregator`, `Update Spot Counters`) carry inline `flow.get('sk1_call') \|\| 'VU2CPL'` fallbacks, so the setter never running was already harmless and now stops being misleading |
+
+### Wire prunes (3)
+
+- `b981643f37259f89` (DXCC Classify) output 0 → dropped `d5eca40d3503035d`
+- `1000e598fc8e322e` (🔔 Test Telegram) output 0 → dropped `d5eca40d3503035d`
+- `6e60f619acad462e` (Build Club Log API Request) output 0 → dropped `9fd52c02a8486dce`
+
+### Group renames
+
+Two groups on the Solar and Internet/Network tabs had `name: "?"`
+— purely cosmetic but they print as `?` in the editor sidebar and
+hurt grep-ability. Renamed to describe their actual contents:
+
+- `498240cb5d374d24` (Solar tab, 33 nodes — NOAA / F10.7 / Geomag / GOES X-ray / MUF–foF2 fetch + parse + aggregator + Solar Panel ui_template) → **"Solar fetch + parse + dashboard"**
+- `0cffa681c4abed74` (Internet and network monitor tab, 15 nodes — 5 pings + 5 timestamp stampers + State Aggregator + Network Monitor Panel) → **"Network ping + dashboard"**
+
+### What was investigated and left alone (so we don't re-flag next audit)
+
+- 3 config nodes (`serial-port 677e2b7f2c916183`, `websocket-client ws_spe_client`, `websocket-client lp7wsclient00001`) looked orphan to the wire-graph but are heavily used — they're referenced via `serial:`/`client:` fields on serial-in/out + websocket-in/out nodes, not via flow wires. False alarm.
+- Cross-tab MQTT fan-in on `lightning/as3935{,/hb,/last_event,/status}` and `stat/powerstrip1/POWER2` — intentional and documented in CLAUDE.md (AS3935 Tuning tab piggy-backs on Lightning tab's subscriptions; Rotator tab piggy-backs on All Power Strips' Tasmota state).
+- Vue push ticks at 1–3 s cadence — intentional UI refresh.
+- `catch` nodes and `ui_template` nodes without incoming wires — by design.
+- Active debug nodes (`lp7ackdbg00001 ack`, `b5c2ed3182e180 Callsign Sent`, `8fe63e652f1feb Debug Alerts`) — daily-driver troubleshooting, operator's call to keep or strip.
+
+### Doc updates
+
+- **CLAUDE.md** "KEY NODE IDs" → DXCC Tracker table: the row for `9fd52c02a8486dce` (Fetch All Modes + Parse) was pointing at the now-disabled node as if it were active. Replaced with `aa7434df62b95ebc` (Fetch All Modes + Parse lotw only), with an inline note about the supersession date so an archeology pass can find the old ID via this commit.
+- **clublog_dxcc_tracker_v7.json** — re-extracted via the rule #4 script. Was 80 nodes (included the disabled Fetch + Format Telegram Alert); now 78 nodes.
+
+### Audit method (in case a future audit wants to repeat it)
+
+Single Python pass over `flows.json`:
+
+1. Build incoming-wire map: for every node ID, list which other nodes wire INTO it (via `wires[i][j]` arrays).
+2. For each non-config node: flag as "no incoming" if not in the producer-types allow-list (`inject`, `mqtt in`, `http in`, `tcp in`, `serial in`, `ping`, `flexradio-*`, `uibuilder`, …) AND nothing wires into it.
+3. For each `d:true` node: list its upstream + downstream wires; if both ends also reach a non-disabled sibling, the disabled node is pure visual debt and can be dropped.
+4. For each `subflow` node: search for `type: "subflow:<id>"` elsewhere — zero instantiations = dead.
+5. For each `function` whose body has `flow.set(KEY, …)`: search every other node's body for `flow.get(KEY)` — if no consumer (or all consumers have `|| default` fallbacks), the writer can be dropped.
+6. For each "orphan-looking" config node (`serial-port`, `websocket-client`, `mqtt-broker`, etc.): the wire-graph won't catch references; instead scan every other node for string fields equal to the config's ID. If zero hits, truly orphan.
+
+The full audit script is preserved in conversation log; re-runnable
+if the flow grows enough to invite another pass.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:
