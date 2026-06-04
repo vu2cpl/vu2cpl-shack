@@ -2,7 +2,7 @@
 
 **Period:** 2026-05-01 → 2026-05-26
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
-**Last commit at handover:** `0fbb042` — flows.json audit: prune 8 dead nodes + rename 2 unnamed groups
+**Last commit at handover:** `6cbaedf` — rebuild_pi.sh Stage 1: I²C verify warns-not-fails (with diagnostics)
 
 ---
 
