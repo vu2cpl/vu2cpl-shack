@@ -2,7 +2,7 @@
 
 **Period:** 2026-05-01 → 2026-05-26
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
-**Last commit at handover:** `3c7a6b5` — Docs CDP for Stage 13 always-prompt + Stage 9 crontab fix (commit subject is stale from temp file reuse; body is correct)
+**Last commit at handover:** `0fbb042` — flows.json audit: prune 8 dead nodes + rename 2 unnamed groups
 
 ---
 
