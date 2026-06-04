@@ -2,7 +2,7 @@
 
 **Period:** 2026-05-01 → 2026-05-26
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
-**Last commit at handover:** `6cbaedf` — rebuild_pi.sh Stage 1: I²C verify warns-not-fails (with diagnostics)
+**Last commit at handover:** `b16fa2c` — rebuild_pi.sh Stage 1: detect pending-reboot after dist-upgrade
 
 ---
 
