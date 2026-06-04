@@ -159,9 +159,17 @@ sudo raspi-config nonint do_i2c 0
 sudo raspi-config nonint do_serial_hw 0   # enable hardware UART (rotator / SPE)
 
 # Verify I²C bus
-ls /dev/i2c-1                              # should exist
+sudo modprobe i2c-dev                      # raspi-config sets dtparam; module may still need loading
+ls /dev/i2c-1                              # should exist; if missing, reboot and retry
 sudo i2cdetect -y 1                        # AS3935 should appear at 0x03 (or 0x01/0x02)
 ```
+
+> **If `/dev/i2c-1` still doesn't appear** after `modprobe + reboot`:
+> only the **legacy Pi-side `as3935.service` daemon** needs it, and
+> that daemon has been **standby fallback** since 2026-05-11 (the
+> ESP32 bridge in `vu2cpl-as3935-bridge` is the live publisher).
+> Skip this step and continue — normal shack operation is unaffected.
+> `rebuild_pi.sh` Stage 1 now warns-not-fails on the same condition.
 
 ---
 

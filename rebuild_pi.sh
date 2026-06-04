@@ -275,9 +275,45 @@ stage_01_apt_packages() {
     sudo raspi-config nonint do_i2c 0
     sudo raspi-config nonint do_serial_hw 0
 
-    step "Verify I²C bus"
-    [[ -e /dev/i2c-1 ]] || fail "/dev/i2c-1 not present after raspi-config"
-    ok "/dev/i2c-1 present"
+    # Some Pi-OS images don't auto-load i2c-dev after raspi-config's dtparam flip;
+    # and udev can take a beat to populate /dev/i2c-1 even when it does.
+    step "Load i2c-dev module + wait for /dev/i2c-1"
+    sudo modprobe i2c-dev 2>/dev/null || true
+    i2c_ok=false
+    for i in 1 2 3 4 5; do
+        if [[ -e /dev/i2c-1 ]]; then
+            i2c_ok=true
+            break
+        fi
+        sleep 1
+    done
+
+    if $i2c_ok; then
+        ok "/dev/i2c-1 present"
+    else
+        # Downgrade to warn — the AS3935 Pi-side daemon is a standby fallback only;
+        # the live publisher since 2026-05-11 is the ESP32 bridge over MQTT, which
+        # needs no I²C on this Pi. So a missing /dev/i2c-1 only blocks the Pi-side
+        # daemon failover, not normal shack operation.
+        warn "/dev/i2c-1 still missing after modprobe + 5 s wait"
+        c_yellow "    Diagnostics:"
+        c_yellow "      i2c modules loaded : $(lsmod | grep -E '^i2c_' | awk '{print $1}' | tr '\n' ' ')"
+        c_yellow "      dtparam in config  : $(grep -E '^dtparam=i2c' /boot/firmware/config.txt 2>/dev/null || grep -E '^dtparam=i2c' /boot/config.txt 2>/dev/null || echo '(not set — raspi-config nonint may have silently no-op'\''d)')"
+        c_yellow "      /dev/i2c-* listing : $(ls -1 /dev/i2c-* 2>/dev/null | tr '\n' ' ' || echo '(none)')"
+        c_yellow "    Likely cause:"
+        c_yellow "      • Brand-new Pi OS image needs a reboot before dtparam takes effect."
+        c_yellow "      • Or this Pi has no I²C exposed (rare — fleet-monitor-only Pi)."
+        c_yellow "    Impact:"
+        c_yellow "      Only affects the LEGACY AS3935 Pi-side daemon (as3935.service)."
+        c_yellow "      It is DISABLED by default since the ESP32 bridge took over on"
+        c_yellow "      2026-05-11. Normal shack operation is unaffected."
+        c_yellow "    Recommended:"
+        c_yellow "      Finish this rebuild, then:"
+        c_yellow "        sudo reboot       # to apply the dtparam"
+        c_yellow "        ls /dev/i2c-1     # re-verify after boot"
+        c_yellow "      If still missing, run 'sudo raspi-config' interactively →"
+        c_yellow "      Interface Options → I²C → Enable, then reboot."
+    fi
 
     mark_stage "01_apt_packages"
     ok "Stage 1 complete"

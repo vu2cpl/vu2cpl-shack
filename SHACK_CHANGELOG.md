@@ -7485,6 +7485,75 @@ if the flow grows enough to invite another pass.
 
 ---
 
+## 2026-06-04 — rebuild_pi.sh Stage 1: I²C verify softened (warn, not fail)
+
+Operator report: Stage 1 failing on a fresh Pi at
+`[[ -e /dev/i2c-1 ]] || fail "/dev/i2c-1 not present after raspi-config"`.
+
+### Root cause
+
+Two interacting issues, both pre-existing brittleness:
+
+1. **`raspi-config nonint do_i2c 0` sets the `dtparam=i2c_arm=on`
+   line in `/boot/firmware/config.txt`, but on some Pi-OS images
+   the `i2c-dev` kernel module isn't auto-loaded** until the next
+   boot — so `/dev/i2c-1` doesn't materialise immediately even
+   though raspi-config returned 0.
+2. **`udev` is async** — even when the module IS loaded, the
+   device node can take a beat to appear.
+
+The check fired before either path completed, killed Stage 1, and
+the operator had no clue what to do next (the fail message didn't
+mention the AS3935-daemon-is-fallback context).
+
+### Fix — Stage 1
+
+Three changes:
+
+1. **Try `sudo modprobe i2c-dev`** before checking. Covers the
+   "raspi-config flipped the dtparam but module isn't loaded yet"
+   case without needing a reboot.
+2. **Retry the device-node check** up to 5 × 1 s. Covers the
+   udev-lag case.
+3. **Downgrade fail → warn on the miss**, with actionable
+   diagnostics:
+   - `lsmod` filter for `i2c_*` to show which modules are loaded
+   - `dtparam` grep against `/boot/firmware/config.txt` (Bookworm+)
+     and `/boot/config.txt` (older) to confirm raspi-config actually
+     wrote the setting
+   - `/dev/i2c-*` listing to confirm whether ANY i2c device node
+     showed up
+   - Plain-English likely causes (need a reboot; or no I²C
+     hardware on this Pi)
+   - **Plain-English impact**: only the legacy
+     `as3935.service` Pi-side daemon needs `/dev/i2c-1`, and that
+     daemon has been **standby fallback** since 2026-05-11 (ESP32
+     bridge is the live publisher). Normal shack operation is
+     unaffected.
+   - Recommended manual recovery: finish the rebuild, reboot, re-check.
+
+Stage 1 now marks complete and lets the install continue. If a
+forker is rebuilding a fleet-monitor-only Pi (no AS3935 hardware at
+all) they no longer get blocked at all.
+
+Same philosophy as the noderedpi5-saga fixes: every `fail` that
+isn't strictly needed for end-user goal becomes `warn` with
+diagnostics + the operator can decide whether to chase it.
+
+### Doc updates landing alongside
+
+**REBUILD_PI.md Step 2** — the manual `ls /dev/i2c-1` check now
+prefaces with `sudo modprobe i2c-dev` to cover the
+just-set-but-not-loaded case, and a callout note explains the
+"can be skipped on a fleet-monitor-only Pi" semantic so an
+operator who hits the failure manually has the same context the
+script's `warn` block prints.
+
+**FORK_GUIDE.md** Stage 1 row already said "if you have AS3935
+hardware" — text is consistent, no change needed.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:
