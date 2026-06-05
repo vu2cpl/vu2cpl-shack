@@ -215,7 +215,8 @@ was already done (state file at `~/.rebuild_pi.state`), it prints
 | 11 — lp700-server | Clones [`VU3ESV/LP-700-Server`](https://github.com/VU3ESV/LP-700-Server) and installs the WebSocket gateway as a systemd unit (only if you have an LP-700 / LP-500). | 5 min |
 | 12 — secrets | Prompts you for Club Log API key, Club Log password, Telegram bot token. Writes them to `/etc/systemd/system/nodered.service.d/secrets.conf` (root-readable only). | 1 min |
 | 13 — station customisation | **Always asks "(Re-)customize station identity for this Pi? [y/N]".** Press y → prompts you for callsign, grid, MQTT broker IP, Tasmota antenna topic + channel, threshold, reconnect timer, QTH text, **then a "which subsystems do you have?" Y/n round for all 12 dashboard cards**. Press Enter → keeps current values. On y, it patches: Init Defaults in `flows.json`; **both `mqtt-broker` config nodes** (so all 37 mqtt nodes dial *your* broker, not the upstream Pi); the Vue TopBar; `manifest.json` name; the **`CARDS` flags** in the Vue dashboard (`v-if` hides cards you said "no" to); and for the 5 stand-alone subsystems you skip (**SPE, LP-700, Solar, DXCC, RBN**) it also sets `disabled:true` on that flow tab so its background polling stops. Dependency rules apply: if you keep Lightning/Rotator/Flex it **forces Power on** (they switch outlets through it); if you drop Flex but keep Lightning it **warns** the TX-inhibit step will no-op. Backs up `flows.json` + `index.js` first, so it's fully reversible. Closes manual A5.1 + A5.3 + A5.4 below. | 3 min |
-| 14 — verification | Runs a post-install checklist split into critical (Node-RED responds / project active / flows parsed / `/shack` + `/ui` reachable / `rpi-agent` active / Mosquitto alive) and optional (LP-700 healthz, AS3935 telemetry, GPS-NTP telemetry — skip-not-fail when hardware isn't present). | 2 min |
+| 13b — rotator-remote (optional) | Asks "Do you have a Rotor-EZ rotator?" If yes: clones [`vu2cpl/rotator-remote`](https://github.com/vu2cpl/rotator-remote), prompts for the rotor's `/dev/serial/by-id/…` device, runs `setup.sh` + `install-service.sh` to start `rotator-remote.service` on `:8090`, checks `/healthz`. The gateway owns the FTDI serial port so Node-RED + other clients share it (no more "restart Node-RED to free the port"). Skip if you have no rotator. | 3 min |
+| 14 — verification | Runs a post-install checklist split into critical (Node-RED responds / project active / flows parsed / `/shack` + `/ui` reachable / `rpi-agent` active / Mosquitto alive) and optional (LP-700 healthz, **rotator-remote healthz**, AS3935 telemetry, GPS-NTP telemetry — skip-not-fail when hardware isn't present). Runs as `--stage 15` positionally (the optional 13b stage precedes it). | 2 min |
 
 **While the script runs**, you'll see colored output: green ✓ for
 done, yellow for warnings, red for errors. Stage 12 pauses to prompt
@@ -678,7 +679,7 @@ After deleting, click Deploy in the editor and save the Vue change
 |---|---|
 | FlexRadio IP / model | `FlexRadio` tab → `flexradio-conn` config node |
 | SPE amp serial path | `SPE` tab → `spe-remote` Pi-side service config; SPE FTDI may need a custom udev rule. |
-| Rotor-EZ serial path | `Rotator` tab → serial-in/out node config |
+| Rotor-EZ serial path | `rotator-remote/config.yaml` → `serial.port` (the gateway owns the port now; the `Rotator` tab is a ws-client to `:8090`). Stage 13b prompts for this. |
 | LP-700 server URL | `LP-700-HID ws` tab → websocket-client config |
 | DX cluster hosts | `DXCC Tracker` tab → 4 `tcp in` nodes — change `host` field per node |
 | GPS NTP topic | `GPS NTP (card)` tab → `mqtt in` node — change topic |
@@ -765,12 +766,13 @@ in `index.js` describe the patterns.
 | Node-RED systemd unit | `/lib/systemd/system/nodered.service` (don't edit directly) |
 | Systemd drop-in for secrets | `/etc/systemd/system/nodered.service.d/secrets.conf` |
 | Pi-side scripts | `/home/<user>/{rpi_agent.py, monitor.sh, power_spe_on.py, as3935_*.py}` |
-| Pi-side systemd units | `/etc/systemd/system/{rpi-agent, as3935, lp700-server}.service` |
+| Pi-side systemd units | `/etc/systemd/system/{rpi-agent, as3935, lp700-server, rotator-remote, spe-remote}.service` |
 | udev rules | `/etc/udev/rules.d/{10-telepost.rules, 99-lp700.rules}` |
 | Sudoers for rpi-agent | `/etc/sudoers.d/rpi-agent` |
 | Cron entry (monitor.sh) | `crontab -e` as your user — `* * * * * /home/<user>/monitor.sh` |
 | Mosquitto config | `/etc/mosquitto/conf.d/lan.conf` (anonymous on port 1883) |
-| LP-700 server | `~/lp700-server/` (cloned from VU3ESV) |
+| LP-700 server | `~/LP-700-Server/` (cloned from VU3ESV) |
+| Rotator gateway | `~/rotator-remote/` (cloned from vu2cpl/rotator-remote; serves `:8090`) |
 | **Runtime data files** (auto-generated): | |
 | DXCC worked seed | `~/.node-red/projects/vu2cpl-shack/nr_dxcc_seed.json` |
 | DXCC blacklist | `~/.node-red/projects/vu2cpl-shack/nr_dxcc_blacklist.json` |

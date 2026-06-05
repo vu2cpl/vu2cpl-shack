@@ -74,8 +74,9 @@ bash ~/.node-red/projects/vu2cpl-shack/rebuild_pi.sh
 > fork — change `REPO_URL` near the top of the script to your
 > fork's URL. See FORK_GUIDE.md Part A3 for details.
 
-The script pauses for three interactive steps:
+The script pauses for these interactive steps (most are opt-in prompts):
 - Stage 6 — paste the new SSH public key into your GitHub account
+- Stage 11 — opt-in: "Do you have an LP-700 / LP-500 meter?" → installs `lp700-server`
 - Stage 12 — paste Club Log API key, password, Telegram token (no echo)
 - Stage 13 — opt-in prompt: "(Re-)customize station identity for this
   Pi? [y/N]". Default N keeps current values (upstream defaults or
@@ -88,6 +89,10 @@ The script pauses for three interactive steps:
   the flow tab for any of SPE/LP-700/Solar/DXCC/RBN you skip.
   Dependency-locked (won't let you drop Power while Lightning/Rotator/
   Flex stay). Always asks; never auto-decides.
+- Stage 13b — opt-in: "Do you have a Rotor-EZ rotator?" → clones + installs
+  `rotator-remote.service` (`:8090`), prompts for the rotor's serial device,
+  runs `setup.sh` + `install-service.sh`, checks `/healthz`. Runs after the
+  ws-client Rotator flow is in place (so the serial port is free for the gateway).
 
 Everything else runs automatically. Re-run safely after Ctrl-C or reboot:
 state is tracked in `$HOME/.rebuild_pi.state` (survives reboots).
@@ -614,7 +619,7 @@ Each reply should be `{"Timezone":"+05:30"}`.
 
 A 16-point checklist for the operator's full-stack verification.
 
-*Note: when `rebuild_pi.sh --stage 14` runs the same verification programmatically, it uses a smaller split (7 critical + 4 optional) tuned to the script's perspective — every Pi has Node-RED/Mosquitto/rpi-agent, but LP-700/AS3935/GPS-NTP are operator-specific. The manual checklist below adds the wider lens that's useful when verifying by hand.*
+*Note: the verification stage is `verify` — now positionally `--stage 15` since the optional `13b` rotator stage was inserted before it (`bash rebuild_pi.sh --stage 15`). It uses a smaller split (7 critical + 5 optional) tuned to the script's perspective — every Pi has Node-RED/Mosquitto/rpi-agent, but LP-700/rotator/AS3935/GPS-NTP are operator-specific. The manual checklist below adds the wider lens that's useful when verifying by hand.*
 
 | # | Check | Pass criterion |
 |---|-------|----------------|

@@ -83,6 +83,7 @@ Node-RED shack automation running on Raspberry Pi 4B. Controls and monitors:
 | MQTT broker node ID | `f4785be9863eab08` |
 | FlexRadio | `192.168.1.148:4992` (TCP API + UDP discovery) |
 | LP-700 WS gateway | `lp700-server.service` on Pi @ `ws://192.168.1.169:8089/ws` (single HID owner, multi-client fan-out) |
+| Rotator WS gateway | `rotator-remote.service` on Pi @ `ws://192.168.1.169:8090/ws` (single FTDI-serial owner, multi-client fan-out). Repo [`vu2cpl/rotator-remote`](https://github.com/vu2cpl/rotator-remote). Azimuth/serial only — rotator power stays on Tasmota/MQTT |
 | Git function | `nrsave "message"` (bash function in `~/.bashrc` on Pi) → regen DXCC tab extract → add flows.json + extract → commit |
 | Dashboard theme | Dark, base #097479, bg #111111 |
 
@@ -105,7 +106,7 @@ git push
 | Tab Label | Tab ID | Nodes | Dashboard Group |
 |-----------|--------|-------|-----------------|
 | SPE | `648eb83c2566c7b6` | 29 | `vu2cpl_grp_spe` |
-| Rotator | `3d26c2c5270bdb37` | 24 | `84143f78d088f01d` |
+| Rotator | `3d26c2c5270bdb37` | 28 | `84143f78d088f01d` |
 | FlexRadio | `a0a882f85c89cffc` | 43 | `vu2cpl_grp_flex` |
 | LP-700-HID ws | `18fb42443172f33c` | 18 | `vu2cpl_grp_lp700` |
 | Solar | `590e889d44815afb` | 35 | `vu2cpl_grp_solar` |
@@ -161,7 +162,7 @@ persists across reboots. Verify with empty-payload read:
 |--------|------|------|
 | SPE Expert 1.5 KFA | `usb-FTDI_FT232R_USB_UART_AI040UZR-if00-port0` | 57600-8N1 |
 | SPE (alternate) | `usb-FTDI_FT232R_USB_UART_AI040V80-if00-port0` | 115200-8N1 |
-| Rotor-EZ | `usb-FTDI_FT232R_USB_UART_AL05J29R-if00-port0` | 4800-8N1 |
+| Rotor-EZ | `usb-FTDI_FT232R_USB_UART_AL05J29R-if00-port0` | 4800-8N1 — owned by `rotator-remote.service`, **not** Node-RED (since 2026-06-06) |
 
 ### USB HID
 
@@ -535,9 +536,18 @@ Sliding strike history lives in `flow.recent_as3935 = [{ts, km}, …]`. Pushed o
 - **Telegram alert icons map** in the formatter functions covers all five alert types: `NEW_DXCC:'🔴'`, `NEW_BAND:'🔵'`, `NEW_BAND_UNCONF:'🔵'`, `NEW_MODE:'🟡'`, `NEW_MODE_UNCONF:'🟡'`, `NEED_QSL:'🟣'`. **Convention:** the `_UNCONF` variant reuses the same emoji as its confirmed sibling — the `? BAND` / `? MODE` text label already signals unconfirmed; emoji's job is just the band/mode/DXCC dimension (added 2026-05-17, commit `4a72223`). Any new alert type with a confirmed/unconfirmed pair should follow the same pattern.
 - DX Clusters: N2WQ (`cluster.n2wq.com:8300`), VU2OY (`vu2oy.ddns.net:7550`), VU2CPL (`vu2cpl.ddns.net:7300`), VE7CC (`ve7cc.net:23`) — VU2CPL moved 7550 → 7300 on 2026-05-17 (commit `4b1fabb`). **Port 7300 is CwSkimmer's telnet cluster port (auth required)** — both DXCC Tracker (`login-parse-dedup-v2`) and RBN Skimmer Monitor (`Login Handler VU2CPL`) send `VU2CPL-1\r\n` on the `Please enter your callsign:` prompt; tcp-out reply nodes use `beserver:reply` + `_session` to write back on the same socket. Old port 7550 was CwSkimmer's "raw" local-telnet (no auth, no prompt). See SHACK_CHANGELOG.md 2026-05-17 "VU2CPL skimmer — login handlers" for the full story and gotchas (notably `newline:""` on the tcp-in being mandatory because CwSkimmer's prompt has no trailing `\n`).
 
+### Rotator
+- **The Rotator tab is a WebSocket client of `rotator-remote.service`** (Pi @ `ws://localhost:8090/ws`) **since 2026-06-06** — it no longer owns the Rotor-EZ FTDI serial port. The gateway (repo [`vu2cpl/rotator-remote`](https://github.com/vu2cpl/rotator-remote)) polls the rotor and fans azimuth out to all clients; Node-RED is just one of them. This removed the old "restart Node-RED to free the serial port" friction and unblocks multi-client access (browser + future Mac app).
+- **Heading control transport only — power is unchanged.** Rotator mains power stays on Tasmota `cmnd/powerstrip1/POWER2` over MQTT, with the auto-off timer on the *All Power Strips* tab. The gateway never touches power.
+- **Key ws-client nodes** (Rotator tab `3d26c2c5270bdb37`): `rotator_ws_client` (websocket-client config → `ws://localhost:8090/ws`), `rotator_ws_in` → `rotator_ws_parse` ("Parse Rotator WS": caches `flow.rotator_heading` from the gateway's `{type:state,heading,…}`, replaces the old Slice heading), `rotator_ws_out` ← `3cfe1d67d0490107` ("Send Rotator → WS": translates the `AP1NNN\r` / `;` strings that `Build Rotator String` + `Click → Heading` still emit into `{type:command,action:goto|stop,heading}` JSON).
+- **Unchanged:** `Build Rotator String`, `Click → Heading`, the compass `ui_svg`, all 4 HTTP endpoints (`/rotator/go|lpsp|stop|power-toggle`), and the Vue builder. They were not touched — only the transport under heading control changed.
+- **Deploy ordering when rebuilding:** the ws-client flow must deploy (Node-RED restart, no serial nodes) **before** `rotator-remote` starts, or the gateway can't open the port. `rebuild_pi.sh` Stage 13b installs the gateway after the flow is in place; the manual order is git pull → restart nodered → `sudo ./install-service.sh` in `~/rotator-remote`.
+- Protocol bytes (`AI1;` query, `AP1NNN\r` set with **CR**, `;` stop, `;`-framed replies) live in `rotator-remote/rotator/protocol.py`, extracted verbatim from the pre-refactor flow. The set/query terminator asymmetry is real DCU-1 — don't "normalise" it.
+
 ### All Power Strips (Rotator)
 - Rotator timer node (`05f0ddeb566a90fc`): currently `60 * 1000` (1 min) — **change to `5 * 60 * 1000` for production**
 - Timer does NOT survive Node-RED restart — acceptable for rotator use
+- Rotator **power** (this outlet) is the only rotator concern still in Node-RED; **heading control moved to `rotator-remote.service`** 2026-06-06 (see the Rotator section above).
 
 ### FlexRadio
 - All slice state in `flexState` flow context
@@ -805,7 +815,7 @@ historical context lives in `SHACK_CHANGELOG.md`, indexed by date.
 |---|------|--------|
 | 1 | **Move AS3935 antenna outdoors** — ESP32 bridge (`vu2cpl-as3935-bridge` v0.2.0) running on the bench, ready for field install. Remaining work: enclosure seal, 18650+TP4056+solar power chain, shade mount, post-install TUN_CAP retune to regain rated 40 km range. See HANDOVER #1. | Hardware |
 | 6 | **Mac SwiftUI app (`~/projects/vu2cpl-shack-app/`)** — scaffold not yet started. Native macOS menu-bar app to replace the browser dashboard. Five tabs (Power, Radio, Solar, Lightning, Settings); see "MAC APP" section above for the full spec + build order. Long-term project. See HANDOVER #6. | Pending |
-| 31 | **Rotator → WebSocket gateway** — same pattern as SPE (`spe-remote.service`) and LP-700 (`lp700-server.service`). Currently the Rotator flow tab holds the Rotor-EZ FTDI port directly; lifting it into a Python websockets gateway service would unblock multi-client (browser + Mac app) access and remove the "restart Node-RED to free the serial port" friction. Medium effort, non-blocking. See HANDOVER #31 for the full spec. | Pending |
+| 31 | ~~**Rotator → WebSocket gateway**~~ | **Done 2026-06-06** — [`vu2cpl/rotator-remote`](https://github.com/vu2cpl/rotator-remote) (Python/Tornado, `:8090`) now owns the Rotor-EZ FTDI port; the Node-RED Rotator tab is a thin ws-client. Bench-verified against the real rotor. `rebuild_pi.sh` Stage 13b installs it (opt-in). Power stays on Tasmota/MQTT. See HANDOVER #31 + SHACK_CHANGELOG 2026-06-06. |
 
 > Canonical TODO list is in **HANDOVER.md "Open follow-ups"**. This
 > table is a mirror — re-sync whenever you change one or the other.

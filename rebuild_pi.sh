@@ -64,6 +64,7 @@ readonly ACTUAL_HOSTNAME="$(hostname)"
 readonly STATE_FILE="$HOME/.rebuild_pi.state"
 readonly REPO_DIR="$HOME/.node-red/projects/$REPO_NAME"
 readonly LP700_DIR="$HOME/LP-700-Server"
+readonly ROTATOR_DIR="$HOME/rotator-remote"
 
 # Stage names (must match the order they execute)
 readonly STAGES=(
@@ -80,6 +81,7 @@ readonly STAGES=(
     "11_lp700_server"
     "12_secrets"
     "13_customize_station"
+    "13b_rotator_remote"
     "14_verify"
 )
 
@@ -1527,6 +1529,100 @@ PYEOF
     ok "Stage 13 complete"
 }
 
+# ─── Stage 13b: rotator-remote gateway (optional) ────────────────────────────
+
+stage_13b_rotator_remote() {
+    banner "Stage 13b — rotator-remote gateway (optional)"
+
+    # Already running? Done.
+    if systemctl is-active --quiet rotator-remote 2>/dev/null; then
+        ok "rotator-remote already active"
+        mark_stage "13b_rotator_remote"
+        return 0
+    fi
+
+    # Opt-in: only stations with a Rotor-EZ (DCU-1 compatible) rotator.
+    echo
+    c_yellow "  rotator-remote is the WebSocket gateway for an Idiom Press Rotor-EZ"
+    c_yellow "  (Hy-Gain DCU-1 compatible) antenna rotator. It owns the FTDI serial"
+    c_yellow "  port so Node-RED + other clients share it without contention. Skip"
+    c_yellow "  if you don't have a rotator (or control it some other way)."
+    echo
+    local has_rot
+    read -r -p "  Do you have a Rotor-EZ rotator on this Pi? [y/N] " has_rot
+    has_rot="${has_rot:-N}"
+    if [[ ! "$has_rot" =~ ^[Yy] ]]; then
+        ok "Skipping Stage 13b — no rotator"
+        mark_stage "13b_rotator_remote"
+        return 0
+    fi
+
+    # Clone (or update).
+    if [[ ! -d "$ROTATOR_DIR" ]]; then
+        step "Clone vu2cpl/rotator-remote"
+        git clone https://github.com/vu2cpl/rotator-remote.git "$ROTATOR_DIR" \
+            || fail "Clone failed — check connectivity to github.com."
+    else
+        ok "Repo already present at $ROTATOR_DIR — pulling latest"
+        (cd "$ROTATOR_DIR" && git pull --ff-only) || warn "git pull failed; continuing with current checkout"
+    fi
+    cd "$ROTATOR_DIR" || fail "Cannot cd to $ROTATOR_DIR"
+
+    # Point config.yaml at this station's rotor serial device.
+    echo
+    c_yellow "  USB-serial devices on this Pi (/dev/serial/by-id):"
+    ls -1 /dev/serial/by-id/ 2>/dev/null | sed 's/^/      /' \
+        || c_yellow "      (none found — is the rotor FTDI cable plugged in?)"
+    local cur_port rot_port
+    cur_port=$(grep -E '^[[:space:]]*port:' config.yaml | head -1 | sed -E 's/^[[:space:]]*port:[[:space:]]*//')
+    echo
+    read -r -p "  Rotor-EZ serial device path (Enter to keep default): " rot_port
+    rot_port="${rot_port:-$cur_port}"
+    if [[ -n "$rot_port" && "$rot_port" != "$cur_port" ]]; then
+        step "Setting serial.port = $rot_port in config.yaml"
+        ROT_PORT="$rot_port" python3 - <<'PYEOF'
+import os, re
+port = os.environ['ROT_PORT']
+t = open('config.yaml').read()
+# Replace the first 'port:' (serial.port — the serial block precedes server).
+t2, n = re.subn(r'(^[ \t]*port:[ \t]*).*$', r'\g<1>' + port, t, count=1, flags=re.M)
+open('config.yaml', 'w').write(t2)
+print('  patched' if n == 1 else '  WARN: serial port line not found — edit config.yaml by hand')
+PYEOF
+    fi
+
+    step "Running setup.sh (venv + deps)"
+    ./setup.sh || fail "setup.sh failed — check the output above."
+
+    step "Installing systemd service (sudo ./install-service.sh)"
+    sudo ./install-service.sh || fail "install-service.sh failed — check the output above."
+
+    step "Verify /healthz (waiting up to 20 s)"
+    local hz_ok=false hz_waited=0
+    while (( hz_waited < 20 )); do
+        if curl -sf --max-time 3 http://localhost:8090/healthz >/dev/null; then
+            hz_ok=true
+            break
+        fi
+        sleep 2
+        hz_waited=$((hz_waited + 2))
+    done
+    if $hz_ok; then
+        ok "rotator-remote /healthz responds on :8090"
+        c_yellow "  (serial:\"down\" until the rotor controller is powered — normal;"
+        c_yellow "   power it on via the dashboard / Tasmota to see a live heading.)"
+    else
+        warn "rotator-remote /healthz not responding after 20 s."
+        warn "  Check: sudo journalctl -u rotator-remote -n 30"
+        warn "  Common cause: the serial port is still held by Node-RED. Confirm the"
+        warn "  ws-client Rotator flow is deployed (no serial nodes — git pull +"
+        warn "  restart nodered), then 'sudo systemctl restart rotator-remote'."
+    fi
+
+    mark_stage "13b_rotator_remote"
+    ok "Stage 13b complete"
+}
+
 # ─── Stage 14: verification (matches REBUILD_PI.md Step 12 + #13) ───────────
 
 stage_14_verify() {
@@ -1610,6 +1706,10 @@ stage_14_verify() {
     check_optional "lp700-server /healthz" \
         "curl -sf --max-time 3 http://localhost:8089/healthz" \
         "LP-700 not installed (Stage 11 opt-out) or meter not yet connected"
+
+    check_optional "rotator-remote /healthz" \
+        "curl -sf --max-time 3 http://localhost:8090/healthz" \
+        "rotator not installed (Stage 13b opt-out) or gateway not running"
 
     check_optional "lightning/as3935/hb topic" \
         "timeout 35 mosquitto_sub -h localhost -t 'lightning/as3935/hb' -C 1" \

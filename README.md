@@ -19,9 +19,11 @@ dashboard. Hardware talks to Node-RED via:
 - **MQTT** (Mosquitto on the same Pi) — Tasmota power outlets, AS3935
   lightning sensor, RPi telemetry
 - **Direct TCP/UDP** — FlexRadio (4992), DX clusters
-- **Serial** — SPE amplifier, Rotor-EZ
+- **Serial** — SPE amplifier (via `spe-remote` gateway)
 - **WebSocket** — LP-700 power/SWR meter (via the
-  [`lp700-server`](https://github.com/VU3ESV/LP-700-Server) gateway)
+  [`lp700-server`](https://github.com/VU3ESV/LP-700-Server) gateway) and
+  Rotor-EZ rotator (via the
+  [`rotator-remote`](https://github.com/vu2cpl/rotator-remote) gateway)
 - **HTTP** — Open-Meteo, NOAA SWPC, Club Log, RPi fleet agent
 
 **Two dashboards**, both served by the same Node-RED instance:
@@ -172,7 +174,11 @@ emit JSON command verbs (`channel_step`, `range_step`, etc.).
 ### Rotator
 
 Idiom Press Rotor-EZ on FTDI serial at 4800-8N1. Heading display +
-preset compass-rose buttons.
+preset compass-rose buttons. Since 2026-06-06 the serial port is owned by
+the [`rotator-remote`](https://github.com/vu2cpl/rotator-remote) gateway
+(`rotator-remote.service`, `:8090`) — the Node-RED tab is a thin WebSocket
+client, so the browser, a future Mac app, and any other client share the
+rotor without serial contention. Power stays on Tasmota/MQTT.
 
 ### DXCC Tracker
 

@@ -7870,6 +7870,135 @@ the *real* logic, not a paraphrase):
 
 ---
 
+## 2026-06-06 — Rotator → WebSocket gateway (TODO #31 closed, all 3 phases)
+
+Lifted the Idiom Press Rotor-EZ serial control out of Node-RED into a
+standalone Python WebSocket gateway, mirroring `spe-remote` and
+`lp700-server`. The Node-RED Rotator tab no longer owns the FTDI port —
+it's a thin ws-client of `rotator-remote.service` (`:8090`). This is the
+last of the three shack USB devices to be lifted into a gateway; it
+unblocks multi-client access (browser + future Mac app) and removes the
+"restart Node-RED to free the serial port" friction.
+
+Planned in plan mode with two operator decisions locked up front: **new
+standalone repo** (vs in-shack scripts) and **serial/heading only** (vs
+gateway-owns-power). Executed phase-by-phase, checking in on the Pi
+between phases.
+
+### Phase 1 — the gateway (new repo `vu2cpl/rotator-remote`)
+
+[github.com/vu2cpl/rotator-remote](https://github.com/vu2cpl/rotator-remote)
+(public, MIT), ~1190 lines. Copied the `spe-remote` skeleton and stripped
+to the (much simpler) rotator needs:
+
+- `rotator/protocol.py` — Rotor-EZ command bytes + reply parser. **Bytes
+  extracted verbatim from the pre-refactor flow**, not paraphrased: `AI1;`
+  query · `AP1NNN\r` set (CR terminator) · `;` stop · replies framed by
+  `;`, first 3 digits = azimuth. The set-vs-query terminator asymmetry is
+  real DCU-1 and load-bearing — the Explore-agent summary had glossed it,
+  so reading the actual `serial-port` config + `Build Rotator String`
+  output strings before writing code was essential.
+- `rotator/serial_handler.py` — single port owner: a daemon reader thread
+  hands bytes to the asyncio loop via `call_soon_threadsafe`; two loop
+  tasks (poll `AI1;` every 1 s; drain a command queue) share one
+  write-lock so the poll and a client command never interleave on the
+  wire. Parsing + broadcast run on the loop thread (safe for Tornado
+  `write_message`).
+- `rotator/websocket_handler.py` — multi-client broadcast with state-dedup
+  + heartbeat gate (copied from spe-remote).
+- `server.py` / `app.py` / `config.py` — Tornado on `:8090`, `/ws` +
+  `/healthz`, 5 s presence heartbeat.
+- `setup.sh` / `run.sh` / `install-service.sh` / `uninstall-service.sh` /
+  `systemd/rotator-remote.service.template` — adapted from spe-remote
+  (renamed, dialout group, `{{USER}}`/`{{WORKDIR}}` substitution).
+
+WS API — server pushes `{type:state,heading,target,moving,ts}` +
+`{type:heartbeat,serial,ts,clients}`; clients send
+`{type:command,action:goto|stop|lpsp[,heading]}` (LP-700-style JSON;
+`lpsp` is computed gateway-side as `(heading+180)%360`).
+
+**Install rationale** (documented in the repo README): like spe-remote /
+lp700-server this is a **Pi-only service** (no rotator on the Mac), so it
+ships `setup.sh` + `install-service.sh` rather than the global
+macOS/Pi-branching `install.py` pattern (which targets cross-platform
+fresh-machine bootstraps).
+
+**Verification:** offline unit tests in a real venv (command bytes
+byte-exact, reply parsing, `moving` incl. wrap, command translation,
+split-frame buffering, bad-command tolerance, broadcast fires) — all
+green. Then **bench-verified on the real rotor**: `goto 90` turned it
+clockwise through north (heading streamed 325→358→5→23, the 358→5 wrap
+handled correctly), `stop`/`lpsp`/multi-client/heartbeat all confirmed.
+First bring-up showed `serial:"down"` until the rotator was powered on via
+Tasmota MQTT — a benign reminder that power is separate.
+
+### Phase 2 — Node-RED Rotator tab → ws-client
+
+flows.json [`626ccc0`](https://github.com/vu2cpl/vu2cpl-shack/commit/626ccc0),
+501 → 497 nodes. The wiring graph revealed a cleaner refactor than first
+planned: **both `Build Rotator String` and `Click → Heading` already
+compute the heading and emit raw `AP1NNN\r` strings**, so instead of
+rewriting their internals I swapped the transport at the boundary.
+
+- **DELETE (8):** Poll 1s inject, serial-in (Idiom Rotor-EZ), Receive
+  Rotator, rbe, trigger, Slice heading, serial-out, serial-port config
+  (`677e2b7f2c916183`, referenced only by the two serial nodes).
+- **MODIFY (1):** `Send Rotator` → `Send Rotator → WS`
+  (`3cfe1d67d0490107`). Body now translates the raw strings
+  (`AP1NNN\r` goto, `;`/`stop` stop) into command JSON; output rewired
+  from serial-out to the new websocket-out. Heading-computing logic in
+  Build Rotator String / Click → Heading **untouched**.
+- **ADD (4):** `websocket-client` config (`rotator_ws_client`,
+  `ws://localhost:8090/ws`), `websocket out`, `websocket in`, and
+  `Parse Rotator WS` — JSON-parses the gateway state, caches
+  `flow.rotator_heading`, and emits the heading number to `Rotator fmt +
+  SVG update` + `Raw HDG to display` (exact replacement for Slice
+  heading; `Rotator fmt` uses `parseFloat` so a numeric heading is fine).
+  `target_hdg` stays owned by the command functions (instant feedback +
+  arrival-clear in Rotator fmt).
+- **UNCHANGED:** Build Rotator String, Click → Heading, compass SVG, all 4
+  HTTP endpoints, the entire power path (Tasmota `powerstrip1/POWER2` over
+  MQTT + auto-off timer on the All Power Strips tab), and the Vue builder.
+
+The apply was scripted in Python with verify-before-write; a first run
+correctly aborted on a **pre-existing** dangling wire (`Raw HDG to
+display` → a long-deleted node `27a6286454485995`, which Node-RED ignores
+at runtime) — the check was relaxed to only fail on refs to nodes *this*
+change deleted, and the pre-existing dangle was preserved as-is. Both new
+function bodies were `node --check`'d.
+
+**Deploy ordering (critical):** the ws-client flow deploys FIRST (Node-RED
+restart releases the port), THEN the gateway starts. Verified on the Pi:
+`/ui` compass + `/shack` RotatorCard both track heading, GO/STOP/LP-SP
+work, power-toggle still flips the outlet, multi-client confirmed.
+
+### Phase 3 — deployment automation + docs
+
+- `rebuild_pi.sh`: new **Stage 13b** (`13b_rotator_remote`, opt-in),
+  inserted between customize (13) and verify, mirroring the LP-700 stage —
+  prompts "Do you have a Rotor-EZ rotator?", clones the repo, lists
+  `/dev/serial/by-id/` and prompts for the rotor's device (patches
+  `config.yaml`), runs `setup.sh` + `install-service.sh`, checks
+  `/healthz`. Stage 14 (verify) gained an optional `rotator-remote
+  /healthz` check and is now positionally `--stage 15`.
+- Docs: CLAUDE.md (INFRASTRUCTURE table row, new **Rotator** flow-notes
+  section, USB-serial table note, OPEN BUGS #31 closed, flow-tab count
+  24→28), HANDOVER (#31 closure with the original spec preserved +
+  What-landed + Current-state rows), REBUILD_PI.md (interactive-pauses
+  list + verify `--stage 15` note), FORK_GUIDE.md (Stage 13b row, verify
+  optional checks, "what lives where" serial-path/systemd/repos entries),
+  README.md (transport list + Rotator section), and this entry. PDF
+  regenerated.
+
+### Net effect
+
+Three USB devices (SPE, LP-700, rotator) now all live behind WebSocket
+gateways with a uniform architecture. Node-RED touches no serial/HID port
+directly. No more "restart Node-RED to free a port"; multi-client
+everywhere; the Mac app (#6) is unblocked for all three.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:
