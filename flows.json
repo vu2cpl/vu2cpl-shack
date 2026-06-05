@@ -272,25 +272,6 @@
         "name": "Network ping + dashboard"
     },
     {
-        "id": "677e2b7f2c916183",
-        "type": "serial-port",
-        "serialport": "/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_AL05J29R-if00-port0",
-        "serialbaud": "4800",
-        "databits": "8",
-        "parity": "none",
-        "stopbits": "1",
-        "waitfor": "",
-        "dtr": "none",
-        "rts": "none",
-        "cts": "none",
-        "dsr": "none",
-        "newline": ";",
-        "bin": "false",
-        "out": "char",
-        "addchar": "",
-        "responsetimeout": "500"
-    },
-    {
         "id": "f925c3107b5f407e",
         "type": "ui_base",
         "theme": {
@@ -621,121 +602,6 @@
         "willPayload": ""
     },
     {
-        "id": "458019bad9ad56d7",
-        "type": "inject",
-        "z": "3d26c2c5270bdb37",
-        "name": "Poll 1s",
-        "props": [
-            {
-                "p": "payload"
-            }
-        ],
-        "repeat": "1",
-        "crontab": "",
-        "once": true,
-        "onceDelay": "2",
-        "topic": "",
-        "payload": "AI1;",
-        "payloadType": "str",
-        "x": 120,
-        "y": 80,
-        "wires": [
-            [
-                "3cfe1d67d0490107"
-            ]
-        ]
-    },
-    {
-        "id": "88e45a160167e6a0",
-        "type": "serial in",
-        "z": "3d26c2c5270bdb37",
-        "name": "Idiom Rotor-EZ",
-        "serial": "677e2b7f2c916183",
-        "x": 120,
-        "y": 180,
-        "wires": [
-            [
-                "68893567a89969fd"
-            ]
-        ]
-    },
-    {
-        "id": "68893567a89969fd",
-        "type": "function",
-        "z": "3d26c2c5270bdb37",
-        "name": "Receive Rotator",
-        "func": "return msg;",
-        "outputs": 1,
-        "noerr": 0,
-        "x": 320,
-        "y": 180,
-        "wires": [
-            [
-                "9d1ed3e1c7cd29f4",
-                "a5631050886e030f"
-            ]
-        ]
-    },
-    {
-        "id": "9d1ed3e1c7cd29f4",
-        "type": "rbe",
-        "z": "3d26c2c5270bdb37",
-        "name": "",
-        "func": "rbe",
-        "gap": "",
-        "start": "",
-        "inout": "out",
-        "x": 520,
-        "y": 160,
-        "wires": [
-            [
-                "f8d32c764621def9"
-            ]
-        ]
-    },
-    {
-        "id": "a5631050886e030f",
-        "type": "trigger",
-        "z": "3d26c2c5270bdb37",
-        "name": "",
-        "op1": "",
-        "op2": "",
-        "op1type": "nul",
-        "op2type": "payl",
-        "duration": "5",
-        "extend": false,
-        "overrideDelay": false,
-        "units": "s",
-        "reset": "",
-        "bytopic": "all",
-        "topic": "topic",
-        "outputs": 1,
-        "x": 520,
-        "y": 200,
-        "wires": [
-            [
-                "f8d32c764621def9"
-            ]
-        ]
-    },
-    {
-        "id": "f8d32c764621def9",
-        "type": "function",
-        "z": "3d26c2c5270bdb37",
-        "name": "Slice heading",
-        "func": "msg.payload = msg.payload.slice(0,3);\nflow.set('rotator_heading', parseInt(msg.payload, 10));\nreturn msg;\n",
-        "outputs": 1,
-        "noerr": 0,
-        "x": 720,
-        "y": 180,
-        "wires": [
-            [
-                "78d79f019261723c",
-                "48d90f1e7b0172b0"
-            ]
-        ]
-    },
-    {
         "id": "78d79f019261723c",
         "type": "function",
         "z": "3d26c2c5270bdb37",
@@ -771,27 +637,17 @@
         "id": "3cfe1d67d0490107",
         "type": "function",
         "z": "3d26c2c5270bdb37",
-        "name": "Send Rotator",
-        "func": "return msg;",
+        "name": "Send Rotator \u2192 WS",
+        "func": "// Translate the raw Rotor-EZ strings that Build Rotator String + Click\u2192Heading\n// still emit into rotator-remote WebSocket command JSON.\n//   Build Rotator String: 'AP1NNN\\r' (goto) or ';' (stop)\n//   Click \u2192 Heading:       'AP1NNN\\r' (goto) or 'stop' (stop)\nvar p = msg.payload;\nif (typeof p !== 'string') return null;\nif (p === ';' || p === 'stop' || p === 'STOP') {\n    msg.payload = JSON.stringify({ type: 'command', action: 'stop' });\n    return msg;\n}\nvar m = p.match(/^AP1(\\d{3})/);\nif (m) {\n    msg.payload = JSON.stringify({ type: 'command', action: 'goto', heading: parseInt(m[1], 10) });\n    return msg;\n}\nreturn null;   // 'AI1;' poll or anything unrecognised \u2192 drop\n",
         "outputs": 1,
         "noerr": 0,
         "x": 700,
         "y": 400,
         "wires": [
             [
-                "43464dfd801988f5"
+                "rotator_ws_out"
             ]
         ]
-    },
-    {
-        "id": "43464dfd801988f5",
-        "type": "serial out",
-        "z": "3d26c2c5270bdb37",
-        "name": "",
-        "serial": "677e2b7f2c916183",
-        "x": 870,
-        "y": 480,
-        "wires": []
     },
     {
         "id": "cae633df9457557f",
@@ -10346,5 +10202,61 @@
         "x": 1740,
         "y": 600,
         "wires": []
+    },
+    {
+        "id": "rotator_ws_client",
+        "type": "websocket-client",
+        "path": "ws://localhost:8090/ws",
+        "tls": "",
+        "wholemsg": "false",
+        "hb": "30",
+        "subprotocol": "",
+        "headers": []
+    },
+    {
+        "id": "rotator_ws_out",
+        "type": "websocket out",
+        "z": "3d26c2c5270bdb37",
+        "name": "ws \u2192 rotator-remote",
+        "server": "",
+        "client": "rotator_ws_client",
+        "x": 900,
+        "y": 400,
+        "wires": []
+    },
+    {
+        "id": "rotator_ws_in",
+        "type": "websocket in",
+        "z": "3d26c2c5270bdb37",
+        "name": "ws \u2190 rotator-remote",
+        "server": "",
+        "client": "rotator_ws_client",
+        "x": 560,
+        "y": 180,
+        "wires": [
+            [
+                "rotator_ws_parse"
+            ]
+        ]
+    },
+    {
+        "id": "rotator_ws_parse",
+        "type": "function",
+        "z": "3d26c2c5270bdb37",
+        "name": "Parse Rotator WS",
+        "func": "// Inbound state from rotator-remote. Replaces the serial receive chain\n// (serial in \u2192 Receive \u2192 rbe \u2192 trigger \u2192 Slice heading). Cache live heading\n// and emit it downstream so the compass renders exactly as before.\n// Heartbeats and null-heading frames ignored. target_hdg stays owned by\n// the command functions (instant feedback; arrival-clear in Rotator fmt).\nvar f;\ntry { f = JSON.parse(msg.payload); } catch (e) { return null; }\nif (!f || f.type !== 'state' || f.heading == null) return null;\nflow.set('rotator_heading', f.heading);\nmsg.payload = f.heading;\nreturn msg;\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 720,
+        "y": 180,
+        "wires": [
+            [
+                "78d79f019261723c",
+                "48d90f1e7b0172b0"
+            ]
+        ]
     }
 ]
