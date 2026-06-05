@@ -2,7 +2,7 @@
 
 **Period:** 2026-05-01 → 2026-05-26
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
-**Last commit at handover:** `5acd1c0` — Rotator gateway Phase 3 (closes #31); flow refactor at `626ccc0`, gateway repo `vu2cpl/rotator-remote`
+**Last commit at handover:** `04691d1` — D1 Rotator compass: remove 4 decorative corner brackets (rotator gateway #31 closed at `5acd1c0`)
 
 ---
 
