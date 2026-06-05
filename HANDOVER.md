@@ -2,7 +2,7 @@
 
 **Period:** 2026-05-01 → 2026-05-26
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
-**Last commit at handover:** `8a287b2` — Fork tooling cards/broker + HANDOVER strikethrough normalize
+**Last commit at handover:** `bb0f922` — HANDOVER strikethrough normalize (fork-tooling work at `c41b60a`)
 
 ---
 
