@@ -711,6 +711,32 @@ Both `/ui` and `/shack` coexist on the same Node-RED instance with no
 conflict — they share flow context and MQTT subscriptions through
 common builder functions.
 
+**Vue `/shack` card visibility (`CARDS` flags, 2026-06-04):** the root
+Vue app (`uibuilder/shack/src/index.js`) has a `const CARDS = { flex:
+true, lp700:true, … }` block near the top; each of the 12 cards in the
+root template is gated with `v-if="CARDS.<key>"`. Flip a flag to
+`false` to hide a card (nothing deleted — the component + its
+builder/cmd-router nodes stay, just unrendered; flip back to restore).
+This is how a forker tailors the dashboard to their hardware.
+`rebuild_pi.sh` Stage 13 sets these from a "which subsystems do you
+have?" Y/n round, with dependency rules (Power forced on if any of
+Lightning/Rotator/Flex stay; warn if Flex dropped while Lightning
+stays). For the 5 stand-alone subsystems (SPE, LP-700, Solar, DXCC,
+RBN) it also sets `"disabled": true` on the flow tab so background
+polling stops. Bump `window.__shackBuild` when editing card render
+logic so the on-screen build stamp distinguishes "code didn't load"
+from "code loaded but signal broken".
+
+**MQTT broker is configured on the `mqtt-broker` *config* nodes, not
+on the mqtt in/out nodes or in any function.** There are two config
+nodes (`f4785be9863eab08` "Tasmota MQTT Broker" + `mqttbroker.shack`),
+both at `192.168.1.169:1883`. The `MQTT_BROKER` const in Init Defaults
+is informational only — a function node cannot reconfigure a broker
+config node at runtime. When changing the broker IP (e.g. a fork),
+patch the `broker` field on **both config nodes**; patching only Init
+Defaults leaves all 37 mqtt nodes dialing the old IP. Stage 13 of
+`rebuild_pi.sh` now does this automatically.
+
 **Retired packages:**
 
 - `@gdziuba/node-red-usbhid` (LP-700 direct HID): migrated to the

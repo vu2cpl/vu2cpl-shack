@@ -12,7 +12,35 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v10 · 2026-06-03 ANT toggle';
+window.__shackBuild = 'v11 · 2026-06-04 hardware cards';
+
+// =====================================================================
+// Station hardware config — which cards appear on the dashboard.
+// rebuild_pi.sh Stage 13 flips these to false for hardware you don't
+// have (dependency-checked there). Set any to false by hand to hide a
+// card; set back to true to restore it. Nothing is deleted — a hidden
+// card's component + data plumbing stay intact, just unrendered.
+//   flex      FlexRadio          spe      SPE amplifier
+//   lp700     LP-700/LP-500      rotator  Rotator
+//   lightning Lightning/AS3935   power    Tasmota power strips
+//   solar     Solar/space wx     dxcc     DXCC tracker
+//   rbn       RBN skimmer mon    rpi      RPi fleet monitor
+//   network   Internet monitor   gpsntp   GPS NTP server card
+// =====================================================================
+const CARDS = {
+  flex:      true,
+  lp700:     true,
+  spe:       true,
+  rotator:   true,
+  lightning: true,
+  power:     true,
+  solar:     true,
+  dxcc:      true,
+  rbn:       true,
+  rpi:       true,
+  network:   true,
+  gpsntp:    true,
+};
 
 // =====================================================================
 // Connection-status heartbeat — MULTI-PATH (belt and braces).
@@ -2593,18 +2621,18 @@ const App = {
   template: `
     <TopBar />
     <div class="dash-grid">
-      <FlexCard />
-      <LP700Card />
-      <SPECard />
-      <RotatorCard />
-      <LightningCard />
-      <PowerCard />
-      <SolarCard />
-      <DXCCCard />
-      <RBNCard />
-      <RPiCard />
-      <NetworkCard />
-      <GpsNtpCard />
+      <FlexCard      v-if="CARDS.flex" />
+      <LP700Card     v-if="CARDS.lp700" />
+      <SPECard       v-if="CARDS.spe" />
+      <RotatorCard   v-if="CARDS.rotator" />
+      <LightningCard v-if="CARDS.lightning" />
+      <PowerCard     v-if="CARDS.power" />
+      <SolarCard     v-if="CARDS.solar" />
+      <DXCCCard      v-if="CARDS.dxcc" />
+      <RBNCard       v-if="CARDS.rbn" />
+      <RPiCard       v-if="CARDS.rpi" />
+      <NetworkCard   v-if="CARDS.network" />
+      <GpsNtpCard    v-if="CARDS.gpsntp" />
     </div>
   `,
   setup() {
@@ -2613,7 +2641,7 @@ const App = {
       console.log('[shack] uibuilder started, version:', uibuilder.version || 'unknown',
                   '· ioConnected initial:', uibuilder.ioConnected);
     });
-    return {};
+    return { CARDS };
   }
 };
 

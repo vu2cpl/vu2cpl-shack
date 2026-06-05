@@ -1236,6 +1236,69 @@ PYEOF
     read -r -p "  QTH location text for header (e.g. 'New York · USA'):     " qth_text
     qth_text="${qth_text:-Your QTH}"
 
+    # ── Hardware / card selection ──────────────────────────────────────
+    # Answer n to hide a card from the /shack Vue dashboard. For the five
+    # stand-alone subsystems (SPE, LP-700, Solar, DXCC, RBN) a "no" also
+    # disables the matching flow tab in Node-RED so its background polling
+    # stops (no Club Log fetches / telnet / errors). Entangled subsystems
+    # (Flex/Rotator/Lightning/Power) are Vue-only — their flow logic is
+    # left intact because other tabs wire into it. Dependency rules below
+    # stop you from hiding a card something else still needs.
+    echo
+    c_yellow "  ── Which subsystems does THIS station have? ──"
+    c_yellow "  Answer n to hide that card. All default to Yes (press Enter)."
+    echo
+
+    # ask_card <var> <prompt> → sets <var> to 1 (yes) or 0 (no)
+    ask_card() {
+        local __ans
+        read -r -p "  $2 [Y/n] " __ans
+        __ans="${__ans:-Y}"
+        if [[ "$__ans" =~ ^[Nn] ]]; then printf -v "$1" '0'; else printf -v "$1" '1'; fi
+    }
+
+    local hw_flex hw_spe hw_lp700 hw_rotator hw_lightning hw_power
+    local hw_solar hw_dxcc hw_rbn hw_rpi hw_network hw_gpsntp
+    ask_card hw_flex      "FlexRadio (SmartSDR TCP)?                   "
+    ask_card hw_spe       "SPE amplifier (spe-remote)?                 "
+    ask_card hw_lp700     "LP-700 / LP-500 meter?                      "
+    ask_card hw_rotator   "Rotator (Rotor-EZ)?                         "
+    ask_card hw_lightning "Lightning protection (AS3935 / Open-Meteo)? "
+    ask_card hw_power     "Tasmota power strips?                       "
+    ask_card hw_solar     "Solar / space-weather panel?                "
+    ask_card hw_dxcc      "DXCC tracker (Club Log + clusters)?         "
+    ask_card hw_rbn       "RBN skimmer monitor?                        "
+    ask_card hw_rpi       "RPi fleet monitor?                          "
+    ask_card hw_network   "Internet / network monitor?                 "
+    ask_card hw_gpsntp    "GPS NTP server card (gpsntp host)?          "
+
+    # ── Dependency rules ───────────────────────────────────────────────
+    # R1 (hard): Tasmota power strips are the switching layer for the
+    # antenna disconnect, rotator auto-off, and Flex power relay. If any of
+    # those stay enabled, Power must stay too — hiding it would orphan the
+    # controls those subsystems drive.
+    if [[ "$hw_power" == '0' ]] \
+       && { [[ "$hw_lightning" == '1' ]] || [[ "$hw_rotator" == '1' ]] || [[ "$hw_flex" == '1' ]]; }; then
+        echo
+        c_yellow "  ⚠ Keeping Power Control card — it's the switching layer for:"
+        [[ "$hw_lightning" == '1' ]] && c_yellow "      • Lightning antenna disconnect (Tasmota antenna outlet)"
+        [[ "$hw_rotator"   == '1' ]] && c_yellow "      • Rotator auto-off timer (Tasmota rotator outlet)"
+        [[ "$hw_flex"      == '1' ]] && c_yellow "      • FlexRadio power relay (4-relay board)"
+        c_yellow "    Hiding it would orphan those controls. Forcing Power = on."
+        hw_power='1'
+    fi
+
+    # R2 (warn): Lightning's TX-inhibit step targets the FlexRadio. Without
+    # Flex it's a harmless no-op (the request just fails), but warn so the
+    # operator isn't surprised the inhibit does nothing.
+    if [[ "$hw_flex" == '0' ]] && [[ "$hw_lightning" == '1' ]]; then
+        echo
+        c_yellow "  ⚠ FlexRadio off but Lightning on: the disconnect chain's"
+        c_yellow "    TX-inhibit step targets a radio you don't have. Harmless"
+        c_yellow "    (the flexradio request fails silently) but it won't do"
+        c_yellow "    anything. Keep FlexRadio if you want TX-inhibit-on-disconnect."
+    fi
+
     echo
     c_yellow "  Summary:"
     echo "    Callsign:           $callsign"
@@ -1244,6 +1307,15 @@ PYEOF
     echo "    Antenna topic:      $power_strip / $power_ch"
     echo "    Threshold / timer:  ${threshold_km}km / ${reconnect_min}min"
     echo "    QTH text:           $qth_text"
+    local enabled_list="" disabled_list=""
+    for pair in "FlexRadio:$hw_flex" "SPE:$hw_spe" "LP-700:$hw_lp700" \
+                "Rotator:$hw_rotator" "Lightning:$hw_lightning" "Power:$hw_power" \
+                "Solar:$hw_solar" "DXCC:$hw_dxcc" "RBN:$hw_rbn" \
+                "RPi:$hw_rpi" "Network:$hw_network" "GPS-NTP:$hw_gpsntp"; do
+        if [[ "${pair#*:}" == '1' ]]; then enabled_list+="${pair%:*} "; else disabled_list+="${pair%:*} "; fi
+    done
+    echo "    Cards ON:           ${enabled_list:-(none)}"
+    echo "    Cards OFF:          ${disabled_list:-(none)}"
     echo
     local confirm
     read -r -p "  Patch files with these values? [Y/n] " confirm
@@ -1270,6 +1342,10 @@ PYEOF
     export PATCH_THRESHOLD="$threshold_km"
     export PATCH_RECONNECT="$reconnect_min"
     export PATCH_QTH="$qth_text"
+    export PATCH_HW_FLEX="$hw_flex" PATCH_HW_SPE="$hw_spe" PATCH_HW_LP700="$hw_lp700"
+    export PATCH_HW_ROTATOR="$hw_rotator" PATCH_HW_LIGHTNING="$hw_lightning" PATCH_HW_POWER="$hw_power"
+    export PATCH_HW_SOLAR="$hw_solar" PATCH_HW_DXCC="$hw_dxcc" PATCH_HW_RBN="$hw_rbn"
+    export PATCH_HW_RPI="$hw_rpi" PATCH_HW_NETWORK="$hw_network" PATCH_HW_GPSNTP="$hw_gpsntp"
 
     step "Patching flows.json Init Defaults"
     python3 - <<'PYEOF' || fail "flows.json patch failed"
@@ -1304,11 +1380,53 @@ for pat, rep in patches:
     if n != 1:
         print(f'  WARN: pattern matched {n}x (expected 1): {pat}')
 init['func'] = func
+
+# ── MQTT broker CONFIG nodes ───────────────────────────────────────────
+# The Init Defaults MQTT_BROKER const above is informational only — a
+# function node can't reconfigure a broker config node at runtime. The 37
+# mqtt-in/out nodes connect via the mqtt-broker CONFIG nodes, whose `broker`
+# field is what actually decides where they dial. Patch every mqtt-broker
+# config node to the forker's IP, else all mqtt nodes keep dialing the
+# upstream Pi and show disconnected ("broker not filled in").
+broker_patched = 0
+for n in d:
+    if n.get('type') == 'mqtt-broker':
+        n['broker'] = MQTT
+        broker_patched += 1
+print(f'  mqtt-broker config nodes patched: {broker_patched}')
+
+# ── D1 safe-subset: disable the flow tab for absent stand-alone hardware ─
+# Only the five self-contained, single-subsystem tabs are touched. Setting
+# the tab's `disabled` flag removes its /ui card AND stops its background
+# polling. Entangled tabs (Flex/Rotator/Lightning/Power/RPi/Network/GPS)
+# are NOT touched here — Vue-only hiding for those, because other tabs wire
+# into their logic or share a D1 group.
+#   env flag '0' (no hardware) → disable the tab; '1' → ensure enabled.
+SAFE_TABS = {
+    'PATCH_HW_SPE':   'spe_ws_tab_01',          # SPE (WS)
+    'PATCH_HW_LP700': '18fb42443172f33c',       # LP-700-HID ws
+    'PATCH_HW_SOLAR': '590e889d44815afb',       # Solar
+    'PATCH_HW_DXCC':  'd110d176c0aad308',       # DXCC Tracker
+    'PATCH_HW_RBN':   'f9a0e3ad0e019052',       # RBN Skimmer Monitor
+}
+tab_by_id = {n['id']: n for n in d if n.get('type') == 'tab'}
+for env_key, tab_id in SAFE_TABS.items():
+    want_on = os.environ.get(env_key, '1') == '1'
+    tab = tab_by_id.get(tab_id)
+    if not tab:
+        print(f'  WARN: safe-subset tab {tab_id} ({env_key}) not found')
+        continue
+    if want_on:
+        tab.pop('disabled', None)           # ensure runnable (idempotent re-enable)
+    else:
+        tab['disabled'] = True
+        print(f"  disabled flow tab: {tab.get('label', tab_id)}")
+
 with open('flows.json', 'w') as f:
     json.dump(d, f, indent=4)
 print('  flows.json patched')
 PYEOF
-    ok "flows.json Init Defaults patched"
+    ok "flows.json Init Defaults + broker + safe-subset tabs patched"
 
     step "Patching uibuilder/shack/src/index.js TopBar"
     python3 - <<'PYEOF' || fail "index.js patch failed"
@@ -1339,10 +1457,43 @@ else:
     print(f'  TopBar sub line updated ({n} replacement)')
     s = s2
 
+# ── CARDS hardware flags — hide cards for absent subsystems ─────────────
+# Flip booleans inside the `const CARDS = { … };` block only. Scoped to the
+# block so the many other `true`/`false` literals in the file are untouched.
+# Idempotent: each key is forced to match its flag (re-run flips back too).
+HW = {
+    'flex':      os.environ.get('PATCH_HW_FLEX', '1'),
+    'lp700':     os.environ.get('PATCH_HW_LP700', '1'),
+    'spe':       os.environ.get('PATCH_HW_SPE', '1'),
+    'rotator':   os.environ.get('PATCH_HW_ROTATOR', '1'),
+    'lightning': os.environ.get('PATCH_HW_LIGHTNING', '1'),
+    'power':     os.environ.get('PATCH_HW_POWER', '1'),
+    'solar':     os.environ.get('PATCH_HW_SOLAR', '1'),
+    'dxcc':      os.environ.get('PATCH_HW_DXCC', '1'),
+    'rbn':       os.environ.get('PATCH_HW_RBN', '1'),
+    'rpi':       os.environ.get('PATCH_HW_RPI', '1'),
+    'network':   os.environ.get('PATCH_HW_NETWORK', '1'),
+    'gpsntp':    os.environ.get('PATCH_HW_GPSNTP', '1'),
+}
+m = re.search(r'const CARDS\s*=\s*\{(.*?)\};', s, re.DOTALL)
+if not m:
+    print('  WARN: const CARDS block not found — cards not patched')
+else:
+    block = m.group(1)
+    for key, val in HW.items():
+        boolstr = 'true' if val == '1' else 'false'
+        block, n = re.subn(r'(\b' + key + r'\s*:\s*)(?:true|false)',
+                           r'\g<1>' + boolstr, block)
+        if n != 1:
+            print(f'  WARN: CARDS.{key} matched {n}x (expected 1)')
+    s = s[:m.start(1)] + block + s[m.end(1):]
+    off = [k for k, v in HW.items() if v == '0']
+    print(f"  CARDS patched — hidden: {', '.join(off) if off else '(none)'}")
+
 with open(path, 'w') as f:
     f.write(s)
 PYEOF
-    ok "index.js TopBar patched"
+    ok "index.js TopBar + CARDS patched"
 
     # Optional: patch manifest.json name if it exists
     if [[ -f uibuilder/shack/src/manifest.json ]]; then
@@ -1364,6 +1515,9 @@ PYEOF
 
     unset PATCH_CALLSIGN PATCH_GRID PATCH_MQTT PATCH_STRIP PATCH_CH
     unset PATCH_THRESHOLD PATCH_RECONNECT PATCH_QTH
+    unset PATCH_HW_FLEX PATCH_HW_SPE PATCH_HW_LP700 PATCH_HW_ROTATOR
+    unset PATCH_HW_LIGHTNING PATCH_HW_POWER PATCH_HW_SOLAR PATCH_HW_DXCC
+    unset PATCH_HW_RBN PATCH_HW_RPI PATCH_HW_NETWORK PATCH_HW_GPSNTP
 
     ok "Backups kept: flows.json.bak.${ts}, index.js.bak.${ts}"
     ok "Run 'sudo systemctl restart nodered' once the install finishes,"

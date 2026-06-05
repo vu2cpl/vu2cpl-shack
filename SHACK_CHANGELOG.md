@@ -7741,6 +7741,135 @@ OS current-stable — informational only, not blocking.
 
 ---
 
+## 2026-06-04 — Fork tooling: MQTT broker config-node patch + hardware-tailored dashboard cards
+
+Operator question that kicked this off: "the rebuild script — MQTT
+broker is not being filled in many instances on the flow? And if a
+forker has no particular module, that card should be removed from
+the Vue /shack dashboard, and even the D1 dashboard where there are
+no conflicts or shared tabs."
+
+Two distinct things. One real bug, one new feature.
+
+### Bug — Stage 13 patched the wrong MQTT target
+
+Stage 13's flows.json patcher rewrote `const MQTT_BROKER = '…'`
+inside the **Init Defaults function node** only. But a function
+node can't reconfigure a broker *config* node at runtime — the 37
+`mqtt in`/`mqtt out` nodes connect via the two `mqtt-broker`
+**config nodes** (`f4785be9863eab08` "Tasmota MQTT Broker" +
+`mqttbroker.shack`), whose `broker` field is what actually decides
+where they dial. Those were never patched, so on a forker's Pi
+every mqtt node kept dialing `192.168.1.169` (the upstream Pi) and
+showed disconnected. That's the "broker not filled in many
+instances."
+
+**Fix:** the patcher now also iterates every `mqtt-broker` config
+node and sets `broker` = the forker's MQTT IP. Verified in a
+dry-run: both config nodes flip to the entered IP; re-running with
+a different IP flips them again (idempotent).
+
+### Feature — hardware-tailored dashboard (scoped: Vue all + safe D1 subset, dependency-locked)
+
+Goal: a forker who has no FlexRadio / no rotator / no DXCC interest
+shouldn't see dead cards. Two design decisions taken with the
+operator before building:
+
+- **Scope** = tailor the Vue `/shack` dashboard for all 12 cards,
+  PLUS auto-disable the **five stand-alone D1 `/ui` tabs** that are
+  cleanly isolated (SPE, LP-700, Solar, DXCC, RBN). The other seven
+  D1 cards are left alone — they're entangled (Flex/Rotator/
+  Lightning/Power switch outlets through each other) or share a D1
+  `ui_group` (GPS-NTP + Network share the `Network Monitor` group),
+  so removing them from D1 risks the layout or orphans a control.
+- **Entanglement handling** = dependency-locked prompts (below).
+
+**Mechanism (Vue):** a single `const CARDS = { flex:true, … }`
+block near the top of `uibuilder/shack/src/index.js`; each card in
+the root template gets `v-if="CARDS.<key>"`; `App.setup()` returns
+`CARDS`. Flip a flag to `false` → card unrendered. **Nothing is
+deleted** — the component definition + its data plumbing stay
+intact, so flipping back to `true` fully restores it. Far safer
+than regex-deleting card code. Build stamp bumped `v10 → v11`.
+
+**Mechanism (D1 safe subset):** for the 5 isolated subsystems, the
+patcher sets `"disabled": true` on the **flow tab** (not just the
+ui_template). This both removes the `/ui` card AND stops the tab's
+background polling — no more pointless Club Log fetches / RBN
+telnet / error spam for hardware the forker doesn't have. The 5
+tabs and the fact that each is single-subsystem (zero shared
+groups) were confirmed by ID before wiring this:
+
+| Subsystem | Flow tab ID | Tab label |
+|---|---|---|
+| SPE | `spe_ws_tab_01` | SPE (WS) |
+| LP-700 | `18fb42443172f33c` | LP-700-HID ws |
+| Solar | `590e889d44815afb` | Solar |
+| DXCC | `d110d176c0aad308` | DXCC Tracker |
+| RBN | `f9a0e3ad0e019052` | RBN Skimmer Monitor |
+
+(This is a refinement of the originally-approved "disable the
+ui_template" — whole-tab disable is strictly cleaner for these 5
+confirmed-isolated tabs and the operator signed off.)
+
+**Stage 13 prompts:** after the existing identity prompts, a new
+"Which subsystems does THIS station have?" block asks 12 Y/n
+questions (all default Yes). Then two dependency rules:
+
+- **R1 (hard):** if Power = no but any of Lightning / Rotator /
+  Flex = yes → **force Power on**, with an explanation that Power
+  is the switching layer for the antenna disconnect / rotator
+  auto-off / Flex power relay. Hiding it would orphan those.
+- **R2 (warn):** if Flex = no but Lightning = yes → warn that the
+  disconnect chain's TX-inhibit step targets a radio you don't
+  have. Harmless (the flexradio request fails silently) but it
+  won't do anything. Don't block — just inform.
+
+The summary block now lists "Cards ON" / "Cards OFF" before the
+final confirm.
+
+### What is deliberately NOT touched
+
+- No flow nodes deleted; no wires cut. Hidden Vue cards keep their
+  builder/cmd-router nodes (harmless when the card isn't shown).
+- D1 for Flex / Rotator / Lightning / Power / RPi / Network / GPS —
+  Vue-only hiding. RPi/Network/GPS are isolated enough that a
+  future pass could add them to the D1 safe subset; held back this
+  round to honour the agreed 5-tab scope (Network + GPS share a D1
+  group, so they need care).
+- Stage 13 still backs up `flows.json` + `index.js` before
+  patching, so every run is reversible by restoring the `.bak`
+  or re-running with the cards turned back on.
+
+### Verification
+
+Dry-ran both patchers against throwaway copies (extracted the two
+embedded Python heredocs verbatim from the script so the test ran
+the *real* logic, not a paraphrase):
+
+- Run 1 (Flex/SPE/DXCC off, broker `10.0.0.5`): both broker config
+  nodes → `10.0.0.5`; SPE + DXCC tabs `disabled:true`; LP-700 +
+  Solar + RBN tabs untouched; `CARDS.flex/spe/dxcc=false`, rest
+  `true`; flows.json still valid JSON; index.js still parses
+  (`node --check`).
+- Run 2 (all on, broker `192.168.50.1`, on the already-patched
+  copy): broker re-patched; all 5 tabs re-enabled (`disabled`
+  removed); all 12 CARDS back to `true` → **idempotent**.
+- Node count unchanged 501 → 501 (nothing added/removed).
+
+### Files changed
+
+- `uibuilder/shack/src/index.js` — CARDS block + 12 `v-if` + setup
+  return + build stamp.
+- `rebuild_pi.sh` — Stage 13 hardware prompts, dependency rules,
+  broker config-node patch, safe-subset tab disable, CARDS flip,
+  exports + unset.
+- Docs: this entry, HANDOVER row + tip, FORK_GUIDE Stage 13 row +
+  A5 section, REBUILD_PI Stage 13 note, CLAUDE.md uibuilder
+  section, README card line.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:

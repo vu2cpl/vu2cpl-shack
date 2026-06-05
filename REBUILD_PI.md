@@ -81,7 +81,13 @@ The script pauses for three interactive steps:
   Pi? [y/N]". Default N keeps current values (upstream defaults or
   whatever you set previously). Press y to (re-)enter callsign /
   grid / MQTT broker / Tasmota antenna topic + channel / threshold /
-  reconnect / QTH text. Always asks; never auto-decides.
+  reconnect / QTH text, then a "which subsystems do you have?" Y/n
+  round for all 12 dashboard cards. Patches Init Defaults, **both
+  `mqtt-broker` config nodes** (so every mqtt node dials your broker,
+  not the upstream Pi), the Vue TopBar + `CARDS` flags, and disables
+  the flow tab for any of SPE/LP-700/Solar/DXCC/RBN you skip.
+  Dependency-locked (won't let you drop Power while Lightning/Rotator/
+  Flex stay). Always asks; never auto-decides.
 
 Everything else runs automatically. Re-run safely after Ctrl-C or reboot:
 state is tracked in `$HOME/.rebuild_pi.state` (survives reboots).

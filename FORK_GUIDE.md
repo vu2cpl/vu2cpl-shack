@@ -86,8 +86,9 @@ Have these ready before Part A5 (customization):
 |---|---|---|
 | **Your callsign** | `K1ABC` | Init Defaults + DXCC Credentials + Vue TopBar |
 | **6-character grid square** | `FN42aa` — use [k7fry.com/grid](http://www.k7fry.com/grid/) if unsure | Init Defaults (lat/lon derived automatically) |
-| **MQTT broker IP** | Usually your Pi's own IP, e.g. `192.168.1.50` | Init Defaults |
+| **MQTT broker IP** | Usually your Pi's own IP, e.g. `192.168.1.50` | Init Defaults **and** both `mqtt-broker` config nodes (Stage 13 patches all of them — see note below) |
 | **Antenna power Tasmota topic** | e.g. `shack-power` / `POWER3` | Init Defaults |
+| **Which subsystems you have** | FlexRadio? SPE? rotator? lightning? etc. | Stage 13 asks Y/n per card; "no" hides that card (and, for SPE/LP-700/Solar/DXCC/RBN, disables its flow tab) |
 | **Club Log account + API key** (optional) | From [clublog.org](https://clublog.org) → Settings → API keys | systemd secrets file + DXCC Credentials node |
 | **Telegram bot token + chat ID** (optional) | From `@BotFather` + `@userinfobot` | systemd secrets file |
 | **A password** for your dashboard | Choose one | bcrypt hash → settings.js |
@@ -213,7 +214,7 @@ was already done (state file at `~/.rebuild_pi.state`), it prints
 | 10 — udev rules | Installs udev rules for LP-700 (`telepost` group) and FTDI serial devices. | <1 min |
 | 11 — lp700-server | Clones [`VU3ESV/LP-700-Server`](https://github.com/VU3ESV/LP-700-Server) and installs the WebSocket gateway as a systemd unit (only if you have an LP-700 / LP-500). | 5 min |
 | 12 — secrets | Prompts you for Club Log API key, Club Log password, Telegram bot token. Writes them to `/etc/systemd/system/nodered.service.d/secrets.conf` (root-readable only). | 1 min |
-| 13 — station customisation | **Always asks "(Re-)customize station identity for this Pi? [y/N]".** Press y → prompts you for callsign, grid, MQTT broker IP, Tasmota antenna topic + channel, threshold, reconnect timer, QTH text. Press Enter → keeps current values. On y: patches Init Defaults in `flows.json` and the TopBar in the Vue dashboard. Also updates `manifest.json`'s `name` for the PWA install. This closes the manual A5.1 + A5.3 + A5.4 steps below into the script. | 2 min |
+| 13 — station customisation | **Always asks "(Re-)customize station identity for this Pi? [y/N]".** Press y → prompts you for callsign, grid, MQTT broker IP, Tasmota antenna topic + channel, threshold, reconnect timer, QTH text, **then a "which subsystems do you have?" Y/n round for all 12 dashboard cards**. Press Enter → keeps current values. On y, it patches: Init Defaults in `flows.json`; **both `mqtt-broker` config nodes** (so all 37 mqtt nodes dial *your* broker, not the upstream Pi); the Vue TopBar; `manifest.json` name; the **`CARDS` flags** in the Vue dashboard (`v-if` hides cards you said "no" to); and for the 5 stand-alone subsystems you skip (**SPE, LP-700, Solar, DXCC, RBN**) it also sets `disabled:true` on that flow tab so its background polling stops. Dependency rules apply: if you keep Lightning/Rotator/Flex it **forces Power on** (they switch outlets through it); if you drop Flex but keep Lightning it **warns** the TX-inhibit step will no-op. Backs up `flows.json` + `index.js` first, so it's fully reversible. Closes manual A5.1 + A5.3 + A5.4 below. | 3 min |
 | 14 — verification | Runs a post-install checklist split into critical (Node-RED responds / project active / flows parsed / `/shack` + `/ui` reachable / `rpi-agent` active / Mosquitto alive) and optional (LP-700 healthz, AS3935 telemetry, GPS-NTP telemetry — skip-not-fail when hardware isn't present). | 2 min |
 
 **While the script runs**, you'll see colored output: green ✓ for
@@ -254,14 +255,38 @@ bottom of this guide.
 > **Most of this section is now automated by Stage 13.** If you let
 > `rebuild_pi.sh` complete normally, the script already prompted
 > you for callsign / grid / MQTT broker / Tasmota topic / threshold /
-> reconnect timer / QTH text, patched Init Defaults + the Vue
-> TopBar, and updated `manifest.json`. **Skim A5.1 + A5.3 to confirm
-> the values look right** — then continue with A5.2 (DXCC creds)
-> and A5.4 (Tasmota topics for each device beyond your antenna
-> switch). Sections below are the manual fallback if you ever
-> need to change values later (re-run with `bash rebuild_pi.sh
-> --stage 13` to re-prompt interactively, or edit by hand as
-> described).
+> reconnect timer / QTH text **and which subsystems you have**, then
+> patched Init Defaults, **both `mqtt-broker` config nodes** (so all
+> your mqtt nodes actually connect — see note), the Vue TopBar,
+> `manifest.json`, the Vue `CARDS` flags, and disabled the flow tabs
+> for any of SPE / LP-700 / Solar / DXCC / RBN you said you don't
+> have. **Skim A5.1 + A5.3 to confirm the values look right** — then
+> continue with A5.2 (DXCC creds) and A5.4 (Tasmota topics for each
+> device beyond your antenna switch). Sections below are the manual
+> fallback if you ever need to change values later (re-run with
+> `bash rebuild_pi.sh --stage 13` to re-prompt interactively, or
+> edit by hand as described).
+
+> **Why the broker patch matters:** Node-RED mqtt nodes don't carry
+> the broker address themselves — they reference an `mqtt-broker`
+> *config node* that holds the host/port. This repo has two config
+> nodes (`Tasmota MQTT Broker` + `shack-mqtt`), both shipped pointing
+> at the upstream Pi (`192.168.1.169`). If only Init Defaults were
+> patched (as in pre-2026-06-04 builds), your 37 mqtt nodes would all
+> still dial `192.168.1.169` and show disconnected. Stage 13 now
+> rewrites the `broker` field on **both config nodes** to your IP. If
+> you ever import flows by hand, remember to fix the broker in those
+> two config nodes (Node-RED editor → any mqtt node → pencil-edit the
+> broker → set Server).
+
+> **Hiding cards you don't need:** Stage 13's subsystem round flips
+> `const CARDS = { … }` at the top of
+> `uibuilder/shack/src/index.js`. To hide or restore a card later by
+> hand, edit that block (`flex: false` hides the FlexRadio card) and
+> restart Node-RED — no rebuild needed. Nothing is deleted, so it's
+> reversible any time. For the 5 stand-alone subsystems, also
+> set `"disabled": true` on the matching flow tab (or just answer the
+> Stage 13 prompt) to stop their background polling.
 
 ### A5.1 — Init Defaults (Lightning + identity) — manual fallback
 

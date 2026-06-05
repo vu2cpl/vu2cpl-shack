@@ -32,6 +32,11 @@ dashboard. Hardware talks to Node-RED via:
   collapsed by default with live summary headers, true responsive
   layout (CSS column masonry), PWA-installable on iPad / iPhone
   ("Add to Home Screen"). The primary dashboard going forward.
+  Cards are individually toggleable via a `const CARDS = { … }` block
+  at the top of `uibuilder/shack/src/index.js` (`v-if` per card) — a
+  forker who lacks a subsystem hides its card without deleting any
+  code; `rebuild_pi.sh` Stage 13 sets these from a hardware Y/n
+  round. See SHACK_CHANGELOG `2026-06-04`.
 
 A 2026-05-24 POC of Dashboard 2 (`@flowfuse/node-red-dashboard`,
 served at `/dashboard`) was retired on 2026-05-26 in favour of
