@@ -2,7 +2,7 @@
 
 **Period:** 2026-05-01 → 2026-05-26
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
-**Last commit at handover:** `bb0f922` — HANDOVER strikethrough normalize (fork-tooling work at `c41b60a`)
+**Last commit at handover:** `5acd1c0` — Rotator gateway Phase 3 (closes #31); flow refactor at `626ccc0`, gateway repo `vu2cpl/rotator-remote`
 
 ---
 
