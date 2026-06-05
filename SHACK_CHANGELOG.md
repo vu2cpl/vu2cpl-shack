@@ -7999,6 +7999,22 @@ everywhere; the Mac app (#6) is unblocked for all three.
 
 ---
 
+## 2026-06-06 — D1 Rotator compass: remove 4 decorative corner brackets
+
+Cosmetic. The D1 `/ui` Compass SVG (`cae633df9457557f`) had 4 cyan
+(`#00e5ff`) L-shaped corner brackets at the four corners of the
+compass box — pure HUD framing from the 2026-05-23 aviation-HUD
+rebuild, no click handlers / bindings / functional value. On the dark
+dashboard the bright cyan reads as light/white, and the operator found
+them a distraction. Removed the 4 `<path d="M … L … L …" fill="none">`
+elements from `svgString` (path count 6 → 2). **Preserved** the
+functional `<polygon id="rot-arrow">` heading pointer (also a triangle)
+and the `rotator-power-*` knob paths. No behaviour change. Verified the
+heading arrow + power knob survive and the SVG envelope is intact before
+writing.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:
