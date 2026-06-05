@@ -2,7 +2,7 @@
 
 **Period:** 2026-05-01 → 2026-05-26
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
-**Last commit at handover:** `f0ca2ef` — rebuild_pi.sh Stage 1: bullseye fallback for raspi-config do_serial
+**Last commit at handover:** `c41b60a` — Fork tooling: MQTT broker config-node patch + hardware-tailored dashboard cards
 
 ---
 
