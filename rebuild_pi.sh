@@ -65,6 +65,11 @@ readonly STATE_FILE="$HOME/.rebuild_pi.state"
 readonly REPO_DIR="$HOME/.node-red/projects/$REPO_NAME"
 readonly LP700_DIR="$HOME/LP-700-Server"
 readonly ROTATOR_DIR="$HOME/rotator-remote"
+readonly SPE_DIR="$HOME/spe-remote"
+# Hardware inventory — collected ONCE (see hw_inventory), persisted here, and
+# read by every gateway-install stage + Stage 13's dashboard-card patching so
+# nothing asks "do you have X?" twice.
+readonly HW_FILE="$HOME/.rebuild_pi.hw"
 
 # Stage names (must match the order they execute)
 readonly STAGES=(
@@ -82,6 +87,7 @@ readonly STAGES=(
     "12_secrets"
     "13_customize_station"
     "13b_rotator_remote"
+    "13c_spe_remote"
     "14_verify"
 )
 
@@ -109,6 +115,15 @@ prompt_continue() {
     echo
     c_yellow "  ⏸  $1"
     read -r -p "      Press Enter to continue (or Ctrl-C to abort)... "
+}
+
+# ask_card <var> <prompt> → sets the named global to 1 (yes) or 0 (no).
+# Default is Yes (bare Enter). Used by the hardware inventory.
+ask_card() {
+    local __ans
+    read -r -p "  $2 [Y/n] " __ans
+    __ans="${__ans:-Y}"
+    if [[ "$__ans" =~ ^[Nn] ]]; then printf -v "$1" '0'; else printf -v "$1" '1'; fi
 }
 
 stage_done()    { grep -qx "$1" "$STATE_FILE" 2>/dev/null; }
@@ -976,19 +991,13 @@ stage_11_lp700_server() {
         return 0
     fi
 
-    # Opt-in: most forkers don't own an LP-700 / LP-500. Skip if absent.
-    echo
-    c_yellow "  lp700-server is the WebSocket gateway for the Telepost LP-700"
-    c_yellow "  (or LP-500) power/SWR meter. Skip if you don't have one."
-    echo
-    local has_lp700
-    read -r -p "  Do you have an LP-700 / LP-500 meter on this Pi? [y/N] " has_lp700
-    has_lp700="${has_lp700:-N}"
-    if [[ ! "$has_lp700" =~ ^[Yy] ]]; then
-        ok "Skipping Stage 11 — no LP-700 hardware"
+    # Driven by the hardware inventory — no re-prompt.
+    if [[ "${HW_LP700:-1}" != '1' ]]; then
+        ok "Skipping Stage 11 — no LP-700 (per hardware inventory)"
         mark_stage "11_lp700_server"
         return 0
     fi
+    c_yellow "  lp700-server — WebSocket gateway for the Telepost LP-700 / LP-500."
 
     # Clone (or detect existing)
     if [[ ! -d "$LP700_DIR" ]]; then
@@ -1238,68 +1247,10 @@ PYEOF
     read -r -p "  QTH location text for header (e.g. 'New York · USA'):     " qth_text
     qth_text="${qth_text:-Your QTH}"
 
-    # ── Hardware / card selection ──────────────────────────────────────
-    # Answer n to hide a card from the /shack Vue dashboard. For the five
-    # stand-alone subsystems (SPE, LP-700, Solar, DXCC, RBN) a "no" also
-    # disables the matching flow tab in Node-RED so its background polling
-    # stops (no Club Log fetches / telnet / errors). Entangled subsystems
-    # (Flex/Rotator/Lightning/Power) are Vue-only — their flow logic is
-    # left intact because other tabs wire into it. Dependency rules below
-    # stop you from hiding a card something else still needs.
-    echo
-    c_yellow "  ── Which subsystems does THIS station have? ──"
-    c_yellow "  Answer n to hide that card. All default to Yes (press Enter)."
-    echo
-
-    # ask_card <var> <prompt> → sets <var> to 1 (yes) or 0 (no)
-    ask_card() {
-        local __ans
-        read -r -p "  $2 [Y/n] " __ans
-        __ans="${__ans:-Y}"
-        if [[ "$__ans" =~ ^[Nn] ]]; then printf -v "$1" '0'; else printf -v "$1" '1'; fi
-    }
-
-    local hw_flex hw_spe hw_lp700 hw_rotator hw_lightning hw_power
-    local hw_solar hw_dxcc hw_rbn hw_rpi hw_network hw_gpsntp
-    ask_card hw_flex      "FlexRadio (SmartSDR TCP)?                   "
-    ask_card hw_spe       "SPE amplifier (spe-remote)?                 "
-    ask_card hw_lp700     "LP-700 / LP-500 meter?                      "
-    ask_card hw_rotator   "Rotator (Rotor-EZ)?                         "
-    ask_card hw_lightning "Lightning protection (AS3935 / Open-Meteo)? "
-    ask_card hw_power     "Tasmota power strips?                       "
-    ask_card hw_solar     "Solar / space-weather panel?                "
-    ask_card hw_dxcc      "DXCC tracker (Club Log + clusters)?         "
-    ask_card hw_rbn       "RBN skimmer monitor?                        "
-    ask_card hw_rpi       "RPi fleet monitor?                          "
-    ask_card hw_network   "Internet / network monitor?                 "
-    ask_card hw_gpsntp    "GPS NTP server card (gpsntp host)?          "
-
-    # ── Dependency rules ───────────────────────────────────────────────
-    # R1 (hard): Tasmota power strips are the switching layer for the
-    # antenna disconnect, rotator auto-off, and Flex power relay. If any of
-    # those stay enabled, Power must stay too — hiding it would orphan the
-    # controls those subsystems drive.
-    if [[ "$hw_power" == '0' ]] \
-       && { [[ "$hw_lightning" == '1' ]] || [[ "$hw_rotator" == '1' ]] || [[ "$hw_flex" == '1' ]]; }; then
-        echo
-        c_yellow "  ⚠ Keeping Power Control card — it's the switching layer for:"
-        [[ "$hw_lightning" == '1' ]] && c_yellow "      • Lightning antenna disconnect (Tasmota antenna outlet)"
-        [[ "$hw_rotator"   == '1' ]] && c_yellow "      • Rotator auto-off timer (Tasmota rotator outlet)"
-        [[ "$hw_flex"      == '1' ]] && c_yellow "      • FlexRadio power relay (4-relay board)"
-        c_yellow "    Hiding it would orphan those controls. Forcing Power = on."
-        hw_power='1'
-    fi
-
-    # R2 (warn): Lightning's TX-inhibit step targets the FlexRadio. Without
-    # Flex it's a harmless no-op (the request just fails), but warn so the
-    # operator isn't surprised the inhibit does nothing.
-    if [[ "$hw_flex" == '0' ]] && [[ "$hw_lightning" == '1' ]]; then
-        echo
-        c_yellow "  ⚠ FlexRadio off but Lightning on: the disconnect chain's"
-        c_yellow "    TX-inhibit step targets a radio you don't have. Harmless"
-        c_yellow "    (the flexradio request fails silently) but it won't do"
-        c_yellow "    anything. Keep FlexRadio if you want TX-inhibit-on-disconnect."
-    fi
+    # Which dashboard cards to show comes from the hardware inventory (asked
+    # once at the start of the run, see hw_inventory). The HW_* globals are
+    # already set — we just apply them to the Vue CARDS flags + the safe-subset
+    # flow-tab disables below. No re-prompting here.
 
     echo
     c_yellow "  Summary:"
@@ -1309,15 +1260,15 @@ PYEOF
     echo "    Antenna topic:      $power_strip / $power_ch"
     echo "    Threshold / timer:  ${threshold_km}km / ${reconnect_min}min"
     echo "    QTH text:           $qth_text"
-    local enabled_list="" disabled_list=""
-    for pair in "FlexRadio:$hw_flex" "SPE:$hw_spe" "LP-700:$hw_lp700" \
-                "Rotator:$hw_rotator" "Lightning:$hw_lightning" "Power:$hw_power" \
-                "Solar:$hw_solar" "DXCC:$hw_dxcc" "RBN:$hw_rbn" \
-                "RPi:$hw_rpi" "Network:$hw_network" "GPS-NTP:$hw_gpsntp"; do
+    local enabled_list="" disabled_list="" pair
+    for pair in "FlexRadio:$HW_FLEX" "SPE:$HW_SPE" "LP-700:$HW_LP700" \
+                "Rotator:$HW_ROTATOR" "Lightning:$HW_LIGHTNING" "Power:$HW_POWER" \
+                "Solar:$HW_SOLAR" "DXCC:$HW_DXCC" "RBN:$HW_RBN" \
+                "RPi:$HW_RPI" "Network:$HW_NETWORK" "GPS-NTP:$HW_GPSNTP"; do
         if [[ "${pair#*:}" == '1' ]]; then enabled_list+="${pair%:*} "; else disabled_list+="${pair%:*} "; fi
     done
-    echo "    Cards ON:           ${enabled_list:-(none)}"
-    echo "    Cards OFF:          ${disabled_list:-(none)}"
+    echo "    Cards ON (from inventory):  ${enabled_list:-(none)}"
+    echo "    Cards OFF (from inventory): ${disabled_list:-(none)}"
     echo
     local confirm
     read -r -p "  Patch files with these values? [Y/n] " confirm
@@ -1344,10 +1295,11 @@ PYEOF
     export PATCH_THRESHOLD="$threshold_km"
     export PATCH_RECONNECT="$reconnect_min"
     export PATCH_QTH="$qth_text"
-    export PATCH_HW_FLEX="$hw_flex" PATCH_HW_SPE="$hw_spe" PATCH_HW_LP700="$hw_lp700"
-    export PATCH_HW_ROTATOR="$hw_rotator" PATCH_HW_LIGHTNING="$hw_lightning" PATCH_HW_POWER="$hw_power"
-    export PATCH_HW_SOLAR="$hw_solar" PATCH_HW_DXCC="$hw_dxcc" PATCH_HW_RBN="$hw_rbn"
-    export PATCH_HW_RPI="$hw_rpi" PATCH_HW_NETWORK="$hw_network" PATCH_HW_GPSNTP="$hw_gpsntp"
+    # Card visibility comes from the hardware inventory (HW_* globals).
+    export PATCH_HW_FLEX="$HW_FLEX" PATCH_HW_SPE="$HW_SPE" PATCH_HW_LP700="$HW_LP700"
+    export PATCH_HW_ROTATOR="$HW_ROTATOR" PATCH_HW_LIGHTNING="$HW_LIGHTNING" PATCH_HW_POWER="$HW_POWER"
+    export PATCH_HW_SOLAR="$HW_SOLAR" PATCH_HW_DXCC="$HW_DXCC" PATCH_HW_RBN="$HW_RBN"
+    export PATCH_HW_RPI="$HW_RPI" PATCH_HW_NETWORK="$HW_NETWORK" PATCH_HW_GPSNTP="$HW_GPSNTP"
 
     step "Patching flows.json Init Defaults"
     python3 - <<'PYEOF' || fail "flows.json patch failed"
@@ -1541,21 +1493,15 @@ stage_13b_rotator_remote() {
         return 0
     fi
 
-    # Opt-in: only stations with a Rotor-EZ (DCU-1 compatible) rotator.
-    echo
-    c_yellow "  rotator-remote is the WebSocket gateway for an Idiom Press Rotor-EZ"
-    c_yellow "  (Hy-Gain DCU-1 compatible) antenna rotator. It owns the FTDI serial"
-    c_yellow "  port so Node-RED + other clients share it without contention. Skip"
-    c_yellow "  if you don't have a rotator (or control it some other way)."
-    echo
-    local has_rot
-    read -r -p "  Do you have a Rotor-EZ rotator on this Pi? [y/N] " has_rot
-    has_rot="${has_rot:-N}"
-    if [[ ! "$has_rot" =~ ^[Yy] ]]; then
-        ok "Skipping Stage 13b — no rotator"
+    # Driven by the hardware inventory — no re-prompt.
+    if [[ "${HW_ROTATOR:-1}" != '1' ]]; then
+        ok "Skipping Stage 13b — no rotator (per hardware inventory)"
         mark_stage "13b_rotator_remote"
         return 0
     fi
+    c_yellow "  rotator-remote — WebSocket gateway for an Idiom Press Rotor-EZ"
+    c_yellow "  (DCU-1 compatible) rotator. Owns the FTDI serial port; Node-RED + other"
+    c_yellow "  clients share it without contention."
 
     # Clone (or update).
     if [[ ! -d "$ROTATOR_DIR" ]]; then
@@ -1621,6 +1567,96 @@ PYEOF
 
     mark_stage "13b_rotator_remote"
     ok "Stage 13b complete"
+}
+
+# ─── Stage 13c: spe-remote gateway (optional) ────────────────────────────────
+
+stage_13c_spe_remote() {
+    banner "Stage 13c — spe-remote gateway (optional)"
+
+    # Already running? Done.
+    if systemctl is-active --quiet spe-remote 2>/dev/null; then
+        ok "spe-remote already active"
+        mark_stage "13c_spe_remote"
+        return 0
+    fi
+
+    # Driven by the hardware inventory — no re-prompt.
+    if [[ "${HW_SPE:-1}" != '1' ]]; then
+        ok "Skipping Stage 13c — no SPE amplifier (per hardware inventory)"
+        mark_stage "13c_spe_remote"
+        return 0
+    fi
+    c_yellow "  spe-remote — WebSocket gateway for the SPE Expert amplifier. Owns the"
+    c_yellow "  SPE FTDI serial port; Node-RED + other clients share it. Also handles"
+    c_yellow "  power-on via a DTR/RTS toggle on the open port."
+
+    # Clone (or update).
+    if [[ ! -d "$SPE_DIR" ]]; then
+        step "Clone vu2cpl/spe-remote"
+        git clone https://github.com/vu2cpl/spe-remote.git "$SPE_DIR" \
+            || fail "Clone failed — check connectivity to github.com."
+    else
+        ok "Repo already present at $SPE_DIR — pulling latest"
+        (cd "$SPE_DIR" && git pull --ff-only) || warn "git pull failed; continuing with current checkout"
+    fi
+    cd "$SPE_DIR" || fail "Cannot cd to $SPE_DIR"
+
+    # Point config.yaml at this station's SPE serial device.
+    echo
+    c_yellow "  USB-serial devices on this Pi (/dev/serial/by-id):"
+    ls -1 /dev/serial/by-id/ 2>/dev/null | sed 's/^/      /' \
+        || c_yellow "      (none found — is the SPE FTDI cable plugged in?)"
+    local cur_port spe_port
+    cur_port=$(grep -E '^[[:space:]]*port:' config.yaml | head -1 | sed -E 's/^[[:space:]]*port:[[:space:]]*//')
+    echo
+    read -r -p "  SPE serial device path (Enter to keep default): " spe_port
+    spe_port="${spe_port:-$cur_port}"
+    if [[ -n "$spe_port" && "$spe_port" != "$cur_port" ]]; then
+        step "Setting serial.port = $spe_port in config.yaml"
+        SPE_PORT="$spe_port" python3 - <<'PYEOF'
+import os, re
+port = os.environ['SPE_PORT']
+t = open('config.yaml').read()
+# Replace the first 'port:' (serial.port — the serial block precedes server).
+t2, n = re.subn(r'(^[ \t]*port:[ \t]*).*$', r'\g<1>' + port, t, count=1, flags=re.M)
+open('config.yaml', 'w').write(t2)
+print('  patched' if n == 1 else '  WARN: serial port line not found — edit config.yaml by hand')
+PYEOF
+    fi
+
+    step "Running setup.sh (venv + deps)"
+    ./setup.sh || fail "setup.sh failed — check the output above."
+
+    step "Installing systemd service (sudo ./install-service.sh)"
+    sudo ./install-service.sh || fail "install-service.sh failed — check the output above."
+
+    # spe-remote has no /healthz; the server serves its bundled dashboard at /,
+    # so a 200 on the root means the WS server is up.
+    step "Verify server responds on :8888 (waiting up to 20 s)"
+    local hz_ok=false hz_waited=0
+    while (( hz_waited < 20 )); do
+        if curl -sf --max-time 3 http://localhost:8888/ >/dev/null; then
+            hz_ok=true
+            break
+        fi
+        sleep 2
+        hz_waited=$((hz_waited + 2))
+    done
+    if $hz_ok; then
+        ok "spe-remote responds on :8888"
+        c_yellow "  (the amp can be OFF — the gateway still serves; power it on from"
+        c_yellow "   the dashboard to see live state.)"
+    else
+        warn "spe-remote not responding on :8888 after 20 s."
+        warn "  Check: sudo journalctl -u spe-remote -n 30"
+        warn "  Common cause: the SPE serial port is wrong or already held by"
+        warn "  Node-RED. The Node-RED SPE tab is a ws-client, so it should not"
+        warn "  hold the port — confirm config.yaml serial.port is correct."
+    fi
+
+    mark_stage "13c_spe_remote"
+    ok "Stage 13c complete"
 }
 
 # ─── Stage 14: verification (matches REBUILD_PI.md Step 12 + #13) ───────────
@@ -1705,11 +1741,15 @@ stage_14_verify() {
     # These FAIL silently if the hardware isn't present — that's expected.
     check_optional "lp700-server /healthz" \
         "curl -sf --max-time 3 http://localhost:8089/healthz" \
-        "LP-700 not installed (Stage 11 opt-out) or meter not yet connected"
+        "LP-700 not installed (no LP-700 in inventory) or meter not yet connected"
 
     check_optional "rotator-remote /healthz" \
         "curl -sf --max-time 3 http://localhost:8090/healthz" \
-        "rotator not installed (Stage 13b opt-out) or gateway not running"
+        "rotator not installed (no rotator in inventory) or gateway not running"
+
+    check_optional "spe-remote :8888" \
+        "curl -sf --max-time 3 http://localhost:8888/" \
+        "SPE not installed (no SPE in inventory) or gateway not running"
 
     check_optional "lightning/as3935/hb topic" \
         "timeout 35 mosquitto_sub -h localhost -t 'lightning/as3935/hb' -C 1" \
@@ -1736,6 +1776,91 @@ stage_14_verify() {
 
     mark_stage "14_verify"
     ok "Stage 14 complete"
+}
+
+# ─── Hardware inventory ───────────────────────────────────────────────────────
+# Asked ONCE, up front, persisted to $HW_FILE. Every stage that needs to know
+# "does this station have X?" reads the persisted answer instead of re-asking —
+# the 3 gateway installs (spe-remote / lp700-server / rotator-remote) and Stage
+# 13's dashboard-card patching all key off the same HW_* globals. Loaded
+# silently on later invocations (and on --stage single runs) so nothing
+# re-prompts. Re-answer with `--reset` (wipes state + inventory).
+
+hw_inventory() {
+    if [[ -f "$HW_FILE" ]]; then
+        # shellcheck disable=SC1090
+        source "$HW_FILE"
+        return 0
+    fi
+
+    banner "Hardware inventory (asked once — drives cards + gateway installs)"
+    c_yellow "  Which subsystems does THIS station have? Your answers decide:"
+    c_yellow "   • which /shack + /ui dashboard cards show (and which flow tabs run)"
+    c_yellow "   • which WebSocket gateways get installed —"
+    c_yellow "       SPE → spe-remote · LP-700 → lp700-server · Rotator → rotator-remote"
+    c_yellow "  All default to Yes; press Enter to keep one."
+    echo
+    ask_card HW_FLEX      "FlexRadio (SmartSDR TCP)?                   "
+    ask_card HW_SPE       "SPE Expert amplifier?                       "
+    ask_card HW_LP700     "LP-700 / LP-500 meter?                      "
+    ask_card HW_ROTATOR   "Rotator (Rotor-EZ)?                         "
+    ask_card HW_LIGHTNING "Lightning protection (AS3935 / Open-Meteo)? "
+    ask_card HW_POWER     "Tasmota power strips?                       "
+    ask_card HW_SOLAR     "Solar / space-weather panel?                "
+    ask_card HW_DXCC      "DXCC tracker (Club Log + clusters)?         "
+    ask_card HW_RBN       "RBN skimmer monitor?                        "
+    ask_card HW_RPI       "RPi fleet monitor?                          "
+    ask_card HW_NETWORK   "Internet / network monitor?                 "
+    ask_card HW_GPSNTP    "GPS NTP server card (gpsntp host)?          "
+
+    # R1 (hard): Tasmota power strips are the switching layer for the antenna
+    # disconnect, rotator auto-off, and Flex power relay. If any of those stay,
+    # Power must stay too — hiding it would orphan the controls they drive.
+    if [[ "$HW_POWER" == '0' ]] \
+       && { [[ "$HW_LIGHTNING" == '1' ]] || [[ "$HW_ROTATOR" == '1' ]] || [[ "$HW_FLEX" == '1' ]]; }; then
+        echo
+        c_yellow "  ⚠ Keeping Power Control — it's the switching layer for:"
+        [[ "$HW_LIGHTNING" == '1' ]] && c_yellow "      • Lightning antenna disconnect (Tasmota antenna outlet)"
+        [[ "$HW_ROTATOR"   == '1' ]] && c_yellow "      • Rotator auto-off timer (Tasmota rotator outlet)"
+        [[ "$HW_FLEX"      == '1' ]] && c_yellow "      • FlexRadio power relay (4-relay board)"
+        c_yellow "    Forcing Power = on."
+        HW_POWER='1'
+    fi
+    # R2 (warn): Lightning's TX-inhibit step targets the Flex. Without it the
+    # inhibit is a harmless no-op (the request just fails) — warn, don't block.
+    if [[ "$HW_FLEX" == '0' ]] && [[ "$HW_LIGHTNING" == '1' ]]; then
+        echo
+        c_yellow "  ⚠ FlexRadio off but Lightning on: the disconnect chain's TX-inhibit"
+        c_yellow "    step targets a radio you don't have (harmless no-op)."
+    fi
+
+    echo
+    local on="" off="" pair
+    for pair in "FlexRadio:$HW_FLEX" "SPE:$HW_SPE" "LP-700:$HW_LP700" \
+                "Rotator:$HW_ROTATOR" "Lightning:$HW_LIGHTNING" "Power:$HW_POWER" \
+                "Solar:$HW_SOLAR" "DXCC:$HW_DXCC" "RBN:$HW_RBN" \
+                "RPi:$HW_RPI" "Network:$HW_NETWORK" "GPS-NTP:$HW_GPSNTP"; do
+        if [[ "${pair#*:}" == '1' ]]; then on+="${pair%:*} "; else off+="${pair%:*} "; fi
+    done
+    c_yellow "  Have:        ${on:-(none)}"
+    c_yellow "  Don't have:  ${off:-(none)}"
+
+    cat > "$HW_FILE" <<EOF
+# rebuild_pi.sh hardware inventory (answered once; re-run with --reset to change)
+HW_FLEX=$HW_FLEX
+HW_SPE=$HW_SPE
+HW_LP700=$HW_LP700
+HW_ROTATOR=$HW_ROTATOR
+HW_LIGHTNING=$HW_LIGHTNING
+HW_POWER=$HW_POWER
+HW_SOLAR=$HW_SOLAR
+HW_DXCC=$HW_DXCC
+HW_RBN=$HW_RBN
+HW_RPI=$HW_RPI
+HW_NETWORK=$HW_NETWORK
+HW_GPSNTP=$HW_GPSNTP
+EOF
+    ok "Hardware inventory saved → $HW_FILE"
 }
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
@@ -1768,12 +1893,17 @@ main() {
     fi
 
     if (( do_reset )); then
-        rm -f "$STATE_FILE"
-        ok "State file wiped — next run starts from Stage 1"
+        rm -f "$STATE_FILE" "$HW_FILE"
+        ok "State file + hardware inventory wiped — next run starts fresh"
         exit 0
     fi
 
     preflight
+
+    # Collect (or load) the hardware inventory before any stage runs, so the
+    # gateway-install stages and Stage 13 all read the same answers and nothing
+    # asks twice. Prompts once on a fresh run; silent on resumes / --stage runs.
+    hw_inventory
 
     if [[ -n "$single_stage" ]]; then
         local target="${STAGES[$((single_stage - 1))]:-}"

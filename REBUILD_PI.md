@@ -74,25 +74,29 @@ bash ~/.node-red/projects/vu2cpl-shack/rebuild_pi.sh
 > fork — change `REPO_URL` near the top of the script to your
 > fork's URL. See FORK_GUIDE.md Part A3 for details.
 
-The script pauses for these interactive steps (most are opt-in prompts):
+The script pauses for these interactive steps:
+- **Hardware inventory (asked once, up front)** — a single "which subsystems
+  does this station have?" Y/n round for all 12 cards. **This one answer set
+  drives everything**: which dashboard cards show, which flow tabs run, and
+  which WebSocket gateways get installed (SPE → `spe-remote`, LP-700 →
+  `lp700-server`, Rotator → `rotator-remote`). Dependency-locked (won't let you
+  drop Power while Lightning/Rotator/Flex stay). Persisted to
+  `$HOME/.rebuild_pi.hw`; re-answer with `--reset`. **No stage re-asks** — the
+  old per-gateway "do you have X?" prompts are gone.
 - Stage 6 — paste the new SSH public key into your GitHub account
-- Stage 11 — opt-in: "Do you have an LP-700 / LP-500 meter?" → installs `lp700-server`
 - Stage 12 — paste Club Log API key, password, Telegram token (no echo)
 - Stage 13 — opt-in prompt: "(Re-)customize station identity for this
-  Pi? [y/N]". Default N keeps current values (upstream defaults or
-  whatever you set previously). Press y to (re-)enter callsign /
-  grid / MQTT broker / Tasmota antenna topic + channel / threshold /
-  reconnect / QTH text, then a "which subsystems do you have?" Y/n
-  round for all 12 dashboard cards. Patches Init Defaults, **both
-  `mqtt-broker` config nodes** (so every mqtt node dials your broker,
-  not the upstream Pi), the Vue TopBar + `CARDS` flags, and disables
-  the flow tab for any of SPE/LP-700/Solar/DXCC/RBN you skip.
-  Dependency-locked (won't let you drop Power while Lightning/Rotator/
-  Flex stay). Always asks; never auto-decides.
-- Stage 13b — opt-in: "Do you have a Rotor-EZ rotator?" → clones + installs
-  `rotator-remote.service` (`:8090`), prompts for the rotor's serial device,
-  runs `setup.sh` + `install-service.sh`, checks `/healthz`. Runs after the
-  ws-client Rotator flow is in place (so the serial port is free for the gateway).
+  Pi? [y/N]". Default N keeps current values. Press y to (re-)enter callsign /
+  grid / MQTT broker / Tasmota antenna topic + channel / threshold / reconnect /
+  QTH text. Patches Init Defaults, **both `mqtt-broker` config nodes** (so every
+  mqtt node dials your broker, not the upstream Pi), the Vue TopBar, and applies
+  the inventory to the `CARDS` flags + the SPE/LP-700/Solar/DXCC/RBN flow-tab
+  disables.
+- Stages 11 / 13b / 13c — the three gateway installs (`lp700-server` /
+  `rotator-remote` / `spe-remote`). **Driven by the inventory** — each installs
+  silently if you have that hardware, skips if not. The two serial gateways
+  (rotator, SPE) prompt only for the device's `/dev/serial/by-id/…` path. They
+  run after the ws-client flows are in place so the serial ports are free.
 
 Everything else runs automatically. Re-run safely after Ctrl-C or reboot:
 state is tracked in `$HOME/.rebuild_pi.state` (survives reboots).
@@ -619,7 +623,7 @@ Each reply should be `{"Timezone":"+05:30"}`.
 
 A 16-point checklist for the operator's full-stack verification.
 
-*Note: the verification stage is `verify` — now positionally `--stage 15` since the optional `13b` rotator stage was inserted before it (`bash rebuild_pi.sh --stage 15`). It uses a smaller split (7 critical + 5 optional) tuned to the script's perspective — every Pi has Node-RED/Mosquitto/rpi-agent, but LP-700/rotator/AS3935/GPS-NTP are operator-specific. The manual checklist below adds the wider lens that's useful when verifying by hand.*
+*Note: the verification stage is `verify` — now positionally `--stage 16` since the optional `13b` rotator + `13c` spe-remote stages were inserted before it (`bash rebuild_pi.sh --stage 16`). It uses a smaller split (7 critical + 6 optional) tuned to the script's perspective — every Pi has Node-RED/Mosquitto/rpi-agent, but LP-700/rotator/SPE/AS3935/GPS-NTP are operator-specific. The manual checklist below adds the wider lens that's useful when verifying by hand.*
 
 | # | Check | Pass criterion |
 |---|-------|----------------|

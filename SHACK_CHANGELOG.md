@@ -8015,6 +8015,65 @@ writing.
 
 ---
 
+## 2026-06-06 — rebuild_pi.sh: spe-remote install stage + ask-hardware-once refactor
+
+Operator caught a real gap: "rebuild script is not installing web socket
+servers on pi?" The script installed `lp700-server` (Stage 11) and
+`rotator-remote` (Stage 13b) but **never `spe-remote`** — a from-scratch
+rebuild left the SPE amplifier gateway uninstalled (it was only on the Pi
+because it had been set up by hand). Worse, FORK_GUIDE already *listed*
+`spe-remote.service` as if it were installed. Fixed, plus the deeper
+"one fix for good" the operator asked for: eliminate the redundant
+double-prompting.
+
+### Two things were wrong
+
+1. **No spe-remote stage.** `vu2cpl/spe-remote` (public, installs like
+   rotator: `setup.sh` + `install-service.sh`, `:8888`, no `/healthz` —
+   serves its dashboard at `/`) had no rebuild stage.
+2. **Redundant prompting.** Stage 13 asked a 12-question "which subsystems
+   do you have?" round (for card visibility), and *each gateway stage*
+   asked again ("Do you have an LP-700? / a rotator?"). Same questions,
+   twice.
+
+### The fix — ask once, up front, persist, everyone reads it
+
+- New **`hw_inventory()`** runs right after pre-flight (before any stage):
+  asks the 12 Y/n questions once, applies the dependency rules (R1 force
+  Power if Lightning/Rotator/Flex stay; R2 warn if Flex dropped while
+  Lightning stays), and persists to `$HOME/.rebuild_pi.hw`. On resumes and
+  `--stage N` single runs it loads the file **silently** — no re-prompt.
+  `--reset` wipes it alongside the state file. `ask_card` was hoisted from
+  Stage 13 to a top-level helper.
+- **Gateway stages read the inventory, don't prompt.** Stage 11
+  (`lp700-server`), Stage 13b (`rotator-remote`), and the new Stage 13c
+  (`spe-remote`) each install if `HW_<x>=1`, skip silently if `0`
+  (default-on if a key is somehow absent — safe). The two serial gateways
+  still prompt for the device's `/dev/serial/by-id/…` path.
+- **New Stage 13c (`13c_spe_remote`)**: clones `vu2cpl/spe-remote`,
+  patches `config.yaml` serial port, `setup.sh` + `install-service.sh`,
+  liveness check `curl :8888/` (no `/healthz` on spe-remote).
+- **Stage 13** keeps its identity opt-in (callsign/grid/broker/…) but its
+  "which subsystems" round is gone — it now reads the inventory `HW_*` for
+  the CARDS flip + safe-subset tab disables. Stage 14 verify gained an
+  optional `spe-remote :8888` check (now 7 critical + 6 optional). Verify
+  is positionally `--stage 16` (13b + 13c precede it).
+
+Net: all three USB gateways are installable by the rebuild, driven by one
+hardware answer set, asked exactly once. Verified: `bash -n` clean; STAGES
+order correct; dry-ran the persist→load→gate logic (lp700=0 → skip,
+rotator/spe=1 → install, unset key → safe default install).
+
+### Docs
+
+CLAUDE.md (INFRASTRUCTURE row for `spe-remote.service` @ `:8888`),
+REBUILD_PI.md (pauses list rewritten around the up-front inventory; verify
+`--stage 16`), FORK_GUIDE.md (new "hardware inventory" table row; Stage 13c
+row; 11/13/13b reworded to "driven by inventory"; verify `--stage 16` +
+spe check). PDF regenerated.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:
