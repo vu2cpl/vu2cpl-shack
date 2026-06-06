@@ -2,7 +2,7 @@
 
 **Period:** 2026-05-01 → 2026-05-26
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
-**Last commit at handover:** `04691d1` — D1 Rotator compass: remove 4 decorative corner brackets (rotator gateway #31 closed at `5acd1c0`)
+**Last commit at handover:** `aa8c4c8` — rebuild_pi.sh: spe-remote stage + ask-hardware-once (all 3 USB gateways installable from one inventory)
 
 ---
 
