@@ -8074,6 +8074,62 @@ spe check). PDF regenerated.
 
 ---
 
+## 2026-06-06 — rebuild_pi.sh: MQTT broker IP moved to mandatory inventory + always-patched in Stage 7
+
+Operator report: "MQTT is not working on a new installation using the
+script despite giving the correct IP (different site, different from the
+.169 IP)."
+
+### Root cause — broker IP buried in an opt-in stage
+
+The broker IP was collected and applied **only inside Stage 13's opt-in
+station-customize flow** ("(Re-)customize station identity? [y/N]"). A bare
+Enter past that prompt marks Stage 13 done and returns — so the two
+`mqtt-broker` config nodes keep their shipped value (`192.168.1.169`, the
+upstream Pi) and every one of the 37 mqtt nodes dials a broker that doesn't
+exist on the fork's LAN. The broker config nodes themselves are otherwise
+clean (port 1883, no TLS, no auth, empty client-id), so the *only* thing
+that needed setting was `broker` — and it was skippable. (Couldn't confirm
+on the operator's Pi — no access at the time — so this was fixed at the
+script level from the identified fragility.)
+
+### Fix — ask once (mandatory), apply always
+
+- The broker IP now lives in the **mandatory up-front inventory**
+  (`hw_inventory`, new `ask_broker_ip` helper), default = this Pi's own LAN
+  IP (Stage 2 installs Mosquitto locally, so that's almost always right).
+  Persisted as `MQTT_IP` in `$HOME/.rebuild_pi.hw`. Can't be skipped the way
+  the opt-in prompt could. Upgrade path: an inventory file written earlier
+  today (no `MQTT_IP`) triggers a one-time prompt + append on next load.
+- **Stage 7 (clone_repo, always runs) now patches both `mqtt-broker` config
+  nodes** to `MQTT_IP` and restarts Node-RED — so MQTT connects out of the
+  box on a fork regardless of whether the operator runs the Stage 13
+  customize. On VU2CPL's own rebuild this is a no-op (Pi IP == `.169` ==
+  shipped value).
+- **Stage 13** no longer re-prompts for the broker; it reads `MQTT_IP` from
+  the inventory (its own broker-config-node patch stays, idempotent).
+
+### Verification
+
+`bash -n` clean. Dry-ran the Stage 7 patch python against a copy of
+flows.json (`MQTT_TARGET=10.0.0.5` → both broker nodes → `10.0.0.5`).
+Dry-ran the inventory persist/load round-trip (`MQTT_IP` survives
+write→source).
+
+### Docs
+
+CLAUDE.md broker note (now "inventory + Stage 7 always"), REBUILD_PI.md +
+FORK_GUIDE.md inventory/Stage-7 rows + the "why the broker patch matters"
+callout rewritten. PDF regen.
+
+### To recover the operator's already-broken Pi (when access returns)
+
+`bash rebuild_pi.sh --stage 7` (re-patches the broker from the inventory),
+or just pencil-edit the broker in the Node-RED editor → Server = the Pi's
+IP, then restart Node-RED.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:

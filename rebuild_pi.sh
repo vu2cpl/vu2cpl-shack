@@ -126,6 +126,25 @@ ask_card() {
     if [[ "$__ans" =~ ^[Nn] ]]; then printf -v "$1" '0'; else printf -v "$1" '1'; fi
 }
 
+# Prompt for the MQTT broker IP → sets the MQTT_IP global. Default is this Pi's
+# own LAN IP (Stage 2 installs Mosquitto locally, so that's almost always right).
+# Lives in the MANDATORY inventory because the broker is the spine of the whole
+# system — it must not be skippable the way the old opt-in Stage 13 prompt was.
+ask_broker_ip() {
+    local def
+    def=$(hostname -I 2>/dev/null | awk '{print $1}')
+    echo
+    c_yellow "  MQTT broker IP — where Mosquitto runs. Stage 2 installs it on THIS"
+    c_yellow "  Pi, so the default (this Pi's own IP) is right unless your broker is"
+    c_yellow "  a separate machine."
+    while true; do
+        read -r -p "  MQTT broker IP (default ${def:-127.0.0.1}): " MQTT_IP
+        MQTT_IP="${MQTT_IP:-${def:-127.0.0.1}}"
+        [[ "$MQTT_IP" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] && break
+        c_red "    Invalid IP — must be dotted-quad (e.g. 192.168.1.50)"
+    done
+}
+
 stage_done()    { grep -qx "$1" "$STATE_FILE" 2>/dev/null; }
 mark_stage()    { mkdir -p "$(dirname "$STATE_FILE")"; echo "$1" >> "$STATE_FILE"; }
 unmark_stage()  { sed -i "/^$1$/d" "$STATE_FILE" 2>/dev/null || true; }
@@ -842,6 +861,33 @@ nrsave() {
 EOF
     fi
 
+    # ── Point the MQTT broker config nodes at THIS site's broker — ALWAYS ──
+    # The whole shack rides on MQTT. The broker IP must not depend on the
+    # opt-in Stage 13 customize (which can be skipped with a bare Enter, leaving
+    # every mqtt node dialing the upstream Pi's 192.168.1.169). We patch it here,
+    # in a stage that always runs, from the mandatory inventory's MQTT_IP.
+    local mqtt_target="${MQTT_IP:-$(hostname -I 2>/dev/null | awk '{print $1}')}"
+    if [[ -n "$mqtt_target" && -f "$REPO_DIR/flows.json" ]]; then
+        step "Pointing MQTT broker config nodes at $mqtt_target"
+        MQTT_TARGET="$mqtt_target" python3 - "$REPO_DIR/flows.json" <<'PYEOF' \
+            || warn "broker patch failed — set the broker in the Node-RED editor by hand"
+import json, os, sys
+path = sys.argv[1]; ip = os.environ['MQTT_TARGET']
+d = json.load(open(path))
+n = sum(1 for node in d if node.get('type') == 'mqtt-broker')
+for node in d:
+    if node.get('type') == 'mqtt-broker':
+        node['broker'] = ip
+json.dump(d, open(path, 'w'), indent=4)
+print(f'  patched {n} mqtt-broker config node(s) -> {ip}')
+PYEOF
+        sudo systemctl restart nodered
+        sleep 3
+        ok "MQTT broker set to $mqtt_target (Node-RED restarted)"
+    else
+        warn "Could not determine an MQTT broker IP — set it in the editor by hand."
+    fi
+
     mark_stage "07_clone_repo"
     ok "Stage 7 complete"
 }
@@ -1201,15 +1247,10 @@ PYEOF
         c_red "    Invalid grid — must be 6-char Maidenhead (e.g. FN42aa, MK83te)"
     done
 
-    # MQTT broker IP — default to Pi's own LAN IP
-    local default_ip
-    default_ip=$(hostname -I 2>/dev/null | awk '{print $1}')
-    while true; do
-        read -r -p "  MQTT broker IP (default ${default_ip:-192.168.1.100}): " mqtt_ip
-        mqtt_ip="${mqtt_ip:-${default_ip:-192.168.1.100}}"
-        if [[ "$mqtt_ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then break; fi
-        c_red "    Invalid IP — must be dotted-quad (e.g. 192.168.1.100)"
-    done
+    # MQTT broker IP comes from the mandatory inventory (already applied to the
+    # broker config nodes in Stage 7) — not re-prompted here. To change it later:
+    # `--reset` (re-does inventory) or edit the broker in the Node-RED editor.
+    mqtt_ip="${MQTT_IP:-$(hostname -I 2>/dev/null | awk '{print $1}')}"
 
     # Tasmota antenna power-strip topic
     while true; do
@@ -1790,6 +1831,12 @@ hw_inventory() {
     if [[ -f "$HW_FILE" ]]; then
         # shellcheck disable=SC1090
         source "$HW_FILE"
+        # Upgrade path: inventories written before the broker IP moved here have
+        # no MQTT_IP. Ask once and append so the broker still gets set.
+        if [[ -z "${MQTT_IP:-}" ]]; then
+            ask_broker_ip
+            echo "MQTT_IP=$MQTT_IP" >> "$HW_FILE"
+        fi
         return 0
     fi
 
@@ -1834,7 +1881,11 @@ hw_inventory() {
         c_yellow "    step targets a radio you don't have (harmless no-op)."
     fi
 
+    # MQTT broker IP — mandatory; the whole system rides on it.
+    ask_broker_ip
+
     echo
+    c_yellow "  MQTT broker:  $MQTT_IP"
     local on="" off="" pair
     for pair in "FlexRadio:$HW_FLEX" "SPE:$HW_SPE" "LP-700:$HW_LP700" \
                 "Rotator:$HW_ROTATOR" "Lightning:$HW_LIGHTNING" "Power:$HW_POWER" \
@@ -1859,6 +1910,7 @@ HW_RBN=$HW_RBN
 HW_RPI=$HW_RPI
 HW_NETWORK=$HW_NETWORK
 HW_GPSNTP=$HW_GPSNTP
+MQTT_IP=$MQTT_IP
 EOF
     ok "Hardware inventory saved → $HW_FILE"
 }

@@ -75,14 +75,16 @@ bash ~/.node-red/projects/vu2cpl-shack/rebuild_pi.sh
 > fork's URL. See FORK_GUIDE.md Part A3 for details.
 
 The script pauses for these interactive steps:
-- **Hardware inventory (asked once, up front)** — a single "which subsystems
-  does this station have?" Y/n round for all 12 cards. **This one answer set
-  drives everything**: which dashboard cards show, which flow tabs run, and
+- **Site inventory (asked once, up front)** — a "which subsystems does this
+  station have?" Y/n round for all 12 cards **plus the MQTT broker IP**
+  (default = this Pi's own LAN IP). **This one answer set drives everything**:
+  the broker every mqtt node dials (patched into both `mqtt-broker` config
+  nodes in **Stage 7, which always runs** — so MQTT works even if you skip the
+  Stage 13 customize), which dashboard cards show, which flow tabs run, and
   which WebSocket gateways get installed (SPE → `spe-remote`, LP-700 →
   `lp700-server`, Rotator → `rotator-remote`). Dependency-locked (won't let you
   drop Power while Lightning/Rotator/Flex stay). Persisted to
-  `$HOME/.rebuild_pi.hw`; re-answer with `--reset`. **No stage re-asks** — the
-  old per-gateway "do you have X?" prompts are gone.
+  `$HOME/.rebuild_pi.hw`; re-answer with `--reset`. **No stage re-asks.**
 - Stage 6 — paste the new SSH public key into your GitHub account
 - Stage 12 — paste Club Log API key, password, Telegram token (no echo)
 - Stage 13 — opt-in prompt: "(Re-)customize station identity for this

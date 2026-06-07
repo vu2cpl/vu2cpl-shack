@@ -86,7 +86,7 @@ Have these ready before Part A5 (customization):
 |---|---|---|
 | **Your callsign** | `K1ABC` | Init Defaults + DXCC Credentials + Vue TopBar |
 | **6-character grid square** | `FN42aa` — use [k7fry.com/grid](http://www.k7fry.com/grid/) if unsure | Init Defaults (lat/lon derived automatically) |
-| **MQTT broker IP** | Usually your Pi's own IP, e.g. `192.168.1.50` | Init Defaults **and** both `mqtt-broker` config nodes (Stage 13 patches all of them — see note below) |
+| **MQTT broker IP** | Usually your Pi's own IP, e.g. `192.168.1.50` | Asked in the **up-front inventory** (default = this Pi's IP); applied to both `mqtt-broker` config nodes in **Stage 7, which always runs** — so MQTT works even if you skip the Stage 13 customize. See note below. |
 | **Antenna power Tasmota topic** | e.g. `shack-power` / `POWER3` | Init Defaults |
 | **Which subsystems you have** | FlexRadio? SPE? rotator? lightning? etc. | Stage 13 asks Y/n per card; "no" hides that card (and, for SPE/LP-700/Solar/DXCC/RBN, disables its flow tab) |
 | **Club Log account + API key** (optional) | From [clublog.org](https://clublog.org) → Settings → API keys | systemd secrets file + DXCC Credentials node |
@@ -202,14 +202,14 @@ was already done (state file at `~/.rebuild_pi.state`), it prints
 
 | Stage | What it does | Typical time |
 |---|---|---|
-| — hardware inventory (once, up front) | A single "which subsystems does this station have?" Y/n round for all 12 cards, asked right after the pre-flight checks. **This one answer set drives everything downstream** — which dashboard cards show, which flow tabs run, and which WebSocket gateways get installed (SPE / LP-700 / rotator). Dependency-locked (won't let you drop Power while Lightning/Rotator/Flex stay). Saved to `$HOME/.rebuild_pi.hw`; re-answer with `--reset`. No later stage re-asks. | 1 min |
+| — site inventory (once, up front) | A "which subsystems does this station have?" Y/n round for all 12 cards **plus your MQTT broker IP** (default = this Pi's own IP), asked right after the pre-flight checks. **This one answer set drives everything downstream** — the broker every mqtt node dials, which dashboard cards show, which flow tabs run, and which WebSocket gateways get installed (SPE / LP-700 / rotator). Dependency-locked (won't let you drop Power while Lightning/Rotator/Flex stay). Saved to `$HOME/.rebuild_pi.hw`; re-answer with `--reset`. No later stage re-asks. | 1 min |
 | 1 — apt packages | Installs system packages: build-essential, git, python3, mosquitto, etc. + sets I2C/SPI/serial on if you have AS3935 hardware. | 5 min |
 | 2 — Mosquitto LAN config | Configures Mosquitto MQTT broker to allow anonymous LAN-only access on port 1883. No auth (LAN-only). | 1 min |
 | 3 — Node-RED install | Runs the official Node-RED install script. Creates systemd unit. | 8 min |
 | 4 — Node-RED palette | npm-installs 10 required palette packages (dashboard, uibuilder, flexradio, etc.). | 12 min |
 | 5 — settings.js | Enables Node-RED Projects feature + `localfilesystem` context store + dashboard auth (you'll set the password later). | 1 min |
 | 6 — GitHub SSH key | Generates an SSH key for the Pi to push back to your fork (if you have one). Skip if you only ever pull. | 1 min |
-| 7 — Clone the repo | Detects your pre-clone from A2 and skips. Otherwise clones now. | 1 min |
+| 7 — Clone the repo | Detects your pre-clone from A2 and skips. Otherwise clones now. **Then always patches both `mqtt-broker` config nodes to your broker IP** (from the inventory) and restarts Node-RED — so MQTT connects regardless of whether you run the Stage 13 customize. | 1 min |
 | 8 — file context store | Runs `enable_file_context.sh` — patches settings.js to enable the `file` context store for persistent DXCC filters and `manual_off` flag. | <1 min |
 | 9 — Pi-side scripts | Installs `/home/<user>/rpi_agent.py`, `monitor.sh`, `power_spe_on.py`, AS3935 daemon (disabled by default), with systemd units + sudoers + cron entries. | 2 min |
 | 10 — udev rules | Installs udev rules for LP-700 (`telepost` group) and FTDI serial devices. | <1 min |
@@ -275,12 +275,15 @@ bottom of this guide.
 > *config node* that holds the host/port. This repo has two config
 > nodes (`Tasmota MQTT Broker` + `shack-mqtt`), both shipped pointing
 > at the upstream Pi (`192.168.1.169`). If only Init Defaults were
-> patched (as in pre-2026-06-04 builds), your 37 mqtt nodes would all
-> still dial `192.168.1.169` and show disconnected. Stage 13 now
-> rewrites the `broker` field on **both config nodes** to your IP. If
-> you ever import flows by hand, remember to fix the broker in those
-> two config nodes (Node-RED editor → any mqtt node → pencil-edit the
-> broker → set Server).
+> patched, your 37 mqtt nodes would all still dial `192.168.1.169` and
+> show disconnected. The broker IP is asked in the **up-front inventory**
+> and applied to **both config nodes in Stage 7 (always runs)** — so MQTT
+> connects even if you skip the Stage 13 customize. (Before 2026-06-06
+> the broker was only set inside Stage 13's opt-in flow; a bare Enter past
+> it left every mqtt node dialing `192.168.1.169` — the "MQTT not working
+> on a fresh fork" trap.) If you ever import flows by hand, fix the broker
+> in those two config nodes (Node-RED editor → any mqtt node → pencil-edit
+> the broker → set Server), or re-run `bash rebuild_pi.sh --stage 7`.
 
 > **Hiding cards you don't need:** Stage 13's subsystem round flips
 > `const CARDS = { … }` at the top of

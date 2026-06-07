@@ -745,8 +745,14 @@ both at `192.168.1.169:1883`. The `MQTT_BROKER` const in Init Defaults
 is informational only — a function node cannot reconfigure a broker
 config node at runtime. When changing the broker IP (e.g. a fork),
 patch the `broker` field on **both config nodes**; patching only Init
-Defaults leaves all 37 mqtt nodes dialing the old IP. Stage 13 of
-`rebuild_pi.sh` now does this automatically.
+Defaults leaves all 37 mqtt nodes dialing the old IP. `rebuild_pi.sh`
+collects the broker IP in its **mandatory up-front inventory** (default =
+the Pi's own LAN IP) and patches both config nodes in **Stage 7 (always
+runs)** — so MQTT works on a fork even if the opt-in Stage 13 customize is
+skipped. (Before 2026-06-06 the broker was only set inside Stage 13's
+opt-in flow; pressing Enter past it left every mqtt node dialing the
+upstream `192.168.1.169` — the cause of "MQTT not working on a fresh
+fork".)
 
 **Retired packages:**
 
