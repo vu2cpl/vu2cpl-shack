@@ -8218,6 +8218,51 @@ Shack-repo change here is only the CLAUDE.md infra-row cross-reference.
 
 ---
 
+## 2026-06-08 — Vue `/shack`: brand the remaining VU2CPL hardcodes for forks
+
+Audit of `uibuilder/shack/src/` for fork-unfriendly hardcodes, after the
+broker sweep. **Headline: the Vue app has no *network* hardcodes** — every
+`fetch()` is a relative path (`/lightning/*`, `/dxcc/*`, `/rotator/*`) and
+all data/commands go through `uibuilder.onTopic`/`send`/`start` (Socket.IO
+to `location.host`). No absolute `ws://`/`http://`, no `.169`. So a fork's
+`/shack` automatically talks to its own Node-RED — none of the MQTT-class
+breakage exists here. What remained was purely **cosmetic / branding**.
+
+### Stage 13 now also brands (it already did TopBar + manifest name)
+
+- `index.html` `<title>` → `<callsign> Shack` (new patch step).
+- `manifest.json` `description` → `<callsign> amateur radio shack control`.
+- `index.js` `LightningCard` reactive-state defaults `callsign`/`grid`
+  (overwritten by live data ~3 s after load, but the first paint is now
+  correct). Targeted regex — there's exactly one `callsign:`/`grid:` key.
+- Bumped the `index.js` cache-buster `?v=10` → `?v=11` to match the build
+  stamp (they'd drifted apart since the CARDS change, so a cached browser
+  could serve a stale `index.js`).
+
+### Two that can't be auto-patched (fork-specific gear) — now flagged
+
+These depend on the forker's own hardware/clusters, which the script can't
+know, so they're marked with `// FORK:` comments in `index.js` and
+documented in FORK_GUIDE A5.3:
+
+- **`NetworkCard` host list** (`index.js`, ~2480): device labels + IPs.
+  `addr` is display-only; `key` must match the network-monitor stamp
+  functions in Node-RED.
+- **DXCC `clusterNames`** (`index.js`, ~815): must match the `cluster_status`
+  names emitted by the DXCC tab's `login-parse-dedup`.
+
+### Verification
+
+`bash -n` + `node --check` clean. Dry-ran the branding patches with
+`CALLSIGN=K1ABC GRID=FN42aa`: title → "K1ABC Shack", manifest name +
+description → K1ABC, LightningCard defaults → K1ABC/FN42aa; cluster names +
+device IPs left intact; patched `index.js` still valid JS.
+
+No `flows.json` change. The repo keeps VU2CPL's own values; Stage 13 brands
+forks at install (callsign=VU2CPL → no-op on VU2CPL's own rebuild).
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:

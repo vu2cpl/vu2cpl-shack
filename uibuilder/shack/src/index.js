@@ -812,6 +812,8 @@ const DXCCCard = {
       postFilters();
     }
 
+    // FORK: your DX cluster names — must match the cluster_status names emitted
+    // by the DXCC tab's login-parse-dedup function in Node-RED. Edit both.
     const clusterNames = ['VU2CPL', 'VU2OY', 'VE7CC', 'N2WQ'];
 
     const allClustersOk = computed(() =>
@@ -2473,7 +2475,9 @@ const NetworkCard = {
     const expanded = ref(false);
     const state = reactive({ pings: {}, status: null, totalFails: null, lastFail: null });
 
-    // Hosts displayed — keys must match the stamp functions in Node-RED
+    // FORK: your network-monitor hosts. `addr` is a display label only (the ping
+    // data comes from Node-RED, keyed by `key`); `key` must match the stamp
+    // functions on the Internet/network monitor flow tab. Edit both to your gear.
     const hosts = [
       { key:'Internet',  label:'Internet',  addr:'www.google.com'  },
       { key:'Flex',      label:'FlexRadio', addr:'192.168.1.148'   },

@@ -1486,6 +1486,29 @@ else:
     print(f'  TopBar sub line updated ({n} replacement)')
     s = s2
 
+# Patch LightningCard reactive-state defaults (callsign/grid) — exactly one of
+# each exists (the card's initial state). They're overwritten by live data a
+# few seconds after load, but branding them keeps the first paint correct.
+for _k, _v in (('callsign', CALLSIGN), ('grid', GRID)):
+    s, _n = re.subn(r"(\b" + _k + r":\s*)'[^']*'", r"\g<1>'" + _v + "'", s, count=1)
+    if _n:
+        print(f'  LightningCard {_k} default updated')
+
+# Patch the sibling index.html <title> (independent of `s`).
+_html = 'uibuilder/shack/src/index.html'
+try:
+    with open(_html) as f:
+        _h = f.read()
+    _h, _hn = re.subn(r'<title>[^<]*</title>', f'<title>{CALLSIGN} Shack</title>', _h)
+    if _hn:
+        with open(_html, 'w') as f:
+            f.write(_h)
+        print('  index.html <title> updated')
+    else:
+        print('  WARN: index.html <title> not found')
+except FileNotFoundError:
+    print('  WARN: index.html not found — title not patched')
+
 # ── CARDS hardware flags — hide cards for absent subsystems ─────────────
 # Flip booleans inside the `const CARDS = { … };` block only. Scoped to the
 # block so the many other `true`/`false` literals in the file are untouched.
@@ -1534,9 +1557,10 @@ try:
         m = json.load(f)
     m['name'] = '${callsign} Shack'
     m['short_name'] = 'Shack'
+    m['description'] = '${callsign} amateur radio shack control'
     with open('uibuilder/shack/src/manifest.json', 'w') as f:
         json.dump(m, f, indent=2)
-    print('  manifest.json patched (name=${callsign} Shack)')
+    print('  manifest.json patched (name + description = ${callsign})')
 except Exception as e:
     print(f'  WARN: manifest.json patch skipped: {e}')
 PYEOF

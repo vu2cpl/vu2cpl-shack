@@ -215,7 +215,7 @@ was already done (state file at `~/.rebuild_pi.state`), it prints
 | 10 — udev rules | Installs udev rules for LP-700 (`telepost` group) and FTDI serial devices. | <1 min |
 | 11 — lp700-server | Clones [`VU3ESV/LP-700-Server`](https://github.com/VU3ESV/LP-700-Server) and installs the WebSocket gateway as a systemd unit — **if the inventory says you have an LP-700 / LP-500** (no separate prompt). | 5 min |
 | 12 — secrets | Prompts you for Club Log API key, Club Log password, Telegram bot token. Writes them to `/etc/systemd/system/nodered.service.d/secrets.conf` (root-readable only). | 1 min |
-| 13 — station customisation | **Always asks "(Re-)customize station identity for this Pi? [y/N]".** Press y → prompts you for callsign, grid, MQTT broker IP, Tasmota antenna topic + channel, threshold, reconnect timer, QTH text. (The "which subsystems do you have?" round is **no longer here** — it's the up-front hardware inventory above.) Press Enter → keeps current values. On y, it patches: Init Defaults in `flows.json`; **both `mqtt-broker` config nodes** (so all 37 mqtt nodes dial *your* broker, not the upstream Pi); the Vue TopBar; `manifest.json` name; and applies the inventory to the **`CARDS` flags** (`v-if` hides cards for hardware you don't have) + the `disabled:true` flow-tab flag for any of **SPE, LP-700, Solar, DXCC, RBN** you skipped. Backs up `flows.json` + `index.js` first, so it's fully reversible. Closes manual A5.1 + A5.3 + A5.4 below. | 3 min |
+| 13 — station customisation | **Always asks "(Re-)customize station identity for this Pi? [y/N]".** Press y → prompts you for callsign, grid, MQTT broker IP, Tasmota antenna topic + channel, threshold, reconnect timer, QTH text. (The "which subsystems do you have?" round is **no longer here** — it's the up-front hardware inventory above.) Press Enter → keeps current values. On y, it patches: Init Defaults in `flows.json`; **both `mqtt-broker` config nodes** (so all 37 mqtt nodes dial *your* broker, not the upstream Pi); the Vue TopBar; the browser-tab `<title>`, `manifest.json` name + description, and the `LightningCard` callsign/grid defaults; and applies the inventory to the **`CARDS` flags** (`v-if` hides cards for hardware you don't have) + the `disabled:true` flow-tab flag for any of **SPE, LP-700, Solar, DXCC, RBN** you skipped. Backs up `flows.json` + `index.js` first, so it's fully reversible. (Two `// FORK:` spots in `index.js` — the network-monitor host list + DX cluster names — are your own gear/clusters and can't be auto-patched; see A5.3.) Closes manual A5.1 + A5.3 + A5.4 below. | 3 min |
 | 13b — rotator-remote | **If the inventory says you have a rotator:** clones [`vu2cpl/rotator-remote`](https://github.com/vu2cpl/rotator-remote), prompts for the rotor's `/dev/serial/by-id/…` device, runs `setup.sh` + `install-service.sh` to start `rotator-remote.service` on `:8090`, checks `/healthz`. The gateway owns the FTDI serial port so Node-RED + other clients share it (no more "restart Node-RED to free the port"). Skipped silently if no rotator. | 3 min |
 | 13c — spe-remote | **If the inventory says you have an SPE amplifier:** clones [`vu2cpl/spe-remote`](https://github.com/vu2cpl/spe-remote), prompts for the SPE's `/dev/serial/by-id/…` device, runs `setup.sh` + `install-service.sh` to start `spe-remote.service` on `:8888` (serves its bundled dashboard at `/`; no `/healthz`). Owns the SPE FTDI port; Node-RED is a ws-client. Skipped silently if no SPE. | 3 min |
 | 14 — verification | Runs a post-install checklist split into critical (Node-RED responds / project active / flows parsed / `/shack` + `/ui` reachable / `rpi-agent` active / Mosquitto alive) and optional (LP-700 healthz, **rotator-remote healthz**, **spe-remote :8888**, AS3935 telemetry, GPS-NTP telemetry — skip-not-fail when hardware isn't present). Runs as `--stage 16` positionally (the optional 13b + 13c stages precede it). | 2 min |
@@ -410,6 +410,21 @@ Search for `class="callsign"` (Ctrl+W in nano). You'll find the
 ```
 
 Edit both lines. Save (Ctrl+O, Enter, Ctrl+X).
+
+> **Stage 13 also brands** the browser-tab `<title>` (`index.html`), the
+> PWA `manifest.json` name + description, and the `LightningCard`
+> `callsign`/`grid` state defaults — so on a Stage-13 install you don't
+> touch those by hand. The Vue app has **no network hardcodes** (all
+> `fetch()` + uibuilder calls are host-relative), so `/shack` always talks
+> to *your* Node-RED — nothing there breaks a fork.
+
+> **Two things Stage 13 can't auto-fix** (they're your own gear/clusters, so
+> the script can't know them) — search `index.js` for **`// FORK:`**:
+> - **Network-monitor hosts** (`NetworkCard`): the device list + their IPs.
+>   `addr` is a display label; `key` must match the stamp functions on the
+>   Internet/network monitor flow tab. Edit both to your hardware.
+> - **DX cluster names** (`clusterNames`): must match the `cluster_status`
+>   names the DXCC tab's `login-parse-dedup` emits in Node-RED. Edit both.
 
 No restart needed. Hard-refresh `/shack` in your browser:
 - **Safari**: hold Shift, click the reload button

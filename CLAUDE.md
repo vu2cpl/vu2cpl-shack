@@ -738,6 +738,19 @@ polling stops. Bump `window.__shackBuild` when editing card render
 logic so the on-screen build stamp distinguishes "code didn't load"
 from "code loaded but signal broken".
 
+**The Vue app is host-relative — no network hardcodes.** Every `fetch()`
+is a relative path (`/lightning/*`, `/dxcc/*`, `/rotator/*`) and all
+data/commands use `uibuilder.onTopic`/`send`/`start` (Socket.IO to
+`location.host`). So `/shack` always talks to its own Node-RED; nothing
+there breaks a fork. The only VU2CPL-specific literals are cosmetic:
+Stage 13 brands the TopBar callsign/sub, `index.html` `<title>`,
+`manifest.json` name+description, and the `LightningCard` callsign/grid
+defaults. Two `// FORK:`-marked spots can't be auto-patched (fork-specific
+gear): the `NetworkCard` host list and the DXCC `clusterNames` — they must
+match the forker's Node-RED stamp functions / cluster config. Keep the
+`index.js` cache-buster (`?v=N` in `index.html`) in step with
+`window.__shackBuild` so edits aren't served stale.
+
 **MQTT broker is configured on the `mqtt-broker` *config* nodes, not
 on the mqtt in/out nodes or in any function.** There are two config
 nodes (`f4785be9863eab08` "Tasmota MQTT Broker" + `mqttbroker.shack`),
