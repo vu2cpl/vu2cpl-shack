@@ -1,5 +1,11 @@
 #!/bin/bash
-BROKER=192.168.1.169
+# Broker: prefer an existing env var, then the shack env file, then localhost.
+# /etc/default/vu2cpl-shack is written by rebuild_pi.sh Stage 9 (MQTT_BROKER=<ip>).
+# Cron doesn't load systemd EnvironmentFile, so we source it ourselves.
+if [ -z "$MQTT_BROKER" ] && [ -f /etc/default/vu2cpl-shack ]; then
+    . /etc/default/vu2cpl-shack
+fi
+BROKER="${MQTT_BROKER:-127.0.0.1}"
 ID=$(hostname)
 
 CPU=$(top -bn1 | grep 'Cpu(s)' | awk '{print $2}' | cut -d. -f1)

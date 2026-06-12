@@ -8130,6 +8130,67 @@ IP, then restart Node-RED.
 
 ---
 
+## 2026-06-08 — Fork fix: sweep ALL `.169` broker hardcodes (not just the config nodes)
+
+Follow-up to the 2026-06-06 broker fix. That one made Stage 7 rewrite the
+two `mqtt-broker` *config nodes*, but the shipped `192.168.1.169` literal
+still survived in several other spots, so a fork at a different IP had
+broken telemetry, a broken LP-700 ws-client, and a misleading Init Defaults
+value. Swept all of them. Full write-up in `FORK_BROKER_HARDCODE_FIX.md`.
+
+### Hardcodes swept
+
+- **`monitor.sh`** — `BROKER=192.168.1.169` → reads `$MQTT_BROKER` →
+  `/etc/default/vu2cpl-shack` → `127.0.0.1`. (Cron can't use systemd
+  EnvironmentFile, so it sources the file itself.)
+- **`as3935_mqtt.py`** — `MQTT_BROKER = "192.168.1.169"` →
+  `os.environ.get("MQTT_BROKER","127.0.0.1")` (+ `import os`).
+- **`as3935.service`** — added `EnvironmentFile=-/etc/default/vu2cpl-shack`
+  (the `-` makes it optional) + `Environment=PYTHONUNBUFFERED=1` (the
+  daemon's own docstring required this for logs to reach journald — it was
+  missing).
+- **`flows.json` LP-700 ws-client** (`lp7wsclient00001`) — was
+  `ws://192.168.1.169:8089/ws`; Stage 7 now rewrites the host to
+  `localhost`, matching the SPE (`:8888`) and rotator (`:8090`) ws-clients,
+  which already used `localhost`. Gateways run on the *same Pi*, so they
+  must NOT inherit the (possibly external) broker IP.
+- **`flows.json` Init Defaults `MQTT_BROKER` const** — Stage 7 now rewrites
+  it to the broker IP too.
+
+### Stage 7 — broadened sweep + fail-loud residual check
+
+The Stage-7 patcher now handles broker config nodes (→ broker IP),
+`websocket-client` paths (`.169` → `localhost`), and the Init Defaults
+const (→ broker IP), then runs a **fail-loud residual sweep**: if any
+`192.168.1.169` survives and the target isn't itself `.169`, the stage
+aborts (a missed hardcode = broken MQTT). On VU2CPL's own rebuild
+(target == `.169`) the sweep is a near-no-op and the residual check is
+skipped — only the ws-clients flip to `localhost` (an improvement).
+
+### Stage 9 — env file + unit retargeting
+
+- Writes `/etc/default/vu2cpl-shack` (`MQTT_BROKER=<inventory IP>`),
+  consumed by `as3935.service` (EnvironmentFile) and `monitor.sh` (sourced).
+- `sed`-retargets both `as3935.service` and `rpi-agent.service` from the
+  upstream `vu2cpl` user/home to `$ACTUAL_USER` at install — they shipped
+  with `User=vu2cpl` + `/home/vu2cpl/…` hardcoded, doubly broken on a fork
+  with a different user. The sed patterns are user/home-specific so
+  `vu2cpl-shack` in the EnvironmentFile path is untouched.
+
+### Verification
+
+`bash -n` (rebuild_pi.sh, monitor.sh) + `py_compile` (as3935_mqtt.py) clean.
+Dry-ran the Stage-7 sweep against a copy of flows.json: fork IP `10.0.0.5`
+→ both brokers + Init const → `10.0.0.5`, all three ws-clients → `localhost`,
+**0 residual** (exit 0); VU2CPL IP `.169` → ws-clients → `localhost`, residual
+check skipped. Dry-ran the sed retarget (`vu2cpl` → `pi`): paths + `User=`
+flipped, `vu2cpl-shack` intact.
+
+The repo's `flows.json` is intentionally left at `.169` (VU2CPL's own
+value); Stage 7 rewrites it at install. No `flows.json` commit here.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:

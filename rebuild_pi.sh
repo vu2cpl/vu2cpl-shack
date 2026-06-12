@@ -861,29 +861,51 @@ nrsave() {
 EOF
     fi
 
-    # ── Point the MQTT broker config nodes at THIS site's broker — ALWAYS ──
-    # The whole shack rides on MQTT. The broker IP must not depend on the
-    # opt-in Stage 13 customize (which can be skipped with a bare Enter, leaving
-    # every mqtt node dialing the upstream Pi's 192.168.1.169). We patch it here,
-    # in a stage that always runs, from the mandatory inventory's MQTT_IP.
+    # ── Sweep the shipped 192.168.1.169 hardcodes out of flows.json — ALWAYS ──
+    # The whole shack rides on MQTT. None of this may depend on the opt-in Stage
+    # 13 customize (which a bare Enter skips). We patch, in this always-run stage,
+    # from the mandatory inventory's MQTT_IP:
+    #   • mqtt-broker config nodes  -> the broker IP (may be a separate machine)
+    #   • websocket-client paths    -> localhost  (the gateways run on THIS Pi,
+    #                                   so they must NOT inherit an external broker IP)
+    #   • Init Defaults MQTT_BROKER const -> the broker IP (informational mirror)
+    # Then a fail-loud residual sweep: if any 192.168.1.169 survives (and our
+    # target isn't itself .169), abort — a missed hardcode means broken MQTT.
     local mqtt_target="${MQTT_IP:-$(hostname -I 2>/dev/null | awk '{print $1}')}"
     if [[ -n "$mqtt_target" && -f "$REPO_DIR/flows.json" ]]; then
-        step "Pointing MQTT broker config nodes at $mqtt_target"
+        step "Sweeping 192.168.1.169 out of flows.json (broker -> $mqtt_target, gateways -> localhost)"
         MQTT_TARGET="$mqtt_target" python3 - "$REPO_DIR/flows.json" <<'PYEOF' \
-            || warn "broker patch failed — set the broker in the Node-RED editor by hand"
-import json, os, sys
-path = sys.argv[1]; ip = os.environ['MQTT_TARGET']
-d = json.load(open(path))
-n = sum(1 for node in d if node.get('type') == 'mqtt-broker')
+            || fail "flows.json broker sweep incomplete (see above) — fix before MQTT will work"
+import json, os, re, sys
+path = sys.argv[1]; ip = os.environ['MQTT_TARGET']; OLD = '192.168.1.169'
+with open(path) as f:
+    d = json.load(f)
+c = {'broker': 0, 'ws': 0, 'const': 0}
 for node in d:
-    if node.get('type') == 'mqtt-broker':
-        node['broker'] = ip
+    t = node.get('type')
+    if t == 'mqtt-broker':
+        node['broker'] = ip; c['broker'] += 1
+    elif t == 'websocket-client':
+        p = node.get('path', '')
+        if OLD in p:
+            node['path'] = p.replace(OLD, 'localhost'); c['ws'] += 1
+    elif node.get('id') == 'ec1fd4dece8c4dc0':           # Init Defaults
+        new, k = re.subn(r"(MQTT_BROKER\s*=\s*['\"])" + re.escape(OLD) + r"(['\"])",
+                         r"\g<1>" + ip + r"\g<2>", node.get('func', ''))
+        if k:
+            node['func'] = new; c['const'] += k
 json.dump(d, open(path, 'w'), indent=4)
-print(f'  patched {n} mqtt-broker config node(s) -> {ip}')
+print(f"  broker nodes -> {ip}: {c['broker']} | ws-client paths -> localhost: {c['ws']} | Init Defaults const: {c['const']}")
+# fail-loud residual sweep (skip when our own target IS .169 — VU2CPL's value)
+if ip != OLD:
+    leftover = [n.get('id') for n in d if OLD in json.dumps(n)]
+    if leftover:
+        print(f"  ERROR: {OLD} still present after patch in node(s): {leftover}", file=sys.stderr)
+        sys.exit(2)
 PYEOF
         sudo systemctl restart nodered
         sleep 3
-        ok "MQTT broker set to $mqtt_target (Node-RED restarted)"
+        ok "flows.json broker hardcodes swept (broker=$mqtt_target, gateways=localhost; Node-RED restarted)"
     else
         warn "Could not determine an MQTT broker IP — set it in the editor by hand."
     fi
@@ -925,10 +947,22 @@ stage_09_pi_scripts() {
     done
     sudo chmod +x "/home/$ACTUAL_USER/monitor.sh" "/home/$ACTUAL_USER/as3935_tune.py"
 
-    # Systemd units
-    step "Install systemd units"
+    # Shack env file — the broker IP for the Pi-side scripts that aren't Node-RED.
+    # as3935.service reads it via EnvironmentFile; monitor.sh sources it (cron
+    # can't use systemd EnvironmentFile). Value from the mandatory inventory.
+    local mqtt_target="${MQTT_IP:-$(hostname -I 2>/dev/null | awk '{print $1}')}"
+    step "Write /etc/default/vu2cpl-shack (MQTT_BROKER=$mqtt_target)"
+    echo "MQTT_BROKER=$mqtt_target" | sudo tee /etc/default/vu2cpl-shack > /dev/null
+
+    # Systemd units — copied, then retargeted from the upstream 'vu2cpl' user/home
+    # to whoever runs this install ($ACTUAL_USER). The sed patterns are
+    # user/home-specific on purpose, so 'vu2cpl-shack' in the EnvironmentFile path
+    # is left intact.
+    step "Install systemd units (retargeted to user $ACTUAL_USER)"
     sudo cp as3935.service    /etc/systemd/system/as3935.service
     sudo cp rpi-agent.service /etc/systemd/system/rpi-agent.service
+    sudo sed -i "s#/home/vu2cpl#/home/$ACTUAL_USER#g; s#User=vu2cpl#User=$ACTUAL_USER#g" \
+        /etc/systemd/system/as3935.service /etc/systemd/system/rpi-agent.service
     sudo systemctl daemon-reload
 
     # Sudoers

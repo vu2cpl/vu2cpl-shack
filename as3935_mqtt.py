@@ -12,11 +12,13 @@ The unit must include:  Environment=PYTHONUNBUFFERED=1
 otherwise print() output is block-buffered and never reaches journalctl.
 """
 
-import time, json, sys, signal, smbus2, paho.mqtt.client as mqtt
+import os, time, json, sys, signal, smbus2, paho.mqtt.client as mqtt
 from RPi import GPIO
 
 # ── Config ──────────────────────────────────────────
-MQTT_BROKER   = "192.168.1.169"
+# Broker from the environment (systemd EnvironmentFile=/etc/default/vu2cpl-shack,
+# written by rebuild_pi.sh Stage 9); localhost fallback for a same-Pi broker.
+MQTT_BROKER   = os.environ.get("MQTT_BROKER", "127.0.0.1")
 MQTT_PORT     = 1883
 MQTT_TOPIC    = "lightning/as3935"
 TOPIC_HB      = "lightning/as3935/hb"

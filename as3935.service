@@ -4,6 +4,11 @@ After=network-online.target mosquitto.service
 Wants=network-online.target
 
 [Service]
+# Broker IP comes from here (written by rebuild_pi.sh Stage 9). The leading '-'
+# makes it optional so the unit still starts if the file is absent.
+EnvironmentFile=-/etc/default/vu2cpl-shack
+# Without this, print() is block-buffered and never reaches journalctl.
+Environment=PYTHONUNBUFFERED=1
 ExecStart=/usr/bin/python3 /home/vu2cpl/as3935_mqtt.py
 WorkingDirectory=/home/vu2cpl
 Restart=on-failure

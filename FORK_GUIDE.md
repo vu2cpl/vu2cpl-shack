@@ -776,6 +776,7 @@ in `index.js` describe the patterns.
 | Sudoers for rpi-agent | `/etc/sudoers.d/rpi-agent` |
 | Cron entry (monitor.sh) | `crontab -e` as your user — `* * * * * /home/<user>/monitor.sh` |
 | Mosquitto config | `/etc/mosquitto/conf.d/lan.conf` (anonymous on port 1883) |
+| Shack env file | `/etc/default/vu2cpl-shack` — `MQTT_BROKER=<your IP>`, written by Stage 9; read by `as3935.service` (EnvironmentFile) + `monitor.sh` (sourced) |
 | LP-700 server | `~/LP-700-Server/` (cloned from VU3ESV) |
 | Rotator gateway | `~/rotator-remote/` (cloned from vu2cpl/rotator-remote; serves `:8090`) |
 | **Runtime data files** (auto-generated): | |
