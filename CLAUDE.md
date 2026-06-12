@@ -84,7 +84,7 @@ Node-RED shack automation running on Raspberry Pi 4B. Controls and monitors:
 | FlexRadio | `192.168.1.148:4992` (TCP API + UDP discovery) |
 | SPE WS gateway | `spe-remote.service` on Pi @ `ws://192.168.1.169:8888/ws` (single FTDI-serial owner, multi-client fan-out). Repo [`vu2cpl/spe-remote`](https://github.com/vu2cpl/spe-remote). Also handles SPE power-on via DTR/RTS on the open port. No `/healthz` — liveness = `curl http://…:8888/` |
 | LP-700 WS gateway | `lp700-server.service` on Pi @ `ws://192.168.1.169:8089/ws` (single HID owner, multi-client fan-out) |
-| Rotator WS gateway | `rotator-remote.service` on Pi @ `ws://192.168.1.169:8090/ws` (single FTDI-serial owner, multi-client fan-out). Repo [`vu2cpl/rotator-remote`](https://github.com/vu2cpl/rotator-remote). Azimuth/serial only — rotator power stays on Tasmota/MQTT |
+| Rotator WS gateway | `rotator-remote.service` on Pi @ `ws://192.168.1.169:8090/ws` (single FTDI-serial owner, multi-client fan-out). Repo [`vu2cpl/rotator-remote`](https://github.com/vu2cpl/rotator-remote). Azimuth/serial only — rotator power stays on Tasmota/MQTT. Also serves a standalone compass web UI at `http://192.168.1.169:8090/` (independent of Node-RED, like spe-remote's `:8888/`) |
 | Git function | `nrsave "message"` (bash function in `~/.bashrc` on Pi) → regen DXCC tab extract → add flows.json + extract → commit |
 | Dashboard theme | Dark, base #097479, bg #111111 |
 

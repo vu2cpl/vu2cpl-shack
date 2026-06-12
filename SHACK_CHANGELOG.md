@@ -8191,6 +8191,33 @@ value); Stage 7 rewrites it at install. No `flows.json` commit here.
 
 ---
 
+## 2026-06-08 — rotator-remote: standalone web UI at :8090/ (in the rotator-remote repo)
+
+Part B of the 2026-06-08 handover. Gave `rotator-remote` its own
+self-contained control page at `http://<pi>:8090/`, exactly like
+`spe-remote` serves its UI at `:8888/` — independent of Node-RED's
+`/shack`. Same single-serial-owner / multi-client model: Node-RED stays a
+ws-client on the same `/ws`; the page is just another client.
+
+Done in the [`vu2cpl/rotator-remote`](https://github.com/vu2cpl/rotator-remote)
+repo (commit `7fc5411`), not this one:
+- `rotator/app.py` serves `web/` via a `NoCacheStaticFileHandler` (copied
+  from spe-remote) at `/`, keeping `/ws` + `/healthz` as their own routes
+  (so Stage 13b's `curl :8090/healthz` still passes).
+- `web/{index.html,app.js,style.css}` — dark compass UI: live heading
+  readout, SVG compass (needle = heading, marker = target, click-to-slew),
+  numeric azimuth + GO, preset bearings, prominent STOP, LP/+180°, and a
+  status line (connection pill + rotor up/down + clients). WS
+  connect/reconnect lifted from spe; commands use the existing JSON
+  protocol (goto/stop/lpsp). No build step.
+
+Power stays out of scope (Tasmota/MQTT in Node-RED). Verified locally — the
+server serves `/`, `/healthz`, and the assets with no-cache headers.
+
+Shack-repo change here is only the CLAUDE.md infra-row cross-reference.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:
