@@ -15,3 +15,15 @@ nr_dxcc_blacklist.json
 # Runtime historic event log (lightning strikes + actions, JSONL).
 # Append-only; grows unbounded. Not source-controlled — runtime only.
 nr_lightning_events.jsonl
+
+# Runtime cty.xml prefix→DXCC map cache (fetched on Node-RED startup).
+nr_cty_maps.json
+
+# uibuilder generates instance scaffolding at runtime (package.json, .config,
+# dist/, api/, routes/, types/, node_modules, README/LICENSE, …). We only
+# source-control our own front-end under uibuilder/shack/src/ — ignore the rest.
+/uibuilder/**
+!/uibuilder/
+!/uibuilder/shack/
+!/uibuilder/shack/src/
+!/uibuilder/shack/src/**
