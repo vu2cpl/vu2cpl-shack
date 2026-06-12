@@ -2,7 +2,7 @@
 
 **Period:** 2026-05-01 → 2026-05-26
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
-**Last commit at handover:** `5aab543` — rebuild_pi.sh: MQTT broker IP → mandatory inventory + always-patched in Stage 7 (fixes "MQTT not working on a fresh fork")
+**Last commit at handover:** `9e0b747` — Fork fix: sweep ALL `.169` broker hardcodes (Stage 7 broadened + Stage 9 env file + unit retargeting)
 
 ---
 
