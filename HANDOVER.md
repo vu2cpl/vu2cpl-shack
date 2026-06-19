@@ -1,8 +1,8 @@
 # Session Handover — VU2CPL Shack
 
-**Period:** 2026-05-01 → 2026-05-26
+**Period:** 2026-05-01 → 2026-06-19
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
-**Last commit at handover:** `9f11bb6` — Vue `/shack`: brand remaining VU2CPL hardcodes for forks (cosmetic; no network hardcodes exist). (rotator-remote web UI = `vu2cpl/rotator-remote` `7fc5411`.)
+**Last commit at handover:** `d5e99bd` — rebuild_pi.sh: fix mosquitto `status=3` (duplicate `persistence_location` between stock `mosquitto.conf` and our `conf.d/lan.conf` on a clean fork install). (rotator-remote web UI = `vu2cpl/rotator-remote` `7fc5411`.)
 
 ---
 
