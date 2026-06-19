@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v13 · 2026-06-19 SPE tune btn colour';
+window.__shackBuild = 'v14 · 2026-06-19 SPE tune confirm copy';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -1797,7 +1797,7 @@ const SPECard = {
       uibuilder.send({ topic: 'spe/cmd', payload: { type: 'speCmd', value: cmd } });
     }
     function confirmTune() {
-      if (!confirm('Start ATU TUNE?\n\nThe amp will transmit a low-power tuning carrier for a few seconds.')) return;
+      if (!confirm('Start ATU TUNE?\n\nTransmit a low-power tuning carrier within a few seconds to start tuning.')) return;
       sendCmd('TUNE');
     }
 

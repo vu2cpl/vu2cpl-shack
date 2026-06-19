@@ -8452,6 +8452,16 @@ to neutral. Verified by WS probe that the gateway sends `tune_active=false`
 while the amp is in Standby/RX (correct). Build stamp → `v13`,
 cache-buster `?v=13`.
 
+**Confirmed working on-amp 2026-06-19** — operator ran a real TUNE cycle;
+the button goes amber on both UIs while the front-panel TUNE LED is lit and
+returns to neutral when it clears. **Follow-up #34 closed.**
+
+**Confirm-dialog copy fix (`v14`).** The Vue `confirmTune()` dialog said
+"The amp will transmit a low-power tuning carrier for a few seconds" — which
+is wrong: the amp doesn't key itself, the *operator* sends the carrier so
+the ATU can tune. Reworded to "Transmit a low-power tuning carrier within a
+few seconds to start tuning." Build stamp → `v14`, cache-buster `?v=14`.
+
 ---
 
 ## Standard Commit Sequence (reminder)
