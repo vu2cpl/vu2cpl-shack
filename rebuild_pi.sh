@@ -423,21 +423,44 @@ stage_02_mosquitto() {
     banner "Stage 2 — Mosquitto MQTT broker (REBUILD_PI.md Step 3)"
 
     step "Install LAN listener config"
+    # The stock /etc/mosquitto/mosquitto.conf on Bookworm already sets
+    # `persistence`, `persistence_location`, and `log_dest file`, and pulls in
+    # this drop-in via `include_dir /etc/mosquitto/conf.d`. Re-declaring any of
+    # those here is a FATAL duplicate — mosquitto 2.x exits status=3
+    # ("Error: Duplicate persistence_location value in configuration"). So the
+    # base drop-in carries ONLY the listener + anon-access lines.
     sudo tee /etc/mosquitto/conf.d/lan.conf > /dev/null <<'EOF'
 # VU2CPL shack broker — LAN-only, no auth
+# (persistence / log_dest inherited from stock /etc/mosquitto/mosquitto.conf —
+#  do NOT re-declare them here; mosquitto 2.x treats duplicates as fatal)
 listener 1883
 allow_anonymous true
+EOF
+    # Defensive: if a minimal/non-standard stock conf is missing persistence
+    # (so retained messages would be lost across reboot), add it here — but only
+    # then, to avoid the duplicate-key fatal above.
+    if ! grep -qE '^\s*persistence_location' /etc/mosquitto/mosquitto.conf 2>/dev/null; then
+        step "Stock conf lacks persistence — adding it to lan.conf"
+        sudo tee -a /etc/mosquitto/conf.d/lan.conf > /dev/null <<'EOF'
 persistence true
 persistence_location /var/lib/mosquitto/
 log_dest file /var/log/mosquitto/mosquitto.log
 EOF
+    fi
 
     step "Enable + start mosquitto"
     sudo systemctl enable --now mosquitto
     sleep 1
 
     step "Verify mosquitto active"
-    systemctl is-active --quiet mosquitto || fail "mosquitto.service not active"
+    if ! systemctl is-active --quiet mosquitto; then
+        # Surface the real parse/bind error so the cause is obvious, not "not active"
+        echo "--- mosquitto config check ---"
+        sudo /usr/sbin/mosquitto -c /etc/mosquitto/mosquitto.conf 2>&1 | head -8 || true
+        echo "--- last journal lines ---"
+        sudo journalctl -u mosquitto -n 8 --no-pager 2>&1 || true
+        fail "mosquitto.service not active (see config check above)"
+    fi
     ok "mosquitto running"
 
     step "Smoke-test MQTT pub/sub locally"

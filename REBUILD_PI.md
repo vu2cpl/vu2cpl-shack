@@ -209,18 +209,30 @@ sudo i2cdetect -y 1                        # AS3935 should appear at 0x03 (or 0x
 
 ## Step 3 — Mosquitto broker
 
+> **Only the listener + anon-access lines go in this drop-in.** The stock
+> `/etc/mosquitto/mosquitto.conf` on Bookworm already sets `persistence`,
+> `persistence_location`, and `log_dest file`, and pulls this file in via
+> `include_dir /etc/mosquitto/conf.d`. Re-declaring any of those here is a
+> **fatal duplicate** — mosquitto 2.x exits `status=3` with
+> `Error: Duplicate persistence_location value in configuration` and the
+> broker never starts.
+
 ```bash
 sudo tee /etc/mosquitto/conf.d/lan.conf <<'EOF'
 # VU2CPL shack broker — LAN-only, no auth
+# (persistence / log_dest inherited from stock mosquitto.conf — do NOT
+#  re-declare them here; mosquitto 2.x treats duplicates as fatal)
 listener 1883
 allow_anonymous true
-persistence true
-persistence_location /var/lib/mosquitto/
-log_dest file /var/log/mosquitto/mosquitto.log
 EOF
 
 sudo systemctl enable --now mosquitto
 sudo systemctl status mosquitto --no-pager   # should be active (running)
+
+# If it shows status=3 / "failed", see the exact parse error with:
+#   sudo /usr/sbin/mosquitto -c /etc/mosquitto/mosquitto.conf -v
+# A "Duplicate ... value" line means your stock mosquitto.conf already sets
+# that directive — remove it from lan.conf above.
 
 # Smoke test from another terminal:
 mosquitto_sub -h localhost -t '$SYS/#' -C 5
@@ -662,6 +674,7 @@ If 15 fails but other cards are fine: not a noderedpi4 problem — it's gpsntp.l
 | Two publishers fighting on `lightning/as3935/*` | Pi `as3935.service` was enabled despite ESP32 also running | `sudo systemctl disable --now as3935` — ESP32 (vu2cpl-as3935-bridge) is the canonical publisher; Pi daemon stays installed but disabled |
 | AS3935 daemon starts but counters never increment (only if Pi fallback is enabled) | IRQ wired to wrong GPIO | Re-check pin 7 / GPIO4 (Step 8) |
 | Mosquitto refuses connections from Tasmota devices | Default config bound to localhost only | Re-do Step 3's `lan.conf` |
+| `mosquitto.service` fails to start, `status=3`, "Start request repeated too quickly" | `lan.conf` re-declares `persistence_location` / `log_dest` already set by stock `mosquitto.conf` → fatal duplicate | Trim `lan.conf` to just `listener 1883` + `allow_anonymous true` (Step 3). Confirm cause with `sudo /usr/sbin/mosquitto -c /etc/mosquitto/mosquitto.conf -v` |
 | Node-RED can't open USB serial | User not in `dialout` group | `sudo usermod -aG dialout vu2cpl` then re-login |
 | LP-700 dashboard frozen at one value | aggregator reading wrong msg shape (the 2026-05-09 fix) | The repo already has the fix; if you see this on a fresh clone, double-check `git pull` actually landed |
 | `flow.set('foo', 'file')` not persisting | File context store not enabled | Re-run `enable_file_context.sh` (Step 6) |

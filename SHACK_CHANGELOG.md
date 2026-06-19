@@ -8263,6 +8263,77 @@ forks at install (callsign=VU2CPL → no-op on VU2CPL's own rebuild).
 
 ---
 
+## 2026-06-19 — Fork fix: mosquitto `status=3` from duplicate `persistence_location`
+
+A forker (`adersh@NodeRed`) ran `rebuild_pi.sh` and `mosquitto.service`
+failed to start: `Active: failed`, `code=exited, status=3`, systemd
+"Start request repeated too quickly". Foreground run gave the exact cause:
+
+```
+Error: Duplicate persistence_location value in configuration.
+Error found at /etc/mosquitto/conf.d/lan.conf:5.
+Error found at /etc/mosquitto/mosquitto.conf:13.
+```
+
+**Root cause — the "two locations" problem.** Mosquitto reads config from
+the stock `/etc/mosquitto/mosquitto.conf` **and** from every file pulled in
+by its `include_dir /etc/mosquitto/conf.d`. On Raspberry Pi OS Bookworm the
+stock file *already* sets `persistence`, `persistence_location
+/var/lib/mosquitto/`, and `log_dest file /var/log/mosquitto/mosquitto.log`.
+Our Stage 2 drop-in (`conf.d/lan.conf`) **re-declared the same three** on
+top of the listener lines. mosquitto 2.x treats a duplicate
+`persistence_location` as **fatal**, not a warning → it exits before binding
+→ `status=3`, and systemd's rapid-restart backoff then reports "repeated too
+quickly". (VU2CPL's own Pi never hit this — its broker predates the script
+and was hand-configured, so the duplicate only surfaces on a *clean* fork
+install where Stage 2 writes the drop-in over a pristine stock conf.)
+
+### Fix — `rebuild_pi.sh` `stage_02_mosquitto()`
+
+The drop-in now carries **only** the two directives the stock conf lacks:
+
+```
+# VU2CPL shack broker — LAN-only, no auth
+listener 1883
+allow_anonymous true
+```
+
+`persistence` / `persistence_location` / `log_dest` are inherited from the
+stock `mosquitto.conf`. **Defensive branch:** if a minimal/non-standard
+stock conf is *missing* `persistence_location` (so retained messages —
+LWT, retained `shack/gpsntp/chrony`, etc. — would be lost on reboot), the
+script appends the three persistence lines to `lan.conf` *only then*, via a
+`grep -qE '^\s*persistence_location' /etc/mosquitto/mosquitto.conf` guard.
+So it's correct whether or not the stock conf already persists — and never
+duplicates.
+
+**Self-diagnosing verify step:** the "Verify mosquitto active" check now,
+on failure, dumps `mosquitto -c … -v` parse output + the last 8 journal
+lines before calling `fail`, so the *next* forker sees the real error
+instead of a bare "not active".
+
+### Docs
+
+- `REBUILD_PI.md` Step 3 trimmed to the 2-line `lan.conf` + a callout box
+  explaining the duplicate-key trap, plus the `mosquitto -c … -v` diagnostic
+  one-liner; new row in the "Common failure modes" table for the
+  `status=3` symptom.
+
+### Immediate unblock (given to the forker)
+
+```bash
+sudo tee /etc/mosquitto/conf.d/lan.conf >/dev/null <<'EOF'
+# VU2CPL shack broker — LAN-only, no auth
+listener 1883
+allow_anonymous true
+EOF
+sudo systemctl restart mosquitto
+```
+
+No `flows.json` change.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:
