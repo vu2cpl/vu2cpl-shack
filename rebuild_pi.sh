@@ -1747,6 +1747,57 @@ print('  patched' if n == 1 else '  WARN: serial port line not found — edit co
 PYEOF
     fi
 
+    # Optional Flex 6000 wiring for the spe-remote tune orchestrator.
+    # Only meaningful when the inventory says this station has both an
+    # SPE *and* a Flex — without the radio there's no carrier to drive
+    # the ATU. Patches the flex: section in config.yaml; spe-remote's
+    # default ships with `enabled: false` so silence here just keeps
+    # the WS gateway behaving as before (state mirror + power + RCU).
+    if [[ "${HW_FLEX:-1}" == '1' ]]; then
+        echo
+        c_yellow "  This station has a FlexRadio per the inventory. spe-remote can"
+        c_yellow "  drive it over SmartSDR TCP for orchestrated TUNE + the ATU band"
+        c_yellow "  sweep (MacExpert Sweep panel). Static LAN IP is fine."
+        local cur_flex_host flex_host flex_enable
+        cur_flex_host=$(python3 - <<'PYEOF' 2>/dev/null
+import yaml
+try:
+    with open('config.yaml') as f:
+        c = yaml.safe_load(f) or {}
+    print(c.get('flex', {}).get('host', ''))
+except Exception:
+    pass
+PYEOF
+)
+        read -r -p "  Enable Flex orchestration? [y/N]: " flex_enable
+        if [[ "$flex_enable" =~ ^[Yy] ]]; then
+            read -r -p "  Flex host IP (Enter to keep ${cur_flex_host:-empty}): " flex_host
+            flex_host="${flex_host:-$cur_flex_host}"
+            if [[ -n "$flex_host" ]]; then
+                step "Setting flex.enabled=true and flex.host=$flex_host in config.yaml"
+                FLEX_HOST="$flex_host" python3 - <<'PYEOF'
+import os, yaml
+host = os.environ['FLEX_HOST']
+with open('config.yaml') as f:
+    c = yaml.safe_load(f) or {}
+c.setdefault('flex', {})
+c['flex']['enabled'] = True
+c['flex']['host'] = host
+c['flex'].setdefault('port', 4992)
+c['flex'].setdefault('slice_rx', 0)
+c['flex'].setdefault('tune_power_watts', 10)
+with open('config.yaml', 'w') as f:
+    yaml.safe_dump(c, f, default_flow_style=False, sort_keys=False)
+print('  patched')
+PYEOF
+            else
+                warn "  Flex host empty — leaving flex.enabled at default (false)."
+            fi
+        else
+            ok "  Skipping Flex wiring — leaving flex.enabled at default (false)."
+        fi
+    fi
+
     step "Running setup.sh (venv + deps)"
     ./setup.sh || fail "setup.sh failed — check the output above."
 

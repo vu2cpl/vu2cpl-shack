@@ -99,6 +99,13 @@ The script pauses for these interactive steps:
   silently if you have that hardware, skips if not. The two serial gateways
   (rotator, SPE) prompt only for the device's `/dev/serial/by-id/…` path. They
   run after the ws-client flows are in place so the serial ports are free.
+  **Stage 13c also asks about Flex** when the inventory has both `HW_SPE=1`
+  and `HW_FLEX=1`: opt-in `y/N` prompt to enable orchestrated TUNE + the ATU
+  band sweep (spe-remote talks to the Flex over SmartSDR TCP on `:4992`),
+  followed by a Flex IP prompt. Default `N` keeps `flex.enabled: false` in
+  `config.yaml` — spe-remote behaves as the plain state-mirror gateway it
+  always was. See spe-remote's "Orchestrated TUNE and Band Sweep" section
+  for the full picture.
 
 Everything else runs automatically. Re-run safely after Ctrl-C or reboot:
 state is tracked in `$HOME/.rebuild_pi.state` (survives reboots).
