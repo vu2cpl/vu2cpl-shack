@@ -2,7 +2,7 @@
 
 **Period:** 2026-05-01 → 2026-06-19
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
-**Last commit at handover:** `2131a7b` — SPE Tune button fill colour toggles with the amp's TUNE LED (#34): neutral→amber on `tune_active` (D1 + Vue), Vue `⚡ TUNE` header chip. Revised from the v12 glow-only cut that looked like "no indication". Build v13. On-amp TUNE-cycle verification pending. (rotator-remote web UI = `vu2cpl/rotator-remote` `7fc5411`.)
+**Last commit at handover:** `6952032` — SPE Tune #34 closed (confirmed on-amp: button goes amber while the front-panel LED is lit) + Vue confirm-dialog copy fix ("Transmit a low-power tuning carrier within a few seconds to start tuning"). Build v14. (rotator-remote web UI = `vu2cpl/rotator-remote` `7fc5411`.)
 
 ---
 
