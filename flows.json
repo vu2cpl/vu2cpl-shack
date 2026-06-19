@@ -8508,7 +8508,7 @@
         "type": "function",
         "z": "spe_ws_tab_01",
         "name": "Parse + route",
-        "func": "// websocket in delivers msg.payload as the raw text frame.\n// Binary frames (RCU LCD mirror) arrive as Buffers; we skip those.\nif (Buffer.isBuffer(msg.payload)) return null;\nif (typeof msg.payload !== 'string') return null;\n\nlet d;\ntry { d = JSON.parse(msg.payload); }\ncatch (e) { return null; }\n\nmsg.payload = d;\n\n// Route by message type.\n// Output 1: amplifier state\n// Output 2: heartbeat (serial up/down + client count)\n// Output 3: power-action result\nif (d.heartbeat)         return [null, msg, null];\nif (d.power_result)      return [null, null, msg];\nif (d.op_status !== undefined) return [msg, null, null, null];\nif (d.tune_event !== undefined) return [null, null, null, msg];\nreturn null;\n",
+        "func": "// websocket in delivers msg.payload as the raw text frame.\n// Binary frames (RCU LCD mirror) arrive as Buffers; we skip those.\nif (Buffer.isBuffer(msg.payload)) return null;\nif (typeof msg.payload !== 'string') return null;\n\nlet d;\ntry { d = JSON.parse(msg.payload); }\ncatch (e) { return null; }\n\nmsg.payload = d;\n\n// Route by message type.\n// Output 1: amplifier state\n// Output 2: heartbeat (serial up/down + client count)\n// Output 3: power-action result\nif (d.heartbeat)         return [null, msg, null];\nif (d.power_result)      return [null, null, msg];\nif (d.op_status !== undefined) return [msg, null, null, null];\nif (d.tune_event !== undefined) {\n  msg.topic = 'spe/tune';\n  return [null, null, null, msg];\n}\nreturn null;\n",
         "outputs": 4,
         "noerr": 0,
         "initialize": "",
@@ -8527,7 +8527,8 @@
                 "ws_pwr_result_dbg"
             ],
             [
-                "ws_panel_node"
+                "ws_panel_node",
+                "uib_shack_01"
             ]
         ]
     },
@@ -9831,7 +9832,7 @@
         "type": "function",
         "z": "spe_ws_tab_01",
         "name": "Route Vue SPE commands",
-        "func": "if (msg.topic && msg.topic !== 'spe/cmd') return null;\nif (!msg.payload || !msg.payload.type) return null;\n// Vue sends { type: 'spePower' | 'speCmd', value: 'ON_SPE' | 'OFF_SPE' | 'MODE' | 'TUNE' | ... }\n// ws_btn_router accepts the same alphabetic command codes via msg.payload.\nif (msg.payload.type === 'spePower' || msg.payload.type === 'speCmd') {\n    return { payload: msg.payload.value };\n}\nreturn null;\n",
+        "func": "if (msg.topic && msg.topic !== 'spe/cmd') return null;\nif (!msg.payload || !msg.payload.type) return null;\n// Vue sends { type: 'spePower' | 'speCmd', value: 'ON_SPE' | 'OFF_SPE' | 'MODE' | 'TUNE' | ... }\n// ws_btn_router accepts the same alphabetic command codes via msg.payload.\nif (msg.payload.type === 'spePower' || msg.payload.type === 'speCmd') {\n    return { payload: msg.payload.value };\n}\n// Sweep commands from the Vue SPECard. Translate into the\n// tune_band:<band> / tune_stop payloads spe-remote expects;\n// ws_btn_router already passes those through.\nif (msg.payload.type === 'speTuneBand') {\n    return { payload: 'tune_band:' + msg.payload.value };\n}\nif (msg.payload.type === 'speTuneStop') {\n    return { payload: 'tune_stop' };\n}\nreturn null;\n",
         "outputs": 1,
         "x": 360,
         "y": 280,

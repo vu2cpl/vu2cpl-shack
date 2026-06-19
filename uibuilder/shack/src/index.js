@@ -1519,11 +1519,47 @@ const SPECard = {
           </span>
         </div>
 
-        <!-- Primary controls: MODE / TUNE / PWRLVL -->
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;">
+        <!-- Primary controls: MODE / TUNE / PWRLVL / SWEEP -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;">
           <button class="btn btn--blue"  :disabled="!powerOn" @click="sendCmd('MODE')">Mode</button>
           <button class="btn btn--amber" :disabled="!powerOn" @click="confirmTune()">Tune</button>
           <button class="btn btn--blue"  :disabled="!powerOn" @click="sendCmd('PWRLVL')">PWR Level</button>
+          <button class="btn btn--blue"  :disabled="!powerOn"
+                  :class="{ 'btn--green': sweep.show || sweep.running }"
+                  @click="sweep.show = !sweep.show">SWEEP</button>
+        </div>
+
+        <!-- ATU band sweep panel — opens when SWEEP is clicked. Reads
+             progress from spe/tune topic messages (set by the Pi-side
+             ws_parse_node fan-out). -->
+        <div v-if="sweep.show" class="sweep-block" style="margin-top:6px;padding:6px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:var(--fs-sm);font-weight:600;margin-bottom:5px;">
+            <span>ATU Band Sweep</span>
+            <span :style="{color: sweepPhaseColor, fontFamily:'var(--font-mono)', fontSize:'var(--fs-xs)'}">
+              {{ (sweep.phase || 'Ready').replace(/_/g, ' ') }}
+            </span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:3px;margin-bottom:5px;">
+            <button v-for="band in sweepBands" :key="band"
+                    class="btn"
+                    :class="band === sweep.selectedBand ? 'btn--green' : 'btn--blue'"
+                    :disabled="sweep.running"
+                    style="font-family:var(--font-mono);font-size:var(--fs-xs);padding:3px 0;"
+                    @click="sweep.selectedBand = band">{{ band }}</button>
+          </div>
+          <div style="font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--muted);min-height:14px;margin-bottom:5px;">
+            {{ sweep.message }}
+          </div>
+          <div style="height:5px;border:1px solid var(--border);border-radius:3px;overflow:hidden;margin-bottom:5px;">
+            <div :style="{height:'100%', width: sweepPct + '%', background:'var(--green)', transition:'width 0.3s'}"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:2fr 1fr;gap:4px;">
+            <button class="btn btn--green" :disabled="sweep.running" @click="startSweep()">Start</button>
+            <button class="btn btn--red"   :disabled="!sweep.running" @click="stopSweep()">Stop</button>
+          </div>
+          <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:5px;line-height:1.3;">
+            Amp in <strong>STBY</strong>, antenna for band selected, before starting.
+          </div>
         </div>
 
         <!-- Top metrics: Mode / RX-TX / Band -->
@@ -1760,15 +1796,98 @@ const SPECard = {
       sendCmd('TUNE');
     }
 
+    // ───────── ATU band-sweep state + actions ─────────────────────
+    // Reactive sweep panel state. show=open/closed; running=Pi has
+    // accepted a SWEEP_STARTED phase; progress=parsed N/M from
+    // SWEEP_STEP messages. Sweep buttons send {type:'speTuneBand',
+    // value:'20m'} or {type:'speTuneStop'} via the same uibuilder
+    // command channel; vue_spe_cmd_router_01 translates to the
+    // tune_band:<band> / tune_stop payloads spe-remote expects.
+    const sweepBands = ["160m","80m","60m","40m","30m","20m",
+                        "17m","15m","12m","10m","6m"];
+    const sweep = reactive({
+      show: false,
+      selectedBand: "20m",
+      running: false,
+      phase: "",
+      message: "",
+      current: 0,
+      total: 0,
+    });
+    const sweepPct = computed(() => {
+      if (!sweep.total) return 0;
+      if (sweep.phase === "SWEEP_DONE") return 100;
+      return Math.max(0, Math.min(100,
+        (sweep.current - 1) / sweep.total * 100
+      ));
+    });
+    const sweepPhaseColor = computed(() => {
+      const p = sweep.phase;
+      if (p === "SUCCESS" || p === "SWEEP_DONE") return "var(--green)";
+      if (p === "FAIL")    return "var(--red)";
+      if (p === "ABORT")   return "var(--amber)";
+      if (sweep.running)   return "var(--amber)";
+      return "var(--muted)";
+    });
+    function startSweep() {
+      if (sweep.running) return;
+      if (!confirm("Start ATU sweep on " + sweep.selectedBand +
+                   "? Amp must be in STBY and the antenna for " +
+                   sweep.selectedBand + " selected.")) return;
+      sweep.running = true;
+      sweep.phase = "STARTED";
+      sweep.message = sweep.selectedBand + " requested";
+      sweep.current = 0;
+      sweep.total = 0;
+      uibuilder.send({
+        topic: "spe/cmd",
+        payload: { type: "speTuneBand", value: sweep.selectedBand },
+      });
+    }
+    function stopSweep() {
+      uibuilder.send({
+        topic: "spe/cmd",
+        payload: { type: "speTuneStop" },
+      });
+    }
+    function handleTuneEvent(p) {
+      if (!p || !p.tune_event) return;
+      const phase = p.tune_event;
+      sweep.phase = phase;
+      sweep.message = p.tune_message || "";
+      if (phase === "STARTED" || phase === "SWEEP_STARTED") {
+        sweep.running = true;
+      }
+      if (["SUCCESS","FAIL","ABORT","SWEEP_DONE"].includes(phase)) {
+        sweep.running = false;
+      }
+      if (phase === "SWEEP_STEP") {
+        const m = (p.tune_message || "").match(/^(\d+)\s*\/\s*(\d+)/);
+        if (m) {
+          sweep.current = parseInt(m[1], 10);
+          sweep.total = parseInt(m[2], 10);
+        }
+      } else if (phase === "SWEEP_DONE") {
+        sweep.current = sweep.total;
+      }
+    }
+
     onMounted(() => {
       uibuilder.onTopic('spe', (msg) => {
         if (msg && msg.payload && typeof msg.payload === 'object') {
           Object.assign(state, msg.payload);
         }
       });
+      // Pi-side ws_parse_node fans tune_event messages out on the
+      // 'spe/tune' topic. See vu2cpl-shack flows.json patch from
+      // 2026-06-19 (the SPE-tab SWEEP-panel commit).
+      uibuilder.onTopic('spe/tune', (msg) => {
+        if (msg && msg.payload) handleTuneEvent(msg.payload);
+      });
     });
 
-    return { expanded, sec, state, powerOn, isTransmitting, pwrPct, pwrBandMax, pwrBandLabel, pwrBarColor, pwrLvlColor, swrColor, tempColor, togglePower, sendCmd, confirmTune };
+    return { expanded, sec, state, powerOn, isTransmitting, pwrPct, pwrBandMax, pwrBandLabel, pwrBarColor, pwrLvlColor, swrColor, tempColor, togglePower, sendCmd, confirmTune,
+             sweep, sweepBands, sweepPct, sweepPhaseColor, startSweep, stopSweep };
   }
 };
 
