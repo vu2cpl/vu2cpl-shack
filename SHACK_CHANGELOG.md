@@ -8,6 +8,66 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-06-19
+
+### SPE Amplifier — ATU band-sweep UI in both `/ui` and `/shack`
+
+**Tabs:** SPE (WS) (`spe_ws_tab_01`) + Vue Dashboard tab (uibuilder)
+**Nodes touched:** `ws_btn_router`, `ws_parse_node`, `ws_panel_node`,
+`vue_spe_cmd_router_01`; `uibuilder/shack/src/index.js` SPECard
+
+spe-remote's Phase 2 work (orchestrated TUNE + ATU band sweep via Flex 6000)
+needed a control surface inside the shack dashboard. Added SWEEP buttons to
+both dashboards — the legacy Node-RED `/ui` SPE Panel and the Vue `/shack`
+SPECard — sharing the same Pi-side `tune_event` broadcast.
+
+**Routing changes in `flows.json`:**
+
+- `ws_btn_router` (Button → WS command) gained a pass-through for
+  tune-orchestration commands. The existing `map` lookup still translates
+  UPPERCASE button names (TUNE, MODE, OFF_SPE …) to lowercase; commands
+  starting with `tune_band:` or equal to `tune_single` / `tune_stop` now
+  fall through unchanged.
+- `ws_parse_node` (Parse + route) widened from 3 to 4 outputs. The new
+  4th output handles incoming `tune_event` JSON: sets `msg.topic = 'spe/tune'`
+  and fans out to both `ws_panel_node` (Node-RED panel) and `uib_shack_01`
+  (Vue dashboard via uibuilder).
+- `vue_spe_cmd_router_01` learnt two new payload types: `speTuneBand`
+  (translates to `tune_band:<value>`) and `speTuneStop` (translates to
+  `tune_stop`). Both go through `ws_btn_router`'s pass-through.
+
+**UI changes:**
+
+- `ws_panel_node` (Node-RED `/ui` SPE Panel template): 4-button controls row
+  widened to 5 columns with a SWEEP button after Tune. SWEEP toggles a
+  small panel below the controls — band picker (6-col grid, 11 bands),
+  status/phase display, message line, progress bar, Start/Stop. JS hooks
+  use the captured `scope` (existing `speAmpToggle` pattern) so
+  `scope.send()` actually reaches the router. A `scope.$watch("msg", …)`
+  watches for tune_event payloads delivered via the new 4th wire.
+- `uibuilder/shack/src/index.js` SPECard: primary-controls grid widened
+  from 3 to 4 cells, gains a SWEEP button. Setup adds reactive sweep
+  state (`sweep.show / running / phase / message / current / total`),
+  `sweepPct` + `sweepPhaseColor` computeds, `startSweep` / `stopSweep`
+  methods that emit `{topic:'spe/cmd', payload:{type:'speTuneBand',
+  value:band}}` over uibuilder, and a second `uibuilder.onTopic('spe/tune')`
+  subscription that calls `handleTuneEvent(p)` to drive the panel.
+
+**First-pass scope-binding bug:** the initial Node-RED panel JS used
+`window.scope.send(...)` — that path doesn't exist; the dashboard passes
+`scope` as an IIFE parameter, not on `window`. Symptom: buttons rendered
+but did nothing. Fixed in commit `b4c8c11` by wrapping the script body in
+`(function(scope){ … })(scope)` and switching to `scope.send`. The Vue
+side never had this issue because uibuilder is a normal Vue component.
+
+Backup of the original flows.json from the first patch is at
+`/tmp/flows.json.bak` should rollback be needed.
+
+Related commits: `9eb615f` (Node-RED first cut), `b4c8c11` (scope fix),
+`945f96c` (Vue add).
+
+---
+
 ## 2026-04-22
 
 ### SPE Amplifier — Power meter scales with selected power level
