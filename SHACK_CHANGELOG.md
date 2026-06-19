@@ -8394,6 +8394,54 @@ No `flows.json` change.
 
 ---
 
+## 2026-06-19 — SPE Tune: front-panel TUNE-LED indicator on both dashboards (follow-up #34)
+
+Surfaced the SPE amplifier's front-panel **TUNE LED** on both the D1 `/ui`
+SPE Panel and the Vue `/shack` SPECard, so the operator can see when the
+amp is *in TUNE mode* (waiting for carrier / ATU sweeping) without looking
+at the rig.
+
+**Gateway side was already done** (no spe-remote change needed). `spe-remote`
+decodes the LED from the RCU LCD frame — `serial_handler.py:639`
+`self._last_tune_active = (payload[4] & 0x40) == 0` (byte 4 bit 6; CLEAR =
+LED on) — stamps `state.tune_active` on every CSV state broadcast
+(`serial_handler.py:577`), and RCU mode is auto-enabled at connect + kept
+alive by `_rcu_tick_loop`. So `tune_active` (bool) already ships in the WS
+state JSON to every client. This change is **Node-RED + Vue only**.
+
+**Data path:** `ws_format_state` builds one flat payload consumed by *both*
+UIs — D1 `ws_panel_node` reads it directly; `vue_spe_bridge_01` forwards the
+same object to the Vue card (which `Object.assign`s it into `state`). So one
+new field feeds both.
+
+### Changes (flows.json + uibuilder)
+
+- **`ws_format_state`** (flows.json): emit `tune: !!d.tune_active` in the
+  panel payload.
+- **`ws_panel_node`** (D1 `/ui`): the existing `Tune` button gains
+  `id="spew-tune-btn"` + an inline `●` LED (`#spew-tune-led`). Render
+  handler lights the LED amber (`var(--gh-amber)`) with a glow + an amber
+  inset box-shadow on the button while `d.tune` is true; dims to `#30363d`
+  otherwise. The amp-gone (`!d.usb`) wipe block resets the LED so it can't
+  stick on after the heartbeat drops (heartbeat-down msgs don't carry
+  `tune`).
+- **Vue SPECard** (`uibuilder/shack/src/index.js`): added `tune:false` to
+  reactive state; the amber `Tune` button glows + shows a `●` while
+  `state.tune`; the **collapsed card header** shows a `⚡ TUNE` chip so it's
+  visible without expanding. Build stamp → `v12 · 2026-06-19 SPE tune LED`,
+  `index.html` cache-buster `?v=11` → `?v=12`.
+
+The "make Tune a button" half of #34 was already satisfied (both UIs were
+`<button>`s); the LED is the new work.
+
+**Verification:** flows.json round-trips byte-identical except the two node
+strings; `node --check` clean on index.js. **On-amp confirmation still
+pending** — needs a real TUNE cycle (button → low-power carrier) to watch
+the LED light amber on both UIs and clear when tuning ends. #34 stays open
+until that's seen on the bench/live amp.
+
+---
+
 ## Standard Commit Sequence (reminder)
 
 Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:

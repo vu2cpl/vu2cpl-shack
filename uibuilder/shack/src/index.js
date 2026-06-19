@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v11 · 2026-06-04 hardware cards';
+window.__shackBuild = 'v12 · 2026-06-19 SPE tune LED';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -1503,6 +1503,8 @@ const SPECard = {
           <span v-if="powerOn && state.band" :style="{color:'var(--accent)', fontWeight:600}">{{ state.band }}</span>
           <span v-if="powerOn"><span class="mini-bar"><span class="mini-bar__fill" :style="{width: pwrPct + '%', background: pwrBarColor}"></span></span></span>
           <span v-if="powerOn" :style="{color: pwrBarColor, fontWeight:600}">{{ Math.round(state.pwr || 0) }}W</span>
+          <span v-if="powerOn && state.tune">·</span>
+          <span v-if="powerOn && state.tune" :style="{color:'var(--amber)', fontWeight:700, textShadow:'0 0 6px var(--amber)'}">⚡ TUNE</span>
         </span>
       </div>
 
@@ -1522,7 +1524,10 @@ const SPECard = {
         <!-- Primary controls: MODE / TUNE / PWRLVL / SWEEP -->
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;">
           <button class="btn btn--blue"  :disabled="!powerOn" @click="sendCmd('MODE')">Mode</button>
-          <button class="btn btn--amber" :disabled="!powerOn" @click="confirmTune()">Tune</button>
+          <button class="btn btn--amber" :disabled="!powerOn" @click="confirmTune()"
+                  :style="state.tune ? 'box-shadow:inset 0 0 0 1px var(--amber),0 0 10px rgba(210,153,34,0.6);' : ''">
+            Tune<span v-if="state.tune" style="margin-left:4px;color:var(--amber);text-shadow:0 0 6px var(--amber);">●</span>
+          </button>
           <button class="btn btn--blue"  :disabled="!powerOn" @click="sendCmd('PWRLVL')">PWR Level</button>
           <button class="btn btn--blue"  :disabled="!powerOn"
                   :class="{ 'btn--green': sweep.show || sweep.running }"
@@ -1722,7 +1727,7 @@ const SPECard = {
       model:null, mode:null, rxtx:null, band:null, input:null, txant:null,
       pwrlvl:null, pwr:0, pwrMax:1500, atuswr:null, antswr:null,
       vpa:null, ipa:null, tempUpper:null, tempLower:null, tempComb:null,
-      warnings:null, alarms:null, usb:false
+      warnings:null, alarms:null, usb:false, tune:false
     });
 
     const powerOn = computed(() => !!state.usb);

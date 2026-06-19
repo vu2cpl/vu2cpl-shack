@@ -118,6 +118,13 @@ tile (`PWR LVL` / colour-coded amber/red for Middle/Maximum), but
 does not drive the bar scale — auto-ranging tracks the *actual*
 output regardless of the amp's selected level cap.
 
+**TUNE control + LED.** The `Tune` button starts an ATU tune cycle, and
+an indicator mirrors the amp's front-panel **TUNE LED** — the button
+glows amber (and the Vue card shows a `⚡ TUNE` chip in its collapsed
+header) while the amp is in TUNE mode. The LED state comes from the
+amp's RCU LCD stream (decoded in the `spe-remote` gateway), not the
+CSV status frame, so it's live whenever the gateway is running.
+
 ### FlexRadio
 
 TCP API to the FLEX-6600 at `192.168.1.148:4992`, plus UDP discovery.
