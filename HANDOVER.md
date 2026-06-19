@@ -2,7 +2,7 @@
 
 **Period:** 2026-05-01 → 2026-06-19
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
-**Last commit at handover:** `33b65dd` — docs: add follow-up #34 (SPE Tune button + front-panel TUNE-LED status indicator, both dashboards). Prior substantive commit: `fccb09e` (mosquitto `status=3` fork fix). (rotator-remote web UI = `vu2cpl/rotator-remote` `7fc5411`.)
+**Last commit at handover:** `fee7d8a` — SPE Tune-LED indicator on both dashboards (#34): `ws_format_state` emits `tune`, D1 + Vue Tune buttons glow + Vue `⚡ TUNE` header chip (gateway already broadcasts `tune_active`). Code-verified; on-amp TUNE-cycle verification pending. (rotator-remote web UI = `vu2cpl/rotator-remote` `7fc5411`.)
 
 ---
 
