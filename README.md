@@ -119,11 +119,12 @@ does not drive the bar scale — auto-ranging tracks the *actual*
 output regardless of the amp's selected level cap.
 
 **TUNE control + LED.** The `Tune` button starts an ATU tune cycle, and
-an indicator mirrors the amp's front-panel **TUNE LED** — the button
-glows amber (and the Vue card shows a `⚡ TUNE` chip in its collapsed
-header) while the amp is in TUNE mode. The LED state comes from the
-amp's RCU LCD stream (decoded in the `spe-remote` gateway), not the
-CSV status frame, so it's live whenever the gateway is running.
+its colour mirrors the amp's front-panel **TUNE LED** — the button stays
+neutral while the LED is off and turns solid amber (with a glow, and a
+`⚡ TUNE` chip in the Vue card's collapsed header) while the amp is in
+TUNE mode. The LED state comes from the amp's RCU LCD stream (decoded in
+the `spe-remote` gateway), not the CSV status frame, so it's live
+whenever the gateway is running.
 
 ### FlexRadio
 

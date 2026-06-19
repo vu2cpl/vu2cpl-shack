@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v12 · 2026-06-19 SPE tune LED';
+window.__shackBuild = 'v13 · 2026-06-19 SPE tune btn colour';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -1524,9 +1524,9 @@ const SPECard = {
         <!-- Primary controls: MODE / TUNE / PWRLVL / SWEEP -->
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;">
           <button class="btn btn--blue"  :disabled="!powerOn" @click="sendCmd('MODE')">Mode</button>
-          <button class="btn btn--amber" :disabled="!powerOn" @click="confirmTune()"
-                  :style="state.tune ? 'box-shadow:inset 0 0 0 1px var(--amber),0 0 10px rgba(210,153,34,0.6);' : ''">
-            Tune<span v-if="state.tune" style="margin-left:4px;color:var(--amber);text-shadow:0 0 6px var(--amber);">●</span>
+          <button class="btn" :class="state.tune ? 'btn--amber' : 'btn--blue'" :disabled="!powerOn" @click="confirmTune()"
+                  :style="state.tune ? 'box-shadow:0 0 10px rgba(210,153,34,0.75);' : ''">
+            Tune<span v-if="state.tune"> ●</span>
           </button>
           <button class="btn btn--blue"  :disabled="!powerOn" @click="sendCmd('PWRLVL')">PWR Level</button>
           <button class="btn btn--blue"  :disabled="!powerOn"

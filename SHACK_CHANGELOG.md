@@ -8440,6 +8440,18 @@ pending** — needs a real TUNE cycle (button → low-power carrier) to watch
 the LED light amber on both UIs and clear when tuning ends. #34 stays open
 until that's seen on the bench/live amp.
 
+**Same-day revision (button colour, not glow).** The first cut left the
+Tune button **permanently amber** (`btn--amber` / `gh-btn-a`) and only
+toggled a box-shadow — visually a no-op, so it read as "no tune indication"
+on test. Revised so the button's **fill colour itself toggles** to mirror
+the amp's TUNE LED: neutral when the LED is off (D1 `gh-btn`; Vue
+`btn--blue`), solid amber + glow + a `●` when it's on (D1 sets
+`background:var(--gh-amber)` with dark text; Vue swaps to `btn--amber`).
+The amp-gone (`!d.usb`) wipe and the Vue idle state both return the button
+to neutral. Verified by WS probe that the gateway sends `tune_active=false`
+while the amp is in Standby/RX (correct). Build stamp → `v13`,
+cache-buster `?v=13`.
+
 ---
 
 ## Standard Commit Sequence (reminder)
