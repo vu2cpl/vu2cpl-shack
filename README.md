@@ -80,7 +80,7 @@ within a configurable threshold (default 25 km). Two strike sources:
   distance from CAPE values and WMO weather codes (95/96/99 = thunderstorm).
 - **AS3935 chip** sensor — local ~40 km range. Bridged onto MQTT by an
   ESP-WROOM-32 ([`vu2cpl-as3935-bridge`](https://github.com/vu2cpl/vu2cpl-as3935-bridge),
-  v0.1.1 on the bench since 2026-05-11). Indoor `as3935.service` on the
+  v0.2.0 on the bench since 2026-05-12). Indoor `as3935.service` on the
   Pi is retained as standby fallback. Outdoor enclosure + 18650/solar
   build + field install pending — until then the antenna is still
   indoors, range still ~few km.
@@ -103,8 +103,10 @@ UI lives on the main Shack tab as the *Lightning Protection* group
 ### SPE Amplifier
 
 Reads the SPE Expert 1.5 KFA over FTDI serial at 250 ms intervals
-(76-byte fixed frame, checksum + wraparound validation). Power-on
-requires a one-shot DTR/RTS toggle from `power_spe_on.py`.
+(76-byte fixed frame, checksum + wraparound validation). Power-on is
+sent over the WebSocket and performed by the `spe-remote` gateway's
+DTR/RTS toggle (`spe/power_control.py`); `power_spe_on.py` is a
+standalone fallback for when the service is down.
 
 **Output-power bar — auto-ranging.** The bar's full-scale value is
 picked from a ladder (5 / 10 / 25 / 50 / 100 / 250 / 500 / 1k / 1.5k
@@ -171,7 +173,7 @@ state messages. Outlets default to `off` on page-load to avoid the
 device so the dashboard never lies for more than ~30 s.
 
 The 16 A master switch publishes energy data every 30 s for shack-wide
-consumption monitoring. The rotator outlet has a 60 s auto-off timer
+consumption monitoring. The rotator outlet has a 5 min auto-off timer
 with idempotent retrigger guard + 10 s cooldown to prevent reset loops.
 
 ### Solar Conditions

@@ -58,6 +58,37 @@ independent). If the package is ever re-imported, re-apply the fix.
 each dashboard fall back to RAW if the others aren't updated, so they
 deploy in any order.
 
+### Documentation — stale-reference sweep
+
+Audited every doc against the live `flows.json` / code and fixed the
+staleness found:
+
+- **CLAUDE.md FLOW TABS table:** SPE row → the real tab `spe_ws_tab_01`
+  ("SPE (WS)", 12 nodes; was the long-deleted serial-owning
+  `648eb83c2566c7b6`); SPE group `vu2cpl_grp_spe` → `vu2cpl_grp_spe_ws`;
+  Lightning group `grp_main` → `8b723cd03854ac2c`; All Power Strips group
+  trimmed to `vu2cpl_grp_power` (the `vu2cpl_grp_energy` group is gone);
+  all node counts re-counted live (with a note that counts drift).
+- **CLAUDE.md Dashboard tabs table:** dropped the two `ui_tab`s that no
+  longer exist (`dd11372f9c492be8` Lightning-detect, `tab_ui_dxcc`) — both
+  folded into the VU2CPL Shack tab.
+- **CLAUDE.md AS3935 Control Panel:** `223cb2ce733c5d3f` was deleted as a
+  standalone node 2026-05-27 (HANDOVER #26, `38bf3fb`) and absorbed into the
+  Lightning Master Dashboard (`557083037f168b22`); the three references that
+  still presented it as a live AS3935-Tuning-tab node now say so.
+- **CLAUDE.md rotator timer note:** dropped the obsolete "change 60s → 5min
+  for production" — the node has been `5 * 60 * 1000` since 2026-05-10.
+- **CLAUDE.md header:** "Last updated" April → June 2026.
+- **HANDOVER.md header:** period end → 2026-06-27, last commit → `ea70bf0`.
+- **README.md:** AS3935 bridge v0.1.1/05-11 → v0.2.0/05-12; SPE power-on
+  corrected to the WebSocket/gateway path (`power_spe_on.py` is the
+  fallback); rotator auto-off 60 s → 5 min.
+- **DXCC.md:** VU2CPL cluster port 7550 → 7300 (moved 2026-05-17);
+  `DXCC_Tracker_README.pdf` regenerated to match (Rule #3).
+
+`spe-remote/handover.md` cross-references were fixed in that repo
+separately (`8e85cfb`).
+
 ---
 
 ## 2026-06-19

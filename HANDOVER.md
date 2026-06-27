@@ -1,8 +1,8 @@
 # Session Handover — VU2CPL Shack
 
-**Period:** 2026-05-01 → 2026-06-19
+**Period:** 2026-05-01 → 2026-06-27
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
-**Last commit at handover:** `6952032` — SPE Tune #34 closed (confirmed on-amp: button goes amber while the front-panel LED is lit) + Vue confirm-dialog copy fix ("Transmit a low-power tuning carrier within a few seconds to start tuning"). Build v14. (rotator-remote web UI = `vu2cpl/rotator-remote` `7fc5411`.)
+**Last commit at handover:** `ea70bf0` — SPE power meter: RAW/AVG/PEAK toggle in both `/ui` and `/shack` (consumes spe-remote `p_out_avg`/`p_out_peak`; build v15). Prior tip `6952032` = SPE Tune #34 closed, build v14. (rotator-remote web UI = `vu2cpl/rotator-remote` `7fc5411`.)
 
 ---
 

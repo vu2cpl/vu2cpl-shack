@@ -71,7 +71,7 @@ Header bar above the main layout shows live status for all 4 DX cluster sources.
 
 | Source | Topic key | Host |
 |--------|-----------|------|
-| VU2CPL | cluster3 | vu2cpl.ddns.net:7550 |
+| VU2CPL | cluster3 | vu2cpl.ddns.net:7300 |
 | VU2OY | cluster2 | vu2oy.ddns.net:7550 |
 | VE7CC | cluster4 | ve7cc.net:23 |
 | N2WQ | cluster1 | cluster.n2wq.com:8300 |

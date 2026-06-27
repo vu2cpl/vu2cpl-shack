@@ -1,7 +1,7 @@
 # CLAUDE.md — VU2CPL Shack Automation
 **Operator:** Manoj (VU2CPL) | MK83TE | Bengaluru, India
 **Repo:** github.com/vu2cpl/vu2cpl-shack (private)
-**Last updated:** April 2026
+**Last updated:** June 2026
 
 ---
 
@@ -106,26 +106,33 @@ git push
 
 | Tab Label | Tab ID | Nodes | Dashboard Group |
 |-----------|--------|-------|-----------------|
-| SPE | `648eb83c2566c7b6` | 29 | `vu2cpl_grp_spe` |
+| SPE (WS) | `spe_ws_tab_01` | 12 | `vu2cpl_grp_spe_ws` |
 | Rotator | `3d26c2c5270bdb37` | 28 | `84143f78d088f01d` |
-| FlexRadio | `a0a882f85c89cffc` | 43 | `vu2cpl_grp_flex` |
-| LP-700-HID ws | `18fb42443172f33c` | 18 | `vu2cpl_grp_lp700` |
-| Solar | `590e889d44815afb` | 35 | `vu2cpl_grp_solar` |
-| RBN Skimmer Monitor | `f9a0e3ad0e019052` | 32 | `1bcbc2eb8f2124aa` |
-| RPi Fleet Monitor | `d5fec2fea3dd37f4` | 27 | `f8d1f7eb7403a442` |
-| Internet and network monitor | `b05f8c028b368ae9` | 26 | `f10110e00bae2689` |
-| Lightning Antenna Protector | `75e2cac8ab96f556` | 85 | `grp_main` |
-| All Power Strips | `b76a5310767803b4` | 45 | `vu2cpl_grp_power` / `vu2cpl_grp_energy` |
-| DXCC Tracker | `d110d176c0aad308` | 70 | `grp_dxcc_stats` |
+| FlexRadio | `a0a882f85c89cffc` | 44 | `vu2cpl_grp_flex` |
+| LP-700-HID ws | `18fb42443172f33c` | 21 | `vu2cpl_grp_lp700` |
+| Solar | `590e889d44815afb` | 37 | `vu2cpl_grp_solar` |
+| RBN Skimmer Monitor | `f9a0e3ad0e019052` | 21 | `1bcbc2eb8f2124aa` |
+| RPi Fleet Monitor | `d5fec2fea3dd37f4` | 30 | `f8d1f7eb7403a442` |
+| Internet and network monitor | `b05f8c028b368ae9` | 28 | `f10110e00bae2689` |
+| Lightning Antenna Protector | `75e2cac8ab96f556` | 92 | `8b723cd03854ac2c` |
+| All Power Strips | `b76a5310767803b4` | 48 | `vu2cpl_grp_power` |
+| DXCC Tracker | `d110d176c0aad308` | 77 | `grp_dxcc_stats` |
+
+> Node counts drift as flows evolve — treat as approximate; re-count against
+> `flows.json` if exact. (Re-counted live 2026-06-27.) The SPE tab is
+> `spe_ws_tab_01` ("SPE (WS)"), a WebSocket client of `spe-remote` — the old
+> `648eb83c2566c7b6` serial-owning tab is long gone.
 
 ### Dashboard tabs
+
+Only two `ui_tab`s remain — the Lightning-detect and DXCC dashboard tabs were
+folded into the main **VU2CPL Shack** tab (2026-05-08 and the DXCC merge), so
+their old IDs (`dd11372f9c492be8`, `tab_ui_dxcc`) no longer exist.
 
 | Name | ID | Order |
 |------|----|-------|
 | VU2CPL Shack | `vu2cpl_ui_tab_shack` | 1 |
-| Lightning detect and disconnect | `dd11372f9c492be8` | 3 |
 | Shack Monitoring tools | `bcce4e07ac31b882` | 4 |
-| DXCC Tracker | `tab_ui_dxcc` | 5 |
 
 ---
 
@@ -284,12 +291,12 @@ Agent endpoints: `POST /reboot`, `POST /shutdown`
 | `as3935_tuning_cache_status` | Cache /status | pass-through; `flow.set('as3935_status', payload)` |
 | `as3935_tuning_cache_hb` | Cache /hb | pass-through; `flow.set('as3935_hb', payload)` |
 | `as3935_tuning_cache_ack` | Cache /cmd_ack | pass-through; `flow.set('as3935_cmd_ack', payload)` |
-| `223cb2ce733c5d3f` | AS3935 Control Panel | ui_template; dispatches on msg.topic via `scope.$watch`. **v0.3.0** (2026-05-17): adds 🔋 battery row (`vbat_mv` from `/hb` + `/status`), Query Battery action button, `vbat_offset_mv` tunable. **Merged with Events panel 2026-05-17:** Events HTML (`<div id="a35ev">…`) appended after the Tunables panel; second IIFE in `<script>` handles event/last_event/counters. One `ui_template` = one dashboard card. Width 12, height 22. **Operator polish 2026-05-17:** Tune Cap button (`#a35tunebtn`) drives a live 30 s countdown via `a35.calibrate()` (label cycles `Tune Cap (Ns)`, button disabled until 0). Query Battery refresh is now truly instant — `cmd/ack` handler regex-extracts `vbat_mv=(\d+)` from the ack `cmd` string and writes to `hb.vbat_mv` so render() picks it up in the same tick instead of waiting for the next 30 s heartbeat. |
+| `223cb2ce733c5d3f` *(deleted — see note below)* | AS3935 Control Panel | **Standalone node deleted 2026-05-27 (HANDOVER #26, `38bf3fb`) — absorbed into the Lightning Master Dashboard (`557083037f168b22`) as a `<details>` collapsible. The tunables/actions described here now live there, not on the AS3935 Tuning tab.** ui_template; dispatches on msg.topic via `scope.$watch`. **v0.3.0** (2026-05-17): adds 🔋 battery row (`vbat_mv` from `/hb` + `/status`), Query Battery action button, `vbat_offset_mv` tunable. **Merged with Events panel 2026-05-17:** Events HTML (`<div id="a35ev">…`) appended after the Tunables panel; second IIFE in `<script>` handles event/last_event/counters. One `ui_template` = one dashboard card. Width 12, height 22. **Operator polish 2026-05-17:** Tune Cap button (`#a35tunebtn`) drives a live 30 s countdown via `a35.calibrate()` (label cycles `Tune Cap (Ns)`, button disabled until 0). Query Battery refresh is now truly instant — `cmd/ack` handler regex-extracts `vbat_mv=(\d+)` from the ack `cmd` string and writes to `hb.vbat_mv` so render() picks it up in the same tick instead of waiting for the next 30 s heartbeat. |
 | `82f732a0dac14945` | AS3935 Cmd | mqtt out `lightning/as3935/cmd` |
 | `as3935_tuning_replay_tick` | Replay every 5s | inject `repeat:5, onceDelay:1`. Fans out to both `as3935_tuning_replay_fn` (Control Panel) and `as3935_evt_replay_fn` (Events panel). |
 | `as3935_tuning_replay_fn` | Replay AS3935 state (5s tick) | reads 3 caches, emits to Control Panel with original topics preserved. Worst-case page-open rehydration: 5 s. Substitute for `ui_control`-based instant-on (TODO #16) — `ui_control` is **not shipped in `node-red-dashboard 3.6.6`** (confirmed by `--force` reinstall, files genuinely absent). |
 
-**AS3935 Events section (v0.3.0, 2026-05-17, merged 2026-05-17):** event log + counters + 5 TEST inject buttons. **Merged into the Control Panel** as of 2026-05-17 — same `ui_template` (`223cb2ce733c5d3f`), one card on the dashboard. The `as3935_evt_grp` ui_group was deleted; `as3935_evt_panel` ui_template was deleted; the 3 nodes that fed it (`as3935_evt_in`, `as3935_evt_cache_last`, `as3935_evt_replay_fn`) now wire to `223cb2ce733c5d3f`.
+**AS3935 Events section (v0.3.0, 2026-05-17, merged 2026-05-17):** event log + counters + 5 TEST inject buttons. **Merged into the Control Panel** as of 2026-05-17 — same `ui_template` (`223cb2ce733c5d3f`), one card on the dashboard. The `as3935_evt_grp` ui_group was deleted; `as3935_evt_panel` ui_template was deleted; the 3 nodes that fed it (`as3935_evt_in`, `as3935_evt_cache_last`, `as3935_evt_replay_fn`) now wire to `223cb2ce733c5d3f`. **(Superseded 2026-05-27: this whole panel — Tunables + Events — was then absorbed into the Lightning Master Dashboard `557083037f168b22` as a `<details>` collapsible; `223cb2ce733c5d3f` no longer exists as a standalone node — HANDOVER #26, `38bf3fb`.)**
 
 | ID | Name | Role |
 |----|------|------|
@@ -390,7 +397,7 @@ Weather data to Header template (`eee1a8b8552aa21f`): plain `wxData` object (no 
 - Open-Meteo CAPE→state mapping (2026-05-12): cold / lit / severe — see "Distance-graded disconnect" matrix below. Replaces older `km = (1 - index/100) * 200` lightning_potential synthesis (null in India)
 - AS3935 MQTT topic: `lightning/as3935` (published by ESP32 bridge in `vu2cpl-as3935-bridge` since 2026-05-11), payload: `{event, distance, energy, timestamp}`
 - AS3935 distance 63 = out of range → treated as 0 km (close zone → always disconnect)
-- AS3935 ESP32 bridge cmd channel: `lightning/as3935/cmd` (in), `lightning/as3935/cmd/ack` (out, not retained). `set` keys: nf, wdth, srej, tun_cap, mask_dist, min_num_lightning, afe_gb (`"indoor"`/`"outdoor"`), modem_sleep. Actions: republish_status, calibrate_tun_cap, reboot, factory_reset_wifi. NVS-persisted; status republished after each successful set. Controlled from the **AS3935 Control Panel** ui_template on the `AS3935 Tuning` flow tab (`fe70cfdcdfa19aa4`)
+- AS3935 ESP32 bridge cmd channel: `lightning/as3935/cmd` (in), `lightning/as3935/cmd/ack` (out, not retained). `set` keys: nf, wdth, srej, tun_cap, mask_dist, min_num_lightning, afe_gb (`"indoor"`/`"outdoor"`), modem_sleep. Actions: republish_status, calibrate_tun_cap, reboot, factory_reset_wifi. NVS-persisted; status republished after each successful set. Controlled from the **AS3935 Control Panel** — since 2026-05-27 a `<details>` collapsible inside the Lightning **Master Dashboard** (`557083037f168b22`), not a standalone node (HANDOVER #26, `38bf3fb`; the `AS3935 Tuning` flow tab `fe70cfdcdfa19aa4` now holds only the mqtt-in / cache / cmd plumbing)
 - Weather: Parse Weather has 2 outputs — output 1 → Header (plain wxData), output 2 → Master Dashboard ({type:'weather'})
 
 #### Dashboard ANT toggle drives manual-off (2026-06-03, second pass)
@@ -546,7 +553,7 @@ Sliding strike history lives in `flow.recent_as3935 = [{ts, km}, …]`. Pushed o
 - Protocol bytes (`AI1;` query, `AP1NNN\r` set with **CR**, `;` stop, `;`-framed replies) live in `rotator-remote/rotator/protocol.py`, extracted verbatim from the pre-refactor flow. The set/query terminator asymmetry is real DCU-1 — don't "normalise" it.
 
 ### All Power Strips (Rotator)
-- Rotator timer node (`05f0ddeb566a90fc`): currently `60 * 1000` (1 min) — **change to `5 * 60 * 1000` for production**
+- Rotator timer node (`05f0ddeb566a90fc`): set to `5 * 60 * 1000` (5 min) for production — done 2026-05-10 (`971f4b4`)
 - Timer does NOT survive Node-RED restart — acceptable for rotator use
 - Rotator **power** (this outlet) is the only rotator concern still in Node-RED; **heading control moved to `rotator-remote.service`** 2026-06-06 (see the Rotator section above).
 
