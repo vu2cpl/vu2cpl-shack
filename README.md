@@ -126,6 +126,17 @@ TUNE mode. The LED state comes from the amp's RCU LCD stream (decoded in
 the `spe-remote` gateway), not the CSV status frame, so it's live
 whenever the gateway is running.
 
+**Power meter modes — RAW / AVG / PEAK.** A pill toggle by the Output
+Power bar (both dashboards) switches what the bar shows: **RAW** (the
+live ~25 Hz reading), **AVG** (a ~1 s smoothed average), or **PEAK** (a
+peak-hold that pins the highest reading ~2.5 s then eases back down at a
+constant 600 W/s). AVG and PEAK are derived in the `spe-remote` gateway
+(`p_out_avg` / `p_out_peak`); each pill appears only once the gateway is
+sending that field, so an older gateway simply shows RAW. PEAK is a
+*sampled* peak (25 Hz) — good for catching sustained SSB/CW crests, not
+a true envelope-PEP wattmeter. The chosen mode persists in the browser
+and is shared between `/ui` and `/shack`.
+
 ### FlexRadio
 
 TCP API to the FLEX-6600 at `192.168.1.148:4992`, plus UDP discovery.

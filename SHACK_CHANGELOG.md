@@ -8,6 +8,58 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-06-27
+
+### SPE Amplifier — RAW / AVG / PEAK power-meter modes in both `/ui` and `/shack`
+
+**Repos:** `spe-remote` (server) + `vu2cpl-shack` (flows + Vue)
+**Nodes touched:** `ws_format_state`, `ws_panel_node`; `uibuilder/shack/src/index.js` SPECard (+ `index.html` cache-buster)
+
+Added a power-meter mode toggle to the SPE Output Power bar on **both**
+dashboards. RAW = the live ~25 Hz reading; AVG = a ~1 s EMA; PEAK = a
+peak-hold that pins the crest ~2.5 s then decays back toward live.
+
+**Server (`spe-remote`, commit `f5537ec` on main):** `AmplifierState`
+(`protocol.py`) gains `p_out_avg` + `p_out_peak` floats, both computed in
+`SerialHandler._consume_csv_frame` and reset across an op/tx transition;
+raw `p_out` untouched. EMA α=0.15; peak-hold decays at a constant
+600 W/s. **`p_out_peak` is a sampled (25 Hz) peak, not true envelope
+PEP** — documented in the field comment + README.
+
+**Flow (`ws_format_state`):** maps `p_out_avg` → `pwr_avg` and
+`p_out_peak` → `pwr_peak`, **null when the server field is absent** (so an
+old gateway is distinguishable from a genuine 0 W and the UI hides
+AVG/PEAK instead of offering a dead button). The single flat payload
+already fans out to both D1 (`ws_panel_node`) and Vue
+(`vue_spe_bridge_01`), so one edit feeds both dashboards.
+
+**D1 (`ws_panel_node`):** RAW/AVG/PEAK pill group in the Output Power
+header; `speRenderPwr()` picks the source with fallback-to-raw, toggles
+the buttons, and caches the last payload (`speLastD`) so a pill click
+re-renders without a new message; `window.speSetMode()` is the global the
+inline `onclick`s call. Mode persists in `localStorage` `speMeterMode`.
+
+**Vue (`/shack` SPECard):** RAW/AVG/PEAK `.pill-group` pills, a
+`pwrDisplay` computed every meter element reads from, and
+`pwrHasAvg`/`pwrHasPeak` gating so a pill shows only once the server is
+sending its field. Shares the same `speMeterMode` key — same origin as
+`/ui`, so the two dashboards stay in sync. Build stamp → `v15`,
+`index.html` cache-buster → `?v=15`.
+
+**Decay-bug fix vs the source package.** Landed as a contributed package
+(adersh fork) whose peak-decay math subtracted the *total* elapsed
+`decay_s` from the running peak every frame — an accelerating,
+sample-rate-dependent collapse (1500→0 in ~0.46 s) rather than the
+documented constant 600 W/s. The version landed here uses a per-frame
+`dt`-scaled decrement (simulated 2.50 s for 1500→0, frame-rate
+independent). If the package is ever re-imported, re-apply the fix.
+
+**Graceful degradation:** every layer is independent — server, flow, and
+each dashboard fall back to RAW if the others aren't updated, so they
+deploy in any order.
+
+---
+
 ## 2026-06-19
 
 ### SPE Amplifier — ATU band-sweep UI in both `/ui` and `/shack`

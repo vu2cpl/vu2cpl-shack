@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v14 · 2026-06-19 SPE tune confirm copy';
+window.__shackBuild = 'v15 · 2026-06-27 SPE power RAW/AVG/PEAK meter';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -1502,7 +1502,8 @@ const SPECard = {
           <span v-if="powerOn && state.band">·</span>
           <span v-if="powerOn && state.band" :style="{color:'var(--accent)', fontWeight:600}">{{ state.band }}</span>
           <span v-if="powerOn"><span class="mini-bar"><span class="mini-bar__fill" :style="{width: pwrPct + '%', background: pwrBarColor}"></span></span></span>
-          <span v-if="powerOn" :style="{color: pwrBarColor, fontWeight:600}">{{ Math.round(state.pwr || 0) }}W</span>
+          <span v-if="powerOn" :style="{color: pwrBarColor, fontWeight:600}">{{ Math.round(pwrDisplay || 0) }}W</span>
+          <span v-if="powerOn && pwrMeterMode !== 'raw'" :style="{fontSize:'var(--fs-xs)', color:'var(--text-dim)', fontWeight:600}">{{ pwrMeterMode.toUpperCase() }}</span>
           <span v-if="powerOn && state.tune">·</span>
           <span v-if="powerOn && state.tune" :style="{color:'var(--amber)', fontWeight:700, textShadow:'0 0 6px var(--amber)'}">⚡ TUNE</span>
         </span>
@@ -1600,10 +1601,25 @@ const SPECard = {
         </div>
 
         <!-- Output power bar (auto-ranges through 5/10/25/50/100/250/500/1k/1.5k/2k/5k W
-             scale bands based on detected power — picks the smallest band that fits). -->
-        <div class="solar-sec-label">Output Power</div>
+             scale bands based on detected power — picks the smallest band that fits).
+             RAW / AVG / PEAK pills switch which server reading the bar shows; AVG and
+             PEAK each appear only once the connected server has sent that field. -->
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
+          <div class="solar-sec-label" style="margin-top:0;">Output Power</div>
+          <span v-if="pwrHasAvg || pwrHasPeak" class="pill-group" role="group" aria-label="Power meter mode">
+            <button type="button" class="pill" :class="{'pill--active': pwrMeterMode==='raw'}"
+                    title="Instantaneous reading (~25Hz during TX) — jittery but live"
+                    @click="setPwrMeterMode('raw')">RAW</button>
+            <button v-if="pwrHasAvg" type="button" class="pill" :class="{'pill--active': pwrMeterMode==='avg'}"
+                    title="Smoothed ~1s average — steadier, closer to a transceiver's AVG meter"
+                    @click="setPwrMeterMode('avg')">AVG</button>
+            <button v-if="pwrHasPeak" type="button" class="pill" :class="{'pill--active': pwrMeterMode==='peak'}"
+                    title="Peak-hold — pins the highest reading for ~2.5s then decays. Sampled at 25Hz, so very short spikes can be missed; not true envelope-peak PEP."
+                    @click="setPwrMeterMode('peak')">PEAK</button>
+          </span>
+        </div>
         <div class="band-row" style="grid-template-columns:auto 1fr auto;">
-          <span class="band-row__name" style="width:auto">{{ Math.round(state.pwr || 0) }} W</span>
+          <span class="band-row__name" style="width:auto">{{ Math.round(pwrDisplay || 0) }} W</span>
           <div class="band-row__bar" style="height:10px;position:relative;">
             <div :style="{height:'100%', width: pwrPct + '%', background: pwrBarColor, transition:'width 0.3s'}"></div>
             <!-- 25/50/75% tick marks -->
@@ -1725,7 +1741,7 @@ const SPECard = {
     const sec = reactive({ operating: false, atu: false, display: false });
     const state = reactive({
       model:null, mode:null, rxtx:null, band:null, input:null, txant:null,
-      pwrlvl:null, pwr:0, pwrMax:1500, atuswr:null, antswr:null,
+      pwrlvl:null, pwr:0, pwr_avg:null, pwr_peak:null, pwrMax:1500, atuswr:null, antswr:null,
       vpa:null, ipa:null, tempUpper:null, tempLower:null, tempComb:null,
       warnings:null, alarms:null, usb:false, tune:false
     });
@@ -1738,15 +1754,44 @@ const SPECard = {
     // ~60% of a 5W bar and a 1200W blast shows as 80% of a 1500W bar.
     // Matches the legacy /ui SPE Panel behaviour (with a finer ladder).
     const PWR_LADDER = [5, 10, 25, 50, 100, 250, 500, 1000, 1500, 2000, 5000];
+
+    // Output-power meter mode: 'raw' (instantaneous, ~25Hz during TX,
+    // jittery), 'avg' (spe-remote's server-side EMA, settles over ~1s —
+    // closer to a transceiver's AVG ballistic), or 'peak' (server-side
+    // peak-hold: pins the highest sample for ~2.5s then decays back at a
+    // constant rate). PEAK is a SAMPLED approximation, not true
+    // envelope-peak PEP — see the pill tooltip and protocol.py's
+    // p_out_peak doc comment. Persisted in localStorage (shared with the
+    // legacy /ui D1 panel — same origin). Falls back to 'raw' automatically
+    // if the connected server hasn't sent the chosen field yet (see
+    // pwrHasAvg / pwrHasPeak), so it's safe to deploy ahead of the
+    // server/flow update.
+    const pwrMeterMode = ref(localStorage.getItem('speMeterMode') || 'raw');
+    function setPwrMeterMode(m) {
+      pwrMeterMode.value = m;
+      try { localStorage.setItem('speMeterMode', m); } catch (e) {}
+    }
+    // null (not 0) when the server build predates the field — lets the
+    // AVG/PEAK pills hide cleanly instead of offering a dead button.
+    const pwrHasAvg  = computed(() => state.pwr_avg  != null);
+    const pwrHasPeak = computed(() => state.pwr_peak != null);
+    // The single value every part of the meter reads from. Honours the
+    // selected mode but falls back to raw if that field isn't available.
+    const pwrDisplay = computed(() => {
+      if (pwrMeterMode.value === 'avg'  && pwrHasAvg.value)  return state.pwr_avg;
+      if (pwrMeterMode.value === 'peak' && pwrHasPeak.value) return state.pwr_peak;
+      return state.pwr;
+    });
+
     const pwrBandMax = computed(() => {
-      const p = parseFloat(state.pwr) || 0;
+      const p = parseFloat(pwrDisplay.value) || 0;
       for (let i = 0; i < PWR_LADDER.length; i++) {
         if (p <= PWR_LADDER[i]) return PWR_LADDER[i];
       }
       return PWR_LADDER[PWR_LADDER.length - 1];
     });
     const pwrPct = computed(() => {
-      const p = parseFloat(state.pwr) || 0;
+      const p = parseFloat(pwrDisplay.value) || 0;
       const max = pwrBandMax.value;
       if (!max) return 0;
       return Math.min(100, Math.max(0, (p / max) * 100));
@@ -1892,6 +1937,7 @@ const SPECard = {
     });
 
     return { expanded, sec, state, powerOn, isTransmitting, pwrPct, pwrBandMax, pwrBandLabel, pwrBarColor, pwrLvlColor, swrColor, tempColor, togglePower, sendCmd, confirmTune,
+             pwrMeterMode, setPwrMeterMode, pwrHasAvg, pwrHasPeak, pwrDisplay,
              sweep, sweepBands, sweepPct, sweepPhaseColor, startSweep, stopSweep };
   }
 };
