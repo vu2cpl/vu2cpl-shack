@@ -63,6 +63,15 @@ waterfall (not audio). `ubersdr_agg` now also emits **`decodersByMode`** (parsed
 mode" line and split the Listeners tile into audio vs waterfall. Aggregator
 re-verified against live data; `?v=17`.
 
+**Emphasis flip (build `v18`).** Operator clarified that the **waterfall
+session** (`is_spectrum && !is_internal`) is the actual *human* listener — the
+audio/IQ streams (`!is_internal && !is_spectrum`) are automated consumers, not
+people. So both cards now **headline the waterfall count** as the big bold
+"Listeners (waterfall)" number (`state.viewers`, 28 px / green), demote the
+total-sessions and IQ-stream counts to small sub-text, and relabel the bar list
+"Sessions by band" (it buckets all user sessions, not humans). The collapsed
+header's "● N listening" also uses the waterfall count now. `?v=18`.
+
 ---
 
 ## 2026-06-27

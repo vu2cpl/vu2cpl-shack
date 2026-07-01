@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v17 · 2026-07-01 UberSDR user/decoder-mode split';
+window.__shackBuild = 'v18 · 2026-07-01 UberSDR waterfall-listener hero';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -2799,7 +2799,7 @@ const UberSdrCard = {
         <span>UberSDR</span>
         <span v-if="!expanded" class="summary">
           <span :style="{color: state.online ? 'var(--green)' : 'var(--muted)', fontWeight:600}">
-            {{ state.online ? '● ' + state.listeners + ' listening' : '○ offline' }}
+            {{ state.online ? '● ' + state.viewers + ' listening' : '○ offline' }}
           </span>
           <span v-if="state.online">·</span>
           <span v-if="state.online" :style="{color:'var(--accent)', fontWeight:600}">{{ egressLabel }}</span>
@@ -2810,7 +2810,7 @@ const UberSdrCard = {
 
       <div class="card__body" :class="{ 'is-collapsed': !expanded }">
         <div class="tiles">
-          <div class="tile"><div class="tile__lbl">Listeners</div><div class="tile__val" :style="{color:'var(--green)'}">{{ state.listeners }}</div><div v-if="state.viewers > 0" style="font-size:var(--fs-xs);color:var(--muted);margin-top:2px">{{ state.listeners - state.viewers }} audio · {{ state.viewers }} waterfall</div></div>
+          <div class="tile"><div class="tile__lbl">Listeners <span style="opacity:.6">(waterfall)</span></div><div class="tile__val" :style="{color:'var(--green)', fontSize:'28px'}">{{ state.viewers }}</div><div style="font-size:var(--fs-xs);color:var(--muted);margin-top:2px">{{ state.listeners - state.viewers }} IQ · {{ state.total }} sess</div></div>
           <div class="tile"><div class="tile__lbl">Sessions</div><div class="tile__val">{{ state.total }}</div></div>
           <div class="tile"><div class="tile__lbl">Egress</div><div class="tile__val" :style="{color:'var(--accent)'}">{{ egressLabel }}</div></div>
         </div>
@@ -2820,8 +2820,8 @@ const UberSdrCard = {
           <div class="tile"><div class="tile__lbl">Monitors</div><div class="tile__val">{{ state.monitors }}</div></div>
         </div>
 
-        <div class="solar-sec-label">Listeners by band</div>
-        <div v-if="!state.listenersByBand.length" class="empty-row">No listeners</div>
+        <div class="solar-sec-label">Sessions by band</div>
+        <div v-if="!state.listenersByBand.length" class="empty-row">No sessions</div>
         <div v-for="b in state.listenersByBand.slice(0,8)" :key="b.band" class="band-row" style="grid-template-columns:auto 1fr auto;">
           <span class="band-row__name" style="width:44px">{{ b.band }}</span>
           <div class="band-row__bar" style="height:9px;"><div :style="{height:'100%', width: pct(b.n) + '%', background:'var(--accent)', transition:'width .3s'}"></div></div>
