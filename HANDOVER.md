@@ -1,8 +1,8 @@
 # Session Handover — VU2CPL Shack
 
-**Period:** 2026-05-01 → 2026-06-27
+**Period:** 2026-05-01 → 2026-07-01
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
-**Last commit at handover:** `ea70bf0` — SPE power meter: RAW/AVG/PEAK toggle in both `/ui` and `/shack` (consumes spe-remote `p_out_avg`/`p_out_peak`; build v15). Prior tip `6952032` = SPE Tune #34 closed, build v14. (rotator-remote web UI = `vu2cpl/rotator-remote` `7fc5411`.)
+**Last commit at handover:** `590e06b` — UberSDR: by-band bar graph now counts waterfall listeners only (build v19). Same-day chain from `5c708ed`: new UberSDR dashboard → `346e552` decoder-mode split (v17) → `419aa28` waterfall-listener headline (v18) → `590e06b` by-band bar scoped to waterfall (v19). Prior tip `ea70bf0` = SPE power meter RAW/AVG/PEAK, build v15. (rotator-remote web UI = `vu2cpl/rotator-remote` `7fc5411`.)
 
 ---
 
