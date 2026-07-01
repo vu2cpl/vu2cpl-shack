@@ -253,7 +253,6 @@ from `sm7iun.se/rbnskew.csv` every 6 h.
 
 ```
 ├── flows.json                       Main Node-RED flow (canonical source)
-├── clublog_dxcc_tracker_v7.json     DXCC tab extract (auto-regen on commit)
 │
 ├── as3935_mqtt.py                   AS3935 chip daemon — standby fallback (ESP32 bridge is primary publisher)
 ├── as3935_tune.py                   LC-tank TUN_CAP sweep helper

@@ -45,10 +45,9 @@ sudo systemctl restart nodered
 1. **Never generate or output a Node-RED flow JSON** unless Manoj explicitly confirms he wants it. Always propose changes first, describe what will change, wait for approval.
 2. **Node IDs are NOT stable** across import/redeploy. Never hardcode an ID from memory. Match nodes by name, type, or tab label when inspecting flows.
 3. **When updating `DXCC.md`**, always regenerate `DXCC_Tracker_README.pdf` and commit both together. They must stay in sync. (Pre-2026-05-10: this rule applied to `README.md`, which was the DXCC doc; now `README.md` is the umbrella overview and `DXCC.md` is the DXCC reference.)
-4. **On every flows.json commit**, extract the DXCC Tracker tab alongside it. **As of 2026-05-11 this is baked into the Pi-side `nrsave` function** (`~/.bashrc`) so the normal `nrsave "msg"` workflow handles it automatically. If you commit flows.json by any other path (`git add` directly, an editor's git plugin, etc.), run the extract yourself:
+4. ~~**On every flows.json commit**, extract the DXCC Tracker tab alongside it.~~ **Retired 2026-07-01.** The extract (`clublog_dxcc_tracker_v7.json`) was a filtered copy of the DXCC tab's nodes out of `flows.json` — a fossil from when the DXCC Tracker was developed as its own standalone flow (its first commit is literally titled "v7 clean start", predating the merge into this repo). It added no information not already in `flows.json` and needed active upkeep (the `nrsave` Pi function regenerated it on every commit) purely to avoid going stale. Removed the file and simplified `nrsave` to just stage + commit `flows.json`. If you ever need "just the DXCC tab" (e.g. to share/diff it), regenerate on demand rather than maintaining a standing file:
    ```bash
-   python3 -c 'import json; d=json.load(open("flows.json")); v=[n for n in d if n.get("z")=="d110d176c0aad308" or n.get("id")=="d110d176c0aad308"]; json.dump(v,open("clublog_dxcc_tracker_v7.json","w"),indent=2)'
-   git add flows.json clublog_dxcc_tracker_v7.json
+   python3 -c 'import json; d=json.load(open("flows.json")); v=[n for n in d if n.get("z")=="d110d176c0aad308" or n.get("id")=="d110d176c0aad308"]; json.dump(v,open("/tmp/dxcc_tab.json","w"),indent=2)'
    ```
 5. **Never put file upload instructions inside index.html** (vu2cpl.com website). Give them as chat instructions only.
 
@@ -861,15 +860,13 @@ historical context lives in `SHACK_CHANGELOG.md`, indexed by date.
 
 ```bash
 # Save after any Deploy:
-nrsave "description"   # regen DXCC extract → add flows.json + extract → commit (function in ~/.bashrc)
+nrsave "description"   # stage + commit flows.json (function in ~/.bashrc)
 git push
 
-# Rule #4 (DXCC tab extract regen on every commit) is now baked into nrsave.
 # If you need to commit flows.json manually (rare — e.g. fixing something
-# nrsave doesn't cover), run the extract step yourself:
+# nrsave doesn't cover):
 cd ~/.node-red/projects/vu2cpl-shack
-python3 -c 'import json; d=json.load(open("flows.json")); v=[n for n in d if n.get("z")=="d110d176c0aad308" or n.get("id")=="d110d176c0aad308"]; json.dump(v,open("clublog_dxcc_tracker_v7.json","w"),indent=2)'
-git add flows.json clublog_dxcc_tracker_v7.json
+git add flows.json
 git commit -m "description"
 git push
 

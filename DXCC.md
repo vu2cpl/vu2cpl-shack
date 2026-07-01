@@ -182,8 +182,7 @@ flow.set('cfg_flows_dir', os.homedir() + '/.node-red/projects/vu2cpl-shack');
 
 | File | Purpose |
 |------|---------|
-| `flows.json` | Main Node-RED flow (git tracked) |
-| `clublog_dxcc_tracker_v7.json` | DXCC tab export (synced on every commit) |
+| `flows.json` | Main Node-RED flow (git tracked) — DXCC Tracker is the `d110d176c0aad308` tab within it |
 | `nr_dxcc_seed.json` | Worked/confirmed seed |
 | `nr_dxcc_blacklist.json` | Blocked callsigns |
 | `DXCC.md` | This document |
@@ -196,8 +195,9 @@ flow.set('cfg_flows_dir', os.homedir() + '/.node-red/projects/vu2cpl-shack');
 
 ```bash
 cd ~/.node-red/projects/vu2cpl-shack
-python3 -c 'import json; d=json.load(open("flows.json")); v=[n for n in d if n.get("z")=="d110d176c0aad308" or n.get("id")=="d110d176c0aad308"]; json.dump(v,open("clublog_dxcc_tracker_v7.json","w"),indent=2); print(len(v),"nodes")'
-git add flows.json clublog_dxcc_tracker_v7.json DXCC.md DXCC_Tracker_README.pdf
+# If this edit touched DXCC.md, regenerate the PDF first (CLAUDE.md rule #3):
+npx md-to-pdf DXCC.md && mv DXCC.pdf DXCC_Tracker_README.pdf
+git add flows.json DXCC.md DXCC_Tracker_README.pdf
 git commit -m "v7: <description>"
 git push
 ```
@@ -214,7 +214,7 @@ git push
 | Dedup window | 60s per callsign + frequency |
 | Club Log API | clublog.org/json_dxccchart.php |
 | Repo | github.com/vu2cpl/vu2cpl-shack |
-| Flow file | clublog_dxcc_tracker_v7.json |
+| Flow tab ID | `d110d176c0aad308` (within `flows.json`) |
 
 ---
 

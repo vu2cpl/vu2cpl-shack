@@ -80,6 +80,34 @@ data: `listenersByBand` drops from an 11-band spread to `[{"band":"40m","n":1}]`
 matching the single real waterfall listener. Both cards relabeled back to
 "Listeners by band (waterfall)" now that the label is accurate again. `?v=19`.
 
+### Repo tooling — retired the `clublog_dxcc_tracker_v7.json` DXCC-tab extract
+
+The file was a filtered copy of the DXCC Tracker tab's nodes out of
+`flows.json` — a fossil from when the DXCC Tracker was developed as its own
+standalone flow before being merged into this repo (its earliest commit is
+literally titled "v7 clean start", 2026-04-14). It carried no information
+not already in `flows.json`, and existed only to be kept in sync — via
+CLAUDE.md rule #4 and a matching block in the `nrsave` Pi function — every
+single time `flows.json` changed. Pure upkeep cost, no benefit.
+
+**Removed:** `clublog_dxcc_tracker_v7.json` (`git rm`). **Retired in place:**
+CLAUDE.md rule #4 (kept its number — 11 historical changelog/handover
+entries reference "rule #4" by number; renumbering would've silently
+repointed them at rule #5 instead). **Simplified:** the `nrsave` bash
+function (both the doc in `REBUILD_PI.md` and the live generator in
+`rebuild_pi.sh`) now just stages + commits `flows.json`, no extract-regen
+step. **Also cleaned:** `DXCC.md`'s "Files on Pi" table, its "Standard
+Commit Sequence" (now just a PDF-regen reminder per rule #3, which is
+unaffected), a stray "Flow file" row that mislabeled the extract as *the*
+flow file, `README.md`'s repository-layout tree, and `HANDOVER.md`'s "Key
+files" list. `DXCC_Tracker_README.pdf` regenerated per rule #3 since
+`DXCC.md` changed.
+
+**Still open:** the *live* `nrsave` function in `~/.bashrc` on the Pi still
+has the old extract-regen body — Claude Code can't reach the Pi to fix it
+directly. Manoj needs to re-run the (now-simplified) `cat >> ~/.bashrc`
+block from `REBUILD_PI.md` on the Pi, or hand-edit the function.
+
 ---
 
 ## 2026-06-27

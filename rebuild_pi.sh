@@ -871,14 +871,13 @@ EOF
     fi
 
     if ! grep -q '^nrsave()' ~/.bashrc 2>/dev/null; then
-        step "Add nrsave shell function to ~/.bashrc (CLAUDE.md rule #4: regen DXCC tab extract on every flows.json commit)"
+        step "Add nrsave shell function to ~/.bashrc (stage + commit flows.json after a Deploy)"
         cat >> ~/.bashrc <<'EOF'
 
-# nrsave — regen DXCC tab extract + stage flows.json + commit (CLAUDE.md rule #4)
+# nrsave — stage flows.json + commit
 nrsave() {
     cd "$REPO_DIR" || return 1
-    python3 -c 'import json; d=json.load(open("flows.json")); v=[n for n in d if n.get("z")=="d110d176c0aad308" or n.get("id")=="d110d176c0aad308"]; json.dump(v,open("clublog_dxcc_tracker_v7.json","w"),indent=2)' || return 1
-    git add flows.json clublog_dxcc_tracker_v7.json
+    git add flows.json
     git commit -m "$1"
 }
 EOF
