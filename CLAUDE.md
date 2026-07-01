@@ -50,6 +50,7 @@ sudo systemctl restart nodered
    python3 -c 'import json; d=json.load(open("flows.json")); v=[n for n in d if n.get("z")=="d110d176c0aad308" or n.get("id")=="d110d176c0aad308"]; json.dump(v,open("/tmp/dxcc_tab.json","w"),indent=2)'
    ```
 5. **Never put file upload instructions inside index.html** (vu2cpl.com website). Give them as chat instructions only.
+6. **When updating `SHACK_CHANGELOG.md`**, always regenerate `SHACK_CHANGELOG.pdf` (`npx --yes md-to-pdf SHACK_CHANGELOG.md`, ~3s, no rename needed — matches the DXCC.md/PDF stem convention) and commit both together. Mirrors rule #3 for the DXCC doc. **Added 2026-07-01** after the PDF was found 12 commits stale (last regenerated 2026-06-12) with no rule enforcing the pairing — regenerated once for a clean baseline, then formalized so it can't silently drift again.
 
 ---
 

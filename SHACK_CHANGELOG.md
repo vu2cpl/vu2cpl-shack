@@ -103,10 +103,23 @@ flow file, `README.md`'s repository-layout tree, and `HANDOVER.md`'s "Key
 files" list. `DXCC_Tracker_README.pdf` regenerated per rule #3 since
 `DXCC.md` changed.
 
-**Still open:** the *live* `nrsave` function in `~/.bashrc` on the Pi still
-has the old extract-regen body — Claude Code can't reach the Pi to fix it
-directly. Manoj needs to re-run the (now-simplified) `cat >> ~/.bashrc`
-block from `REBUILD_PI.md` on the Pi, or hand-edit the function.
+**Resolved 2026-07-01, same day.** The *live* `nrsave` function in
+`~/.bashrc` on the Pi had the old extract-regen body (Claude Code can't
+reach the Pi directly to fix it) — Manoj hand-swapped it on the Pi via a
+byte-exact Python replace (backed up to `~/.bashrc.bak.YYYYMMDD_HHMM`
+first, matching the HANDOVER #17 convention), verified by `sed`-printing
+the function back out. Confirmed simplified to just stage + commit
+`flows.json`, no extract step.
+
+### Repo tooling — SHACK_CHANGELOG.pdf caught up + rule added (new rule #6)
+
+Found `SHACK_CHANGELOG.pdf` (6.7 MB, git-tracked) **12 commits stale**
+(last regenerated 2026-06-12, commit `9f11bb6`) while `SHACK_CHANGELOG.md`
+had substantial edits since — unlike the `DXCC.md`/`DXCC_Tracker_README.pdf`
+pairing (CLAUDE.md rule #3), nothing enforced this one, so it had quietly
+drifted. Regenerated (`npx --yes md-to-pdf SHACK_CHANGELOG.md`, ~3s, no
+rename needed) and added **CLAUDE.md rule #6** mirroring rule #3, so this
+can't silently lapse again.
 
 ---
 
