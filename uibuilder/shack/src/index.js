@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v15 · 2026-06-27 SPE power RAW/AVG/PEAK meter';
+window.__shackBuild = 'v16 · 2026-07-01 UberSDR receiver monitor card';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -40,6 +40,7 @@ const CARDS = {
   rpi:       true,
   network:   true,
   gpsntp:    true,
+  ubersdr:   true,
 };
 
 // =====================================================================
@@ -2789,9 +2790,87 @@ const TopBar = {
   }
 };
 
+// === UberSDR card (receiver monitor — data via uibuilder topic 'ubersdr') ===
+const UberSdrCard = {
+  template: `
+    <div class="card">
+      <div class="card__header" @click="expanded = !expanded">
+        <span class="chev">{{ expanded ? '▼' : '▶' }}</span>
+        <span>UberSDR</span>
+        <span v-if="!expanded" class="summary">
+          <span :style="{color: state.online ? 'var(--green)' : 'var(--muted)', fontWeight:600}">
+            {{ state.online ? '● ' + state.listeners + ' listening' : '○ offline' }}
+          </span>
+          <span v-if="state.online">·</span>
+          <span v-if="state.online" :style="{color:'var(--accent)', fontWeight:600}">{{ egressLabel }}</span>
+          <span v-if="state.online">·</span>
+          <span v-if="state.online" :style="{color: cpuColor, fontWeight:600}">{{ Math.round(state.cpuPct) }}% cpu</span>
+        </span>
+      </div>
+
+      <div class="card__body" :class="{ 'is-collapsed': !expanded }">
+        <div class="tiles">
+          <div class="tile"><div class="tile__lbl">Listeners</div><div class="tile__val" :style="{color:'var(--green)'}">{{ state.listeners }}</div></div>
+          <div class="tile"><div class="tile__lbl">Sessions</div><div class="tile__val">{{ state.total }}</div></div>
+          <div class="tile"><div class="tile__lbl">Egress</div><div class="tile__val" :style="{color:'var(--accent)'}">{{ egressLabel }}</div></div>
+        </div>
+        <div class="tiles">
+          <div class="tile"><div class="tile__lbl">SDR CPU</div><div class="tile__val" :style="{color: cpuColor}">{{ Math.round(state.cpuPct) }}<span class="tile__sub-unit">%</span></div></div>
+          <div class="tile"><div class="tile__lbl">Decoders</div><div class="tile__val">{{ state.decoders }}</div></div>
+          <div class="tile"><div class="tile__lbl">Monitors</div><div class="tile__val">{{ state.monitors }}</div></div>
+        </div>
+
+        <div class="solar-sec-label">Listeners by band</div>
+        <div v-if="!state.listenersByBand.length" class="empty-row">No listeners</div>
+        <div v-for="b in state.listenersByBand.slice(0,8)" :key="b.band" class="band-row" style="grid-template-columns:auto 1fr auto;">
+          <span class="band-row__name" style="width:44px">{{ b.band }}</span>
+          <div class="band-row__bar" style="height:9px;"><div :style="{height:'100%', width: pct(b.n) + '%', background:'var(--accent)', transition:'width .3s'}"></div></div>
+          <span style="width:22px;text-align:right;color:var(--muted);font-weight:600">{{ b.n }}</span>
+        </div>
+
+        <div class="solar-sec-label">Band noise &amp; voice</div>
+        <table class="slice-tbl">
+          <thead><tr><th>Band</th><th>Noise</th><th>Voice</th><th>Dec/Mon</th></tr></thead>
+          <tbody>
+            <tr v-for="b in state.bands" :key="b.band">
+              <td class="slice-tbl__letter" style="font-weight:600">{{ b.band }}</td>
+              <td :style="{color: noiseColor(b.noise)}">{{ (b.noise == null || b.noise === 0) ? '—' : b.noise + ' dB' }}</td>
+              <td :style="b.voice > 0 ? {color:'var(--green)', fontWeight:700} : {color:'var(--muted)'}">{{ b.voice }}</td>
+              <td style="color:var(--muted)">{{ b.dec }}/{{ b.mon }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="statusline" style="margin-top:6px;justify-content:space-between;">
+          <span>{{ state.decoders }} decoders · {{ state.monitors }} monitors</span>
+          <span :style="{color: state.online ? 'var(--muted)' : 'var(--amber)'}">{{ state.online ? 'live' : 'waiting for data' }}</span>
+        </div>
+      </div>
+    </div>
+  `,
+  setup() {
+    const expanded = ref(false);
+    const state = reactive({
+      online:false, total:0, listeners:0, decoders:0, monitors:0, other:0,
+      cpuPct:0, egressMbps:0, bandsCount:0, listenersByBand:[], countries:[], bands:[]
+    });
+    const egressLabel = computed(() => state.egressMbps >= 1 ? state.egressMbps + ' Mb/s' : Math.round(state.egressMbps * 1000) + ' kb/s');
+    const cpuColor = computed(() => state.cpuPct > 85 ? 'var(--red)' : state.cpuPct > 60 ? 'var(--amber)' : 'var(--green)');
+    const maxBand = computed(() => state.listenersByBand.length ? state.listenersByBand[0].n : 1);
+    function pct(n) { return Math.round(n / (maxBand.value || 1) * 100); }
+    function noiseColor(n) { if (n == null || n === 0) return 'var(--muted)'; if (n > -90) return 'var(--red)'; if (n > -100) return 'var(--amber)'; return 'var(--green)'; }
+    onMounted(() => {
+      uibuilder.onTopic('ubersdr', (msg) => {
+        if (msg && msg.payload && typeof msg.payload === 'object') Object.assign(state, msg.payload);
+      });
+    });
+    return { expanded, state, egressLabel, cpuColor, pct, noiseColor };
+  }
+};
+
 // === Root app ===
 const App = {
-  components: { TopBar, LightningCard, DXCCCard, NetworkCard, RPiCard, PowerCard, SolarCard, FlexCard, SPECard, LP700Card, RotatorCard, GpsNtpCard, RBNCard },
+  components: { TopBar, LightningCard, DXCCCard, NetworkCard, RPiCard, PowerCard, SolarCard, FlexCard, SPECard, LP700Card, RotatorCard, GpsNtpCard, RBNCard, UberSdrCard },
   template: `
     <TopBar />
     <div class="dash-grid">
@@ -2804,6 +2883,7 @@ const App = {
       <SolarCard     v-if="CARDS.solar" />
       <DXCCCard      v-if="CARDS.dxcc" />
       <RBNCard       v-if="CARDS.rbn" />
+      <UberSdrCard   v-if="CARDS.ubersdr" />
       <RPiCard       v-if="CARDS.rpi" />
       <NetworkCard   v-if="CARDS.network" />
       <GpsNtpCard    v-if="CARDS.gpsntp" />

@@ -10262,5 +10262,148 @@
                 "48d90f1e7b0172b0"
             ]
         ]
+    },
+    {
+        "id": "ubersdr_tab",
+        "type": "tab",
+        "label": "UberSDR",
+        "disabled": false,
+        "info": "UberSDR receiver monitor. Subscribes to ubersdr/metrics/sessions + ubersdr/metrics/voice_activity/# on the shack broker (192.168.1.169), aggregates in 'Aggregate UberSDR', and feeds both the D1 /ui card (Shack Monitoring tools tab) and the Vue /shack UberSdrCard (topic 'ubersdr')."
+    },
+    {
+        "id": "ubersdr_grp",
+        "type": "ui_group",
+        "name": "UberSDR",
+        "tab": "bcce4e07ac31b882",
+        "order": 30,
+        "disp": false,
+        "width": 12,
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "ubersdr_mqtt_sessions",
+        "type": "mqtt in",
+        "z": "ubersdr_tab",
+        "name": "ubersdr/metrics/sessions",
+        "topic": "ubersdr/metrics/sessions",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "mqttbroker.shack",
+        "nl": false,
+        "rap": false,
+        "inputs": 0,
+        "x": 190,
+        "y": 100,
+        "wires": [
+            [
+                "ubersdr_agg"
+            ]
+        ]
+    },
+    {
+        "id": "ubersdr_mqtt_va",
+        "type": "mqtt in",
+        "z": "ubersdr_tab",
+        "name": "ubersdr/metrics/voice_activity/#",
+        "topic": "ubersdr/metrics/voice_activity/#",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "mqttbroker.shack",
+        "nl": false,
+        "rap": false,
+        "inputs": 0,
+        "x": 210,
+        "y": 160,
+        "wires": [
+            [
+                "ubersdr_agg"
+            ]
+        ]
+    },
+    {
+        "id": "ubersdr_replay",
+        "type": "inject",
+        "z": "ubersdr_tab",
+        "name": "Replay every 10s",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "10",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "2",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 220,
+        "wires": [
+            [
+                "ubersdr_agg"
+            ]
+        ]
+    },
+    {
+        "id": "ubersdr_agg",
+        "type": "function",
+        "z": "ubersdr_tab",
+        "name": "Aggregate UberSDR",
+        "func": "// UberSDR aggregator: caches sessions + per-band voice_activity, emits one flat\n// panel payload on every input (sessions mqtt / voice_activity mqtt / replay inject).\nconst BAND_ORDER=['2200m','630m','160m','80m','60m','40m','30m','20m','17m','15m','12m','10m','6m'];\nconst BANDS=[['2200m',135700,137800],['630m',472000,479000],['160m',1800000,2000000],['80m',3500000,4000000],['60m',5250000,5450000],['40m',7000000,7300000],['30m',10100000,10150000],['20m',14000000,14350000],['17m',18068000,18168000],['15m',21000000,21450000],['12m',24890000,24990000],['10m',28000000,29700000],['6m',50000000,54000000]];\nfunction f2b(hz){for(var i=0;i<BANDS.length;i++){if(hz>=BANDS[i][1]&&hz<=BANDS[i][2])return BANDS[i][0];}return 'Other';}\nvar topic=msg.topic||'';\nif(topic.indexOf('voice_activity')>=0){\n  var band=topic.split('/').pop();\n  var p=msg.payload; if(typeof p==='string'){try{p=JSON.parse(p);}catch(e){return null;}}\n  var va=flow.get('usdr_va')||{};\n  va[band]={noise:(typeof p.noise_floor_db==='number')?+p.noise_floor_db.toFixed(1):null,thr:p.threshold_db,voice:p.total_activities||0,ts:Date.now()};\n  flow.set('usdr_va',va);\n} else if(topic.indexOf('sessions')>=0){\n  var d=msg.payload; if(typeof d==='string'){try{d=JSON.parse(d);}catch(e){return null;}}\n  var s=d.sessions||[];\n  var listeners=0,decoders=0,monitors=0,other=0,cpu=0,tot=0,aud=0,wf=0;\n  var byBand={},countries={},decoderBands={},monitorBands={};\n  for(var i=0;i<s.length;i++){var x=s[i];\n    cpu+=x.thread_cpu_pct||0; tot+=x.total_kbps||0; aud+=x.audio_kbps||0; wf+=x.waterfall_kbps||0;\n    var b=f2b(x.frequency);\n    if(!x.is_internal){listeners++; byBand[b]=(byBand[b]||0)+1;\n      var c=(x.country&&x.country.trim())?x.country:'Unknown'; countries[c]=(countries[c]||0)+1;}\n    else if(x.is_spectrum){monitors++; monitorBands[b]=(monitorBands[b]||0)+1;}\n    else if((x.id||'').indexOf('decoder')>=0){decoders++; decoderBands[b]=(decoderBands[b]||0)+1;}\n    else other++;\n  }\n  flow.set('usdr_sess',{ts:Date.now(),total:d.count||s.length,listeners:listeners,decoders:decoders,monitors:monitors,other:other,\n    cpuPct:+cpu.toFixed(1),egressMbps:+(tot/1000).toFixed(1),audioMbps:+(aud/1000).toFixed(1),wfMbps:+(wf/1000).toFixed(1),\n    byBand:byBand,countries:countries,decoderBands:decoderBands,monitorBands:monitorBands});\n}\nvar sess=flow.get('usdr_sess'), va=flow.get('usdr_va')||{}, now=Date.now();\nvar online=!!(sess&&(now-sess.ts<60000));\nvar lbb=sess?Object.keys(sess.byBand).map(function(k){return {band:k,n:sess.byBand[k]};}).sort(function(a,b){return b.n-a.n||BAND_ORDER.indexOf(a.band)-BAND_ORDER.indexOf(b.band);}):[];\nvar cty=sess?Object.keys(sess.countries).map(function(k){return {c:k,n:sess.countries[k]};}).sort(function(a,b){return b.n-a.n;}):[];\nvar bands=BAND_ORDER.filter(function(b){return va[b];}).map(function(b){return {band:b,noise:va[b].noise,thr:va[b].thr,voice:va[b].voice,dec:(sess&&sess.decoderBands[b])||0,mon:(sess&&sess.monitorBands[b])||0};});\nmsg.payload=sess?{ts:now,online:online,total:sess.total,listeners:sess.listeners,decoders:sess.decoders,monitors:sess.monitors,other:sess.other,cpuPct:sess.cpuPct,egressMbps:sess.egressMbps,audioMbps:sess.audioMbps,wfMbps:sess.wfMbps,bandsCount:bands.length,listenersByBand:lbb,countries:cty,bands:bands}\n  :{ts:now,online:false,total:0,listeners:0,decoders:0,monitors:0,other:0,cpuPct:0,egressMbps:0,audioMbps:0,wfMbps:0,bandsCount:bands.length,listenersByBand:[],countries:[],bands:bands};\nreturn msg;\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 470,
+        "y": 160,
+        "wires": [
+            [
+                "ubersdr_panel",
+                "ubersdr_vue_bridge"
+            ]
+        ]
+    },
+    {
+        "id": "ubersdr_panel",
+        "type": "ui_template",
+        "z": "ubersdr_tab",
+        "group": "ubersdr_grp",
+        "name": "UberSDR Panel",
+        "order": 1,
+        "width": 12,
+        "height": 0,
+        "format": "<style>\n.usdr{--bg:#0d1117;--card:#161b22;--bd:#30363d;--tx:#c9d1d9;--mu:#8b949e;--cy:#39c5cf;--gn:#3fb950;--am:#e3b341;--rd:#f85149;\n background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:12px 14px;color:var(--tx);font-family:var(--gh-font,-apple-system,sans-serif);}\n.usdr .hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}\n.usdr .ti{font-size:14px;font-weight:700;}\n.usdr .ti small{color:var(--mu);font-weight:500;}\n.usdr .live{font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;}\n.usdr .on{color:var(--gn);background:rgba(63,185,80,.12);border:1px solid rgba(63,185,80,.35);}\n.usdr .off{color:var(--mu);background:rgba(139,148,158,.1);border:1px solid var(--bd);}\n.usdr .tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-bottom:11px;}\n.usdr .tl{background:var(--card);border:1px solid var(--bd);border-radius:7px;padding:7px 8px;}\n.usdr .tl .lb{font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--mu);margin-bottom:2px;}\n.usdr .tl .vv{font-size:19px;font-weight:700;line-height:1;}\n.usdr .tl .sub{font-size:9.5px;color:var(--mu);margin-top:3px;}\n.usdr .bar{height:4px;background:#30363d;border-radius:3px;margin-top:5px;overflow:hidden;}\n.usdr .bar i{display:block;height:100%;}\n.usdr .cols{display:grid;grid-template-columns:1fr 1fr;gap:9px;}\n.usdr .pane{background:var(--card);border:1px solid var(--bd);border-radius:7px;padding:9px;}\n.usdr .ph{font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--mu);margin-bottom:7px;font-weight:600;}\n.usdr .brow{display:flex;align-items:center;gap:6px;margin-bottom:5px;font-size:11.5px;}\n.usdr .brow b{width:38px;font-variant-numeric:tabular-nums;}\n.usdr .brow .track{flex:1;height:8px;background:#0d1117;border:1px solid var(--bd);border-radius:4px;overflow:hidden;}\n.usdr .brow .track i{display:block;height:100%;background:var(--cy);}\n.usdr .brow .n{width:18px;text-align:right;color:var(--mu);font-variant-numeric:tabular-nums;}\n.usdr table{width:100%;border-collapse:collapse;font-size:11px;}\n.usdr th{text-align:left;color:var(--mu);font-weight:600;padding:2px 3px;border-bottom:1px solid var(--bd);font-size:9.5px;text-transform:uppercase;}\n.usdr td{padding:2px 3px;border-bottom:1px solid rgba(48,54,61,.5);font-variant-numeric:tabular-nums;}\n.usdr td.bn{font-weight:600;}\n.usdr .ft{margin-top:9px;font-size:9.5px;color:var(--mu);display:flex;justify-content:space-between;}\n</style>\n<div class=\"usdr\" id=\"usdr-root\">\n  <div class=\"hd\"><span class=\"ti\">📡 UberSDR <small>— Receiver Monitor</small></span><span class=\"live off\" id=\"usdr-live\">○ offline</span></div>\n  <div class=\"tiles\">\n    <div class=\"tl\"><div class=\"lb\">Listeners</div><div class=\"vv\" id=\"usdr-lis\">—</div><div class=\"sub\" id=\"usdr-cty\">&nbsp;</div></div>\n    <div class=\"tl\"><div class=\"lb\">Sessions</div><div class=\"vv\" id=\"usdr-tot\">—</div><div class=\"sub\" id=\"usdr-brk\">&nbsp;</div></div>\n    <div class=\"tl\"><div class=\"lb\">Egress</div><div class=\"vv\" style=\"color:var(--cy)\" id=\"usdr-egr\">—</div><div class=\"sub\">IQ + audio</div></div>\n    <div class=\"tl\"><div class=\"lb\">SDR CPU</div><div class=\"vv\" id=\"usdr-cpu\">—</div><div class=\"bar\"><i id=\"usdr-cpubar\" style=\"width:0%\"></i></div></div>\n    <div class=\"tl\"><div class=\"lb\">Bands</div><div class=\"vv\" id=\"usdr-bn\">—</div><div class=\"sub\">2200m→10m</div></div>\n  </div>\n  <div class=\"cols\">\n    <div class=\"pane\"><div class=\"ph\">Listeners by band</div><div id=\"usdr-lbb\"></div></div>\n    <div class=\"pane\"><div class=\"ph\">Band noise &amp; voice</div><table><thead><tr><th>Band</th><th>Noise</th><th>Voice</th><th>D/M</th></tr></thead><tbody id=\"usdr-bands\"></tbody></table></div>\n  </div>\n  <div class=\"ft\"><span id=\"usdr-dm\">&nbsp;</span><span id=\"usdr-age\">—</span></div>\n</div>\n<script>\n(function(scope){\n  function esc(s){return String(s).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}\n  function noiseCol(n){ if(n==null||n===0) return 'var(--mu)'; if(n>-90) return 'var(--rd)'; if(n>-100) return 'var(--am)'; return 'var(--gn)'; }\n  function set(id,v){ var e=document.getElementById(id); if(e) e.textContent=v; }\n  function render(d){\n    var live=document.getElementById('usdr-live');\n    if(live){ live.textContent=d.online?('● '+d.listeners+' listening'):'○ offline'; live.className='live '+(d.online?'on':'off'); }\n    set('usdr-lis',d.listeners); \n    var intl=(d.countries||[]).filter(function(c){return c.c!=='Unknown';}).reduce(function(a,c){return a+c.n;},0);\n    set('usdr-cty', intl? (intl+' located · '+(d.listeners-intl)+' ?') : (d.listeners+' unlocated'));\n    set('usdr-tot',d.total); set('usdr-brk',d.listeners+' usr · '+d.decoders+' dec · '+d.monitors+' mon');\n    set('usdr-egr', d.egressMbps>=1? d.egressMbps+' Mb/s' : Math.round(d.egressMbps*1000)+' kb/s');\n    set('usdr-cpu', (d.cpuPct||0)+'%');\n    var cb=document.getElementById('usdr-cpubar'); if(cb){ var p=Math.min(100,d.cpuPct||0); cb.style.width=p+'%'; cb.style.background=p>85?'var(--rd)':p>60?'var(--am)':'var(--gn)'; }\n    set('usdr-bn',d.bandsCount);\n    // listeners by band bars\n    var lbb=d.listenersByBand||[], max=lbb.length?lbb[0].n:1, h='';\n    lbb.slice(0,7).forEach(function(x){ h+='<div class=\"brow\"><b>'+esc(x.band)+'</b><span class=\"track\"><i style=\"width:'+Math.round(x.n/max*100)+'%\"></i></span><span class=\"n\">'+x.n+'</span></div>'; });\n    if(!lbb.length) h='<div style=\"font-size:11px;color:var(--mu)\">no listeners</div>';\n    var lel=document.getElementById('usdr-lbb'); if(lel) lel.innerHTML=h;\n    // band table\n    var bh='';\n    (d.bands||[]).forEach(function(b){\n      var nz=(b.noise==null||b.noise===0)?'—':b.noise+' dB';\n      var vc=b.voice>0?'<span style=\"color:var(--gn);font-weight:600\">'+b.voice+'</span>':'0';\n      bh+='<tr><td class=\"bn\">'+esc(b.band)+'</td><td style=\"color:'+noiseCol(b.noise)+'\">'+nz+'</td><td>'+vc+'</td><td style=\"color:var(--mu)\">'+b.dec+'/'+b.mon+'</td></tr>';\n    });\n    var bel=document.getElementById('usdr-bands'); if(bel) bel.innerHTML=bh;\n    set('usdr-dm', d.decoders+' decoders · '+d.monitors+' monitors active');\n    set('usdr-age', d.online?('updated '+new Date(d.ts).toLocaleTimeString()):'stale');\n  }\n  scope.$watch('msg',function(msg){ if(msg&&msg.payload&&typeof msg.payload==='object'&&'listeners' in msg.payload) render(msg.payload); });\n})(scope);\n</script>\n",
+        "storeOutMessages": true,
+        "fwdInMessages": false,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "className": "",
+        "x": 730,
+        "y": 120,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "ubersdr_vue_bridge",
+        "type": "function",
+        "z": "ubersdr_tab",
+        "name": "Build UberSDR state for Vue",
+        "func": "// Wrap the flat panel payload with topic 'ubersdr' for the uibuilder client.\nreturn { topic: 'ubersdr', payload: msg.payload };",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 760,
+        "y": 200,
+        "wires": [
+            [
+                "uib_shack_01"
+            ]
+        ]
     }
 ]

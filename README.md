@@ -17,7 +17,7 @@ A single Node-RED instance on a Raspberry Pi 4B (`noderedpi4`,
 dashboard. Hardware talks to Node-RED via:
 
 - **MQTT** (Mosquitto on the same Pi) — Tasmota power outlets, AS3935
-  lightning sensor, RPi telemetry
+  lightning sensor, RPi telemetry, UberSDR receiver metrics
 - **Direct TCP/UDP** — FlexRadio (4992), DX clusters
 - **Serial** — SPE amplifier (via `spe-remote` gateway)
 - **WebSocket** — LP-700 power/SWR meter (via the
@@ -30,7 +30,7 @@ dashboard. Hardware talks to Node-RED via:
 
 - **`/ui`** — Dashboard 1 (legacy Angular). Dark-themed
   (base `#097479`, bg `#111111`). Original, all features intact.
-- **`/shack`** — Vue 3 SPA served via uibuilder. 12 cards, all
+- **`/shack`** — Vue 3 SPA served via uibuilder. 13 cards, all
   collapsed by default with live summary headers, true responsive
   layout (CSS column masonry), PWA-installable on iPad / iPhone
   ("Add to Home Screen"). The primary dashboard going forward.

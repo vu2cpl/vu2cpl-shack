@@ -80,6 +80,7 @@ Node-RED shack automation running on Raspberry Pi 4B. Controls and monitors:
 | Node-RED dashboard | `http://192.168.1.169:1880/ui` |
 | Node-RED editor | `http://192.168.1.169:1880` |
 | MQTT broker | Mosquitto @ `192.168.1.169:1883` (plain, no auth, LAN only) |
+| UberSDR metrics | External UberSDR receiver publishing to the shack broker: `ubersdr/metrics/sessions` (session list) + `ubersdr/metrics/voice_activity/<band>` (12 bands). **Read-only** — the `UberSDR` flow tab aggregates + displays, publishes nothing back. |
 | MQTT broker node ID | `f4785be9863eab08` |
 | FlexRadio | `192.168.1.148:4992` (TCP API + UDP discovery) |
 | SPE WS gateway | `spe-remote.service` on Pi @ `ws://192.168.1.169:8888/ws` (single FTDI-serial owner, multi-client fan-out). Repo [`vu2cpl/spe-remote`](https://github.com/vu2cpl/spe-remote). Also handles SPE power-on via DTR/RTS on the open port. No `/healthz` — liveness = `curl http://…:8888/` |
@@ -102,7 +103,7 @@ git push
 
 ---
 
-## FLOW TABS (11 total)
+## FLOW TABS (12 total)
 
 | Tab Label | Tab ID | Nodes | Dashboard Group |
 |-----------|--------|-------|-----------------|
@@ -117,6 +118,7 @@ git push
 | Lightning Antenna Protector | `75e2cac8ab96f556` | 92 | `8b723cd03854ac2c` |
 | All Power Strips | `b76a5310767803b4` | 48 | `vu2cpl_grp_power` |
 | DXCC Tracker | `d110d176c0aad308` | 77 | `grp_dxcc_stats` |
+| UberSDR | `ubersdr_tab` | 6 | `ubersdr_grp` (on Shack Monitoring tools) |
 
 > Node counts drift as flows evolve — treat as approximate; re-count against
 > `flows.json` if exact. (Re-counted live 2026-06-27.) The SPE tab is

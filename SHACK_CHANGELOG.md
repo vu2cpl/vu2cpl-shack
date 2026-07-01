@@ -8,6 +8,51 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-07-01
+
+### UberSDR — receiver-monitor dashboard (new flow tab, both `/ui` + `/shack`)
+
+**New flow tab:** `UberSDR` (`ubersdr_tab`, 6 nodes) · **D1 group:**
+`ubersdr_grp` on the Shack Monitoring tools tab · **Vue:** `UberSdrCard`
+(topic `ubersdr`), `CARDS.ubersdr`, build `v16` / cache-buster `?v=16`.
+
+An UberSDR multi-channel receiver publishes metrics to the shack broker
+(192.168.1.169); added a dashboard for it on both UIs.
+
+**MQTT consumed (read-only):**
+- `ubersdr/metrics/sessions` — `count` + `sessions[]` (per-session frequency,
+  mode, channel, bandwidth, per-thread CPU, audio/waterfall/total kbps,
+  country, and `is_internal` / `is_spectrum` flags).
+- `ubersdr/metrics/voice_activity/<band>` — 12 bands (2200m→10m): noise floor,
+  threshold, detected-voice `activities[]` + `total_activities`.
+
+**Aggregator** (`ubersdr_agg` function): topic-routes each input — caches the
+session roll-up (`flow.usdr_sess`) or one band's voice-activity
+(`flow.usdr_va[band]`) — then emits one flat payload merging both. Sessions are
+categorised into **real listeners** (`!is_internal`), **decoders**
+(`is_internal` + id contains `decoder`), and **spectrum / noise-floor monitors**
+(`is_spectrum`); listeners are bucketed to a ham band by frequency, with an
+`Other` catch-all for out-of-band tuning (which is actually the largest bucket).
+Per-thread CPU and total kbps are summed (→ Mbps). A 10 s replay inject
+re-emits from cache so the panels rehydrate on page open. Snapshot at build
+time: 64 sessions = 30 listeners · 21 decoders · 13 monitors, ~121 Mbps egress,
+~50 % SDR CPU, across 12 bands.
+
+**Both dashboards render the same flat payload** — D1 `ubersdr_panel`
+ui_template directly; Vue `UberSdrCard` via `ubersdr_vue_bridge` → `uib_shack_01`
+(topic `ubersdr`). Four sections: summary tiles (listeners / sessions breakdown
+/ egress Mbps / SDR CPU / band count), a listeners-by-band bar list, a per-band
+noise-floor + voice-activity table (noise colour-graded; 0/absent → "—"), and a
+decoders/monitors count line.
+
+**Verified before wiring any UI:** the aggregator was run standalone against a
+live captured `sessions` payload + all 12 `voice_activity` bands, driven exactly
+as Node-RED does (topic routing, string-payload parse), confirming the counts
+(64/30/21/13), egress, and per-band merge. `flows.json` +
+`clublog_dxcc_tracker_v7.json` (Rule #4) committed together.
+
+---
+
 ## 2026-06-27
 
 ### SPE Amplifier — RAW / AVG / PEAK power-meter modes in both `/ui` and `/shack`
