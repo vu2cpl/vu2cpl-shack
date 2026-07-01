@@ -72,6 +72,14 @@ total-sessions and IQ-stream counts to small sub-text, and relabel the bar list
 "Sessions by band" (it buckets all user sessions, not humans). The collapsed
 header's "● N listening" also uses the waterfall count now. `?v=18`.
 
+**Bar graph scoped to waterfall-only (build `v19`).** The "by band" bar list
+still bucketed *all* real-user sessions (audio/IQ streams included), so it
+disagreed with the new headline number. `ubersdr_agg`'s `byBand` now only
+buckets sessions where `is_spectrum && !is_internal` — verified against live
+data: `listenersByBand` drops from an 11-band spread to `[{"band":"40m","n":1}]`,
+matching the single real waterfall listener. Both cards relabeled back to
+"Listeners by band (waterfall)" now that the label is accurate again. `?v=19`.
+
 ---
 
 ## 2026-06-27

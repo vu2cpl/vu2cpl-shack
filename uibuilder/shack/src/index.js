@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v18 · 2026-07-01 UberSDR waterfall-listener hero';
+window.__shackBuild = 'v19 · 2026-07-01 UberSDR band bar = waterfall only';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -2820,8 +2820,8 @@ const UberSdrCard = {
           <div class="tile"><div class="tile__lbl">Monitors</div><div class="tile__val">{{ state.monitors }}</div></div>
         </div>
 
-        <div class="solar-sec-label">Sessions by band</div>
-        <div v-if="!state.listenersByBand.length" class="empty-row">No sessions</div>
+        <div class="solar-sec-label">Listeners by band <span style="opacity:.6;font-weight:400">(waterfall)</span></div>
+        <div v-if="!state.listenersByBand.length" class="empty-row">No listeners</div>
         <div v-for="b in state.listenersByBand.slice(0,8)" :key="b.band" class="band-row" style="grid-template-columns:auto 1fr auto;">
           <span class="band-row__name" style="width:44px">{{ b.band }}</span>
           <div class="band-row__bar" style="height:9px;"><div :style="{height:'100%', width: pct(b.n) + '%', background:'var(--accent)', transition:'width .3s'}"></div></div>
