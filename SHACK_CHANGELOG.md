@@ -51,6 +51,18 @@ as Node-RED does (topic routing, string-payload parse), confirming the counts
 (64/30/21/13), egress, and per-band merge. `flows.json` +
 `clublog_dxcc_tracker_v7.json` (Rule #4) committed together.
 
+**Same-day enhancement — user vs internal-channel split (build `v17`).** The
+reliable discriminators are UberSDR's own flags, not mode/frequency: `is_internal
+= false` → real user (UUID id, `ubersdr-<uuid>` channel); `is_internal = true &&
+!is_spectrum` → decoder (the mode lives in the `decoder-<band>-<mode>` channel
+string); `is_internal = true && is_spectrum = true` → noise-floor monitor; and
+the lone `is_internal = false && is_spectrum = true` = a real user watching the
+waterfall (not audio). `ubersdr_agg` now also emits **`decodersByMode`** (parsed
+`ft8|ft4|cw|wspr|rtty|js8|psk` counts — live: FT8 10 · FT4 8 · WSPR 3) and a
+**`viewers`** count (spectrum-only real users). Both cards gained a "Decoders by
+mode" line and split the Listeners tile into audio vs waterfall. Aggregator
+re-verified against live data; `?v=17`.
+
 ---
 
 ## 2026-06-27

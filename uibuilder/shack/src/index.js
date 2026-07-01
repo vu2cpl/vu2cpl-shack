@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v16 · 2026-07-01 UberSDR receiver monitor card';
+window.__shackBuild = 'v17 · 2026-07-01 UberSDR user/decoder-mode split';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -2810,7 +2810,7 @@ const UberSdrCard = {
 
       <div class="card__body" :class="{ 'is-collapsed': !expanded }">
         <div class="tiles">
-          <div class="tile"><div class="tile__lbl">Listeners</div><div class="tile__val" :style="{color:'var(--green)'}">{{ state.listeners }}</div></div>
+          <div class="tile"><div class="tile__lbl">Listeners</div><div class="tile__val" :style="{color:'var(--green)'}">{{ state.listeners }}</div><div v-if="state.viewers > 0" style="font-size:var(--fs-xs);color:var(--muted);margin-top:2px">{{ state.listeners - state.viewers }} audio · {{ state.viewers }} waterfall</div></div>
           <div class="tile"><div class="tile__lbl">Sessions</div><div class="tile__val">{{ state.total }}</div></div>
           <div class="tile"><div class="tile__lbl">Egress</div><div class="tile__val" :style="{color:'var(--accent)'}">{{ egressLabel }}</div></div>
         </div>
@@ -2841,6 +2841,9 @@ const UberSdrCard = {
           </tbody>
         </table>
 
+        <div class="solar-sec-label">Decoders by mode</div>
+        <div style="font-size:var(--fs-sm);color:var(--muted);font-variant-numeric:tabular-nums;">{{ decoderModeStr || '—' }}</div>
+
         <div class="statusline" style="margin-top:6px;justify-content:space-between;">
           <span>{{ state.decoders }} decoders · {{ state.monitors }} monitors</span>
           <span :style="{color: state.online ? 'var(--muted)' : 'var(--amber)'}">{{ state.online ? 'live' : 'waiting for data' }}</span>
@@ -2851,11 +2854,12 @@ const UberSdrCard = {
   setup() {
     const expanded = ref(false);
     const state = reactive({
-      online:false, total:0, listeners:0, decoders:0, monitors:0, other:0,
-      cpuPct:0, egressMbps:0, bandsCount:0, listenersByBand:[], countries:[], bands:[]
+      online:false, total:0, listeners:0, viewers:0, decoders:0, monitors:0, other:0,
+      cpuPct:0, egressMbps:0, bandsCount:0, listenersByBand:[], countries:[], decodersByMode:[], bands:[]
     });
     const egressLabel = computed(() => state.egressMbps >= 1 ? state.egressMbps + ' Mb/s' : Math.round(state.egressMbps * 1000) + ' kb/s');
     const cpuColor = computed(() => state.cpuPct > 85 ? 'var(--red)' : state.cpuPct > 60 ? 'var(--amber)' : 'var(--green)');
+    const decoderModeStr = computed(() => (state.decodersByMode || []).map(m => m.mode + ' ' + m.n).join(' · '));
     const maxBand = computed(() => state.listenersByBand.length ? state.listenersByBand[0].n : 1);
     function pct(n) { return Math.round(n / (maxBand.value || 1) * 100); }
     function noiseColor(n) { if (n == null || n === 0) return 'var(--muted)'; if (n > -90) return 'var(--red)'; if (n > -100) return 'var(--amber)'; return 'var(--green)'; }
@@ -2864,7 +2868,7 @@ const UberSdrCard = {
         if (msg && msg.payload && typeof msg.payload === 'object') Object.assign(state, msg.payload);
       });
     });
-    return { expanded, state, egressLabel, cpuColor, pct, noiseColor };
+    return { expanded, state, egressLabel, cpuColor, decoderModeStr, pct, noiseColor };
   }
 };
 
