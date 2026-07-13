@@ -8,6 +8,156 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-07-13
+
+### `/shack` Vue dashboard stopped populating — uibuilder upgrade + stale-editor-tab flows.json corruption, VU2CPL cluster reverted to :7550
+
+**Symptom:** operator reported `/shack` cards all opened but showed no
+live data, and had seen a Node-RED Palette Manager notification about
+a new `node-red-contrib-uibuilder` version shortly before. Two
+unrelated root causes turned out to be stacked on top of each other;
+resolving the first one uncovered the second.
+
+**Cause #1 — uibuilder upgraded on disk but the runtime was never
+restarted.** Node-RED's journal showed the Palette Manager had
+upgraded `node-red-contrib-uibuilder` 7.6.2 → 7.7.4 at 19:37:
+```
+[info] Upgrading module: node-red-contrib-uibuilder to version: 7.7.4
+[info] Upgraded module: node-red-contrib-uibuilder. Restart Node-RED to use the new version
+```
+Node-RED logs this explicitly but does **not** auto-restart. Static
+front-end files (`uibuilder.iife.min.js` etc.) are served fresh from
+disk on every request, so the browser was immediately getting 7.7.4
+client code — while the live server process (running since
+2026-07-04) was still executing 7.6.2 server logic. That client/server
+split is almost certainly what the operator's "new uibuilder version"
+notification was pointing at, and is consistent with the dashboard
+shell loading but never receiving data.
+
+**First restart attempt collided with a concurrent `apt upgrade`.**
+The operator restarted Node-RED at 19:46, not realising `apt upgrade`
+was mid-flight on the Pi (`dpkg --configure --pending` was actively
+relinking `/usr/bin/npm` / `/usr/bin/node` at that exact moment).
+uibuilder's own startup runs a `package-mgt.cjs` `pkgCheck()` that
+shells out to `npm list --json`; it got malformed/empty output at that
+instant:
+```
+[error] npm list installed packages FAILED. Unexpected end of JSON input
+TypeError: Cannot create property 'dependencies' on string ''
+  at UibPackages.pkgCheck ... at UibPackages.setup ... at pluginDefinition (uib-runtime-plugin.js)
+```
+which cascaded into the `Shack Vue` uibuilder node instance
+(`uib_shack_01`) throwing `TypeError: Cannot read properties of
+undefined (reading 'RED')` at flow-start — a *different* failure
+from the version mismatch above, coincidentally surfacing in the same
+troubleshooting window. Waited for `apt upgrade` to fully finish
+(confirmed no `apt`/`dpkg` processes left, `npm --version` /
+`node --version` both clean), restarted again at 20:01 — uibuilder
+initialised cleanly this time (`🌐 uibuilder v7.7.4 initialised`, zero
+`uib_shack_01` errors). Cards rendered — but still carried no live
+data.
+
+**Cause #2 — the real bug: `flows.json` had picked up a stale,
+uncommitted overwrite.** `git status` on the Pi showed `flows.json`
+modified with a huge diff (3016 insertions / 3069 deletions against
+commit `39f6e25`) — file mtime 19:50:22, sandwiched exactly between
+the two restarts above. A raw `git diff --stat` that size looks like
+a rewrite, but diffing **by node id** (`{id: node}` dict comparison,
+ignoring Node-RED's own key-reordering noise) showed the true
+picture: **same node count, 0 added, 0 removed, 32 nodes with content
+changes** — all of it a reversion to an older state, not new work:
+
+- Every "Build `<subsystem>` state for Vue" bridge/builder function
+  across every card (SPE, GPS-NTP, UberSDR, Solar, RBN, Network,
+  LP-700, DXCC, Rotator, Power, Lightning, RPi, Flex) lost its output
+  wire into the `Shack Vue` uibuilder node (`uib_shack_01`). A
+  full-text search for `uib_shack_01` across `flows.json` dropped
+  from **15 references to 1** (its own node definition) — nothing
+  fed the Vue app any data at all. This is the direct cause of "all
+  cards open, no data."
+- `df7d1786eab4d5a2` / `cf2f9b095d6f1624` (the two VU2CPL cluster
+  `tcp in` nodes, RBN Skimmer Monitor + DXCC Tracker) reverted from
+  port **7300 back to the pre-2026-05-17 7550**.
+- `f925c3107b5f407e` (`ui_base` config node) had its dark-mode `css`
+  field wiped to `null`.
+- `38a6451a95a57685` (DXCC Dashboard `ui_template`) `width`/`height`
+  reset from `18`/`12` (numbers) to `"0"`/`"0"` (strings).
+- Two more wire drops: `48d90f1e7b0172b0` ("Raw HDG to display", lost
+  its wire to `27a6286454485995`) and `as3935_evt_cache_last` (lost
+  its wire to Master Dashboard `557083037f168b22`).
+
+The uniform, interleaved nature of the reversion — some fields old,
+some already-fixed, spanning entirely unrelated subsystems, all
+landing in one write at 19:50 — points to a **stale Node-RED editor
+browser tab**, open since before several of these fixes shipped
+(likely weeks), getting a Deploy click sometime during the
+troubleshooting session. Node-RED Deploy always writes the
+*deploying* tab's full in-memory flow model to disk — if that tab's
+model predates work done via other tabs, `nrsave`, or direct file
+edits, Deploy silently clobbers all of it. There is no warning dialog
+for "this flow changed on disk since you last loaded it."
+
+**Fix:** `git restore flows.json` on the Pi (clean discard back to
+`39f6e25` — confirmed 14 wires into `uib_shack_01` restored, VU2CPL
+back on port 7300), then `sudo systemctl restart nodered`. Clean boot,
+uibuilder v7.7.4 initialised with no errors, Vue cards populated with
+live data — operator-confirmed.
+
+**Follow-up, deliberate this time:** with the dashboard fixed, VU2CPL's
+cluster connections on port 7300 were still throwing continuous
+`ECONNREFUSED 103.203.39.165:7300` — the auth-required CwSkimmer port
+isn't currently reachable from outside. Operator explicitly requested
+reverting both VU2CPL `tcp in` nodes (`df7d1786eab4d5a2` "Telnet
+VU2CPL", RBN Skimmer Monitor; `cf2f9b095d6f1624`, DXCC Tracker) to the
+old "raw" no-login port **7550** — this time permanently, until 7300
+comes back up on their end. Edited `port` + `name` on both nodes
+directly in `flows.json`. Both connections came up clean on restart;
+no changes needed to either tab's login-handler code, which already
+no-ops gracefully when there's no login prompt to answer (same as the
+existing VU2OY `:7550` connection, which never needed login handling
+either). Committed from the Pi as `98daacb`.
+
+**Process gotcha caught mid-fix:** the first pass at the port edit
+used `json.dump(d, f, indent=4)` with Python's default
+`ensure_ascii=True`, which escapes every non-ASCII character (emoji
+in node names, en-dashes in comments) into `\uXXXX` sequences — Node-RED
+itself never does this, so the diff inflated to 146 lines across the
+whole file for what should have been a 4-line change. Caught before
+committing; fixed by reloading the file and re-dumping with
+`ensure_ascii=False`, which collapsed the diff back to exactly the
+intended `port` + `name` fields on the two nodes.
+
+**Lessons for next time:**
+1. Palette Manager module upgrades never auto-restart Node-RED — a
+   module can sit "Upgraded" on disk (front-end assets serving
+   immediately) while the live process keeps running old server code
+   indefinitely, until someone restarts it.
+2. Don't restart Node-RED while `apt upgrade`/`dpkg` is actively
+   running — binaries can be transiently relinked mid-upgrade, and a
+   restart at that instant can catch spawned child processes (like
+   uibuilder's internal `npm list` package-check) in a broken
+   PATH/binary state that resolves itself once the upgrade finishes.
+3. Long-lived Node-RED editor browser tabs are a real hazard. A tab
+   left open across multiple `nrsave` / direct-file-edit sessions
+   holds a stale in-memory flow model; deploying from it silently
+   reverts everything done via other paths since that tab last
+   synced. Hard-refresh any editor tab that's been open a while
+   before deploying from it.
+4. When a `git diff --stat` on `flows.json` looks implausibly large,
+   don't assume it's all real — diff **by node id**, ignoring
+   Node-RED's own re-serialization noise, before deciding what
+   actually changed.
+5. `ensure_ascii=False` (and matching Node-RED's `indent=4`) is
+   mandatory for any script that hand-edits `flows.json` — the
+   default Python JSON encoder's unicode escaping produces a diff
+   Node-RED itself would never write.
+
+No flows.json node count change (501 → 501, restore + 2-field edit
+only). See HANDOVER.md "What landed this week" 07-13 for the
+condensed version.
+
+---
+
 ## 2026-07-01
 
 ### UberSDR — receiver-monitor dashboard (new flow tab, both `/ui` + `/shack`)
@@ -8664,20 +8814,33 @@ few seconds to start tuning." Build stamp → `v14`, cache-buster `?v=14`.
 
 ## Standard Commit Sequence (reminder)
 
-Per CLAUDE.md rule #4, extract the DXCC Tracker tab alongside flows.json:
+**Updated 2026-07-13** — the DXCC Tracker tab extract (`clublog_dxcc_tracker_v7.json`)
+referenced here was retired 2026-07-01 (CLAUDE.md rule #4, kept its number,
+retired in place); `nrsave` on the Pi now just stages + commits `flows.json`
+directly, no separate extract step. Current sequence, after a Deploy in the
+Node-RED editor:
 
 ```bash
-cd ~/.node-red/projects/vu2cpl-shack
-python3 -c 'import json; d=json.load(open("flows.json")); v=[n for n in d if n.get("z")=="d110d176c0aad308" or n.get("id")=="d110d176c0aad308"]; json.dump(v,open("clublog_dxcc_tracker_v7.json","w"),indent=2)'
-git add flows.json clublog_dxcc_tracker_v7.json
+# On the Pi:
+nrsave "description of change"
+git push
+```
+
+If a `flows.json` change needs to be made from the Mac instead (rare — the
+browser editor + `nrsave` on the Pi is the normal path for flow edits):
+
+```bash
+cd ~/.node-red/projects/vu2cpl-shack   # on the Pi, or the Mac's local clone
+git add flows.json
 git commit -m "<description>"
 git push
 ```
 
-After push, on the Pi:
+Then on the other machine:
 
 ```bash
-cd ~/.node-red/projects/vu2cpl-shack
+cd ~/.node-red/projects/vu2cpl-shack   # Pi
+# or ~/projects/vu2cpl-shack           # Mac
 git pull
-sudo systemctl restart nodered
+sudo systemctl restart nodered         # Pi only, always after a flows.json change
 ```
