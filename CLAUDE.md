@@ -14,7 +14,7 @@ Claude Code runs on **Mac Mini M4 Pro** with a local clone of the repo.
 | Local repo | `~/projects/vu2cpl-shack/` |
 | Mac hostname | `MiniM4-Pro` |
 | Pi SSH | `ssh vu2cpl@192.168.1.169` |
-| SwiftUI app (planned) | `~/projects/vu2cpl-shack-app/` |
+| SwiftUI app (shelved 2026-07-31) | `~/projects/vu2cpl-shack-app/` (not scaffolded) |
 | Website source | `~/projects/vu2cpl-website/` (vu2cpl.com staging) |
 | GitHub Pages site | `~/projects/vu2cpl.github.io/` |
 
@@ -66,7 +66,7 @@ Node-RED shack automation running on Raspberry Pi 4B. Controls and monitors:
 - DX cluster monitoring and DXCC alerting
 - Raspberry Pi fleet monitoring
 
-**Future:** Native macOS SwiftUI menu-bar app replacing the browser dashboard (see Mac App section).
+**Shelved plan:** Native macOS SwiftUI menu-bar app replacing the browser dashboard — see MAC APP section (shelved 2026-07-31, spec kept for later).
 
 ---
 
@@ -819,7 +819,12 @@ fork".)
 
 ---
 
-## MAC APP (in progress)
+## MAC APP (shelved 2026-07-31)
+
+**Operator decision 2026-07-31: shelved, not proceeding for now.** Never
+scaffolded — `~/projects/vu2cpl-shack-app/` doesn't exist. Spec kept
+below in case this gets picked back up later; treat everything in this
+section as a plan, not current work. See CLAUDE.md TODO #6 / HANDOVER #6.
 
 **Goal:** Native macOS SwiftUI menu-bar app replacing the browser dashboard.
 
@@ -867,7 +872,7 @@ historical context lives in `SHACK_CHANGELOG.md`, indexed by date.
 | # | Item | Status |
 |---|------|--------|
 | 1 | ~~**Move AS3935 antenna outdoors**~~ | **Done 2026-07-31** — enclosure sealed, 18650+TP4056+solar power chain live, shade-mounted, TUN_CAP retuned post-install. Back to its rated ~40 km detection range instead of the indoor few-km limit. See HANDOVER #1. |
-| 6 | **Mac SwiftUI app (`~/projects/vu2cpl-shack-app/`)** — scaffold not yet started. Native macOS menu-bar app to replace the browser dashboard. Five tabs (Power, Radio, Solar, Lightning, Settings); see "MAC APP" section above for the full spec + build order. Long-term project. See HANDOVER #6. | Pending |
+| 6 | ~~**Mac SwiftUI app (`~/projects/vu2cpl-shack-app/`)**~~ | **Shelved 2026-07-31** — operator decision, not proceeding for now. Never scaffolded. Spec (5 tabs, build order) kept in "MAC APP" section above in case revisited later. See HANDOVER #6. |
 | 35 | ~~**UberSDR Telegram alerting**~~ | **Done 2026-07-31** — receiver offline/back alert wired on `ubersdr_tab`, Manoj-only via the existing shack Telegram bot (same `TELEGRAM_TOKEN`/`TELEGRAM_CHAT_ID` env vars as Lightning/DXCC). See "UberSDR" flow-specific notes below + HANDOVER #35. |
 | 31 | ~~**Rotator → WebSocket gateway**~~ | **Done 2026-06-06** — [`vu2cpl/rotator-remote`](https://github.com/vu2cpl/rotator-remote) (Python/Tornado, `:8090`) now owns the Rotor-EZ FTDI port; the Node-RED Rotator tab is a thin ws-client. Bench-verified against the real rotor. `rebuild_pi.sh` Stage 13b installs it (opt-in). Power stays on Tasmota/MQTT. See HANDOVER #31 + SHACK_CHANGELOG 2026-06-06. |
 | 34 | ~~**SPE Tune — proper button + indicator reflecting the amp's front-panel TUNE LED.**~~ | **Done 2026-06-19 — confirmed on-amp.** Node-RED + Vue only (spe-remote already decodes + broadcasts `tune_active`): `ws_format_state` emits `tune`; the Tune button's **fill colour toggles** neutral→amber to mirror the LED on both UIs (D1 `#spew-tune-btn`; Vue `btn--blue`↔`btn--amber`), Vue `⚡ TUNE` header chip. Operator ran a real TUNE cycle = button amber while LED lit, clears when done. `v14` also reworded the Vue confirm dialog ("Transmit a low-power tuning carrier within a few seconds to start tuning"). See HANDOVER #34 + SHACK_CHANGELOG 2026-06-19. |

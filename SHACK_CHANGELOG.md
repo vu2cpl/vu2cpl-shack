@@ -10,6 +10,21 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-07-31
 
+### Mac SwiftUI app — shelved (closes HANDOVER #6)
+
+Operator decision: not proceeding with the native macOS menu-bar app
+for now. It was never scaffolded — no Xcode project, no code,
+`~/projects/vu2cpl-shack-app/` doesn't exist. Closed as **shelved**
+rather than deleted: CLAUDE.md's "MAC APP" section (5-tab spec,
+build order, CocoaMQTT + `Network.framework` library choices) stays
+in the doc, clearly marked as a shelved plan rather than active or
+in-progress work, in case it's picked back up later. No code changes
+in this repo.
+
+With this, HANDOVER #6, #1 (AS3935 outdoor install), and #35
+(UberSDR alerting) are all closed — no open follow-ups remain as of
+this entry.
+
 ### UberSDR — Telegram offline/back alerting (closes HANDOVER #35)
 
 **New nodes on `ubersdr_tab`:** `ubersdr_tg_xition` (function) →
