@@ -10362,7 +10362,8 @@
         "wires": [
             [
                 "ubersdr_panel",
-                "ubersdr_vue_bridge"
+                "ubersdr_vue_bridge",
+                "ubersdr_tg_xition"
             ]
         ]
     },
@@ -10405,5 +10406,65 @@
                 "uib_shack_01"
             ]
         ]
+    },
+    {
+        "id": "ubersdr_tg_xition",
+        "type": "function",
+        "z": "ubersdr_tab",
+        "name": "Online Transition → Telegram",
+        "func": "// Detects UberSDR receiver online<->offline transitions (from ubersdr_agg's\n// 60s-staleness 'online' flag) and sends a Telegram alert on each flip.\n// First sample after a Node-RED restart is suppressed -- can't tell a\n// transition from initial steady state. Mirrors as3935_health_xition.\nconst online = !!(msg.payload && msg.payload.online);\nconst prev = context.get('lastOnline');\nif (prev === online) return null;\ncontext.set('lastOnline', online);\nif (prev === undefined) return null;\n\nconst token  = env.get('TELEGRAM_TOKEN');\nconst chatId = env.get('TELEGRAM_CHAT_ID');\nif (!token || !chatId) {\n    node.warn('Telegram creds missing — set TELEGRAM_TOKEN/_CHAT_ID in systemd secrets.conf');\n    node.status({fill:'red', shape:'ring', text:'no creds'});\n    return null;\n}\n\nconst tsStr = new Date().toLocaleTimeString();\nlet text;\nif (online) {\n    const p = msg.payload || {};\n    text = `✅ <b>UberSDR BACK ONLINE</b>\\n`\n         + `Listeners: ${p.viewers||0} · CPU: ${p.cpuPct||0}%\\n`\n         + `Time: ${tsStr}`;\n} else {\n    text = `🔴 <b>UberSDR OFFLINE</b>\\n`\n         + `No sessions update in 60s.\\n`\n         + `Time: ${tsStr}`;\n}\n\nmsg.url     = 'https://api.telegram.org/bot' + token + '/sendMessage';\nmsg.method  = 'POST';\nmsg.headers = { 'Content-Type': 'application/json' };\nmsg.payload = {\n    chat_id: chatId,\n    text: text,\n    parse_mode: 'HTML',\n    disable_web_page_preview: true\n};\nnode.status({fill: online ? 'green' : 'red', shape:'dot', text: (online?'online':'offline') + ' @ ' + tsStr});\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 760,
+        "y": 280,
+        "wires": [
+            [
+                "ubersdr_tg_http"
+            ]
+        ]
+    },
+    {
+        "id": "ubersdr_tg_http",
+        "type": "http request",
+        "z": "ubersdr_tab",
+        "name": "UberSDR → Telegram sendMessage",
+        "method": "use",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 1030,
+        "y": 280,
+        "wires": [
+            [
+                "ubersdr_tg_debug"
+            ]
+        ]
+    },
+    {
+        "id": "ubersdr_tg_debug",
+        "type": "debug",
+        "z": "ubersdr_tab",
+        "name": "Telegram response",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1260,
+        "y": 280,
+        "wires": []
     }
 ]

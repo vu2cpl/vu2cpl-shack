@@ -8,6 +8,58 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-07-31
+
+### UberSDR — Telegram offline/back alerting (closes HANDOVER #35)
+
+**New nodes on `ubersdr_tab`:** `ubersdr_tg_xition` (function) →
+`ubersdr_tg_http` (http request) → `ubersdr_tg_debug` (debug). Tab node
+count 6 → 9.
+
+The UberSDR dashboard (landed 2026-07-01) already computes an `online`
+flag in `ubersdr_agg` — `now - sess.ts < 60000`, re-evaluated every 10 s
+by the `ubersdr_replay` inject regardless of new MQTT traffic. That
+flag was deferred as HANDOVER #35 pending two decisions: what triggers
+an alert, and who receives it. Picked back up today and closed both:
+
+- **Trigger:** offline/back only. The 60 s staleness window already
+  absorbs a single missed MQTT publish, so no extra debounce layer was
+  added — CPU >85%, listener-count milestones, and per-band noise
+  spikes were considered and deliberately deferred (noisier, each needs
+  its own threshold tuning, lower value for a receiver-uptime alert).
+- **Recipient:** Manoj-only, via the existing shack Telegram bot — same
+  `TELEGRAM_TOKEN` / `TELEGRAM_CHAT_ID` systemd env vars Lightning's
+  `Init Defaults` and DXCC's Credentials node already read. No new HA
+  path, no new MQTT topic (`shack/alerts/ubersdr` was the alternative
+  sketched in the original TODO — not built).
+
+**`ubersdr_tg_xition`** compares `msg.payload.online` against the last
+value in tab-local `context` (Node-RED `flow` context doesn't cross
+tabs, so this reads `env.get()` directly rather than a shared
+Credentials node — env vars are process-global, unlike flow context).
+First sample after a Node-RED restart is suppressed, since there's no
+way to tell an initial steady state from a transition — same pattern
+as the Lightning tab's `as3935_health_xition`. On a real flip it builds
+an HTML-formatted Telegram message (🔴 `UberSDR OFFLINE` / ✅ `UberSDR
+BACK ONLINE`, the latter including live listener count + SDR CPU%) and
+sets `msg.url` / `msg.method` / `msg.headers` / `msg.payload` for the
+downstream `http request` node — the same blank-URL-on-the-node,
+`msg.url`-set-upstream convention as `tg_lightning_http`.
+
+**Wiring:** tapped off `ubersdr_agg`'s existing single output, alongside
+`ubersdr_panel` and `ubersdr_vue_bridge` — no change to the aggregator
+itself, since the `online` field it needed already existed.
+
+**Edited directly in `flows.json` on Mac** (per CLAUDE.md's "Claude Code
+on Mac ... Flow JSON review and planning" — this was a small, precisely
+scoped addition of 3 nodes + 1 wire, verified via a JSON round-trip
+against the untouched file before editing to confirm no formatting
+drift). Diff is exactly the new wire + 3 new node objects, nothing else
+touched. **Not yet deployed** — needs `git pull` + `sudo systemctl
+restart nodered` on the Pi.
+
+---
+
 ## 2026-07-13
 
 ### `/shack` Vue dashboard stopped populating — uibuilder upgrade + stale-editor-tab flows.json corruption, VU2CPL cluster reverted to :7550

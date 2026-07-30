@@ -118,7 +118,7 @@ git push
 | Lightning Antenna Protector | `75e2cac8ab96f556` | 92 | `8b723cd03854ac2c` |
 | All Power Strips | `b76a5310767803b4` | 48 | `vu2cpl_grp_power` |
 | DXCC Tracker | `d110d176c0aad308` | 77 | `grp_dxcc_stats` |
-| UberSDR | `ubersdr_tab` | 6 | `ubersdr_grp` (on Shack Monitoring tools) |
+| UberSDR | `ubersdr_tab` | 9 | `ubersdr_grp` (on Shack Monitoring tools) |
 
 > Node counts drift as flows evolve — treat as approximate; re-count against
 > `flows.json` if exact. (Re-counted live 2026-06-27.) The SPE tab is
@@ -696,6 +696,28 @@ position.
 the hyphen (`mqtt-broker`). Hand-built flows that get this wrong are
 rejected on import as "unknown types".
 
+### UberSDR
+
+**Telegram offline/back alert (2026-07-31).** `ubersdr_agg` already
+computed an `online` flag (`now - sess.ts < 60000`, re-evaluated every
+10s via `ubersdr_replay`) for the dashboard cards — 3 new nodes on
+`ubersdr_tab` now watch that flag for transitions and alert the shack
+Telegram bot:
+
+| ID | Name | Role |
+|----|------|------|
+| `ubersdr_tg_xition` | Online Transition → Telegram | Compares `msg.payload.online` to the last-seen value (tab-local `context`); first sample after a Node-RED restart is suppressed (mirrors `as3935_health_xition`). Reads `TELEGRAM_TOKEN`/`TELEGRAM_CHAT_ID` directly via `env.get()` — no Credentials node needed since env vars aren't flow-scoped. |
+| `ubersdr_tg_http` | UberSDR → Telegram sendMessage | `http request`, URL blank, `msg.url` set upstream — same shape as `tg_lightning_http`. |
+| `ubersdr_tg_debug` | Telegram response | debug node, sidebar only — same as `tg_lightning_debug`. |
+
+Wired off `ubersdr_agg`'s existing output (alongside `ubersdr_panel` +
+`ubersdr_vue_bridge`), so it fires on every aggregator tick — offline
+alert 🔴 within ~60–70s of the last `sessions` publish going stale,
+back-online ✅ (with listener count + CPU%) on the next fresh publish.
+Manoj-only recipient, same pipeline as Lightning/DXCC alerts — no new
+MQTT topic or HA path. CPU/listener-milestone/noise-spike triggers
+were considered and deferred; add later if wanted.
+
 ---
 
 ## EXTERNAL APIs
@@ -846,7 +868,7 @@ historical context lives in `SHACK_CHANGELOG.md`, indexed by date.
 |---|------|--------|
 | 1 | **Move AS3935 antenna outdoors** — ESP32 bridge (`vu2cpl-as3935-bridge` v0.2.0) running on the bench, ready for field install. Remaining work: enclosure seal, 18650+TP4056+solar power chain, shade mount, post-install TUN_CAP retune to regain rated 40 km range. See HANDOVER #1. | Hardware |
 | 6 | **Mac SwiftUI app (`~/projects/vu2cpl-shack-app/`)** — scaffold not yet started. Native macOS menu-bar app to replace the browser dashboard. Five tabs (Power, Radio, Solar, Lightning, Settings); see "MAC APP" section above for the full spec + build order. Long-term project. See HANDOVER #6. | Pending |
-| 35 | **UberSDR Telegram alerting** — deferred 2026-07-01 (operator: do later). Alert on the new UberSDR dashboard (`ubersdr_tab`): trigger TBD (receiver offline/back recommended; or CPU >85 % / listener milestone / band-noise spike) and recipient TBD (Node-RED shack bot for Manoj, or HA `script.notify_all_telegram` for the family group via MQTT `shack/alerts/ubersdr`). Detection hangs off `ubersdr_agg`'s output. See HANDOVER #35. | Pending |
+| 35 | ~~**UberSDR Telegram alerting**~~ | **Done 2026-07-31** — receiver offline/back alert wired on `ubersdr_tab`, Manoj-only via the existing shack Telegram bot (same `TELEGRAM_TOKEN`/`TELEGRAM_CHAT_ID` env vars as Lightning/DXCC). See "UberSDR" flow-specific notes below + HANDOVER #35. |
 | 31 | ~~**Rotator → WebSocket gateway**~~ | **Done 2026-06-06** — [`vu2cpl/rotator-remote`](https://github.com/vu2cpl/rotator-remote) (Python/Tornado, `:8090`) now owns the Rotor-EZ FTDI port; the Node-RED Rotator tab is a thin ws-client. Bench-verified against the real rotor. `rebuild_pi.sh` Stage 13b installs it (opt-in). Power stays on Tasmota/MQTT. See HANDOVER #31 + SHACK_CHANGELOG 2026-06-06. |
 | 34 | ~~**SPE Tune — proper button + indicator reflecting the amp's front-panel TUNE LED.**~~ | **Done 2026-06-19 — confirmed on-amp.** Node-RED + Vue only (spe-remote already decodes + broadcasts `tune_active`): `ws_format_state` emits `tune`; the Tune button's **fill colour toggles** neutral→amber to mirror the LED on both UIs (D1 `#spew-tune-btn`; Vue `btn--blue`↔`btn--amber`), Vue `⚡ TUNE` header chip. Operator ran a real TUNE cycle = button amber while LED lit, clears when done. `v14` also reworded the Vue confirm dialog ("Transmit a low-power tuning carrier within a few seconds to start tuning"). See HANDOVER #34 + SHACK_CHANGELOG 2026-06-19. |
 
