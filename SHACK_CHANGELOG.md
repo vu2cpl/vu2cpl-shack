@@ -58,6 +58,28 @@ drift). Diff is exactly the new wire + 3 new node objects, nothing else
 touched. Pulled + Node-RED restarted on the Pi same day — **live and
 operator-verified on the dashboard**.
 
+### AS3935 sensor — outdoor install complete (closes HANDOVER #1)
+
+The ESP32 bridge ([`vu2cpl-as3935-bridge`](https://github.com/vu2cpl/vu2cpl-as3935-bridge))
+had been bench-verified since 2026-05-12 (v0.2.0 — full MQTT cmd
+channel, NVS-persisted tunables, on-device TUN_CAP sweep), with the
+physical field install as the one remaining piece of HANDOVER #1.
+That install is done: enclosure sealed, 18650+TP4056+solar power
+chain live, shade-mounted, and TUN_CAP retuned for the new outdoor
+environment (the sweep is location-dependent — the bench value
+doesn't carry over).
+
+Sensor is off the bench and back to its rated ~40 km detection range,
+instead of the indoor few-km limit noted since the original bench
+bring-up. Hardware-only change — no firmware or Node-RED flow
+changes required; the MQTT contract (`lightning/as3935`,
+`lightning/as3935/status`, `lightning/as3935/cmd`+`/ack`) is
+unaffected by sensor location.
+
+Docs updated: CLAUDE.md TODO #1, HANDOVER.md (Open follow-ups #1,
+Current system state, #21's trailing note), README.md Lightning
+Antenna Protector section.
+
 ---
 
 ## 2026-07-13

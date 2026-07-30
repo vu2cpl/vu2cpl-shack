@@ -78,12 +78,12 @@ within a configurable threshold (default 25 km). Two strike sources:
 
 - **Open-Meteo CAPE polling** every 5 min — synthesises a strike
   distance from CAPE values and WMO weather codes (95/96/99 = thunderstorm).
-- **AS3935 chip** sensor — local ~40 km range. Bridged onto MQTT by an
+- **AS3935 chip** sensor — rated ~40 km range. Bridged onto MQTT by an
   ESP-WROOM-32 ([`vu2cpl-as3935-bridge`](https://github.com/vu2cpl/vu2cpl-as3935-bridge),
-  v0.2.0 on the bench since 2026-05-12). Indoor `as3935.service` on the
-  Pi is retained as standby fallback. Outdoor enclosure + 18650/solar
-  build + field install pending — until then the antenna is still
-  indoors, range still ~few km.
+  v0.2.0). Indoor `as3935.service` on the Pi is retained as standby
+  fallback. Installed outdoors 2026-07-31 (sealed enclosure,
+  18650+TP4056+solar power chain, shade mount, TUN_CAP retuned) — off
+  the bench and back to its full rated range.
 
 A vertical **BYPASS** switch on the dashboard suspends auto-disconnect
 for 120 minutes (force-reconnects ant + radio on activation, never

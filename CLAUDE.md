@@ -866,7 +866,7 @@ historical context lives in `SHACK_CHANGELOG.md`, indexed by date.
 
 | # | Item | Status |
 |---|------|--------|
-| 1 | **Move AS3935 antenna outdoors** — ESP32 bridge (`vu2cpl-as3935-bridge` v0.2.0) running on the bench, ready for field install. Remaining work: enclosure seal, 18650+TP4056+solar power chain, shade mount, post-install TUN_CAP retune to regain rated 40 km range. See HANDOVER #1. | Hardware |
+| 1 | ~~**Move AS3935 antenna outdoors**~~ | **Done 2026-07-31** — enclosure sealed, 18650+TP4056+solar power chain live, shade-mounted, TUN_CAP retuned post-install. Back to its rated ~40 km detection range instead of the indoor few-km limit. See HANDOVER #1. |
 | 6 | **Mac SwiftUI app (`~/projects/vu2cpl-shack-app/`)** — scaffold not yet started. Native macOS menu-bar app to replace the browser dashboard. Five tabs (Power, Radio, Solar, Lightning, Settings); see "MAC APP" section above for the full spec + build order. Long-term project. See HANDOVER #6. | Pending |
 | 35 | ~~**UberSDR Telegram alerting**~~ | **Done 2026-07-31** — receiver offline/back alert wired on `ubersdr_tab`, Manoj-only via the existing shack Telegram bot (same `TELEGRAM_TOKEN`/`TELEGRAM_CHAT_ID` env vars as Lightning/DXCC). See "UberSDR" flow-specific notes below + HANDOVER #35. |
 | 31 | ~~**Rotator → WebSocket gateway**~~ | **Done 2026-06-06** — [`vu2cpl/rotator-remote`](https://github.com/vu2cpl/rotator-remote) (Python/Tornado, `:8090`) now owns the Rotor-EZ FTDI port; the Node-RED Rotator tab is a thin ws-client. Bench-verified against the real rotor. `rebuild_pi.sh` Stage 13b installs it (opt-in). Power stays on Tasmota/MQTT. See HANDOVER #31 + SHACK_CHANGELOG 2026-06-06. |
