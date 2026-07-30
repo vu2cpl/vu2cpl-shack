@@ -55,8 +55,7 @@ on Mac ... Flow JSON review and planning" — this was a small, precisely
 scoped addition of 3 nodes + 1 wire, verified via a JSON round-trip
 against the untouched file before editing to confirm no formatting
 drift). Diff is exactly the new wire + 3 new node objects, nothing else
-touched. **Not yet deployed** — needs `git pull` + `sudo systemctl
-restart nodered` on the Pi.
+touched. Pulled + Node-RED restarted on the Pi same day — **live**.
 
 ---
 
