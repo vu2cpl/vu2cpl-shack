@@ -123,6 +123,10 @@ the RBN node table, the DXCC node table, and the DX Clusters note.
 The earlier "repointed to LAN" entry above initially said "no other
 node needed changes" — this entry supersedes that.
 
+**Deployed + operator-verified same day:** after `git pull` + Node-RED
+restart on the Pi, both VU2CPL connections went green with spots
+flowing — the RBN Skimmer tab tile and the DXCC tab's VU2CPL cluster.
+
 ### Network monitor — device list de-duplicated, repointed, one new tile
 
 **Immediate change:** the "Mac RBN" ping target (`4a4d2801d848f882`,
