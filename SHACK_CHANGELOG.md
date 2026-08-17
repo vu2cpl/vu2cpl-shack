@@ -63,18 +63,65 @@ is currently running on the Windows box (`192.168.1.170`) as a test,
 which didn't obviously square with pointing the telnet client at
 `.109`.
 
-Flagged both points to the operator; **confirmed `.109` is correct**
-regardless of the `meridian`/CW-Skimmer mismatch noted above — taking
-the operator's on-the-ground confirmation over the inference from
-`meridian`'s HANDOVER.md. `df7d1786eab4d5a2`'s `host` field changed
-`vu2cpl.ddns.net` → `192.168.1.109` (port unchanged, still `7550`).
-No other node needed changes — `Login Handler VU2CPL`'s no-login
-passthrough behavior depends on the skimmer feed itself having no
-login prompt, not on which network path reaches it, so it's
-unaffected by the host swap. This also takes VU2CPL's RBN-monitoring
-connection off the public DDNS + router-port-forward path entirely,
-onto a direct LAN hop. CLAUDE.md's `df7d1786eab4d5a2` entry updated
-with the new host + history.
+Flagged both points to the operator; **confirmed `.109` is correct** —
+and the follow-up probe (next entry) showed why both facts are true
+at once: meridian *includes a DX-cluster aggregator server*
+(`meridian-core/src/dxcluster/`), so `.109:7550` is meridian
+aggregating the Windows box's CW Skimmer feed. `df7d1786eab4d5a2`'s
+`host` field changed `vu2cpl.ddns.net` → `192.168.1.109` (port
+unchanged, still `7550`), taking VU2CPL's RBN-monitoring connection
+off the public DDNS + router-port-forward path onto a direct LAN
+hop. CLAUDE.md's `df7d1786eab4d5a2` entry updated with the new host
++ history.
+
+### RBN + DXCC — VU2CPL feed requires login now; prompt detection fixed in both handlers
+
+**The real reason the VU2CPL tile was red** — found by asking the
+obvious question the host-swap above didn't answer: if
+`vu2cpl.ddns.net:7550` resolves and connects (it does — verified,
+DDNS + port-forward both fine), why were there no spots?
+
+**Live probe of `.109:7550`:**
+
+```
+Welcome to Aggregator. You are client #19.\r\n
+Please enter your callsign:\r\n
+```
+
+The feed is **not CwSkimmer's raw no-login port anymore** — it's
+meridian's DX-cluster aggregator server, and it **requires a login**.
+Sending `VU2CPL-1\r\n` gets the cluster prompt
+(`VU2CPL-1 de SKIMMER via Aggregator >`) and a working session.
+
+**The bug:** both login handlers (`Login Handler VU2CPL` on the RBN
+tab, `login-parse-dedup-v2` on the DXCC tab — both tcp-ins use
+`newline:""` raw chunks) detect the prompt on the **literal last
+element** of `chunk.split(/\r?\n/)`. CwSkimmer's prompt has no
+trailing newline, so that element used to *be* the prompt — the
+2026-05-17 design assumption. Meridian terminates its prompt with
+`\r\n`, so the last split element is the **empty string**, no
+`endsWith` fragment matches, and the login is never sent. Both
+connections sat at the prompt forever — connected (so nothing looked
+"down" at TCP level) but with zero spots ever flowing. The
+"client #19" count is consistent with weeks of such zombie sessions
+piling up.
+
+**Fix:** both handlers now take the last **non-empty** line for
+prompt detection. Verified against all four wire cases (meridian's
+banner+prompt concatenated, meridian's prompt alone, CwSkimmer's
+unterminated prompt, and a `DX de` spot line → no false positive).
+All existing guards (<40 chars, `endsWith` fragment list — which
+already contained `enter your callsign:`) unchanged. Checked
+meridian's server for duplicate-callsign handling: sessions are
+independent, no kick — both tabs logging in as `VU2CPL-1`
+concurrently is fine.
+
+**Doc corrections that ride along:** CLAUDE.md's claims that "on
+`:7550` there's no prompt at all, so the login handlers no-op"
+(written 2026-07-13, still true then) are now wrong — rewritten in
+the RBN node table, the DXCC node table, and the DX Clusters note.
+The earlier "repointed to LAN" entry above initially said "no other
+node needed changes" — this entry supersedes that.
 
 ### Network monitor — device list de-duplicated, repointed, one new tile
 
