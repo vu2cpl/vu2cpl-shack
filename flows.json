@@ -263,12 +263,14 @@
             "4cf44df9ecf7a0b2",
             "b894bbfaf99f645e",
             "018c746b68e13ffe",
-            "2396f95d5d88dd38"
+            "2396f95d5d88dd38",
+            "netmon_ubersdr_ping",
+            "netmon_ubersdr_stamp"
         ],
         "x": 14,
         "y": 359,
         "w": 852,
-        "h": 502,
+        "h": 580,
         "name": "Network ping + dashboard"
     },
     {
@@ -3831,8 +3833,8 @@
         "z": "b05f8c028b368ae9",
         "g": "0cffa681c4abed74",
         "mode": null,
-        "name": "Mac RBN ",
-        "host": "192.168.1.245",
+        "name": "RBN PC/PI",
+        "host": "192.168.1.164",
         "timer": "10",
         "inputs": 0,
         "x": 120,
@@ -3868,7 +3870,7 @@
         "z": "b05f8c028b368ae9",
         "g": "0cffa681c4abed74",
         "name": "Please Read!! Network Monitoring",
-        "info": "Change PING node IPs to match your equipment.",
+        "info": "To add/change a monitored device: (1) add or edit a `ping` node with the target host, (2) add or edit its matching `stamp X` function -- that's the single place that owns the device's label, display addr, and LAN latency threshold (maxMs), written into flow.net_state.pings[key]. Both dashboards (D1 Network Monitor Panel, Vue NetworkCard) render whatever's in `pings` -- the only other edit needed is adding the new key to the ORDER array in each (D1: this panel's <script>; Vue: NetworkCard's ORDER in uibuilder/shack/src/index.js).",
         "x": 700,
         "y": 820,
         "wires": []
@@ -4188,7 +4190,7 @@
         "order": 1,
         "width": 8,
         "height": 8,
-        "format": "<style>\n.nm{background:#0d1117;color:#c9d1d9;font-family:monospace;font-size:12px;border-radius:6px;padding:10px;}\n.nm-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;border-bottom:1px solid #21262d;padding-bottom:6px;}\n.nm-title{color:#58a6ff;font-weight:bold;font-size:14px;}\n.nm-sec{color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;margin-top:8px;}\n.nm-host-row{display:flex;align-items:center;padding:5px 0;border-bottom:1px solid #21262d;}\n.nm-host-row:last-child{border-bottom:none;}\n.nm-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-right:8px;}\n.nm-dot.up{background:#3fb950;box-shadow:0 0 4px #3fb950;}\n.nm-dot.down{background:#f85149;}\n.nm-name{flex:1;font-size:11px;font-weight:bold;}\n.nm-ms{font-size:11px;font-family:monospace;text-align:right;width:60px;}\n.nm-bar-wrap{flex:1;background:#21262d;border-radius:2px;height:4px;margin:0 8px;max-width:80px;overflow:hidden;}\n.nm-bar{height:4px;border-radius:2px;transition:width 0.3s;}\n.nm-status-box{border-radius:4px;padding:6px 10px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}\n.nm-status-box.up{background:#0d2818;border:1px solid #238636;}\n.nm-status-box.down{background:#2d0808;border:1px solid #a82020;}\n.nm-fail-item{font-size:10px;color:#8b949e;padding:3px 0;border-bottom:1px solid #21262d;}\n.nm-fail-item:last-child{border-bottom:none;}\n.nm-grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:6px;}\n.nm-box{background:#161b22;border:1px solid #21262d;border-radius:4px;padding:5px 7px;text-align:center;}\n.nm-box-lbl{font-size:9px;color:#8b949e;}\n.nm-box-val{font-size:13px;font-weight:bold;margin-top:2px;}\n</style>\n<div class=\"nm\">\n  <div class=\"nm-hdr\">\n    <span class=\"nm-title\">&#127760; Network Monitor</span>\n  </div>\n\n  <div class=\"nm-sec\">Internet Status</div>\n  <div id=\"nm-inet-box\" class=\"nm-status-box up\">\n    <div>\n      <div style=\"font-size:10px;color:#8b949e;\">Status</div>\n      <div id=\"nm-inet-status\" style=\"font-size:14px;font-weight:bold;color:#3fb950;\">&#9679; UP</div>\n    </div>\n    <div style=\"text-align:right;\">\n      <div style=\"font-size:10px;color:#8b949e;\">Total Fails</div>\n      <div id=\"nm-fails\" style=\"font-size:14px;font-weight:bold;color:#58a6ff;\">0</div>\n    </div>\n  </div>\n  <div style=\"font-size:10px;color:#8b949e;margin-bottom:6px;\" id=\"nm-lastfail\">Last fail: —</div>\n\n  <div class=\"nm-sec\">Host Ping Status</div>\n  <div id=\"nm-hosts\"></div>\n\n  <div class=\"nm-sec\">Fail History</div>\n  <div id=\"nm-history\" style=\"background:#161b22;border:1px solid #21262d;border-radius:4px;padding:6px 8px;max-height:120px;overflow-y:auto;\"></div>\n  <div style=\"font-size:9px;color:#8b949e;margin-top:3px;\">Last 10 outages</div>\n</div>\n\n<script>\n(function(){\n  var HOSTS=[\n    {key:'Internet', label:'Internet (8.8.8.8)', maxMs:100},\n    {key:'Flex',     label:'Flex 6600',          maxMs:5},\n    {key:'OpenwebRX',label:'OpenwebRX+',         maxMs:5},\n    {key:'RBN_PC',   label:'Mac RBN',             maxMs:5},\n    {key:'RBN_SDR',  label:'RBN SDR',            maxMs:5}\n  ];\n\n  function msColor(ms, maxMs){\n    if(ms===null) return '#f85149';\n    var pct=ms/maxMs;\n    return pct>0.8?'#f85149':pct>0.5?'#e3b341':'#3fb950';\n  }\n\n  scope.$watch('msg', function(msg){\n    if(!msg||!msg.payload) return;\n    var d=msg.payload;\n\n    // Internet status bar\n    var ibox=document.getElementById('nm-inet-box');\n    var istat=document.getElementById('nm-inet-status');\n    var isUp=(d.status==='up'||d.status===undefined);\n    if(ibox){ ibox.className='nm-status-box '+(isUp?'up':'down'); }\n    if(istat){ istat.textContent='\\u25CF '+(isUp?'UP':'DOWN'); istat.style.color=isUp?'#3fb950':'#f85149'; }\n    if(d.totalFails!==undefined){ var fe=document.getElementById('nm-fails'); if(fe) fe.textContent=d.totalFails; }\n    if(d.lastFail){ var lf=document.getElementById('nm-lastfail'); if(lf) lf.textContent='Last fail: '+d.lastFail; }\n\n    // Host rows\n    if(d.pings){\n      var html='';\n      HOSTS.forEach(function(h){\n        var p=d.pings[h.key];\n        var up=p&&p.up;\n        var ms=p?p.ms:null;\n        var msStr=ms===null?'—':ms+'ms';\n        var col=msColor(ms,h.maxMs);\n        var barW=ms===null?0:Math.min(100,ms/h.maxMs*100);\n        html+='<div class=\"nm-host-row\">'\n            +'<div class=\"nm-dot '+(up?'up':'down')+'\"></div>'\n            +'<div class=\"nm-name\">'+h.label+'</div>'\n            +'<div class=\"nm-bar-wrap\"><div class=\"nm-bar\" style=\"width:'+barW.toFixed(0)+'%;background:'+col+';\"></div></div>'\n            +'<div class=\"nm-ms\" style=\"color:'+col+'\">'+msStr+'</div>'\n            +'</div>';\n      });\n      var he=document.getElementById('nm-hosts');\n      if(he) he.innerHTML=html||'<div style=\"color:#8b949e;font-size:10px;\">Waiting for ping data...</div>';\n    }\n\n    // Fail history\n    if(d.failHistory!==undefined){\n      var fh=d.failHistory;\n      var fhtml=fh.length?fh.map(function(f){ return '<div class=\"nm-fail-item\">'+f+'</div>'; }).join('')\n                        :'<div style=\"color:#8b949e;font-size:10px;padding:4px;\">No outages recorded</div>';\n      var fhe=document.getElementById('nm-history');\n      if(fhe) fhe.innerHTML=fhtml;\n    }\n  });\n})();\n</script>",
+        "format": "<style>\n.nm{background:#0d1117;color:#c9d1d9;font-family:monospace;font-size:12px;border-radius:6px;padding:10px;}\n.nm-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;border-bottom:1px solid #21262d;padding-bottom:6px;}\n.nm-title{color:#58a6ff;font-weight:bold;font-size:14px;}\n.nm-sec{color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;margin-top:8px;}\n.nm-host-row{display:flex;align-items:center;padding:5px 0;border-bottom:1px solid #21262d;}\n.nm-host-row:last-child{border-bottom:none;}\n.nm-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-right:8px;}\n.nm-dot.up{background:#3fb950;box-shadow:0 0 4px #3fb950;}\n.nm-dot.down{background:#f85149;}\n.nm-name{flex:1;font-size:11px;font-weight:bold;}\n.nm-ms{font-size:11px;font-family:monospace;text-align:right;width:60px;}\n.nm-bar-wrap{flex:1;background:#21262d;border-radius:2px;height:4px;margin:0 8px;max-width:80px;overflow:hidden;}\n.nm-bar{height:4px;border-radius:2px;transition:width 0.3s;}\n.nm-status-box{border-radius:4px;padding:6px 10px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}\n.nm-status-box.up{background:#0d2818;border:1px solid #238636;}\n.nm-status-box.down{background:#2d0808;border:1px solid #a82020;}\n.nm-fail-item{font-size:10px;color:#8b949e;padding:3px 0;border-bottom:1px solid #21262d;}\n.nm-fail-item:last-child{border-bottom:none;}\n.nm-grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:6px;}\n.nm-box{background:#161b22;border:1px solid #21262d;border-radius:4px;padding:5px 7px;text-align:center;}\n.nm-box-lbl{font-size:9px;color:#8b949e;}\n.nm-box-val{font-size:13px;font-weight:bold;margin-top:2px;}\n</style>\n<div class=\"nm\">\n  <div class=\"nm-hdr\">\n    <span class=\"nm-title\">&#127760; Network Monitor</span>\n  </div>\n\n  <div class=\"nm-sec\">Internet Status</div>\n  <div id=\"nm-inet-box\" class=\"nm-status-box up\">\n    <div>\n      <div style=\"font-size:10px;color:#8b949e;\">Status</div>\n      <div id=\"nm-inet-status\" style=\"font-size:14px;font-weight:bold;color:#3fb950;\">&#9679; UP</div>\n    </div>\n    <div style=\"text-align:right;\">\n      <div style=\"font-size:10px;color:#8b949e;\">Total Fails</div>\n      <div id=\"nm-fails\" style=\"font-size:14px;font-weight:bold;color:#58a6ff;\">0</div>\n    </div>\n  </div>\n  <div style=\"font-size:10px;color:#8b949e;margin-bottom:6px;\" id=\"nm-lastfail\">Last fail: —</div>\n\n  <div class=\"nm-sec\">Host Ping Status</div>\n  <div id=\"nm-hosts\"></div>\n\n  <div class=\"nm-sec\">Fail History</div>\n  <div id=\"nm-history\" style=\"background:#161b22;border:1px solid #21262d;border-radius:4px;padding:6px 8px;max-height:120px;overflow-y:auto;\"></div>\n  <div style=\"font-size:9px;color:#8b949e;margin-top:3px;\">Last 10 outages</div>\n</div>\n\n<script>\n(function(){\n  // Display order + which keys to show only -- label and maxMs (per-device\n  // LAN latency threshold) now come from Node-RED's pings payload itself\n  // (see the \"stamp X\" functions on this flow tab), so this is the only\n  // thing to edit here when a device is added/removed.\n  var ORDER=['Internet','Flex','OpenwebRX','RBN_PC','RBN_SDR','UBERSDR'];\n\n  function msColor(ms, maxMs){\n    if(ms===null) return '#f85149';\n    var pct=ms/maxMs;\n    return pct>0.8?'#f85149':pct>0.5?'#e3b341':'#3fb950';\n  }\n\n  scope.$watch('msg', function(msg){\n    if(!msg||!msg.payload) return;\n    var d=msg.payload;\n\n    // Internet status bar\n    var ibox=document.getElementById('nm-inet-box');\n    var istat=document.getElementById('nm-inet-status');\n    var isUp=(d.status==='up'||d.status===undefined);\n    if(ibox){ ibox.className='nm-status-box '+(isUp?'up':'down'); }\n    if(istat){ istat.textContent='\\u25CF '+(isUp?'UP':'DOWN'); istat.style.color=isUp?'#3fb950':'#f85149'; }\n    if(d.totalFails!==undefined){ var fe=document.getElementById('nm-fails'); if(fe) fe.textContent=d.totalFails; }\n    if(d.lastFail){ var lf=document.getElementById('nm-lastfail'); if(lf) lf.textContent='Last fail: '+d.lastFail; }\n\n    // Host rows\n    if(d.pings){\n      var html='';\n      ORDER.forEach(function(key){\n        var p=d.pings[key];\n        if(!p) return;\n        var up=p.up;\n        var ms=p.ms;\n        var maxMs=p.maxMs||50;\n        var label=p.label||key;\n        var msStr=ms===null?'—':ms+'ms';\n        var col=msColor(ms,maxMs);\n        var barW=ms===null?0:Math.min(100,ms/maxMs*100);\n        html+='<div class=\"nm-host-row\">'\n            +'<div class=\"nm-dot '+(up?'up':'down')+'\"></div>'\n            +'<div class=\"nm-name\">'+label+'</div>'\n            +'<div class=\"nm-bar-wrap\"><div class=\"nm-bar\" style=\"width:'+barW.toFixed(0)+'%;background:'+col+';\"></div></div>'\n            +'<div class=\"nm-ms\" style=\"color:'+col+'\">'+msStr+'</div>'\n            +'</div>';\n      });\n      var he=document.getElementById('nm-hosts');\n      if(he) he.innerHTML=html||'<div style=\"color:#8b949e;font-size:10px;\">Waiting for ping data...</div>';\n    }\n\n    // Fail history\n    if(d.failHistory!==undefined){\n      var fh=d.failHistory;\n      var fhtml=fh.length?fh.map(function(f){ return '<div class=\"nm-fail-item\">'+f+'</div>'; }).join('')\n                        :'<div style=\"color:#8b949e;font-size:10px;padding:4px;\">No outages recorded</div>';\n      var fhe=document.getElementById('nm-history');\n      if(fhe) fhe.innerHTML=fhtml;\n    }\n  });\n})();\n</script>",
         "storeOutMessages": true,
         "fwdInMessages": false,
         "resendOnRefresh": true,
@@ -4206,7 +4208,7 @@
         "z": "b05f8c028b368ae9",
         "g": "0cffa681c4abed74",
         "name": "stamp Internet",
-        "func": "var p=msg.payload;\nif(!st) var st=flow.get('net_state')||{};\nif(!st.pings) st.pings={};\nst.pings['Internet']={ms:p===false?null:parseFloat(p)||0, up:p!==false};\nflow.set('net_state',st);\nmsg.payload=Object.assign({},st);\nreturn msg;",
+        "func": "var p=msg.payload;\nif(!st) var st=flow.get('net_state')||{};\nif(!st.pings) st.pings={};\nst.pings['Internet']={ms:p===false?null:parseFloat(p)||0, up:p!==false, label:'Internet', addr:'www.google.com', maxMs:100};\nflow.set('net_state',st);\nmsg.payload=Object.assign({},st);\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
@@ -4226,7 +4228,7 @@
         "z": "b05f8c028b368ae9",
         "g": "0cffa681c4abed74",
         "name": "stamp Flex",
-        "func": "var p=msg.payload;\nif(!st) var st=flow.get('net_state')||{};\nif(!st.pings) st.pings={};\nst.pings['Flex']={ms:p===false?null:parseFloat(p)||0, up:p!==false};\nflow.set('net_state',st);\nmsg.payload=Object.assign({},st);\nreturn msg;",
+        "func": "var p=msg.payload;\nif(!st) var st=flow.get('net_state')||{};\nif(!st.pings) st.pings={};\nst.pings['Flex']={ms:p===false?null:parseFloat(p)||0, up:p!==false, label:'FlexRadio', addr:'192.168.1.148', maxMs:5};\nflow.set('net_state',st);\nmsg.payload=Object.assign({},st);\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
@@ -4246,7 +4248,7 @@
         "z": "b05f8c028b368ae9",
         "g": "0cffa681c4abed74",
         "name": "stamp OpenwebRX",
-        "func": "var p=msg.payload;\nif(!st) var st=flow.get('net_state')||{};\nif(!st.pings) st.pings={};\nst.pings['OpenwebRX']={ms:p===false?null:parseFloat(p)||0, up:p!==false};\nflow.set('net_state',st);\nmsg.payload=Object.assign({},st);\nreturn msg;",
+        "func": "var p=msg.payload;\nif(!st) var st=flow.get('net_state')||{};\nif(!st.pings) st.pings={};\nst.pings['OpenwebRX']={ms:p===false?null:parseFloat(p)||0, up:p!==false, label:'OpenwebRX+', addr:'192.168.1.158', maxMs:5};\nflow.set('net_state',st);\nmsg.payload=Object.assign({},st);\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
@@ -4266,7 +4268,7 @@
         "z": "b05f8c028b368ae9",
         "g": "0cffa681c4abed74",
         "name": "stamp RBN_PC",
-        "func": "var p=msg.payload;\nif(!st) var st=flow.get('net_state')||{};\nif(!st.pings) st.pings={};\nst.pings['RBN_PC']={ms:p===false?null:parseFloat(p)||0, up:p!==false};\nflow.set('net_state',st);\nmsg.payload=Object.assign({},st);\nreturn msg;",
+        "func": "var p=msg.payload;\nif(!st) var st=flow.get('net_state')||{};\nif(!st.pings) st.pings={};\nst.pings['RBN_PC']={ms:p===false?null:parseFloat(p)||0, up:p!==false, label:'RBN PC/PI', addr:'192.168.1.164', maxMs:5};\nflow.set('net_state',st);\nmsg.payload=Object.assign({},st);\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
@@ -4286,7 +4288,7 @@
         "z": "b05f8c028b368ae9",
         "g": "0cffa681c4abed74",
         "name": "stamp RBN_SDR",
-        "func": "var p=msg.payload;\nif(!st) var st=flow.get('net_state')||{};\nif(!st.pings) st.pings={};\nst.pings['RBN_SDR']={ms:p===false?null:parseFloat(p)||0, up:p!==false};\nflow.set('net_state',st);\nmsg.payload=Object.assign({},st);\nreturn msg;",
+        "func": "var p=msg.payload;\nif(!st) var st=flow.get('net_state')||{};\nif(!st.pings) st.pings={};\nst.pings['RBN_SDR']={ms:p===false?null:parseFloat(p)||0, up:p!==false, label:'RBN SDR', addr:'192.168.1.241', maxMs:5};\nflow.set('net_state',st);\nmsg.payload=Object.assign({},st);\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
@@ -4294,6 +4296,45 @@
         "libs": [],
         "x": 370,
         "y": 780,
+        "wires": [
+            [
+                "4cf44df9ecf7a0b2"
+            ]
+        ]
+    },
+    {
+        "id": "netmon_ubersdr_ping",
+        "type": "ping",
+        "z": "b05f8c028b368ae9",
+        "g": "0cffa681c4abed74",
+        "mode": null,
+        "name": "Ubersdr",
+        "host": "192.168.1.109",
+        "timer": "10",
+        "inputs": 0,
+        "x": 130,
+        "y": 860,
+        "wires": [
+            [
+                "netmon_ubersdr_stamp"
+            ]
+        ]
+    },
+    {
+        "id": "netmon_ubersdr_stamp",
+        "type": "function",
+        "z": "b05f8c028b368ae9",
+        "g": "0cffa681c4abed74",
+        "name": "stamp Ubersdr",
+        "func": "var p=msg.payload;\nif(!st) var st=flow.get('net_state')||{};\nif(!st.pings) st.pings={};\nst.pings['UBERSDR']={ms:p===false?null:parseFloat(p)||0, up:p!==false, label:'Ubersdr', addr:'192.168.1.109', maxMs:5};\nflow.set('net_state',st);\nmsg.payload=Object.assign({},st);\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 860,
         "wires": [
             [
                 "4cf44df9ecf7a0b2"

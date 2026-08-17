@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v19 · 2026-07-01 UberSDR band bar = waterfall only';
+window.__shackBuild = 'v20 · 2026-07-31 NetworkCard reads device list from Node-RED';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -2646,16 +2646,16 @@ const NetworkCard = {
     const expanded = ref(false);
     const state = reactive({ pings: {}, status: null, totalFails: null, lastFail: null });
 
-    // FORK: your network-monitor hosts. `addr` is a display label only (the ping
-    // data comes from Node-RED, keyed by `key`); `key` must match the stamp
-    // functions on the Internet/network monitor flow tab. Edit both to your gear.
-    const hosts = [
-      { key:'Internet',  label:'Internet',  addr:'www.google.com'  },
-      { key:'Flex',      label:'FlexRadio', addr:'192.168.1.148'   },
-      { key:'OpenwebRX', label:'OpenwebRX+',addr:'192.168.1.158'   },
-      { key:'RBN_PC',    label:'Mac RBN',   addr:'192.168.1.245'   },
-      { key:'RBN_SDR',   label:'RBN SDR',   addr:'192.168.1.241'   }
-    ];
+    // Device label/addr now live in Node-RED (each "stamp X" function on the
+    // Internet/network monitor flow tab) and arrive via state.pings[key] — this
+    // card just renders whatever it's sent. ORDER only fixes display order and
+    // which keys to show; adding a new device still means adding a ping+stamp
+    // pair in Node-RED, then adding its key here (FORK: your device keys).
+    const ORDER = ['Internet', 'Flex', 'OpenwebRX', 'RBN_PC', 'RBN_SDR', 'UBERSDR'];
+    const hosts = computed(() => ORDER.map(key => {
+      const p = state.pings?.[key];
+      return { key, label: p?.label || key, addr: p?.addr || '' };
+    }));
 
     function pingFor(key) { return state.pings?.[key] || {}; }
     function latencyColor(ms) {
@@ -2683,13 +2683,13 @@ const NetworkCard = {
     }
 
     const upCount = computed(() =>
-      hosts.filter(h => pingFor(h.key).up === true).length
+      hosts.value.filter(h => pingFor(h.key).up === true).length
     );
     const anyDown = computed(() =>
-      hosts.some(h => pingFor(h.key).up === false)
+      hosts.value.some(h => pingFor(h.key).up === false)
     );
     const avgMs = computed(() => {
-      const ups = hosts.map(h => pingFor(h.key)).filter(p => p.up === true && p.ms != null);
+      const ups = hosts.value.map(h => pingFor(h.key)).filter(p => p.up === true && p.ms != null);
       if (!ups.length) return null;
       return Math.round(ups.reduce((s, p) => s + p.ms, 0) / ups.length);
     });

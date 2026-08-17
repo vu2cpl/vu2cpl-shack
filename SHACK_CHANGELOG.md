@@ -10,6 +10,117 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-07-31
 
+### Stale Node-RED editor tab reverted `flows.json` — second occurrence
+
+Same failure mode as 2026-07-13 (see that date's entry below and
+HANDOVER.md "Known weirdness"): a browser tab left open since before
+recent changes got Deployed from, silently pushing its stale
+in-memory flow model to disk and clobbering everything done since via
+other tabs or direct edits. The diff stat — **3016 insertions(+), 3069
+deletions(-)** — is an exact match to the original incident's numbers,
+which makes it near-certain this was the *same* tab, never closed in
+the intervening weeks.
+
+**Diagnosis, this time faster:** operator reported "minor Pi flow
+change, then `/shack` stopped working, but `/ui` still works." That
+D1-fine/Vue-broken split is itself now a documented triage signal —
+D1's widgets wire directly to their own data, no shared choke point,
+while every Vue card funnels through one node (`uib_shack_01`).
+Confirmed via `grep -c uib_shack_01 flows.json` (1) vs `git show
+HEAD:flows.json | grep -c uib_shack_01` (15) — matching the 2026-07-13
+symptom (every Vue-bridge wire but one reverted) exactly.
+
+**Fix:** same as last time — `cp flows.json /tmp/flows.json.broken.*`
+as a safety copy, `git restore flows.json`, `sudo systemctl restart
+nodered`.
+
+**Casualty:** the operator's actual intended edit — repointing the
+VU2CPL RBN skimmer's telnet client off `vu2cpl.ddns.net` to a LAN
+IP — was uncommitted, so the `git restore` discarded it along with
+the corruption. Not yet redone as of this entry; needs the operator
+to confirm the right target host first (see RBN Skimmer Monitor note
+below).
+
+**Follow-up:** "hard-refresh the tab before deploying" was already
+the documented mitigation after the first incident and evidently
+wasn't enough — the operator's own call was to route small edits
+through Claude editing `flows.json` directly on the Mac instead of
+the browser editor whenever the edit doesn't need the visual canvas,
+sidestepping the whole stale-tab class of bug rather than relying on
+remembering to refresh.
+
+### RBN Skimmer Monitor — VU2CPL telnet target needs confirming
+
+Operator reports the VU2CPL tile is showing red (down) despite
+believing it was pointed at `192.168.1.109`. Two things worth
+reconciling before this gets fixed: (1) the currently-committed flow
+still has `Telnet VU2CPL :7550` (`df7d1786eab4d5a2`) pointed at
+`vu2cpl.ddns.net`, not `.109` — almost certainly the edit lost in the
+stale-tab revert above. (2) `.109` is the "ubersdr box," which per
+`~/projects/meridian/HANDOVER.md` runs `meridian` (an SDR/IQ tool),
+not CW Skimmer — the operator separately said CW Skimmer itself is
+currently running on the Windows box (`192.168.1.170`) as a test.
+Pointing at `.109` would explain the permanent red regardless of any
+other fix, since nothing there listens on port 7550. **Open, pending
+operator confirmation of the correct host** — not changed in this
+session.
+
+### Network monitor — device list de-duplicated, repointed, one new tile
+
+**Immediate change:** the "Mac RBN" ping target (`4a4d2801d848f882`,
+`192.168.1.245`) is a Mac that's no longer active. Repointed + renamed
+to **RBN PC/PI** (`192.168.1.164` — the Pi running `meridian`). Added
+a new **Ubersdr** tile (`192.168.1.109`, new `ping` node
+`netmon_ubersdr_ping` + `function` node `netmon_ubersdr_stamp`) for
+the ubersdr box, also running `meridian`. `b05f8c028b368ae9` node
+count 28 → 30.
+
+**Underlying fix — the actual ask.** The operator's complaint wasn't
+just "change this one host," it was "I have to edit this in multiple
+places every time." True: each device's label, display address, and
+LAN-latency color threshold (`maxMs`) were hardcoded independently in
+**three** spots — the D1 `Network Monitor Panel` ui_template's
+`HOSTS` array, the Vue `NetworkCard`'s `hosts` array
+(`uibuilder/shack/src/index.js`, previously `// FORK:`-marked), and
+implicitly via the ping node's own host field. A relabel meant editing
+JavaScript in two different files in two different runtimes (Node-RED
+backend, browser frontend) just to keep them agreeing.
+
+Consolidated so **each `stamp X` function is the single owner** of its
+device's `label`, `addr`, and `maxMs`, written straight into
+`flow.net_state.pings[key]` alongside the existing `ms`/`up` fields —
+colocated on the canvas right next to that device's `ping` node, so
+changing a target and its label/threshold happens in one place you're
+already looking at. Both dashboards now render whatever's in `pings`
+dynamically:
+
+- **D1** (`Network Monitor Panel`, `4cf44df9ecf7a0b2`): the hardcoded
+  `HOSTS` array became an `ORDER` array of keys only; the render loop
+  looks up `label`/`maxMs` from each ping's own data (falling back to
+  the key name / `maxMs=50` if a brand-new device hasn't reported in
+  yet).
+- **Vue** (`NetworkCard`): the hardcoded `hosts` array (with baked-in
+  label/addr) became a `computed()` deriving `{key, label, addr}` from
+  `state.pings` off the same kind of `ORDER` array. `upCount`/
+  `anyDown`/`avgMs` computeds updated to read `hosts.value` accordingly
+  (`hosts` is no longer a plain array). Build stamp → `v20`,
+  `index.html` cache-buster → `?v=20`.
+
+**What still needs a two-place edit:** the `ORDER` array itself (which
+keys to show, in what order) — D1's lives in the panel's own
+`<script>`, Vue's in `NetworkCard`. Adding a genuinely new device still
+means adding a `ping`+`stamp` pair in Node-RED regardless (inherent to
+one-ping-node-per-device), so bumping both tiny `ORDER` lists at the
+same time is a minor addendum, not the full label/addr/threshold
+triplication this fix removes. The "Please Read!!" comment node on
+this flow tab documents the convention for next time.
+
+Syntax-checked (`node --check`) on all 6 stamp function bodies, the D1
+panel's embedded `<script>`, and the full Vue `index.js`; JSON
+round-trips clean. CLAUDE.md gained a new "Internet and network
+monitor" flow-specific-notes subsection with the current device table
+(FLOW TABS node count 28→30 too).
+
 ### Mac SwiftUI app — shelved (closes HANDOVER #6)
 
 Operator decision: not proceeding with the native macOS menu-bar app

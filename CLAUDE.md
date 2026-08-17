@@ -114,7 +114,7 @@ git push
 | Solar | `590e889d44815afb` | 37 | `vu2cpl_grp_solar` |
 | RBN Skimmer Monitor | `f9a0e3ad0e019052` | 21 | `1bcbc2eb8f2124aa` |
 | RPi Fleet Monitor | `d5fec2fea3dd37f4` | 30 | `f8d1f7eb7403a442` |
-| Internet and network monitor | `b05f8c028b368ae9` | 28 | `f10110e00bae2689` |
+| Internet and network monitor | `b05f8c028b368ae9` | 30 | `f10110e00bae2689` |
 | Lightning Antenna Protector | `75e2cac8ab96f556` | 92 | `8b723cd03854ac2c` |
 | All Power Strips | `b76a5310767803b4` | 48 | `vu2cpl_grp_power` |
 | DXCC Tracker | `d110d176c0aad308` | 77 | `grp_dxcc_stats` |
@@ -695,6 +695,40 @@ position.
 (with a space), not `"mqtt-in"`. Only the broker config node uses
 the hyphen (`mqtt-broker`). Hand-built flows that get this wrong are
 rejected on import as "unknown types".
+
+### Internet and network monitor (`b05f8c028b368ae9`)
+
+Pings a small set of local + internet hosts every ~10s via 5 `ping`
+nodes, each wired to its own "stamp X" function that writes into
+`flow.net_state.pings[key]`. **Device label, display address, and
+LAN latency threshold (`maxMs`) are owned by the stamp function, not
+duplicated in either dashboard** (fixed 2026-07-31 — previously these
+were hardcoded separately in the D1 `Network Monitor Panel` template
+*and* the Vue `NetworkCard`, so one device change meant three edits
+across two languages). Both dashboards now render whatever's in
+`pings`; the only thing each still needs locally is an `ORDER` array
+of keys (display order + which keys to show) — D1's lives in the
+panel's own `<script>`, Vue's in `NetworkCard`
+(`uibuilder/shack/src/index.js`, `// FORK:`-marked).
+
+**To add or change a monitored device:** add/edit a `ping` node with
+the target host, add/edit its matching `stamp X` function (label,
+addr, maxMs), then add the key to `ORDER` in both dashboards if it's
+a new device — see the "Please Read!!" comment node on this tab.
+
+| key | label | host | maxMs |
+|-----|-------|------|-------|
+| `Internet`  | Internet   | www.google.com | 100 |
+| `Flex`      | FlexRadio  | 192.168.1.148  | 5 |
+| `OpenwebRX` | OpenwebRX+ | 192.168.1.158  | 5 |
+| `RBN_PC`    | RBN PC/PI  | 192.168.1.164  | 5 |
+| `RBN_SDR`   | RBN SDR    | 192.168.1.241  | 5 |
+| `UBERSDR`   | Ubersdr    | 192.168.1.109  | 5 |
+
+`RBN_PC` was "Mac RBN", pinging a Mac (`192.168.1.245`) that's no
+longer active — repointed 2026-07-31 to the Pi running `meridian`
+(`192.168.1.164`). `UBERSDR` is a new tile added the same day, for
+the ubersdr box also running `meridian` (`192.168.1.109`).
 
 ### UberSDR
 
