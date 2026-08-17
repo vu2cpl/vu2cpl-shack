@@ -173,6 +173,10 @@ Both nodes now uniformly on the DDNS name. TODO #36 (HANDOVER)
 updated: the meridian cutover needs no flow change at all now — just
 the router forward + verification once meridian's decoders are done.
 
+**Deployed + operator-verified same evening:** pull + restart on the
+Pi, both VU2CPL connections green with spots flowing over the DDNS
+path.
+
 ### Network monitor — device list de-duplicated, repointed, one new tile
 
 **Immediate change:** the "Mac RBN" ping target (`4a4d2801d848f882`,
