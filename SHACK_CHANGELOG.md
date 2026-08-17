@@ -151,6 +151,28 @@ still reach the DXCC tab via the full clusters (N2WQ/VE7CC); the RBN
 Skimmer tab's sources are skimmer-telnet feeds only, so it stays
 CW-only unless UberSDR grows an FT8 spot output someday.
 
+### VU2CPL feed — back on `vu2cpl.ddns.net`; router forward becomes the server switch-point
+
+Evening follow-up to the entries above. Operator decided to test
+meridian by **repointing the router's `:7550` port-forward** at it —
+and asked whether Node-RED would pick that up automatically. It
+wouldn't have: the morning's LAN repoint had taken the RBN tab's
+`tcp in` straight to `.109`, bypassing the router. So, per operator's
+call, the RBN node (`df7d1786eab4d5a2`) went back to
+`vu2cpl.ddns.net:7550` — hairpin NAT verified working from inside the
+LAN — making the router forward the single switch-point for which
+server (UberSDR's Aggregator vs meridian) feeds both tabs, with no
+Node-RED edits needed per switch.
+
+Discovered while making the change: the DXCC tab's
+`cf2f9b095d6f1624` **had been on `vu2cpl.ddns.net` all along** — the
+morning's "repointed to LAN" commit (`4b17770`) only changed the RBN
+node, and the doc claims that both connections went LAN-direct were
+wrong (corrected in CLAUDE.md's DX Clusters note + node tables).
+Both nodes now uniformly on the DDNS name. TODO #36 (HANDOVER)
+updated: the meridian cutover needs no flow change at all now — just
+the router forward + verification once meridian's decoders are done.
+
 ### Network monitor — device list de-duplicated, repointed, one new tile
 
 **Immediate change:** the "Mac RBN" ping target (`4a4d2801d848f882`,

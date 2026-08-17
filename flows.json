@@ -2803,7 +2803,7 @@
         "z": "f9a0e3ad0e019052",
         "name": "Telnet VU2CPL :7550",
         "server": "client",
-        "host": "192.168.1.109",
+        "host": "vu2cpl.ddns.net",
         "port": "7550",
         "datatype": "utf8",
         "newline": "",
