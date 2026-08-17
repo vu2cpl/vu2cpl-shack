@@ -430,7 +430,7 @@
         "tab": "vu2cpl_ui_tab_shack",
         "order": 1,
         "disp": false,
-        "width": 8,
+        "width": 18,
         "collapse": false,
         "className": ""
     },
@@ -492,7 +492,7 @@
         "tab": "bcce4e07ac31b882",
         "order": 24,
         "disp": true,
-        "width": 8,
+        "width": 18,
         "collapse": true,
         "className": ""
     },
@@ -525,7 +525,7 @@
         "tab": "vu2cpl_ui_tab_shack",
         "order": 11,
         "disp": false,
-        "width": 8,
+        "width": 18,
         "collapse": false,
         "className": ""
     },

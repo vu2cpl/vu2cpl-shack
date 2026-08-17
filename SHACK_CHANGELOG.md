@@ -151,6 +151,32 @@ still reach the DXCC tab via the full clusters (N2WQ/VE7CC); the RBN
 Skimmer tab's sources are skimmer-telnet feeds only, so it stays
 CW-only unless UberSDR grows an FT8 spot output someday.
 
+### Editor red triangles on 3 ui panels — group widths aligned to widgets
+
+Operator asked why some ui panels show red in the editor, suspecting
+a link to the two flows.json revert incidents. Diagnosis: three
+widgets — `eee1a8b8552aa21f` (Header — Clocks + Weather, 18×2),
+`1edeb9703cae2fcb` (RBN Skimmer Panel, 18×8), `38a6451a95a57685`
+(DXCC Dashboard, 18×12) — are 18 units wide inside `ui_group`s
+declared width 8 (`vu2cpl_grp_header`, `1bcbc2eb8f2124aa`,
+`grp_dxcc_stats`). The editor red-flags any widget wider than its
+group.
+
+**Not incident damage:** a sweep of the last 40 flows.json commits
+(back to 2026-05-26) shows the 8-vs-18 mismatch unchanged the whole
+time — it predates both stale-tab incidents and neither caused nor
+was caused by them. D1 renders fine regardless because the card
+auto-grows to fit the widget, which is why nothing ever looked wrong
+on `/ui`. The one real cost: invalid nodes make the editor pop the
+"workspace contains invalid nodes — deploy anyway?" confirmation on
+every Deploy, which habituates click-through on exactly the kind of
+warning dialog that a stale-tab Deploy rides in on.
+
+**Fix:** the three groups' width set 8 → 18, matching their widgets
+(the repo convention everywhere else — Lightning 12/12, gpsntp
+10/10). Render-neutral in practice; clears the red triangles and the
+deploy-time warning.
+
 ### VU2CPL feed — back on `vu2cpl.ddns.net`; router forward becomes the server switch-point
 
 Evening follow-up to the entries above. Operator decided to test
