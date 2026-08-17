@@ -49,21 +49,32 @@ the browser editor whenever the edit doesn't need the visual canvas,
 sidestepping the whole stale-tab class of bug rather than relying on
 remembering to refresh.
 
-### RBN Skimmer Monitor — VU2CPL telnet target needs confirming
+### RBN Skimmer Monitor — VU2CPL telnet target repointed to LAN
 
-Operator reports the VU2CPL tile is showing red (down) despite
-believing it was pointed at `192.168.1.109`. Two things worth
-reconciling before this gets fixed: (1) the currently-committed flow
-still has `Telnet VU2CPL :7550` (`df7d1786eab4d5a2`) pointed at
+Operator reported the VU2CPL tile showing red (down) despite
+believing it was pointed at `192.168.1.109`. Two things needed
+reconciling before fixing this: (1) the currently-committed flow
+still had `Telnet VU2CPL :7550` (`df7d1786eab4d5a2`) pointed at
 `vu2cpl.ddns.net`, not `.109` — almost certainly the edit lost in the
 stale-tab revert above. (2) `.109` is the "ubersdr box," which per
 `~/projects/meridian/HANDOVER.md` runs `meridian` (an SDR/IQ tool),
-not CW Skimmer — the operator separately said CW Skimmer itself is
-currently running on the Windows box (`192.168.1.170`) as a test.
-Pointing at `.109` would explain the permanent red regardless of any
-other fix, since nothing there listens on port 7550. **Open, pending
-operator confirmation of the correct host** — not changed in this
-session.
+not CW Skimmer — the operator had separately said CW Skimmer itself
+is currently running on the Windows box (`192.168.1.170`) as a test,
+which didn't obviously square with pointing the telnet client at
+`.109`.
+
+Flagged both points to the operator; **confirmed `.109` is correct**
+regardless of the `meridian`/CW-Skimmer mismatch noted above — taking
+the operator's on-the-ground confirmation over the inference from
+`meridian`'s HANDOVER.md. `df7d1786eab4d5a2`'s `host` field changed
+`vu2cpl.ddns.net` → `192.168.1.109` (port unchanged, still `7550`).
+No other node needed changes — `Login Handler VU2CPL`'s no-login
+passthrough behavior depends on the skimmer feed itself having no
+login prompt, not on which network path reaches it, so it's
+unaffected by the host swap. This also takes VU2CPL's RBN-monitoring
+connection off the public DDNS + router-port-forward path entirely,
+onto a direct LAN hop. CLAUDE.md's `df7d1786eab4d5a2` entry updated
+with the new host + history.
 
 ### Network monitor — device list de-duplicated, repointed, one new tile
 
