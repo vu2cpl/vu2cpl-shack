@@ -905,6 +905,7 @@ historical context lives in `SHACK_CHANGELOG.md`, indexed by date.
 
 | # | Item | Status |
 |---|------|--------|
+| 36 | **FT8 spots on the RBN Skimmer tab** — waiting on `~/projects/meridian` completion. The VU2CPL feed (UberSDR's Aggregator, `192.168.1.109:7550`) is CW/RTTY-only by design; meridian's dxcluster server speaks the same wire contract and is expected to serve FT8 too. When ready: repoint `df7d1786eab4d5a2` (RBN) + `cf2f9b095d6f1624` (DXCC) and re-test — login handlers already cover both prompt styles. See HANDOVER #36. | Pending (external) |
 | 1 | ~~**Move AS3935 antenna outdoors**~~ | **Done 2026-07-31** — enclosure sealed, 18650+TP4056+solar power chain live, shade-mounted, TUN_CAP retuned post-install. Back to its rated ~40 km detection range instead of the indoor few-km limit. See HANDOVER #1. |
 | 6 | ~~**Mac SwiftUI app (`~/projects/vu2cpl-shack-app/`)**~~ | **Shelved 2026-07-31** — operator decision, not proceeding for now. Never scaffolded. Spec (5 tabs, build order) kept in "MAC APP" section above in case revisited later. See HANDOVER #6. |
 | 35 | ~~**UberSDR Telegram alerting**~~ | **Done 2026-07-31** — receiver offline/back alert wired on `ubersdr_tab`, Manoj-only via the existing shack Telegram bot (same `TELEGRAM_TOKEN`/`TELEGRAM_CHAT_ID` env vars as Lightning/DXCC). See "UberSDR" flow-specific notes below + HANDOVER #35. |
