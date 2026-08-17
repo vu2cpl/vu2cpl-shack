@@ -127,6 +127,30 @@ node needed changes" — this entry supersedes that.
 restart on the Pi, both VU2CPL connections went green with spots
 flowing — the RBN Skimmer tab tile and the DXCC tab's VU2CPL cluster.
 
+**Correction (same day, operator):** the server on `.109:7550` is
+**UberSDR's RBN-style Aggregator**, not meridian's. The meridian
+attribution above was an over-conclusion from a source-code match —
+meridian's `dxcluster/server.rs` reproduces the same wire contract
+because it was *wire-trace modeled on* this Aggregator (its own test
+comments say "the wire-traced Aggregator contract lines survive
+untouched"), but it is not the process listening there. Everything
+else in the entry (the prompt bytes, the `\r\n` terminator, the
+handler bug, the fix) stands unchanged — the wire evidence was live,
+only the name of the software behind it was wrong.
+
+**FT8 follow-up (same day):** operator asked why no FT8 spots. By
+design, not a bug: the Aggregator feed is **CW/RTTY-only** — its own
+help text offers just CW/RTTY display filters, and the live spots
+carry the classic CW-skimmer `dB`/`WPM` fields. UberSDR *is* decoding
+FT8/FT4 (its MQTT metrics show decoders on 10 bands) but those
+decodes don't feed this telnet port, and no separate FT8 spot port is
+open on `.109` (probed 7000/7001/7373/7300 — connection refused; only
+8073, the web UI, is open). UberSDR's FT8 decodes most likely upload
+to PSK Reporter — check pskreporter.info to confirm. FT8 DX spots
+still reach the DXCC tab via the full clusters (N2WQ/VE7CC); the RBN
+Skimmer tab's sources are skimmer-telnet feeds only, so it stays
+CW-only unless UberSDR grows an FT8 spot output someday.
+
 ### Network monitor — device list de-duplicated, repointed, one new tile
 
 **Immediate change:** the "Mac RBN" ping target (`4a4d2801d848f882`,
