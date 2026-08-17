@@ -175,7 +175,8 @@ warning dialog that a stale-tab Deploy rides in on.
 **Fix:** the three groups' width set 8 → 18, matching their widgets
 (the repo convention everywhere else — Lightning 12/12, gpsntp
 10/10). Render-neutral in practice; clears the red triangles and the
-deploy-time warning.
+deploy-time warning. **Deployed + operator-verified same evening:**
+red marks gone after pull + restart.
 
 ### VU2CPL feed — back on `vu2cpl.ddns.net`; router forward becomes the server switch-point
 
