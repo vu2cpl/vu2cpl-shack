@@ -151,6 +151,16 @@ still reach the DXCC tab via the full clusters (N2WQ/VE7CC); the RBN
 Skimmer tab's sources are skimmer-telnet feeds only, so it stays
 CW-only unless UberSDR grows an FT8 spot output someday.
 
+### Power Control — powerstrip1/POWER3 relabeled "UberSDR"
+
+The UberSDR box now draws power from powerstrip1's plug 3 (was a
+spare, labeled "PLUG3"). Label updated in both dashboards — D1
+`Power Control Panel` template + Vue PowerCard plug list (build
+`v21`, `?v=21`) — and the CLAUDE.md hardware map. Labels only; no
+topic/behavior change. (Done via the Mac-side flows.json workflow
+rather than the browser editor — the label lives in both UIs, so an
+editor edit would have covered only `/ui`.)
+
 ### Editor red triangles on 3 ui panels — group widths aligned to widgets
 
 Operator asked why some ui panels show red in the editor, suspecting

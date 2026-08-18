@@ -146,7 +146,7 @@ their old IDs (`dd11372f9c492be8`, `tab_ui_dxcc`) no longer exist.
 |--------|---------|------------|
 | `powerstrip1` | POWER1 | 13.8V SMPS |
 | | POWER2 | **Rotator** (auto-off timer) |
-| | POWER3 | Plug 3 |
+| | POWER3 | UberSDR box (since 2026-07-31; was spare "Plug 3") |
 | | POWER4 | Plug 4 |
 | | POWER5 | **Antenna switch** (lightning) |
 | `powerstrip2` | POWER1-5 | General outlets |

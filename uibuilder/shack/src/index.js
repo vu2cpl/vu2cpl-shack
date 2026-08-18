@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v20 · 2026-07-31 NetworkCard reads device list from Node-RED';
+window.__shackBuild = 'v21 · 2026-07-31 powerstrip1/POWER3 relabeled UberSDR';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -2159,7 +2159,7 @@ const PowerCard = {
     const plugs = [
       { topic:'cmnd/powerstrip1/POWER1', label:'13.8V SMPS' },
       { topic:'cmnd/powerstrip1/POWER2', label:'Rotator' },
-      { topic:'cmnd/powerstrip1/POWER3', label:'PLUG3' },
+      { topic:'cmnd/powerstrip1/POWER3', label:'UberSDR' },
       { topic:'cmnd/powerstrip1/POWER4', label:'Plug4' },
       { topic:'cmnd/powerstrip1/POWER5', label:'Antenna' },
       { topic:'cmnd/powerstrip2/POWER1', label:'Plug1' },
