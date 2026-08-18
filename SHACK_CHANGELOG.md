@@ -159,7 +159,8 @@ spare, labeled "PLUG3"). Label updated in both dashboards — D1
 `v21`, `?v=21`) — and the CLAUDE.md hardware map. Labels only; no
 topic/behavior change. (Done via the Mac-side flows.json workflow
 rather than the browser editor — the label lives in both UIs, so an
-editor edit would have covered only `/ui`.)
+editor edit would have covered only `/ui`.) **Deployed +
+operator-verified:** label showing correctly after pull + restart.
 
 ### Editor red triangles on 3 ui panels — group widths aligned to widgets
 
