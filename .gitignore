@@ -27,3 +27,6 @@ nr_cty_maps.json
 !/uibuilder/shack/
 !/uibuilder/shack/src/
 !/uibuilder/shack/src/**
+
+# Node-RED credentials — encrypted, but kept out of this PUBLIC repo entirely
+flows_cred.json
