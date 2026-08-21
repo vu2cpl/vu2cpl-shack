@@ -622,6 +622,7 @@
         "name": "Shack Vue",
         "topic": "",
         "url": "shack",
+        "okToGo": true,
         "fwdInMessages": false,
         "allowScripts": false,
         "allowStyles": false,
@@ -645,6 +646,52 @@
         ]
     },
     {
+        "id": "vue_link_in_builders",
+        "type": "link in",
+        "z": "vue_dashboard_tab_01",
+        "name": "Builders → Shack Vue",
+        "links": [
+            "vue_lo_3d26c2c5",
+            "vue_lo_a0a882f8",
+            "vue_lo_18fb4244",
+            "vue_lo_590e889d",
+            "vue_lo_f9a0e3ad",
+            "vue_lo_d5fec2fe",
+            "vue_lo_b05f8c02",
+            "vue_lo_75e2cac8",
+            "vue_lo_b76a5310",
+            "vue_lo_d110d176",
+            "vue_lo_spe_ws_t",
+            "vue_lo_4590ed80",
+            "vue_lo_ubersdr_"
+        ],
+        "x": 100,
+        "y": 100,
+        "wires": [
+            [
+                "uib_shack_01"
+            ]
+        ]
+    },
+    {
+        "id": "vue_link_out_cmds",
+        "type": "link out",
+        "z": "vue_dashboard_tab_01",
+        "name": "Shack Vue cmds →",
+        "mode": "link",
+        "links": [
+            "vue_li_cmd_lightnin",
+            "vue_li_cmd_dxcc_cmd",
+            "vue_li_cmd_rpi_cmd_",
+            "vue_li_cmd_pwr_cmd_",
+            "vue_li_cmd_spe_cmd_",
+            "vue_li_cmd_lp_cmd_r"
+        ],
+        "x": 500,
+        "y": 100,
+        "wires": []
+    },
+    {
         "id": "78d79f019261723c",
         "type": "function",
         "z": "3d26c2c5270bdb37",
@@ -652,7 +699,7 @@
         "func": "\nvar hdg = 0;\nif(typeof msg.payload === 'object' && msg.payload.heading !== undefined){\n    hdg = parseFloat(msg.payload.heading);\n} else {\n    hdg = parseFloat(msg.payload);\n}\nif(isNaN(hdg)) return null;\n\nvar cx = 110, cy = 110;\nvar rad = (hdg - 90) * Math.PI / 180;\nvar r = 98;\nvar x2 = (cx + r * Math.cos(rad)).toFixed(1);\nvar y2 = (cy + r * Math.sin(rad)).toFixed(1);\n\nvar bx = cx + 70 * Math.cos(rad);\nvar by = cy + 70 * Math.sin(rad);\nvar lx = (bx - 8 * Math.sin(rad)).toFixed(1);\nvar ly = (by + 8 * Math.cos(rad)).toFixed(1);\nvar rx = (bx + 8 * Math.sin(rad)).toFixed(1);\nvar ry = (by - 8 * Math.cos(rad)).toFixed(1);\n\nvar updates = [\n    {command: 'update_attribute', elementId: 'rot-actual', attributeName: 'x2', attributeValue: x2},\n    {command: 'update_attribute', elementId: 'rot-actual', attributeName: 'y2', attributeValue: y2},\n    {command: 'update_attribute', elementId: 'rot-arrow', attributeName: 'points', attributeValue: x2+','+y2+' '+lx+','+ly+' '+rx+','+ry},\n    {command: 'update_text', elementId: 'rot-hdg-txt', textContent: Math.round(hdg)+'°'}\n];\n\n// Check if reached target - hide line after 3s\nvar target = flow.get('target_hdg');\nif(target !== undefined && Math.abs(hdg - target) <= 3){\n    flow.set('target_hdg', undefined);\n    // 3s delay then hide\n    setTimeout(function(){\n        node.send({payload: [{\n            command: 'update_attribute', elementId: 'rot-target',\n            attributeName: 'opacity', attributeValue: '0'\n        }]});\n    }, 3000);\n}\n\nmsg.payload = updates;\nreturn msg;\n",
         "outputs": 1,
         "noerr": 0,
-        "x": 940,
+        "x": 990,
         "y": 180,
         "wires": [
             [
@@ -669,7 +716,7 @@
         "outputs": 1,
         "noerr": 0,
         "x": 720,
-        "y": 240,
+        "y": 260,
         "wires": [
             []
         ]
@@ -682,8 +729,8 @@
         "func": "// Translate the raw Rotor-EZ strings that Build Rotator String + Click→Heading\n// still emit into rotator-remote WebSocket command JSON.\n//   Build Rotator String: 'AP1NNN\\r' (goto) or ';' (stop)\n//   Click → Heading:       'AP1NNN\\r' (goto) or 'stop' (stop)\nvar p = msg.payload;\nif (typeof p !== 'string') return null;\nif (p === ';' || p === 'stop' || p === 'STOP') {\n    msg.payload = JSON.stringify({ type: 'command', action: 'stop' });\n    return msg;\n}\nvar m = p.match(/^AP1(\\d{3})/);\nif (m) {\n    msg.payload = JSON.stringify({ type: 'command', action: 'goto', heading: parseInt(m[1], 10) });\n    return msg;\n}\nreturn null;   // 'AI1;' poll or anything unrecognised → drop\n",
         "outputs": 1,
         "noerr": 0,
-        "x": 700,
-        "y": 400,
+        "x": 740,
+        "y": 480,
         "wires": [
             [
                 "rotator_ws_out"
@@ -799,8 +846,8 @@
         "dblClickZoomPercentage": "150",
         "cssString": "",
         "name": "Compass SVG",
-        "x": 1160,
-        "y": 180,
+        "x": 1060,
+        "y": 80,
         "wires": [
             [
                 "a4d4f32631281901"
@@ -834,8 +881,8 @@
         "func": "\nvar hdg = parseInt(msg.payload);\n\n// LP/SP toggle: add 180° to current target\nif(msg.payload === 'toggle_180'){\n    // Try target_hdg first (last commanded heading), fall back to actual rotator heading\n    var cur = flow.get('target_hdg');\n    if(cur === undefined || cur === null) cur = flow.get('rotator_heading');\n    if(cur === undefined || cur === null){\n        node.warn('LP/SP: no current heading');\n        return [null, null];\n    }\n    hdg = (cur + 180) % 360;\n    msg.payload = hdg;\n}\n\nvar work = ('00' + (isNaN(hdg)?msg.payload:hdg)).slice(-3);\nvar svgMsg;\n\nif(msg.payload === 'stop' || msg.payload === 'STOP'){\n    msg.payload = ';';\n    flow.set('target_hdg', undefined);\n    svgMsg = {payload: [{\n        command: 'update_attribute', elementId: 'rot-target',\n        attributeName: 'opacity', attributeValue: '0'\n    }]};\n    var t = context.get('t');\n    if(t) clearTimeout(t);\n} else if(!isNaN(hdg) && hdg >= 0 && hdg <= 359){\n    msg.payload = 'AP1' + work + '\\r';\n    flow.set('target_hdg', hdg);\n    var cx = 110, cy = 110;\n    var rad = (hdg - 90) * Math.PI / 180;\n    var x2 = (cx + 98 * Math.cos(rad)).toFixed(1);\n    var y2 = (cy + 98 * Math.sin(rad)).toFixed(1);\n    svgMsg = {payload: [\n        {command: 'update_attribute', elementId: 'rot-target', attributeName: 'x2', attributeValue: x2},\n        {command: 'update_attribute', elementId: 'rot-target', attributeName: 'y2', attributeValue: y2},\n        {command: 'update_attribute', elementId: 'rot-target', attributeName: 'opacity', attributeValue: '0.7'}\n    ]};\n    // Fallback: hide after 5 min if rotator stalls\n    var t = context.get('t');\n    if(t) clearTimeout(t);\n    context.set('t', setTimeout(function(){\n        flow.set('target_hdg', undefined);\n        node.send([null, {payload: [{command:'update_attribute', elementId:'rot-target', attributeName:'opacity', attributeValue:'0'}]}]);\n    }, 300000));\n} else {\n    return [null, null];\n}\nreturn [msg, svgMsg];\n",
         "outputs": 2,
         "noerr": 0,
-        "x": 450,
-        "y": 400,
+        "x": 650,
+        "y": 380,
         "wires": [
             [
                 "3cfe1d67d0490107"
@@ -925,7 +972,7 @@
         "rh": 0,
         "inputs": 0,
         "x": 200,
-        "y": 160,
+        "y": 140,
         "wires": [
             [
                 "rotator_pwr_state_fn"
@@ -943,8 +990,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 480,
-        "y": 160,
+        "x": 490,
+        "y": 140,
         "wires": [
             [
                 "cae633df9457557f"
@@ -977,7 +1024,7 @@
         "statusCode": "200",
         "headers": {},
         "x": 400,
-        "y": 220,
+        "y": 240,
         "wires": []
     },
     {
@@ -1112,8 +1159,8 @@
         "correl": "",
         "expiry": "",
         "broker": "f4785be9863eab08",
-        "x": 700,
-        "y": 380,
+        "x": 720,
+        "y": 320,
         "wires": []
     },
     {
@@ -1131,11 +1178,11 @@
         "resendOnRefresh": false,
         "templateScope": "local",
         "className": "",
+        "x": 140,
+        "y": 1280,
         "wires": [
             []
-        ],
-        "x": 140,
-        "y": 1280
+        ]
     },
     {
         "id": "vue_rotator_tick_01",
@@ -1184,8 +1231,8 @@
         "name": "ws → rotator-remote",
         "server": "",
         "client": "rotator_ws_client",
-        "x": 900,
-        "y": 400,
+        "x": 980,
+        "y": 480,
         "wires": []
     },
     {
@@ -1195,8 +1242,8 @@
         "name": "ws ← rotator-remote",
         "server": "",
         "client": "rotator_ws_client",
-        "x": 560,
-        "y": 180,
+        "x": 490,
+        "y": 200,
         "wires": [
             [
                 "rotator_ws_parse"
@@ -1214,14 +1261,27 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 720,
-        "y": 180,
+        "x": 710,
+        "y": 200,
         "wires": [
             [
                 "78d79f019261723c",
                 "48d90f1e7b0172b0"
             ]
         ]
+    },
+    {
+        "id": "vue_lo_3d26c2c5",
+        "type": "link out",
+        "z": "3d26c2c5270bdb37",
+        "name": "→ Shack Vue",
+        "mode": "link",
+        "links": [
+            "vue_link_in_builders"
+        ],
+        "x": 560,
+        "y": 1200,
+        "wires": []
     },
     {
         "id": "356fd33c230fe11b",
@@ -2210,6 +2270,19 @@
         ]
     },
     {
+        "id": "vue_lo_a0a882f8",
+        "type": "link out",
+        "z": "a0a882f85c89cffc",
+        "name": "→ Shack Vue",
+        "mode": "link",
+        "links": [
+            "vue_link_in_builders"
+        ],
+        "x": 560,
+        "y": 1500,
+        "wires": []
+    },
+    {
         "id": "378721e33b7680cd",
         "type": "function",
         "z": "18fb42443172f33c",
@@ -2623,6 +2696,35 @@
         "wires": [
             [
                 "0feb87f388ee869b"
+            ]
+        ]
+    },
+    {
+        "id": "vue_lo_18fb4244",
+        "type": "link out",
+        "z": "18fb42443172f33c",
+        "name": "→ Shack Vue",
+        "mode": "link",
+        "links": [
+            "vue_link_in_builders"
+        ],
+        "x": 560,
+        "y": 800,
+        "wires": []
+    },
+    {
+        "id": "vue_li_cmd_lp_cmd_r",
+        "type": "link in",
+        "z": "18fb42443172f33c",
+        "name": "Shack Vue cmds",
+        "links": [
+            "vue_link_out_cmds"
+        ],
+        "x": 160,
+        "y": 880,
+        "wires": [
+            [
+                "vue_lp_cmd_router_01"
             ]
         ]
     },
@@ -3350,6 +3452,19 @@
         ]
     },
     {
+        "id": "vue_lo_590e889d",
+        "type": "link out",
+        "z": "590e889d44815afb",
+        "name": "→ Shack Vue",
+        "mode": "link",
+        "links": [
+            "vue_link_in_builders"
+        ],
+        "x": 560,
+        "y": 1100,
+        "wires": []
+    },
+    {
         "id": "df7d1786eab4d5a2",
         "type": "tcp in",
         "z": "f9a0e3ad0e019052",
@@ -3404,8 +3519,8 @@
         "base64": false,
         "end": false,
         "tls": "",
-        "x": 640,
-        "y": 80,
+        "x": 490,
+        "y": 60,
         "wires": []
     },
     {
@@ -3749,8 +3864,8 @@
         "topic": "",
         "payload": "",
         "payloadType": "str",
-        "x": 110,
-        "y": 1100,
+        "x": 240,
+        "y": 720,
         "wires": [
             [
                 "vue_rbn_builder_01"
@@ -3764,13 +3879,26 @@
         "name": "Build RBN state for Vue",
         "func": "// flow.rbn_dash is file-backed by the existing RBN State Aggregator\nvar s = flow.get('rbn_dash', 'file') || flow.get('rbn_dash') || {};\nreturn {\n    topic: 'rbn',\n    payload: {\n        skimmers:   s.skimmers   || {},\n        calFetched: s.calFetched || null,\n        sk1:        s.sk1, sk2: s.sk2\n    }\n};\n",
         "outputs": 1,
-        "x": 360,
-        "y": 1100,
+        "x": 490,
+        "y": 720,
         "wires": [
             [
                 "vue_lo_f9a0e3ad"
             ]
         ]
+    },
+    {
+        "id": "vue_lo_f9a0e3ad",
+        "type": "link out",
+        "z": "f9a0e3ad0e019052",
+        "name": "→ Shack Vue",
+        "mode": "link",
+        "links": [
+            "vue_link_in_builders"
+        ],
+        "x": 675,
+        "y": 720,
+        "wires": []
     },
     {
         "id": "8c65ab8722688c03",
@@ -4421,6 +4549,35 @@
         ]
     },
     {
+        "id": "vue_lo_d5fec2fe",
+        "type": "link out",
+        "z": "d5fec2fea3dd37f4",
+        "name": "→ Shack Vue",
+        "mode": "link",
+        "links": [
+            "vue_link_in_builders"
+        ],
+        "x": 560,
+        "y": 800,
+        "wires": []
+    },
+    {
+        "id": "vue_li_cmd_rpi_cmd_",
+        "type": "link in",
+        "z": "d5fec2fea3dd37f4",
+        "name": "Shack Vue cmds",
+        "links": [
+            "vue_link_out_cmds"
+        ],
+        "x": 160,
+        "y": 880,
+        "wires": [
+            [
+                "vue_rpi_cmd_router_01"
+            ]
+        ]
+    },
+    {
         "id": "823d7b59970a196e",
         "type": "ping",
         "z": "b05f8c028b368ae9",
@@ -5005,8 +5162,8 @@
         "topic": "",
         "payload": "",
         "payloadType": "str",
-        "x": 110,
-        "y": 800,
+        "x": 190,
+        "y": 1000,
         "wires": [
             [
                 "vue_net_builder_01"
@@ -5020,13 +5177,26 @@
         "name": "Build Network state for Vue",
         "func": "// Read flow.net_state and forward to Vue with topic 'network'.\nvar ns = flow.get('net_state') || {};\nvar ageStr = function (sec) {\n    if (sec == null) return null;\n    if (sec < 60)    return Math.round(sec) + 's ago';\n    if (sec < 3600)  return Math.round(sec/60) + 'm ago';\n    if (sec < 86400) return Math.round(sec/3600) + 'h ago';\n    return Math.round(sec/86400) + 'd ago';\n};\nreturn {\n    topic: 'network',\n    payload: {\n        pings:      ns.pings || {},\n        status:     ns.status,\n        totalFails: ns.totalFails,\n        lastFail:   ageStr(ns.lastFail)\n    }\n};\n",
         "outputs": 1,
-        "x": 360,
-        "y": 800,
+        "x": 520,
+        "y": 1000,
         "wires": [
             [
                 "vue_lo_b05f8c02"
             ]
         ]
+    },
+    {
+        "id": "vue_lo_b05f8c02",
+        "type": "link out",
+        "z": "b05f8c028b368ae9",
+        "name": "→ Shack Vue",
+        "mode": "link",
+        "links": [
+            "vue_link_in_builders"
+        ],
+        "x": 705,
+        "y": 1000,
+        "wires": []
     },
     {
         "id": "626d6b74261cd17d",
@@ -6862,6 +7032,77 @@
         "wires": []
     },
     {
+        "id": "vue_lo_75e2cac8",
+        "type": "link out",
+        "z": "75e2cac8ab96f556",
+        "name": "→ Shack Vue",
+        "mode": "link",
+        "links": [
+            "vue_link_in_builders"
+        ],
+        "x": 560,
+        "y": 1300,
+        "wires": []
+    },
+    {
+        "id": "vue_li_cmd_lightnin",
+        "type": "link in",
+        "z": "75e2cac8ab96f556",
+        "name": "Shack Vue cmds",
+        "links": [
+            "vue_link_out_cmds"
+        ],
+        "x": 160,
+        "y": 1380,
+        "wires": [
+            [
+                "vue_lightning_cmd_router_01"
+            ]
+        ]
+    },
+    {
+        "id": "a35_li_masterdash",
+        "type": "link in",
+        "z": "75e2cac8ab96f556",
+        "name": "AS3935 Tuning → Master Dashboard",
+        "links": [
+            "a35_lo_masterdash"
+        ],
+        "x": 850,
+        "y": 240,
+        "wires": [
+            [
+                "557083037f168b22"
+            ]
+        ]
+    },
+    {
+        "id": "l_lo_a35cmd",
+        "type": "link out",
+        "z": "75e2cac8ab96f556",
+        "name": "→ AS3935 Cmd",
+        "mode": "link",
+        "links": [
+            "l_li_a35cmd"
+        ],
+        "x": 560,
+        "y": 1380,
+        "wires": []
+    },
+    {
+        "id": "l_lo_a35test",
+        "type": "link out",
+        "z": "75e2cac8ab96f556",
+        "name": "→ AS3935 TEST publish",
+        "mode": "link",
+        "links": [
+            "l_li_a35test"
+        ],
+        "x": 560,
+        "y": 1420,
+        "wires": []
+    },
+    {
         "id": "fa472f4b461b6b2b",
         "type": "mqtt out",
         "z": "b76a5310767803b4",
@@ -7821,6 +8062,35 @@
         "wires": [
             [
                 "a1fbb636a745e687"
+            ]
+        ]
+    },
+    {
+        "id": "vue_lo_b76a5310",
+        "type": "link out",
+        "z": "b76a5310767803b4",
+        "name": "→ Shack Vue",
+        "mode": "link",
+        "links": [
+            "vue_link_in_builders"
+        ],
+        "x": 560,
+        "y": 900,
+        "wires": []
+    },
+    {
+        "id": "vue_li_cmd_pwr_cmd_",
+        "type": "link in",
+        "z": "b76a5310767803b4",
+        "name": "Shack Vue cmds",
+        "links": [
+            "vue_link_out_cmds"
+        ],
+        "x": 160,
+        "y": 980,
+        "wires": [
+            [
+                "vue_pwr_cmd_router_01"
             ]
         ]
     },
@@ -9611,6 +9881,35 @@
         ]
     },
     {
+        "id": "vue_lo_d110d176",
+        "type": "link out",
+        "z": "d110d176c0aad308",
+        "name": "→ Shack Vue",
+        "mode": "link",
+        "links": [
+            "vue_link_in_builders"
+        ],
+        "x": 560,
+        "y": 1500,
+        "wires": []
+    },
+    {
+        "id": "vue_li_cmd_dxcc_cmd",
+        "type": "link in",
+        "z": "d110d176c0aad308",
+        "name": "Shack Vue cmds",
+        "links": [
+            "vue_link_out_cmds"
+        ],
+        "x": 160,
+        "y": 1580,
+        "wires": [
+            [
+                "vue_dxcc_cmd_router_01"
+            ]
+        ]
+    },
+    {
         "id": "ws_overview_cmt",
         "type": "comment",
         "z": "spe_ws_tab_01",
@@ -9674,8 +9973,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 600,
-        "y": 100,
+        "x": 570,
+        "y": 40,
         "wires": [
             [
                 "ws_panel_node",
@@ -9694,8 +9993,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 590,
-        "y": 160,
+        "x": 550,
+        "y": 100,
         "wires": [
             [
                 "ws_panel_node"
@@ -9715,8 +10014,8 @@
         "targetType": "msg",
         "statusVal": "",
         "statusType": "auto",
-        "x": 580,
-        "y": 220,
+        "x": 470,
+        "y": 280,
         "wires": []
     },
     {
@@ -9734,8 +10033,8 @@
         "resendOnRefresh": true,
         "templateScope": "local",
         "className": "",
-        "x": 860,
-        "y": 140,
+        "x": 840,
+        "y": 160,
         "wires": [
             [
                 "ws_btn_router"
@@ -9753,8 +10052,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1090,
-        "y": 140,
+        "x": 770,
+        "y": 300,
         "wires": [
             [
                 "ws_out_node"
@@ -9767,8 +10066,8 @@
         "z": "spe_ws_tab_01",
         "name": "WS out (commands)",
         "client": "ws_spe_client",
-        "x": 1320,
-        "y": 140,
+        "x": 1020,
+        "y": 300,
         "wires": []
     },
     {
@@ -9785,8 +10084,8 @@
         "fwdInMessages": false,
         "resendOnRefresh": false,
         "templateScope": "global",
-        "x": 170,
-        "y": 280,
+        "x": 1040,
+        "y": 60,
         "wires": [
             []
         ]
@@ -9798,8 +10097,8 @@
         "name": "Build SPE state for Vue",
         "func": "// ws_format_state already builds the flat panel-ready object.\n// Wrap with topic 'spe' for the uibuilder client.\nreturn { topic: 'spe', payload: msg.payload };\n",
         "outputs": 1,
-        "x": 700,
-        "y": 200,
+        "x": 590,
+        "y": 220,
         "wires": [
             [
                 "vue_lo_spe_ws_t"
@@ -9813,11 +10112,40 @@
         "name": "Route Vue SPE commands",
         "func": "if (msg.topic && msg.topic !== 'spe/cmd') return null;\nif (!msg.payload || !msg.payload.type) return null;\n// Vue sends { type: 'spePower' | 'speCmd', value: 'ON_SPE' | 'OFF_SPE' | 'MODE' | 'TUNE' | ... }\n// ws_btn_router accepts the same alphabetic command codes via msg.payload.\nif (msg.payload.type === 'spePower' || msg.payload.type === 'speCmd') {\n    return { payload: msg.payload.value };\n}\n// Sweep commands from the Vue SPECard. Translate into the\n// tune_band:<band> / tune_stop payloads spe-remote expects;\n// ws_btn_router already passes those through.\nif (msg.payload.type === 'speTuneBand') {\n    return { payload: 'tune_band:' + msg.payload.value };\n}\nif (msg.payload.type === 'speTuneStop') {\n    return { payload: 'tune_stop' };\n}\nreturn null;\n",
         "outputs": 1,
-        "x": 360,
-        "y": 280,
+        "x": 460,
+        "y": 380,
         "wires": [
             [
                 "ws_btn_router"
+            ]
+        ]
+    },
+    {
+        "id": "vue_lo_spe_ws_t",
+        "type": "link out",
+        "z": "spe_ws_tab_01",
+        "name": "→ Shack Vue",
+        "mode": "link",
+        "links": [
+            "vue_link_in_builders"
+        ],
+        "x": 805,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "vue_li_cmd_spe_cmd_",
+        "type": "link in",
+        "z": "spe_ws_tab_01",
+        "name": "Shack Vue cmds",
+        "links": [
+            "vue_link_out_cmds"
+        ],
+        "x": 255,
+        "y": 380,
+        "wires": [
+            [
+                "vue_spe_cmd_router_01"
             ]
         ]
     },
@@ -9877,6 +10205,40 @@
             [
                 "vue_lo_4590ed80"
             ]
+        ]
+    },
+    {
+        "id": "vue_lo_4590ed80",
+        "type": "link out",
+        "z": "4590ed80de4873b1",
+        "name": "→ Shack Vue",
+        "mode": "link",
+        "links": [
+            "vue_link_in_builders"
+        ],
+        "x": 600,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "d1_global_css_01",
+        "type": "ui_template",
+        "z": "4590ed80de4873b1",
+        "group": "",
+        "name": "D1 global CSS (dark scrollbars) → <head>",
+        "order": 0,
+        "width": 0,
+        "height": 0,
+        "format": "<style>\n/* Tell browser to render native UI in dark mode (incl. scrollbars on Mac/Win/Linux) */\n:root, html, body {\n  color-scheme: dark;\n}\n\n/* Firefox-native scrollbar styling (uses system dark theme if color-scheme set) */\n* {\n  scrollbar-width: thin;\n  scrollbar-color: #30363d #161b22;\n}\n\n/* WebKit (Safari, Chrome, Edge) scrollbar styling - applies everywhere */\n::-webkit-scrollbar {\n  width: 8px;\n  height: 8px;\n}\n::-webkit-scrollbar-track {\n  background: #0d1117;\n}\n::-webkit-scrollbar-thumb {\n  background: #30363d;\n  border-radius: 4px;\n  border: 1px solid #161b22;\n}\n::-webkit-scrollbar-thumb:hover {\n  background: #58a6ff;\n}\n::-webkit-scrollbar-corner {\n  background: #0d1117;\n}\n\n/* Minimal mobile-only optimization */\n@media (max-width: 600px) {\n  body { font-size: 13px; }\n  md-content { overflow-x: hidden !important; }\n}\n\n/* Scroll only for specific growing-data containers (not entire cards) */\n#logLines,\n#log-container,\n.lightning-events,\n#dxccTable tbody,\n#a35ev-list,\n.evt-list,\n.skimmer-spots,\n.rbn-spots {\n  max-height: 200px;\n  overflow-y: auto;\n}\n</style>",
+        "storeOutMessages": false,
+        "fwdInMessages": false,
+        "resendOnRefresh": false,
+        "templateScope": "global",
+        "className": "",
+        "x": 140,
+        "y": 200,
+        "wires": [
+            []
         ]
     },
     {
@@ -10302,6 +10664,51 @@
         "wires": []
     },
     {
+        "id": "a35_lo_masterdash",
+        "type": "link out",
+        "z": "fe70cfdcdfa19aa4",
+        "name": "→ Master Dashboard",
+        "mode": "link",
+        "links": [
+            "a35_li_masterdash"
+        ],
+        "x": 620,
+        "y": 325,
+        "wires": []
+    },
+    {
+        "id": "l_li_a35cmd",
+        "type": "link in",
+        "z": "fe70cfdcdfa19aa4",
+        "name": "Lightning → AS3935 Cmd",
+        "links": [
+            "l_lo_a35cmd"
+        ],
+        "x": 520,
+        "y": 160,
+        "wires": [
+            [
+                "82f732a0dac14945"
+            ]
+        ]
+    },
+    {
+        "id": "l_li_a35test",
+        "type": "link in",
+        "z": "fe70cfdcdfa19aa4",
+        "name": "Lightning → TEST publish",
+        "links": [
+            "l_lo_a35test"
+        ],
+        "x": 380,
+        "y": 740,
+        "wires": [
+            [
+                "as3935_evt_test_out"
+            ]
+        ]
+    },
+    {
         "id": "ubersdr_mqtt_sessions",
         "type": "mqtt in",
         "z": "ubersdr_tab",
@@ -10488,6 +10895,19 @@
         "wires": []
     },
     {
+        "id": "vue_lo_ubersdr_",
+        "type": "link out",
+        "z": "ubersdr_tab",
+        "name": "→ Shack Vue",
+        "mode": "link",
+        "links": [
+            "vue_link_in_builders"
+        ],
+        "x": 960,
+        "y": 200,
+        "wires": []
+    },
+    {
         "id": "aetherdisp_in0",
         "type": "mqtt in",
         "z": "aetherdisp_tab_01",
@@ -10635,425 +11055,6 @@
             [
                 "aetherdisp_out"
             ]
-        ]
-    },
-    {
-        "id": "vue_link_in_builders",
-        "type": "link in",
-        "z": "vue_dashboard_tab_01",
-        "name": "Builders → Shack Vue",
-        "links": [
-            "vue_lo_3d26c2c5",
-            "vue_lo_a0a882f8",
-            "vue_lo_18fb4244",
-            "vue_lo_590e889d",
-            "vue_lo_f9a0e3ad",
-            "vue_lo_d5fec2fe",
-            "vue_lo_b05f8c02",
-            "vue_lo_75e2cac8",
-            "vue_lo_b76a5310",
-            "vue_lo_d110d176",
-            "vue_lo_spe_ws_t",
-            "vue_lo_4590ed80",
-            "vue_lo_ubersdr_"
-        ],
-        "x": 100,
-        "y": 100,
-        "wires": [
-            [
-                "uib_shack_01"
-            ]
-        ]
-    },
-    {
-        "id": "vue_lo_3d26c2c5",
-        "type": "link out",
-        "z": "3d26c2c5270bdb37",
-        "name": "→ Shack Vue",
-        "mode": "link",
-        "links": [
-            "vue_link_in_builders"
-        ],
-        "x": 560,
-        "y": 1200,
-        "wires": []
-    },
-    {
-        "id": "vue_lo_a0a882f8",
-        "type": "link out",
-        "z": "a0a882f85c89cffc",
-        "name": "→ Shack Vue",
-        "mode": "link",
-        "links": [
-            "vue_link_in_builders"
-        ],
-        "x": 560,
-        "y": 1500,
-        "wires": []
-    },
-    {
-        "id": "vue_lo_18fb4244",
-        "type": "link out",
-        "z": "18fb42443172f33c",
-        "name": "→ Shack Vue",
-        "mode": "link",
-        "links": [
-            "vue_link_in_builders"
-        ],
-        "x": 560,
-        "y": 800,
-        "wires": []
-    },
-    {
-        "id": "vue_lo_590e889d",
-        "type": "link out",
-        "z": "590e889d44815afb",
-        "name": "→ Shack Vue",
-        "mode": "link",
-        "links": [
-            "vue_link_in_builders"
-        ],
-        "x": 560,
-        "y": 1100,
-        "wires": []
-    },
-    {
-        "id": "vue_lo_f9a0e3ad",
-        "type": "link out",
-        "z": "f9a0e3ad0e019052",
-        "name": "→ Shack Vue",
-        "mode": "link",
-        "links": [
-            "vue_link_in_builders"
-        ],
-        "x": 560,
-        "y": 1100,
-        "wires": []
-    },
-    {
-        "id": "vue_lo_d5fec2fe",
-        "type": "link out",
-        "z": "d5fec2fea3dd37f4",
-        "name": "→ Shack Vue",
-        "mode": "link",
-        "links": [
-            "vue_link_in_builders"
-        ],
-        "x": 560,
-        "y": 800,
-        "wires": []
-    },
-    {
-        "id": "vue_lo_b05f8c02",
-        "type": "link out",
-        "z": "b05f8c028b368ae9",
-        "name": "→ Shack Vue",
-        "mode": "link",
-        "links": [
-            "vue_link_in_builders"
-        ],
-        "x": 560,
-        "y": 800,
-        "wires": []
-    },
-    {
-        "id": "vue_lo_75e2cac8",
-        "type": "link out",
-        "z": "75e2cac8ab96f556",
-        "name": "→ Shack Vue",
-        "mode": "link",
-        "links": [
-            "vue_link_in_builders"
-        ],
-        "x": 560,
-        "y": 1300,
-        "wires": []
-    },
-    {
-        "id": "vue_lo_b76a5310",
-        "type": "link out",
-        "z": "b76a5310767803b4",
-        "name": "→ Shack Vue",
-        "mode": "link",
-        "links": [
-            "vue_link_in_builders"
-        ],
-        "x": 560,
-        "y": 900,
-        "wires": []
-    },
-    {
-        "id": "vue_lo_d110d176",
-        "type": "link out",
-        "z": "d110d176c0aad308",
-        "name": "→ Shack Vue",
-        "mode": "link",
-        "links": [
-            "vue_link_in_builders"
-        ],
-        "x": 560,
-        "y": 1500,
-        "wires": []
-    },
-    {
-        "id": "vue_lo_spe_ws_t",
-        "type": "link out",
-        "z": "spe_ws_tab_01",
-        "name": "→ Shack Vue",
-        "mode": "link",
-        "links": [
-            "vue_link_in_builders"
-        ],
-        "x": 540,
-        "y": 140,
-        "wires": []
-    },
-    {
-        "id": "vue_lo_4590ed80",
-        "type": "link out",
-        "z": "4590ed80de4873b1",
-        "name": "→ Shack Vue",
-        "mode": "link",
-        "links": [
-            "vue_link_in_builders"
-        ],
-        "x": 600,
-        "y": 200,
-        "wires": []
-    },
-    {
-        "id": "vue_lo_ubersdr_",
-        "type": "link out",
-        "z": "ubersdr_tab",
-        "name": "→ Shack Vue",
-        "mode": "link",
-        "links": [
-            "vue_link_in_builders"
-        ],
-        "x": 960,
-        "y": 200,
-        "wires": []
-    },
-    {
-        "id": "vue_link_out_cmds",
-        "type": "link out",
-        "z": "vue_dashboard_tab_01",
-        "name": "Shack Vue cmds →",
-        "mode": "link",
-        "links": [
-            "vue_li_cmd_lightnin",
-            "vue_li_cmd_dxcc_cmd",
-            "vue_li_cmd_rpi_cmd_",
-            "vue_li_cmd_pwr_cmd_",
-            "vue_li_cmd_spe_cmd_",
-            "vue_li_cmd_lp_cmd_r"
-        ],
-        "x": 500,
-        "y": 100,
-        "wires": []
-    },
-    {
-        "id": "vue_li_cmd_lightnin",
-        "type": "link in",
-        "z": "75e2cac8ab96f556",
-        "name": "Shack Vue cmds",
-        "links": [
-            "vue_link_out_cmds"
-        ],
-        "x": 160,
-        "y": 1380,
-        "wires": [
-            [
-                "vue_lightning_cmd_router_01"
-            ]
-        ]
-    },
-    {
-        "id": "vue_li_cmd_dxcc_cmd",
-        "type": "link in",
-        "z": "d110d176c0aad308",
-        "name": "Shack Vue cmds",
-        "links": [
-            "vue_link_out_cmds"
-        ],
-        "x": 160,
-        "y": 1580,
-        "wires": [
-            [
-                "vue_dxcc_cmd_router_01"
-            ]
-        ]
-    },
-    {
-        "id": "vue_li_cmd_rpi_cmd_",
-        "type": "link in",
-        "z": "d5fec2fea3dd37f4",
-        "name": "Shack Vue cmds",
-        "links": [
-            "vue_link_out_cmds"
-        ],
-        "x": 160,
-        "y": 880,
-        "wires": [
-            [
-                "vue_rpi_cmd_router_01"
-            ]
-        ]
-    },
-    {
-        "id": "vue_li_cmd_pwr_cmd_",
-        "type": "link in",
-        "z": "b76a5310767803b4",
-        "name": "Shack Vue cmds",
-        "links": [
-            "vue_link_out_cmds"
-        ],
-        "x": 160,
-        "y": 980,
-        "wires": [
-            [
-                "vue_pwr_cmd_router_01"
-            ]
-        ]
-    },
-    {
-        "id": "vue_li_cmd_spe_cmd_",
-        "type": "link in",
-        "z": "spe_ws_tab_01",
-        "name": "Shack Vue cmds",
-        "links": [
-            "vue_link_out_cmds"
-        ],
-        "x": 160,
-        "y": 280,
-        "wires": [
-            [
-                "vue_spe_cmd_router_01"
-            ]
-        ]
-    },
-    {
-        "id": "vue_li_cmd_lp_cmd_r",
-        "type": "link in",
-        "z": "18fb42443172f33c",
-        "name": "Shack Vue cmds",
-        "links": [
-            "vue_link_out_cmds"
-        ],
-        "x": 160,
-        "y": 880,
-        "wires": [
-            [
-                "vue_lp_cmd_router_01"
-            ]
-        ]
-    },
-    {
-        "id": "a35_lo_masterdash",
-        "type": "link out",
-        "z": "fe70cfdcdfa19aa4",
-        "name": "→ Master Dashboard",
-        "mode": "link",
-        "links": [
-            "a35_li_masterdash"
-        ],
-        "x": 620,
-        "y": 325,
-        "wires": []
-    },
-    {
-        "id": "a35_li_masterdash",
-        "type": "link in",
-        "z": "75e2cac8ab96f556",
-        "name": "AS3935 Tuning → Master Dashboard",
-        "links": [
-            "a35_lo_masterdash"
-        ],
-        "x": 850,
-        "y": 240,
-        "wires": [
-            [
-                "557083037f168b22"
-            ]
-        ]
-    },
-    {
-        "id": "l_lo_a35cmd",
-        "type": "link out",
-        "z": "75e2cac8ab96f556",
-        "name": "→ AS3935 Cmd",
-        "mode": "link",
-        "links": [
-            "l_li_a35cmd"
-        ],
-        "x": 560,
-        "y": 1380,
-        "wires": []
-    },
-    {
-        "id": "l_li_a35cmd",
-        "type": "link in",
-        "z": "fe70cfdcdfa19aa4",
-        "name": "Lightning → AS3935 Cmd",
-        "links": [
-            "l_lo_a35cmd"
-        ],
-        "x": 520,
-        "y": 160,
-        "wires": [
-            [
-                "82f732a0dac14945"
-            ]
-        ]
-    },
-    {
-        "id": "l_lo_a35test",
-        "type": "link out",
-        "z": "75e2cac8ab96f556",
-        "name": "→ AS3935 TEST publish",
-        "mode": "link",
-        "links": [
-            "l_li_a35test"
-        ],
-        "x": 560,
-        "y": 1420,
-        "wires": []
-    },
-    {
-        "id": "l_li_a35test",
-        "type": "link in",
-        "z": "fe70cfdcdfa19aa4",
-        "name": "Lightning → TEST publish",
-        "links": [
-            "l_lo_a35test"
-        ],
-        "x": 380,
-        "y": 740,
-        "wires": [
-            [
-                "as3935_evt_test_out"
-            ]
-        ]
-    },
-    {
-        "id": "d1_global_css_01",
-        "type": "ui_template",
-        "z": "4590ed80de4873b1",
-        "group": "",
-        "name": "D1 global CSS (dark scrollbars) → <head>",
-        "order": 0,
-        "width": 0,
-        "height": 0,
-        "format": "<style>\n/* Tell browser to render native UI in dark mode (incl. scrollbars on Mac/Win/Linux) */\n:root, html, body {\n  color-scheme: dark;\n}\n\n/* Firefox-native scrollbar styling (uses system dark theme if color-scheme set) */\n* {\n  scrollbar-width: thin;\n  scrollbar-color: #30363d #161b22;\n}\n\n/* WebKit (Safari, Chrome, Edge) scrollbar styling - applies everywhere */\n::-webkit-scrollbar {\n  width: 8px;\n  height: 8px;\n}\n::-webkit-scrollbar-track {\n  background: #0d1117;\n}\n::-webkit-scrollbar-thumb {\n  background: #30363d;\n  border-radius: 4px;\n  border: 1px solid #161b22;\n}\n::-webkit-scrollbar-thumb:hover {\n  background: #58a6ff;\n}\n::-webkit-scrollbar-corner {\n  background: #0d1117;\n}\n\n/* Minimal mobile-only optimization */\n@media (max-width: 600px) {\n  body { font-size: 13px; }\n  md-content { overflow-x: hidden !important; }\n}\n\n/* Scroll only for specific growing-data containers (not entire cards) */\n#logLines,\n#log-container,\n.lightning-events,\n#dxccTable tbody,\n#a35ev-list,\n.evt-list,\n.skimmer-spots,\n.rbn-spots {\n  max-height: 200px;\n  overflow-y: auto;\n}\n</style>",
-        "storeOutMessages": false,
-        "fwdInMessages": false,
-        "resendOnRefresh": false,
-        "templateScope": "global",
-        "className": "",
-        "x": 140,
-        "y": 200,
-        "wires": [
-            []
         ]
     }
 ]
