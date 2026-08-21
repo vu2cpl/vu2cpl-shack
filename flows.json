@@ -145,6 +145,13 @@
         "info": "MQTT control + live status panel for the vu2cpl-as3935-bridge ESP32.\n\nPublishes to lightning/as3935/cmd. Subscribes to status/hb/cmd/ack.\n\nDashboard group: Shack Monitoring tools > AS3935 Tuning."
     },
     {
+        "id": "ubersdr_tab",
+        "type": "tab",
+        "label": "UberSDR",
+        "disabled": false,
+        "info": "UberSDR receiver monitor. Subscribes to ubersdr/metrics/sessions + ubersdr/metrics/voice_activity/# on the shack broker (192.168.1.169), aggregates in 'Aggregate UberSDR', and feeds both the D1 /ui card (Shack Monitoring tools tab) and the Vue /shack UberSdrCard (topic 'ubersdr')."
+    },
+    {
         "id": "0916fc715057e741",
         "type": "group",
         "z": "a0a882f85c89cffc",
@@ -185,6 +192,7 @@
         "id": "498240cb5d374d24",
         "type": "group",
         "z": "590e889d44815afb",
+        "name": "Solar fetch + parse + dashboard",
         "style": {
             "stroke": "#999999",
             "stroke-opacity": "1",
@@ -232,13 +240,13 @@
         "x": 14,
         "y": 19,
         "w": 1272,
-        "h": 502,
-        "name": "Solar fetch + parse + dashboard"
+        "h": 502
     },
     {
         "id": "0cffa681c4abed74",
         "type": "group",
         "z": "b05f8c028b368ae9",
+        "name": "Network ping + dashboard",
         "style": {
             "stroke": "#999999",
             "stroke-opacity": "1",
@@ -270,8 +278,7 @@
         "x": 14,
         "y": 359,
         "w": 852,
-        "h": 580,
-        "name": "Network ping + dashboard"
+        "h": 580
     },
     {
         "id": "f925c3107b5f407e",
@@ -370,8 +377,7 @@
                 "px": 0,
                 "py": 0
             }
-        },
-        "css": "\n/* Tell browser to render native UI in dark mode (incl. scrollbars on Mac/Win/Linux) */\n:root, html, body {\n  color-scheme: dark;\n}\n\n/* Firefox-native scrollbar styling (uses system dark theme if color-scheme set) */\n* {\n  scrollbar-width: thin;\n  scrollbar-color: #30363d #161b22;\n}\n\n/* WebKit (Safari, Chrome, Edge) scrollbar styling - applies everywhere */\n::-webkit-scrollbar {\n  width: 8px;\n  height: 8px;\n}\n::-webkit-scrollbar-track {\n  background: #0d1117;\n}\n::-webkit-scrollbar-thumb {\n  background: #30363d;\n  border-radius: 4px;\n  border: 1px solid #161b22;\n}\n::-webkit-scrollbar-thumb:hover {\n  background: #58a6ff;\n}\n::-webkit-scrollbar-corner {\n  background: #0d1117;\n}\n\n/* Minimal mobile-only optimization */\n@media (max-width: 600px) {\n  body { font-size: 13px; }\n  md-content { overflow-x: hidden !important; }\n}\n\n/* Scroll only for specific growing-data containers (not entire cards) */\n#logLines,\n#log-container,\n.lightning-events,\n#dxccTable tbody,\n#a35ev-list,\n.evt-list,\n.skimmer-spots,\n.rbn-spots {\n  max-height: 200px;\n  overflow-y: auto;\n}\n"
+        }
     },
     {
         "id": "94d0df28ae5cccfc",
@@ -582,26 +588,53 @@
         "headers": []
     },
     {
-        "id": "mqttbroker.shack",
-        "type": "mqtt-broker",
-        "name": "shack-mqtt",
-        "broker": "192.168.1.169",
-        "port": "1883",
-        "clientid": "",
-        "autoConnect": true,
-        "usetls": false,
-        "protocolVersion": "4",
-        "keepalive": "60",
-        "cleansession": true,
-        "birthTopic": "",
-        "birthQos": "0",
-        "birthPayload": "",
-        "closeTopic": "",
-        "closeQos": "0",
-        "closePayload": "",
-        "willTopic": "",
-        "willQos": "0",
-        "willPayload": ""
+        "id": "rotator_ws_client",
+        "type": "websocket-client",
+        "path": "ws://localhost:8090/ws",
+        "tls": "",
+        "wholemsg": "false",
+        "hb": "30",
+        "subprotocol": "",
+        "headers": []
+    },
+    {
+        "id": "ubersdr_grp",
+        "type": "ui_group",
+        "name": "UberSDR",
+        "tab": "bcce4e07ac31b882",
+        "order": 30,
+        "disp": false,
+        "width": 12,
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "uib_shack_01",
+        "type": "uibuilder",
+        "z": "vue_dashboard_tab_01",
+        "name": "Shack Vue",
+        "topic": "",
+        "url": "shack",
+        "okToGo": true,
+        "fwdInMessages": false,
+        "allowScripts": false,
+        "allowStyles": false,
+        "copyIndex": true,
+        "templateFolder": "blank",
+        "extTemplate": "",
+        "showfolder": false,
+        "reload": false,
+        "sourceFolder": "src",
+        "deployedVersion": "7.6.2",
+        "showMsgUib": false,
+        "title": "",
+        "descr": "",
+        "x": 300,
+        "y": 100,
+        "wires": [
+            [],
+            []
+        ]
     },
     {
         "id": "78d79f019261723c",
@@ -630,9 +663,7 @@
         "x": 720,
         "y": 240,
         "wires": [
-            [
-                "27a6286454485995"
-            ]
+            []
         ]
     },
     {
@@ -803,6 +834,382 @@
             ],
             [
                 "cae633df9457557f"
+            ]
+        ]
+    },
+    {
+        "id": "rotator_pwr_http_in",
+        "type": "http in",
+        "z": "3d26c2c5270bdb37",
+        "name": "POST /rotator/power-toggle",
+        "url": "/rotator/power-toggle",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 200,
+        "y": 60,
+        "wires": [
+            [
+                "rotator_pwr_response",
+                "rotator_pwr_make_msg"
+            ]
+        ]
+    },
+    {
+        "id": "rotator_pwr_response",
+        "type": "http response",
+        "z": "3d26c2c5270bdb37",
+        "name": "200 OK",
+        "statusCode": "200",
+        "headers": {},
+        "x": 500,
+        "y": 30,
+        "wires": []
+    },
+    {
+        "id": "rotator_pwr_make_msg",
+        "type": "function",
+        "z": "3d26c2c5270bdb37",
+        "name": "Build TOGGLE msg",
+        "func": "return {payload: 'TOGGLE', topic: 'cmnd/powerstrip1/POWER2'};",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 500,
+        "y": 90,
+        "wires": [
+            [
+                "rotator_pwr_mqtt_out"
+            ]
+        ]
+    },
+    {
+        "id": "rotator_pwr_mqtt_out",
+        "type": "mqtt out",
+        "z": "3d26c2c5270bdb37",
+        "name": "Rotator Power → MQTT",
+        "topic": "cmnd/powerstrip1/POWER2",
+        "qos": "1",
+        "retain": false,
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "f4785be9863eab08",
+        "x": 800,
+        "y": 90,
+        "wires": []
+    },
+    {
+        "id": "rotator_pwr_state_in",
+        "type": "mqtt in",
+        "z": "3d26c2c5270bdb37",
+        "name": "stat/powerstrip1/POWER2 (rotator)",
+        "topic": "stat/powerstrip1/POWER2",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "f4785be9863eab08",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 200,
+        "y": 160,
+        "wires": [
+            [
+                "rotator_pwr_state_fn"
+            ]
+        ]
+    },
+    {
+        "id": "rotator_pwr_state_fn",
+        "type": "function",
+        "z": "3d26c2c5270bdb37",
+        "name": "Power state → SVG dim",
+        "func": "var state = String(msg.payload).toUpperCase().trim();\nvar isOn = state === 'ON';\nreturn {payload: [\n    // Dim/undim the whole compass content\n    {command: 'update_attribute', elementId: 'compass-content', attributeName: 'opacity', attributeValue: isOn ? '1' : '0.25'},\n    // Update the power knob's LED indicator color\n    {command: 'update_attribute', elementId: 'rotator-power-led', attributeName: 'fill', attributeValue: isOn ? '#3fb950' : '#1a0808'},\n    {command: 'update_attribute', elementId: 'rotator-power-led', attributeName: 'stroke', attributeValue: isOn ? '#3fb950' : '#005c70'},\n    // Make knob body brighter when ON\n    {command: 'update_attribute', elementId: 'rotator-power-body', attributeName: 'stroke', attributeValue: isOn ? '#3fb950' : '#00a5c9'},\n    {command: 'update_attribute', elementId: 'rotator-power-stem', attributeName: 'stroke', attributeValue: isOn ? '#3fb950' : '#00a5c9'},\n    {command: 'update_attribute', elementId: 'rotator-power-arc', attributeName: 'stroke', attributeValue: isOn ? '#3fb950' : '#00a5c9'}\n]};",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 480,
+        "y": 160,
+        "wires": [
+            [
+                "cae633df9457557f"
+            ]
+        ]
+    },
+    {
+        "id": "rotator_lpsp_http_in",
+        "type": "http in",
+        "z": "3d26c2c5270bdb37",
+        "name": "POST /rotator/lpsp",
+        "url": "/rotator/lpsp",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 150,
+        "y": 250,
+        "wires": [
+            [
+                "rotator_lpsp_response",
+                "rotator_lpsp_fn"
+            ]
+        ]
+    },
+    {
+        "id": "rotator_lpsp_response",
+        "type": "http response",
+        "z": "3d26c2c5270bdb37",
+        "name": "200 OK",
+        "statusCode": "200",
+        "headers": {},
+        "x": 400,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "rotator_lpsp_fn",
+        "type": "function",
+        "z": "3d26c2c5270bdb37",
+        "name": "LP/SP → toggle_180",
+        "func": "return {payload: 'toggle_180'};",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 280,
+        "wires": [
+            [
+                "40ef419559a726ff"
+            ]
+        ]
+    },
+    {
+        "id": "rotator_go_http_in",
+        "type": "http in",
+        "z": "3d26c2c5270bdb37",
+        "name": "POST /rotator/go",
+        "url": "/rotator/go",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 150,
+        "y": 350,
+        "wires": [
+            [
+                "rotator_go_response",
+                "rotator_go_fn"
+            ]
+        ]
+    },
+    {
+        "id": "rotator_go_response",
+        "type": "http response",
+        "z": "3d26c2c5270bdb37",
+        "name": "200 OK",
+        "statusCode": "200",
+        "headers": {},
+        "x": 400,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "rotator_go_fn",
+        "type": "function",
+        "z": "3d26c2c5270bdb37",
+        "name": "GO + ensure power on",
+        "func": "// Get heading from request body\nvar hdg = msg.payload && msg.payload.hdg;\nif(hdg === undefined || isNaN(hdg)) return null;\n\n// Output 1: Power ON (idempotent — Tasmota ignores if already on)\nnode.send([null, {payload: 'ON'}]);\n\n// Output 0: Send heading after 200ms so power has time to engage if it was off\nsetTimeout(function(){\n    node.send([{payload: hdg}, null]);\n}, 200);\nreturn null;\n",
+        "outputs": 2,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 380,
+        "wires": [
+            [
+                "40ef419559a726ff"
+            ],
+            [
+                "rotator_go_pwr_mqtt"
+            ]
+        ]
+    },
+    {
+        "id": "rotator_stop_http_in",
+        "type": "http in",
+        "z": "3d26c2c5270bdb37",
+        "name": "POST /rotator/stop",
+        "url": "/rotator/stop",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 150,
+        "y": 450,
+        "wires": [
+            [
+                "rotator_stop_response",
+                "rotator_stop_fn"
+            ]
+        ]
+    },
+    {
+        "id": "rotator_stop_response",
+        "type": "http response",
+        "z": "3d26c2c5270bdb37",
+        "name": "200 OK",
+        "statusCode": "200",
+        "headers": {},
+        "x": 400,
+        "y": 420,
+        "wires": []
+    },
+    {
+        "id": "rotator_stop_fn",
+        "type": "function",
+        "z": "3d26c2c5270bdb37",
+        "name": "STOP → stop",
+        "func": "return {payload: 'stop'};",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 480,
+        "wires": [
+            [
+                "40ef419559a726ff"
+            ]
+        ]
+    },
+    {
+        "id": "rotator_go_pwr_mqtt",
+        "type": "mqtt out",
+        "z": "3d26c2c5270bdb37",
+        "name": "GO Power → MQTT",
+        "topic": "cmnd/powerstrip1/POWER2",
+        "qos": "1",
+        "retain": false,
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "f4785be9863eab08",
+        "x": 700,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "rotator_controls_combined_01",
+        "type": "ui_template",
+        "z": "3d26c2c5270bdb37",
+        "group": "84143f78d088f01d",
+        "name": "Rotator Controls (LP/SP + HDG + GO + STOP)",
+        "order": 2,
+        "width": 8,
+        "height": 1,
+        "format": "<div style=\"display:flex;gap:6px;align-items:center;width:100%;\">\n  <button id=\"lpsp-btn\" title=\"Toggle ±180° (long path / short path)\" style=\"padding:8px 8px;border:1.5px solid #00a5c9;background:#000510;color:#00e5ff;border-radius:3px;cursor:pointer;font-weight:bold;font-size:11px;flex-shrink:0;font-family:Consolas,monospace;\">LP/SP</button>\n  <input id=\"hdg-input\" type=\"number\" placeholder=\"0-359\" min=\"0\" max=\"359\" style=\"flex:1;min-width:0;width:60px;padding:8px 4px;border:1.5px solid #005c70;background:#000510;color:#00e5ff;border-radius:3px;font-size:13px;text-align:center;font-family:Consolas,monospace;\" />\n  <button id=\"go-btn\" style=\"padding:8px 10px;border:1.5px solid #00e5ff;background:#000510;color:#00e5ff;border-radius:3px;cursor:pointer;font-weight:bold;font-size:12px;flex-shrink:0;font-family:Consolas,monospace;\">GO</button>\n  <button id=\"stop-btn\" style=\"padding:8px 8px;border:1.5px solid #f85149;background:#1a0808;color:#f85149;border-radius:3px;cursor:pointer;font-weight:bold;font-size:11px;flex-shrink:0;font-family:Consolas,monospace;\">■ STOP</button>\n</div>\n<script>\n(function(){\n  function post(url, body){\n    return fetch(url, {\n      method: 'POST',\n      headers: body ? {'Content-Type':'application/json'} : {},\n      body: body ? JSON.stringify(body) : undefined\n    }).catch(function(e){ console.warn(url + ' failed:', e); });\n  }\n  document.getElementById('lpsp-btn').onclick = function(){\n    post('/rotator/lpsp');\n  };\n  document.getElementById('go-btn').onclick = function(){\n    var inp = document.getElementById('hdg-input');\n    var v = parseInt(inp.value);\n    if(isNaN(v) || v < 0 || v > 359) return;\n    post('/rotator/go', {hdg: v});\n    inp.value = '';\n  };\n  document.getElementById('stop-btn').onclick = function(){\n    post('/rotator/stop');\n  };\n  document.getElementById('hdg-input').addEventListener('keypress', function(e){\n    if(e.key === 'Enter') document.getElementById('go-btn').click();\n  });\n  // Aviation knob handler (called from SVG onclick)\n  window._rotatorPowerToggle = function(){\n    post('/rotator/power-toggle');\n  };\n})();\n</script>",
+        "storeOutMessages": true,
+        "fwdInMessages": false,
+        "resendOnRefresh": false,
+        "templateScope": "local",
+        "className": "",
+        "x": 0,
+        "y": 0,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "vue_rotator_tick_01",
+        "type": "inject",
+        "z": "3d26c2c5270bdb37",
+        "name": "Push Rotator to Vue every 1s",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "1",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "2",
+        "topic": "",
+        "payload": "",
+        "payloadType": "str",
+        "x": 110,
+        "y": 1200,
+        "wires": [
+            [
+                "vue_rotator_builder_01"
+            ]
+        ]
+    },
+    {
+        "id": "vue_rotator_builder_01",
+        "type": "function",
+        "z": "3d26c2c5270bdb37",
+        "name": "Build Rotator state for Vue",
+        "func": "// flow.rotator_heading is written by Slice heading on each poll.\n// flow.target_hdg is set by Build Rotator String when a heading is sent.\n// Power state mirrors the Tasmota powerstrip1/POWER2 outlet (rotator),\n// which Power tab tracks in flow.power_states (memory-only on Power tab).\n// Easier: read global.dxcc_xxx — no, that's not it. Use a global mirror.\n// Tasmota state for rotator outlet: stat/powerstrip1/POWER2 'ON' | 'OFF'.\n// The Power Control tab tracks it in its own flow scope. Bridge via global is\n// already done for AS3935; for rotator we'll use the flow.rotatorTimerEnd hint:\n// if a timer is active, the rotator power is ON.\nvar hdg = flow.get('rotator_heading');\nvar tgt = flow.get('target_hdg');\n\n// Power state — pull from global if present, else infer\nvar pwr = global.get('rotator_power');\nif (pwr == null) {\n    // Fallback: assume ON if heading is being received (rotator needs power to report)\n    pwr = (hdg != null);\n}\n\nreturn {\n    topic: 'rotator',\n    payload: {\n        heading:  hdg != null ? Number(hdg) : null,\n        target:   tgt != null ? Number(tgt) : null,\n        power:    !!pwr,\n        timerEnd: flow.get('rotatorTimerEnd') || null\n    }\n};\n",
+        "outputs": 1,
+        "x": 360,
+        "y": 1200,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "rotator_ws_out",
+        "type": "websocket out",
+        "z": "3d26c2c5270bdb37",
+        "name": "ws → rotator-remote",
+        "server": "",
+        "client": "rotator_ws_client",
+        "x": 900,
+        "y": 400,
+        "wires": []
+    },
+    {
+        "id": "rotator_ws_in",
+        "type": "websocket in",
+        "z": "3d26c2c5270bdb37",
+        "name": "ws ← rotator-remote",
+        "server": "",
+        "client": "rotator_ws_client",
+        "x": 560,
+        "y": 180,
+        "wires": [
+            [
+                "rotator_ws_parse"
+            ]
+        ]
+    },
+    {
+        "id": "rotator_ws_parse",
+        "type": "function",
+        "z": "3d26c2c5270bdb37",
+        "name": "Parse Rotator WS",
+        "func": "// Inbound state from rotator-remote. Replaces the serial receive chain\n// (serial in → Receive → rbe → trigger → Slice heading). Cache live heading\n// and emit it downstream so the compass renders exactly as before.\n// Heartbeats and null-heading frames ignored. target_hdg stays owned by\n// the command functions (instant feedback; arrival-clear in Rotator fmt).\nvar f;\ntry { f = JSON.parse(msg.payload); } catch (e) { return null; }\nif (!f || f.type !== 'state' || f.heading == null) return null;\nflow.set('rotator_heading', f.heading);\nmsg.payload = f.heading;\nreturn msg;\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 720,
+        "y": 180,
+        "wires": [
+            [
+                "78d79f019261723c",
+                "48d90f1e7b0172b0"
             ]
         ]
     },
@@ -1753,6 +2160,44 @@
         ]
     },
     {
+        "id": "vue_flex_tick_01",
+        "type": "inject",
+        "z": "a0a882f85c89cffc",
+        "name": "Push Flex to Vue every 2s",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "2",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "3",
+        "topic": "",
+        "payload": "",
+        "payloadType": "str",
+        "x": 110,
+        "y": 1500,
+        "wires": [
+            [
+                "vue_flex_builder_01"
+            ]
+        ]
+    },
+    {
+        "id": "vue_flex_builder_01",
+        "type": "function",
+        "z": "a0a882f85c89cffc",
+        "name": "Build Flex state for Vue",
+        "func": "// flow.flexState is in-memory only; read it and pass through to Vue.\nvar s = flow.get('flexState') || {};\nreturn {\n    topic: 'flex',\n    payload: {\n        model:        s.model         || null,\n        callsign:     s.callsign      || null,\n        clients:      s.clients       || [],\n        slices:       s.slices        || {},\n        activeSlices: s.activeSlices  || [],\n        rfpower:      s.rfpower       != null ? s.rfpower   : null,\n        tunepower:    s.tunepower     != null ? s.tunepower : null,\n        patemp:       s.patemp        != null ? s.patemp    : null,\n        pavolts:      s.pavolts       != null ? s.pavolts   : null,\n        involts:      s.involts       != null ? s.involts   : null,\n        fan:          s.fan           != null ? s.fan       : null,\n        txstate:      s.txstate       || null\n    }\n};\n",
+        "outputs": 1,
+        "x": 360,
+        "y": 1500,
+        "wires": [
+            []
+        ]
+    },
+    {
         "id": "378721e33b7680cd",
         "type": "function",
         "z": "18fb42443172f33c",
@@ -2113,6 +2558,59 @@
         "x": 540,
         "y": 540,
         "wires": []
+    },
+    {
+        "id": "vue_lp_tick_01",
+        "type": "inject",
+        "z": "18fb42443172f33c",
+        "name": "Push LP-700 to Vue every 1s",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "1",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "2",
+        "topic": "",
+        "payload": "",
+        "payloadType": "str",
+        "x": 110,
+        "y": 800,
+        "wires": [
+            [
+                "vue_lp_builder_01"
+            ]
+        ]
+    },
+    {
+        "id": "vue_lp_builder_01",
+        "type": "function",
+        "z": "18fb42443172f33c",
+        "name": "Build LP-700 state for Vue",
+        "func": "// flow.lpState = { avg, peak, swr, channel, range, scale }\nvar s = flow.get('lpState') || {};\nreturn {\n    topic: 'lp700',\n    payload: {\n        avg:     s.avg     != null ? s.avg     : null,\n        peak:    s.peak    != null ? s.peak    : null,\n        swr:     s.swr     != null ? s.swr     : null,\n        channel: s.channel != null ? s.channel : null,\n        range:   s.range   != null ? s.range   : null,\n        scale:   s.scale   != null ? s.scale   : null\n    }\n};\n",
+        "outputs": 1,
+        "x": 360,
+        "y": 800,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "vue_lp_cmd_router_01",
+        "type": "function",
+        "z": "18fb42443172f33c",
+        "name": "Route Vue LP-700 commands",
+        "func": "if (msg.topic && msg.topic !== 'lp700/cmd') return null;\nif (!msg.payload || !msg.payload.type) return null;\n// Convert to the topic LP Button Router expects: 'lp700_ch' or 'lp700_rng'\nif (msg.payload.type === 'channelStep') return { topic: 'lp700_ch' };\nif (msg.payload.type === 'rangeStep')   return { topic: 'lp700_rng' };\nreturn null;\n",
+        "outputs": 1,
+        "x": 360,
+        "y": 880,
+        "wires": [
+            [
+                "0feb87f388ee869b"
+            ]
+        ]
     },
     {
         "id": "95be1a581b6d2d85",
@@ -2798,6 +3296,44 @@
         ]
     },
     {
+        "id": "vue_solar_tick_01",
+        "type": "inject",
+        "z": "590e889d44815afb",
+        "name": "Push Solar to Vue every 5s",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "5",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "3",
+        "topic": "",
+        "payload": "",
+        "payloadType": "str",
+        "x": 110,
+        "y": 1100,
+        "wires": [
+            [
+                "vue_solar_builder_01"
+            ]
+        ]
+    },
+    {
+        "id": "vue_solar_builder_01",
+        "type": "function",
+        "z": "590e889d44815afb",
+        "name": "Build Solar state for Vue",
+        "func": "// flow.solarState is file-backed by the existing Solar State Aggregator.\nvar s = flow.get('solarState', 'file') || flow.get('solarState') || {};\nfunction rnd(v, n) { return (typeof v === 'number') ? Number(v.toFixed(n)) : v; }\nreturn {\n    topic: 'solar',\n    payload: {\n        sfi:    s.sfi,            sfiLbl: s.sfiLabel,\n        k:      s.k != null ? Number(s.k.toFixed(2)) : null,\n        kLbl:   s.kLabel,\n        a:      s.a,              aLbl:   s.aLabel,\n        muf:    rnd(s.muf,  1),\n        fof2:   rnd(s.fof2, 1),\n        xnow:   s.xray2,\n        x24:    s.xray24,\n        rsg:    { cur: s.rsgCur, h24: s.rsg24, pred: s.rsgPred }\n    }\n};\n",
+        "outputs": 1,
+        "x": 360,
+        "y": 1100,
+        "wires": [
+            []
+        ]
+    },
+    {
         "id": "df7d1786eab4d5a2",
         "type": "tcp in",
         "z": "f9a0e3ad0e019052",
@@ -3176,6 +3712,44 @@
         "libs": [],
         "x": 680,
         "y": 220,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "vue_rbn_tick_01",
+        "type": "inject",
+        "z": "f9a0e3ad0e019052",
+        "name": "Push RBN to Vue every 5s",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "5",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "3",
+        "topic": "",
+        "payload": "",
+        "payloadType": "str",
+        "x": 110,
+        "y": 1100,
+        "wires": [
+            [
+                "vue_rbn_builder_01"
+            ]
+        ]
+    },
+    {
+        "id": "vue_rbn_builder_01",
+        "type": "function",
+        "z": "f9a0e3ad0e019052",
+        "name": "Build RBN state for Vue",
+        "func": "// flow.rbn_dash is file-backed by the existing RBN State Aggregator\nvar s = flow.get('rbn_dash', 'file') || flow.get('rbn_dash') || {};\nreturn {\n    topic: 'rbn',\n    payload: {\n        skimmers:   s.skimmers   || {},\n        calFetched: s.calFetched || null,\n        sk1:        s.sk1, sk2: s.sk2\n    }\n};\n",
+        "outputs": 1,
+        "x": 360,
+        "y": 1100,
         "wires": [
             []
         ]
@@ -3774,6 +4348,59 @@
         ]
     },
     {
+        "id": "vue_rpi_tick_01",
+        "type": "inject",
+        "z": "d5fec2fea3dd37f4",
+        "name": "Push RPi to Vue every 3s",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "3",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "2",
+        "topic": "",
+        "payload": "",
+        "payloadType": "str",
+        "x": 110,
+        "y": 800,
+        "wires": [
+            [
+                "vue_rpi_builder_01"
+            ]
+        ]
+    },
+    {
+        "id": "vue_rpi_builder_01",
+        "type": "function",
+        "z": "d5fec2fea3dd37f4",
+        "name": "Build RPi state for Vue",
+        "func": "// flow.rpi_dash is file-backed by the existing RPi State Aggregator\nvar d = flow.get('rpi_dash', 'file') || flow.get('rpi_dash') || {};\nreturn { topic: 'rpi', payload: { devices: d.devices || {} } };\n",
+        "outputs": 1,
+        "x": 360,
+        "y": 800,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "vue_rpi_cmd_router_01",
+        "type": "function",
+        "z": "d5fec2fea3dd37f4",
+        "name": "Route Vue RPi commands",
+        "func": "// From Vue: { topic: 'rpi/cmd', payload: { type:'rpiReboot'|'rpiShutdown', host:'<name>' } }\nif (msg.topic && msg.topic !== 'rpi/cmd') return null;\nif (!msg.payload || !msg.payload.type || !msg.payload.host) return null;\nvar t = msg.payload.type;\nvar host = msg.payload.host;\nvar cmd = null;\nif (t === 'rpiReboot')   cmd = 'reboot';\nif (t === 'rpiShutdown') cmd = 'shutdown';\nif (!cmd) return null;\n// Re-emit in the shape Route CMD expects: { topic: 'rpi/<host>/cmd', payload: 'reboot'|'shutdown' }\nreturn { topic: 'rpi/' + host + '/cmd', payload: cmd };\n",
+        "outputs": 1,
+        "x": 360,
+        "y": 880,
+        "wires": [
+            [
+                "a0695975fec84e2c"
+            ]
+        ]
+    },
+    {
         "id": "823d7b59970a196e",
         "type": "ping",
         "z": "b05f8c028b368ae9",
@@ -4342,6 +4969,44 @@
         ]
     },
     {
+        "id": "vue_net_tick_01",
+        "type": "inject",
+        "z": "b05f8c028b368ae9",
+        "name": "Push Net to Vue every 3s",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "3",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "2",
+        "topic": "",
+        "payload": "",
+        "payloadType": "str",
+        "x": 110,
+        "y": 800,
+        "wires": [
+            [
+                "vue_net_builder_01"
+            ]
+        ]
+    },
+    {
+        "id": "vue_net_builder_01",
+        "type": "function",
+        "z": "b05f8c028b368ae9",
+        "name": "Build Network state for Vue",
+        "func": "// Read flow.net_state and forward to Vue with topic 'network'.\nvar ns = flow.get('net_state') || {};\nvar ageStr = function (sec) {\n    if (sec == null) return null;\n    if (sec < 60)    return Math.round(sec) + 's ago';\n    if (sec < 3600)  return Math.round(sec/60) + 'm ago';\n    if (sec < 86400) return Math.round(sec/3600) + 'h ago';\n    return Math.round(sec/86400) + 'd ago';\n};\nreturn {\n    topic: 'network',\n    payload: {\n        pings:      ns.pings || {},\n        status:     ns.status,\n        totalFails: ns.totalFails,\n        lastFail:   ageStr(ns.lastFail)\n    }\n};\n",
+        "outputs": 1,
+        "x": 360,
+        "y": 800,
+        "wires": [
+            []
+        ]
+    },
+    {
         "id": "626d6b74261cd17d",
         "type": "inject",
         "z": "75e2cac8ab96f556",
@@ -4841,8 +5506,7 @@
         "y": 180,
         "wires": [
             [
-                "88ce7a0b9c27747d",
-                "82f732a0dac14945"
+                "88ce7a0b9c27747d"
             ]
         ]
     },
@@ -6016,6 +6680,159 @@
         ]
     },
     {
+        "id": "vue_lightning_tick_01",
+        "type": "inject",
+        "z": "75e2cac8ab96f556",
+        "name": "Push to Vue every 3s",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "3",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "2",
+        "topic": "",
+        "payload": "",
+        "payloadType": "str",
+        "x": 110,
+        "y": 1300,
+        "wires": [
+            [
+                "vue_lightning_builder_01"
+            ]
+        ]
+    },
+    {
+        "id": "vue_lightning_builder_01",
+        "type": "function",
+        "z": "75e2cac8ab96f556",
+        "name": "Build Lightning state for Vue",
+        "func": "// Pull all Lightning + AS3935 state into one payload for the Vue card.\n// Reads from flow context (this tab's scope) for Lightning data,\n// and from global context for AS3935 status/hb/last_event (cross-tab).\n\nvar s = {};\n\n// Bypass\ns.bypassActive    = flow.get('bypass_active')     || false;\ns.bypassExpiresAt = flow.get('bypass_expires_at') || null;\n\n// Config (set by Init Defaults on this tab)\ns.callsign     = flow.get('callsign')     || 'VU2CPL';\ns.grid         = flow.get('grid_square')  || 'MK83TE';\ns.thresholdKm  = flow.get('threshold_km') ?? 40;\ns.reconnectMin = flow.get('reconnect_min') ?? 20;\n\n// Strike stats (object: total, near, mid, far, closest)\nvar stats = flow.get('stats') || {};\ns.totalStrikes = stats.total   ?? 0;\ns.lt40         = stats.near    ?? 0;   // <40 km zone\ns.lt50         = stats.mid     ?? 0;   // 40–50 km\ns.gt50         = stats.far     ?? 0;   // >50 km\ns.closestKm    = (stats.closest != null && stats.closest < 9999) ? stats.closest : null;\n\n// Antenna state (note: flow.antenna_off is boolean; UI shows ON state)\ns.antennaOn = !flow.get('antenna_off');\n\n// AS3935 status from GLOBAL context (mirrored from AS3935 Tuning tab)\nvar status = global.get('as3935_status') || flow.get('as3935_status') || {};\nvar hb     = global.get('as3935_hb')     || flow.get('as3935_hb')     || {};\nvar lwt    = status.event === 'offline';\ns.as3935Status = (status && Object.keys(status).length && !lwt) ? 'ready' : 'offline';\n/* lwt-nulls */ if (lwt || s.as3935Status === 'offline') {\n    s.nf = null; s.irq = null; s.uptime = null; s.vbat = null; s.counters = null; s.tunables = {};\n    return { topic: 'lightning', payload: s };\n}\ns.nf     = status.nf      ?? hb.nf      ?? null;\ns.irq    = status.irq     ?? hb.irq     ?? (hb.counters ? hb.counters.irq : null);\n// Format uptime nicely (seconds → \"23h 12m\")\nvar ups = hb.uptime_s ?? status.uptime_s ?? null;\nif (ups != null) {\n    var d_ = Math.floor(ups / 86400), h_ = Math.floor((ups % 86400) / 3600), m_ = Math.floor((ups % 3600) / 60);\n    s.uptime = (d_ ? d_+'d ' : '') + (h_||d_ ? h_+'h ' : '') + m_+'m';\n} else s.uptime = null;\ns.vbat = status.vbat_mv ?? hb.vbat_mv ?? null;\ns.counters = hb.counters || null;\n// Query-battery ack carries vbat_mv=NNNN in the cmd reply string.\n// Mirror to status so the battery row updates without waiting for next /hb.\nvar ack = global.get('as3935_cmd_ack') || {};\nif (ack && typeof ack.cmd === 'string' && ack.cmd.indexOf('vbat_mv=') >= 0) {\n    var m = ack.cmd.match(/vbat_mv=(\\d+)/);\n    if (m && status && Object.keys(status).length) {\n        status.vbat_mv = Number(m[1]);\n        s.vbat = status.vbat_mv;\n    }\n}\n\n\n// AS3935 tunables (from /status payload)\ns.tunables = {\n    nf:                 status.nf,\n    wdth:               status.wdth,\n    srej:               status.srej,\n    tun_cap:            status.tun_cap,\n    mask_dist:          status.mask_dist,\n    min_num_lightning:  status.min_num_lightning,\n    afe_gb:             status.afe_gb,\n    modem_sleep:        status.modem_sleep\n};\n\n// AS3935 last event (retained MQTT mirror)\nvar ev = global.get('as3935_evt_last') || flow.get('as3935_evt_last') || {};\ns.as3935Distance = ev.distance ?? null;\ns.as3935Energy   = ev.energy   ?? null;\ns.as3935Event    = ev.event    ?? null;\ns.as3935LastTs   = ev.ts_epoch_ms ?? null;\n\n// CAPE + Open-Meteo state\n// Writer is `Parse Open-Meteo → Strike` (593f22a507b46335) on this same tab.\n// It writes `om_cape_latest` + `om_state` (+ `om_wc_latest`). Don't change\n// these key names without updating that node too — Vue dashboard goes silent.\ns.cape    = flow.get('om_cape_latest') ?? null;\ns.omState = flow.get('om_state')       ?? null;\n\n// Event log (most recent first, last 30 rows)\nvar log = flow.get('event_log') || [];\ns.eventLog = log.slice(0, 30).map(function(r) {\n    if (typeof r === 'string') return r;\n    if (r && r.html)           return r.html;\n    if (r && r.ts && r.text)   return '<span style=\\\"color:var(--muted)\\\">' + r.ts + '</span> ' + r.text;\n    return JSON.stringify(r);\n});\n\nreturn { topic: 'lightning', payload: s };\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 1300,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "vue_lightning_cmd_router_01",
+        "type": "function",
+        "z": "75e2cac8ab96f556",
+        "name": "Route Vue commands",
+        "func": "if (msg.topic && msg.topic !== 'lightning/cmd') return null;\n// Incoming from Vue: { topic: 'lightning/cmd', payload: { type, value } }\n// Routes to existing Lightning + AS3935 actions via multiple outputs:\n//   0: HTTP-equivalent payload (antenna ON, bypass toggle)  → wire to existing handlers\n//   1: flow context update (threshold/reconnect sliders)     → also triggers a state push\n//   2: AS3935 cmd publish (republish, calibrate, reboot...)  → wire to AS3935 cmd MQTT-out\n//   3: AS3935 TEST inject publish (synthetic events)         → wire to AS3935 TEST publisher\n\nif (!msg.payload || !msg.payload.type) return [null, null, null, null];\nvar t = msg.payload.type, v = msg.payload.value;\n\n// --- Operational actions ---\nif (t === 'antennaOn') {\n    // Same as POST /lightning/ant-on\n    return [{ payload: { source: 'vue', action: 'antenna_on' } }, null, null, null];\n}\nif (t === 'bypassToggle') {\n    // Same as the existing Bypass Handler trigger\n    return [{ payload: { source: 'vue', action: 'bypass_toggle' } }, null, null, null];\n}\n\n// --- Slider updates ---\nif (t === 'setThreshold' && typeof v === 'number') {\n    flow.set('cfg_threshold_km', v);\n    return [null, { payload: { source: 'vue', cfg: 'threshold', value: v } }, null, null];\n}\nif (t === 'setReconnect' && typeof v === 'number') {\n    flow.set('cfg_reconnect_min', v);\n    return [null, { payload: { source: 'vue', cfg: 'reconnect', value: v } }, null, null];\n}\n\n// --- AS3935 tunable update (sends { set: { key: value } } to bridge cmd channel) ---\nif (t === 'setTunable' && msg.payload.key !== undefined && v !== undefined) {\n    // Bridge expects: { set: \"<key>\", value: <value> }\n    return [null, null, { topic: 'lightning/as3935/cmd', payload: { set: msg.payload.key, value: v } }, null];\n}\n\n// --- AS3935 maintenance ---\nvar asCmd = null;\nif (t === 'as3935Republish')      asCmd = 'republish_status';\nif (t === 'as3935Calibrate')      asCmd = 'calibrate_tun_cap';\nif (t === 'as3935QueryBattery')   asCmd = 'query_battery';\nif (t === 'as3935Reboot')         asCmd = 'reboot';\nif (t === 'as3935FactoryReset')   asCmd = 'factory_reset_wifi';\nif (asCmd) {\n    // For reboot / factory_reset_wifi: clear the cached hb + status so the builder\n    // returns nulls until the bridge comes back online with fresh data.\n    if (asCmd === 'reboot' || asCmd === 'factory_reset_wifi') {\n        global.set('as3935_hb', null);\n        global.set('as3935_status', { event: 'offline' });\n    }\n    return [null, null, { topic: 'lightning/as3935/cmd', payload: { action: asCmd } }, null];\n}\n\n// --- TEST injects (bench only) ---\nif (t === 'testStrike') {\n    var ev;\n    if (v === 'near')      ev = { event: 'lightning', distance: 5,  energy: 12000 };\n    else if (v === 'far')  ev = { event: 'lightning', distance: 25, energy: 4000 };\n    else if (v === 'oor')  ev = { event: 'lightning', distance: 63, energy: 0 };\n    else if (v === 'disturber') ev = { event: 'disturber', distance: 0, energy: 0 };\n    else if (v === 'noise')     ev = { event: 'noise', distance: 0, energy: 0 };\n    if (ev) {\n        ev.timestamp = Date.now();\n        ev.test = true;\n        return [null, null, null, { topic: 'lightning/as3935', payload: ev }];\n    }\n}\n\nnode.warn('Unknown Vue command: ' + JSON.stringify(msg.payload));\nreturn [null, null, null, null];\n",
+        "outputs": 4,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 1380,
+        "wires": [
+            [],
+            [
+                "vue_lightning_builder_01"
+            ],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "tx_inhibit_setter_01",
+        "type": "function",
+        "z": "75e2cac8ab96f556",
+        "name": "TX Inhibit Setter",
+        "func": "// TX Inhibit Setter — wired from Trigger Disconnect / Execute Reconnect /\n// Force Reconnect / HTTP→Antenna ON / Manual Override.\n//\n// Command lineage discovered 2026-05-27 via spray-and-pray + status_code\n// inspection (status_code=0 means radio ack'd, 0x5000002D means rejected):\n//   xmit 0                            → 0 ack (universal PTT release)\n//   interlock tx1_inhibit=N           → 0x5000002D rejected\n//   radio set tx_inhibit=N            → 0x5000002D rejected\n//   transmit set inhibit=N            → 0 ack  ← this is the working form\n//   interlock tx1_inhibit_value=N     → 0x5000002D rejected\n//\n// We send `xmit 0` first on inhibit-ON so any in-progress TX drops\n// immediately (then the inhibit prevents future key-up). On inhibit-\n// OFF we only need to clear the inhibit flag.\n//\n// Idempotent: same value sent multiple times is harmless.\nlet inhibit;\nif (msg.cmd === 'DISCONNECT')      inhibit = 1;\nelse if (msg.cmd === 'RECONNECT')  inhibit = 0;\nelse if (msg.cmd === 'BYPASS_ON')  inhibit = 0;\nelse return null;\n\nconst cmds = inhibit\n    ? ['xmit 0', 'transmit set inhibit=1']    // stop now + inhibit future\n    : ['transmit set inhibit=0'];              // clear inhibit\n\nconst out = { payload: cmds, _txInhibitValue: inhibit };\nnode.status({\n    fill: inhibit ? 'red' : 'green', shape: 'dot',\n    text: 'TX ' + (inhibit ? 'INHIBITED' : 'OK')\n});\nreturn out;\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 700,
+        "y": 700,
+        "wires": [
+            [
+                "flexradio_tx_inhibit_01"
+            ]
+        ]
+    },
+    {
+        "id": "flexradio_tx_inhibit_01",
+        "type": "flexradio-request",
+        "z": "75e2cac8ab96f556",
+        "name": "FlexRadio TX Inhibit",
+        "radio": "94d0df28ae5cccfc",
+        "x": 920,
+        "y": 700,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "lightning_antoff_http_in_01",
+        "type": "http in",
+        "z": "75e2cac8ab96f556",
+        "name": "POST /lightning/ant-off",
+        "url": "/lightning/ant-off",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 1270,
+        "y": 600,
+        "wires": [
+            [
+                "lightning_antoff_fn_01"
+            ]
+        ]
+    },
+    {
+        "id": "lightning_antoff_fn_01",
+        "type": "function",
+        "z": "75e2cac8ab96f556",
+        "name": "HTTP → Antenna OFF",
+        "func": "// Dashboard ANT OFF toggle — symmetric to HTTP → Antenna ON.\n// Sets sticky manual_off (file scope, survives Pi restart) so any\n// auto-strike that follows goes through Trigger Disconnect's\n// manual-off early-exit (alert-only). See HANDOVER #33.\nconst strip = flow.get('power_strip') || 'powerstrip1';\nconst ch    = flow.get('power_ch')    || 'POWER5';\nconst ts    = new Date().toLocaleString();\nflow.set('antenna_off', true);\nflow.set('manual_off',  true, 'file');\nnode.send([\n    { payload: 'OK', res: msg.res },\n    { topic: 'cmnd/' + strip + '/' + ch, payload: 'OFF',\n      cmd: 'DISCONNECT', reason: 'Manual via dashboard',\n      timestamp: ts, distance: null },\n    { payload: 'cancel' },\n    { event_record: { type: 'manual_off', source: 'dashboard',\n      ts: Date.now() } }\n]);\nnode.status({fill:'red', shape:'dot', text:'Antenna OFF (manual)'});\nreturn null;\n",
+        "outputs": 4,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1540,
+        "y": 600,
+        "wires": [
+            [
+                "lightning_antoff_res_01"
+            ],
+            [
+                "b2e2ed6a2bba24af",
+                "tx_inhibit_setter_01"
+            ],
+            [
+                "dabc283d78fa8081"
+            ],
+            [
+                "light_jsonl_append_01"
+            ]
+        ]
+    },
+    {
+        "id": "lightning_antoff_res_01",
+        "type": "http response",
+        "z": "75e2cac8ab96f556",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 1740,
+        "y": 600,
+        "wires": []
+    },
+    {
         "id": "fa472f4b461b6b2b",
         "type": "mqtt out",
         "z": "b76a5310767803b4",
@@ -6921,6 +7738,59 @@
         "y": 60,
         "wires": [
             []
+        ]
+    },
+    {
+        "id": "vue_pwr_tick_01",
+        "type": "inject",
+        "z": "b76a5310767803b4",
+        "name": "Push Power to Vue every 3s",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "3",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "2",
+        "topic": "",
+        "payload": "",
+        "payloadType": "str",
+        "x": 110,
+        "y": 900,
+        "wires": [
+            [
+                "vue_pwr_builder_01"
+            ]
+        ]
+    },
+    {
+        "id": "vue_pwr_builder_01",
+        "type": "function",
+        "z": "b76a5310767803b4",
+        "name": "Build Power state for Vue",
+        "func": "// flow.power_states is keyed by stat/<dev>/POWERn → 'ON'|'OFF'\n// Plus flow.energy_state for the 16A master, flow.rotatorTimerEnd for rotator auto-off\nvar raw = flow.get('power_states') || {};\n// Vue indexes by cmnd topic. Map stat → cmnd by simple string swap.\nvar byCmnd = {};\nObject.keys(raw).forEach(function(k){\n    var cmnd = k.replace(/^stat\\//, 'cmnd/');\n    byCmnd[cmnd] = raw[k];\n    byCmnd[k] = raw[k];  // also keep the original in case some keys are already cmnd\n});\n\nvar e = flow.get('energy_state') || {};\nvar energy = {\n    voltage: e.voltage,\n    current: e.current,\n    power:   e.power,\n    today:   e.today\n};\n\nreturn {\n    topic: 'power',\n    payload: {\n        power: byCmnd,\n        energy: energy.voltage != null || energy.power != null ? energy : null,\n        rotatorTimerEnd: flow.get('rotatorTimerEnd') || null\n    }\n};\n",
+        "outputs": 1,
+        "x": 360,
+        "y": 900,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "vue_pwr_cmd_router_01",
+        "type": "function",
+        "z": "b76a5310767803b4",
+        "name": "Route Vue Power commands",
+        "func": "if (msg.topic && msg.topic !== 'power/cmd') return null;\nif (!msg.payload || msg.payload.type !== 'togglePlug' || !msg.payload.plug) return null;\n// Convert to the shape Power TOGGLE Router expects: { topic: 'cmnd/.../POWERn' }\nreturn { topic: msg.payload.plug };\n",
+        "outputs": 1,
+        "x": 360,
+        "y": 980,
+        "wires": [
+            [
+                "a1fbb636a745e687"
+            ]
         ]
     },
     {
@@ -8521,6 +9391,193 @@
         "wires": []
     },
     {
+        "id": "vue_dxcc_tick_01",
+        "type": "inject",
+        "z": "d110d176c0aad308",
+        "name": "Push DXCC to Vue every 3s",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "3",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "3",
+        "topic": "",
+        "payload": "",
+        "payloadType": "str",
+        "x": 110,
+        "y": 1500,
+        "wires": [
+            [
+                "vue_dxcc_builder_01"
+            ]
+        ]
+    },
+    {
+        "id": "vue_dxcc_builder_01",
+        "type": "function",
+        "z": "d110d176c0aad308",
+        "name": "Build DXCC state for Vue",
+        "func": "// Pull DXCC state into one payload for the Vue card. Triggered by the 3s tick.\nvar s = {};\n\n// Stats (totals + last update time)\nvar ws = flow.get('workedStats') || {};\ns.stats = {\n    // Semantic fields - \"entities\" and \"slots\" are different units!\n    // ws.entities      = unique DXCC entities worked (319)\n    // ws.bandSlots     = total entity-band combinations (2432)\n    // ws.confirmed     = band SLOTS confirmed via QSL/LoTW (2395)\n    // ws.unconfirmed   = band slots unconfirmed (37; 2395+37=2432)\n    entities:       ws.entities    ?? null,\n    bandSlots:      ws.bandSlots   ?? null,\n    confirmedSlots: ws.confirmed   ?? null,\n    unconfirmedSlots: ws.unconfirmed ?? null,\n    // Legacy alias for the collapsed-summary header (still says \"X worked\")\n    totalWorked:    ws.entities    ?? null,\n    // Legacy field kept for backwards compatibility - now correctly\n    // labelled in the template as 'confirmed slots' not 'confirmed entities'\n    totalConfirmed: ws.confirmed   ?? null,\n    seedAge:        null\n};\n\n// Seed age — mtime of nr_dxcc_seed.json (rewritten by the daily Club Log\n// fetch via Fetch All Modes + Parse, so mtime = last successful fetch).\n// Format as a short relative-time string for the Vue card header.\nvar flowsDir = flow.get('cfg_flows_dir') || (os.homedir() + '/.node-red/projects/vu2cpl-shack');\nvar seedPaths = [\n    flowsDir + '/nr_dxcc_seed.json',\n    os.homedir() + '/.node-red/nr_dxcc_seed.json'\n];\nfor (var i = 0; i < seedPaths.length; i++) {\n    try {\n        if (fs.existsSync(seedPaths[i])) {\n            var st = fs.statSync(seedPaths[i]);\n            var ageMs = Date.now() - st.mtimeMs;\n            var ageMin = Math.floor(ageMs / 60000);\n            var ageHr  = Math.floor(ageMin / 60);\n            var ageDay = Math.floor(ageHr  / 24);\n            if      (ageMin < 1)   s.stats.seedAge = 'just now';\n            else if (ageMin < 60)  s.stats.seedAge = ageMin + 'm ago';\n            else if (ageHr  < 24)  s.stats.seedAge = ageHr  + 'h ago';\n            else if (ageDay < 30)  s.stats.seedAge = ageDay + 'd ago';\n            else                   s.stats.seedAge = Math.floor(ageDay / 30) + 'mo ago';\n            s.stats.seedMtime = st.mtimeMs;\n            break;\n        }\n    } catch (e) { /* fall through to next path */ }\n}\n\n// Cluster status — keyed by cluster1..4; map via the .name field to friendly names\nvar rawCs = flow.get('clusterStatus') || {};\ns.clusterStatus = {};\nObject.keys(rawCs).forEach(function(k) {\n    var c = rawCs[k] || {};\n    if (c.name) {\n        s.clusterStatus[c.name] = {\n            connected: !!c.connected,\n            reconnecting: !!c.reconnecting,\n            lastSpot: c.lastSpot || (c.lastSpotTs ? new Date(c.lastSpotTs).toISOString().substr(11,5) : null),\n            spotCount: c.count || 0\n        };\n    }\n});\n\n// Mute state (global so the Login+Parse function can read it)\ns.muted = global.get('dxcc_cluster_mute') || {};\n\n// Alert list — Format Alert function populates flow.alertList\nvar alerts = flow.get('alertList') || [];\ns.alertList = alerts.slice(0, 50).map(function(a){\n    // freq comes as \"14.290000 MHz\" string — trim to e.g. \"14.290\"\n    var f = a.freq || '';\n    var m = /([0-9]+\\.[0-9]+)/.exec(f);\n    return {\n        time:   a.time || '',\n        freq:   m ? Number(m[1]).toFixed(3) : f,\n        mode:   a.mode || '',\n        call:   a.call || '',\n        entity: a.entity || '',\n        type:   a.type || a.alertType || ''\n    };\n});\n\n// \"New\" since last seen — just total alert list size for now\ns.newAlerts = alerts.length;\n\n// Blacklist\ns.blacklist = flow.get('dxccBlacklist') || [];\n\n// Filter state — read with 'file' since Save Alert Filters HTTP writes file-backed\nvar bandsOn = flow.get('filterBands', 'file') || {};\ns.filters = {\n    types: {\n        dxcc:       flow.get('filterNewDxcc',       'file') !== false,\n        band:       flow.get('filterNewBand',       'file') !== false,\n        bandUnconf: flow.get('filterNewBandUnconf', 'file') !== false,\n        mode:       flow.get('filterNewMode',       'file') !== false,\n        modeUnconf: flow.get('filterNewModeUnconf', 'file') !== false\n    },\n    modes: {\n        cw:    flow.get('filterModeCW',    'file') !== false,\n        phone: flow.get('filterModePhone', 'file') !== false,\n        data:  flow.get('filterModeData',  'file') !== false\n    },\n    bands: bandsOn,\n    ttl:   flow.get('spotTTL', 'file') || 20\n};\n\n\nreturn { topic: 'dxcc', payload: s };\n",
+        "outputs": 1,
+        "libs": [
+            {
+                "var": "fs",
+                "module": "fs"
+            },
+            {
+                "var": "os",
+                "module": "os"
+            }
+        ],
+        "x": 360,
+        "y": 1500,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "vue_dxcc_cmd_router_01",
+        "type": "function",
+        "z": "d110d176c0aad308",
+        "name": "Route Vue DXCC commands",
+        "func": "if (msg.topic && msg.topic !== 'dxcc/cmd') return null;\n// Incoming from Vue: { topic: 'dxcc/cmd', payload: { type, value, key } }\nif (!msg.payload || !msg.payload.type) return null;\nvar t = msg.payload.type;\n\nif (t === 'muteCluster' && msg.payload.key) {\n    var mute = global.get('dxcc_cluster_mute') || {};\n    mute[msg.payload.key] = !!msg.payload.value;\n    global.set('dxcc_cluster_mute', mute);\n    node.status({fill:'blue', shape:'dot', text:'mute ' + msg.payload.key + ' = ' + mute[msg.payload.key]});\n    return null;\n}\n\nnode.warn('Unknown DXCC command: ' + JSON.stringify(msg.payload));\nreturn null;\n",
+        "outputs": 1,
+        "x": 360,
+        "y": 1580,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "dxcc_seed_age_tick_01",
+        "type": "inject",
+        "z": "d110d176c0aad308",
+        "name": "Seed-age tick (30s)",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "30",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "3",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 920,
+        "wires": [
+            [
+                "dxcc_seed_age_fn_01"
+            ]
+        ]
+    },
+    {
+        "id": "dxcc_seed_age_fn_01",
+        "type": "function",
+        "z": "d110d176c0aad308",
+        "name": "Compute DXCC Seed Age",
+        "func": "// Computes the age of nr_dxcc_seed.json via fs.statSync and emits a\n// short relative-time string for the DXCC Dashboard's Seed row.\n// Driven by a 30s inject. Mirrors what vue_dxcc_builder_01 does for\n// the /shack DXCC card.\nvar flowsDir = flow.get('cfg_flows_dir')\n  || (os.homedir() + '/.node-red/projects/vu2cpl-shack');\nvar seedPaths = [\n    flowsDir + '/nr_dxcc_seed.json',\n    os.homedir() + '/.node-red/nr_dxcc_seed.json'\n];\nfor (var i = 0; i < seedPaths.length; i++) {\n    try {\n        if (fs.existsSync(seedPaths[i])) {\n            var st = fs.statSync(seedPaths[i]);\n            var ageMs = Date.now() - st.mtimeMs;\n            var ageMin = Math.floor(ageMs / 60000);\n            var ageHr  = Math.floor(ageMin / 60);\n            var ageDay = Math.floor(ageHr  / 24);\n            var ageStr;\n            if      (ageMin < 1)   ageStr = 'just now';\n            else if (ageMin < 60)  ageStr = ageMin + 'm ago';\n            else if (ageHr  < 24)  ageStr = ageHr  + 'h ago';\n            else if (ageDay < 30)  ageStr = ageDay + 'd ago';\n            else                   ageStr = Math.floor(ageDay / 30) + 'mo ago';\n            node.status({fill:'green', shape:'dot', text:'seed ' + ageStr});\n            return { topic: 'seed_age', payload: { age: ageStr, mtime: st.mtimeMs } };\n        }\n    } catch (e) { /* try next path */ }\n}\nnode.status({fill:'grey', shape:'ring', text:'seed file not found'});\nreturn null;\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [
+            {
+                "var": "fs",
+                "module": "fs"
+            },
+            {
+                "var": "os",
+                "module": "os"
+            }
+        ],
+        "x": 400,
+        "y": 920,
+        "wires": [
+            [
+                "38a6451a95a57685"
+            ]
+        ]
+    },
+    {
+        "id": "dxcc_mute_handler_01",
+        "type": "function",
+        "z": "d110d176c0aad308",
+        "name": "DXCC Cluster Mute Handler",
+        "func": "// Closes #27 - server-side handler for D1 dashboard's cluster mute\n// click. Receives msg.topic='dxcc_mute' with payload {name, mute}\n// and updates global.dxcc_cluster_mute - same global already\n// honoured by login-parse-dedup-v2's mute check (used by the Vue\n// /shack DXCC card too, so this works across both dashboards).\nif (msg.topic !== 'dxcc_mute') return null;\nvar p = msg.payload || {};\nif (!p.name) return null;\nvar mute = global.get('dxcc_cluster_mute') || {};\nmute[p.name] = !!p.mute;\nglobal.set('dxcc_cluster_mute', mute);\nnode.status({fill:'blue', shape:'dot',\n  text: 'mute ' + p.name + ' = ' + mute[p.name]});\nreturn null;\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 700,
+        "y": 880,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "cty_bootstrap_fn_01",
+        "type": "function",
+        "z": "d110d176c0aad308",
+        "name": "Bootstrap cty.xml from file",
+        "func": "// 2026-05-28 - resilience fix. Reads nr_cty_maps.json (written by\n// Parse cty.xml -> Prefix Maps after each successful Club Log fetch)\n// and populates the three flow context keys the prefix-lookup function\n// needs. Fires at onceDelay:1 - well before the live Club Log fetch\n// at onceDelay:5 - so DXCC alert classification has a working prefix\n// map from the moment spots start arriving.\n//\n// If Club Log is unreachable at restart, the cached maps continue\n// to serve. If Club Log later succeeds, the live fetch overwrites\n// both flow context AND the cache file with fresher data.\n//\n// First-time deploys (no cache yet): no-op; the live fetch at +5s\n// populates from scratch and writes the cache for next time.\n\nvar flowsDir = flow.get('cfg_flows_dir') || (os.homedir() + '/.node-red');\nvar cachePath = flowsDir + '/nr_cty_maps.json';\n\n// Fallback path in case cfg_flows_dir isn't set yet (Credentials node\n// fires at onceDelay:0.5 - we run at 1 - timing is generally safe but\n// being defensive is cheap).\n// Two probe paths - cfg_flows_dir if Credentials node has fired, then\n// the generic fallback. os is already imported via the libs declaration\n// (require() is NOT available in Node-RED function nodes).\nvar paths = [\n    cachePath,\n    os.homedir() + '/.node-red/nr_cty_maps.json'\n];\n\nfor (var i = 0; i < paths.length; i++) {\n    try {\n        if (fs.existsSync(paths[i])) {\n            var raw = fs.readFileSync(paths[i], 'utf8');\n            var cached = JSON.parse(raw);\n            if (cached.prefixMap && cached.entityNames) {\n                flow.set('dxccPrefixMap',  cached.prefixMap);\n                flow.set('dxccExceptions', cached.exceptions || {});\n                flow.set('dxccSeedNames',  cached.entityNames);\n                var ageMs = Date.now() - new Date(cached.parsedAt || 0).getTime();\n                var ageMin = Math.floor(ageMs / 60000);\n                var ageStr = ageMin < 60 ? ageMin + 'm'\n                           : ageMin < 1440 ? Math.floor(ageMin/60) + 'h'\n                           : Math.floor(ageMin/1440) + 'd';\n                var s = cached.stats || {};\n                node.status({fill:'blue', shape:'dot',\n                    text: 'cached ' + (s.entities||'?') + 'ent ' + (s.prefixes||'?') + 'pfx (age ' + ageStr + ')'});\n                node.warn('cty bootstrap from cache: ' + paths[i] + ' (' + ageStr + ' old)');\n                return null;\n            }\n        }\n    } catch (e) {\n        node.warn('cty cache read failed at ' + paths[i] + ': ' + e.message);\n    }\n}\nnode.status({fill:'grey', shape:'ring', text:'no cty cache - waiting for live fetch'});\nreturn null;\n",
+        "outputs": 0,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [
+            {
+                "var": "fs",
+                "module": "fs"
+            },
+            {
+                "var": "os",
+                "module": "os"
+            },
+            {
+                "var": "path",
+                "module": "path"
+            }
+        ],
+        "x": 470,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "cty_bootstrap_tick_01",
+        "type": "inject",
+        "z": "d110d176c0aad308",
+        "name": "Load cty.xml from cache (early)",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "1",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 200,
+        "y": 200,
+        "wires": [
+            [
+                "cty_bootstrap_fn_01"
+            ]
+        ]
+    },
+    {
         "id": "ws_overview_cmt",
         "type": "comment",
         "z": "spe_ws_tab_01",
@@ -8568,8 +9625,7 @@
                 "ws_pwr_result_dbg"
             ],
             [
-                "ws_panel_node",
-                "uib_shack_01"
+                "ws_panel_node"
             ]
         ]
     },
@@ -8702,6 +9758,34 @@
         ]
     },
     {
+        "id": "vue_spe_bridge_01",
+        "type": "function",
+        "z": "spe_ws_tab_01",
+        "name": "Build SPE state for Vue",
+        "func": "// ws_format_state already builds the flat panel-ready object.\n// Wrap with topic 'spe' for the uibuilder client.\nreturn { topic: 'spe', payload: msg.payload };\n",
+        "outputs": 1,
+        "x": 700,
+        "y": 200,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "vue_spe_cmd_router_01",
+        "type": "function",
+        "z": "spe_ws_tab_01",
+        "name": "Route Vue SPE commands",
+        "func": "if (msg.topic && msg.topic !== 'spe/cmd') return null;\nif (!msg.payload || !msg.payload.type) return null;\n// Vue sends { type: 'spePower' | 'speCmd', value: 'ON_SPE' | 'OFF_SPE' | 'MODE' | 'TUNE' | ... }\n// ws_btn_router accepts the same alphabetic command codes via msg.payload.\nif (msg.payload.type === 'spePower' || msg.payload.type === 'speCmd') {\n    return { payload: msg.payload.value };\n}\n// Sweep commands from the Vue SPECard. Translate into the\n// tune_band:<band> / tune_stop payloads spe-remote expects;\n// ws_btn_router already passes those through.\nif (msg.payload.type === 'speTuneBand') {\n    return { payload: 'tune_band:' + msg.payload.value };\n}\nif (msg.payload.type === 'speTuneStop') {\n    return { payload: 'tune_stop' };\n}\nreturn null;\n",
+        "outputs": 1,
+        "x": 360,
+        "y": 280,
+        "wires": [
+            [
+                "ws_btn_router"
+            ]
+        ]
+    },
+    {
         "id": "a278b2a11351fcfb",
         "type": "mqtt in",
         "z": "4590ed80de4873b1",
@@ -8709,7 +9793,7 @@
         "topic": "shack/gpsntp/chrony",
         "qos": "0",
         "datatype": "json",
-        "broker": "mqttbroker.shack",
+        "broker": "f4785be9863eab08",
         "nl": false,
         "rap": true,
         "rh": 0,
@@ -8740,6 +9824,19 @@
         "className": "",
         "x": 460,
         "y": 120,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "vue_gpsntp_bridge_01",
+        "type": "function",
+        "z": "4590ed80de4873b1",
+        "name": "GPS NTP → Vue",
+        "func": "// Wrap the retained chrony JSON for the uibuilder client\nif (!msg.payload) return null;\n// MQTT-in may deliver string or already-parsed JSON; tolerate both\nvar p = msg.payload;\nif (typeof p === 'string') { try { p = JSON.parse(p); } catch (e) { return null; } }\nreturn { topic: 'gpsntp', payload: p };\n",
+        "outputs": 1,
+        "x": 400,
+        "y": 200,
         "wires": [
             []
         ]
@@ -8840,9 +9937,7 @@
         "x": 320,
         "y": 100,
         "wires": [
-            [
-                "557083037f168b22"
-            ]
+            []
         ]
     },
     {
@@ -8860,9 +9955,7 @@
         "x": 320,
         "y": 160,
         "wires": [
-            [
-                "557083037f168b22"
-            ]
+            []
         ]
     },
     {
@@ -8880,9 +9973,7 @@
         "x": 320,
         "y": 220,
         "wires": [
-            [
-                "557083037f168b22"
-            ]
+            []
         ]
     },
     {
@@ -8926,9 +10017,7 @@
         "x": 380,
         "y": 300,
         "wires": [
-            [
-                "557083037f168b22"
-            ]
+            []
         ]
     },
     {
@@ -8947,9 +10036,7 @@
         "x": 160,
         "y": 440,
         "wires": [
-            [
-                "557083037f168b22"
-            ]
+            []
         ]
     },
     {
@@ -8988,9 +10075,7 @@
         "x": 420,
         "y": 500,
         "wires": [
-            [
-                "557083037f168b22"
-            ]
+            []
         ]
     },
     {
@@ -9008,9 +10093,7 @@
         "x": 420,
         "y": 560,
         "wires": [
-            [
-                "557083037f168b22"
-            ]
+            []
         ]
     },
     {
@@ -9167,1162 +10250,6 @@
         "wires": []
     },
     {
-        "id": "rotator_pwr_http_in",
-        "type": "http in",
-        "z": "3d26c2c5270bdb37",
-        "name": "POST /rotator/power-toggle",
-        "url": "/rotator/power-toggle",
-        "method": "post",
-        "upload": false,
-        "swaggerDoc": "",
-        "x": 200,
-        "y": 60,
-        "wires": [
-            [
-                "rotator_pwr_response",
-                "rotator_pwr_make_msg"
-            ]
-        ]
-    },
-    {
-        "id": "rotator_pwr_response",
-        "type": "http response",
-        "z": "3d26c2c5270bdb37",
-        "name": "200 OK",
-        "statusCode": "200",
-        "headers": {},
-        "x": 500,
-        "y": 30,
-        "wires": []
-    },
-    {
-        "id": "rotator_pwr_make_msg",
-        "type": "function",
-        "z": "3d26c2c5270bdb37",
-        "name": "Build TOGGLE msg",
-        "func": "return {payload: 'TOGGLE', topic: 'cmnd/powerstrip1/POWER2'};",
-        "outputs": 1,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 500,
-        "y": 90,
-        "wires": [
-            [
-                "rotator_pwr_mqtt_out"
-            ]
-        ]
-    },
-    {
-        "id": "rotator_pwr_mqtt_out",
-        "type": "mqtt out",
-        "z": "3d26c2c5270bdb37",
-        "name": "Rotator Power → MQTT",
-        "topic": "cmnd/powerstrip1/POWER2",
-        "qos": "1",
-        "retain": false,
-        "respTopic": "",
-        "contentType": "",
-        "userProps": "",
-        "correl": "",
-        "expiry": "",
-        "broker": "f4785be9863eab08",
-        "x": 800,
-        "y": 90,
-        "wires": []
-    },
-    {
-        "id": "rotator_pwr_state_in",
-        "type": "mqtt in",
-        "z": "3d26c2c5270bdb37",
-        "name": "stat/powerstrip1/POWER2 (rotator)",
-        "topic": "stat/powerstrip1/POWER2",
-        "qos": "0",
-        "datatype": "auto-detect",
-        "broker": "f4785be9863eab08",
-        "nl": false,
-        "rap": true,
-        "rh": 0,
-        "inputs": 0,
-        "x": 200,
-        "y": 160,
-        "wires": [
-            [
-                "rotator_pwr_state_fn"
-            ]
-        ]
-    },
-    {
-        "id": "rotator_pwr_state_fn",
-        "type": "function",
-        "z": "3d26c2c5270bdb37",
-        "name": "Power state → SVG dim",
-        "func": "var state = String(msg.payload).toUpperCase().trim();\nvar isOn = state === 'ON';\nreturn {payload: [\n    // Dim/undim the whole compass content\n    {command: 'update_attribute', elementId: 'compass-content', attributeName: 'opacity', attributeValue: isOn ? '1' : '0.25'},\n    // Update the power knob's LED indicator color\n    {command: 'update_attribute', elementId: 'rotator-power-led', attributeName: 'fill', attributeValue: isOn ? '#3fb950' : '#1a0808'},\n    {command: 'update_attribute', elementId: 'rotator-power-led', attributeName: 'stroke', attributeValue: isOn ? '#3fb950' : '#005c70'},\n    // Make knob body brighter when ON\n    {command: 'update_attribute', elementId: 'rotator-power-body', attributeName: 'stroke', attributeValue: isOn ? '#3fb950' : '#00a5c9'},\n    {command: 'update_attribute', elementId: 'rotator-power-stem', attributeName: 'stroke', attributeValue: isOn ? '#3fb950' : '#00a5c9'},\n    {command: 'update_attribute', elementId: 'rotator-power-arc', attributeName: 'stroke', attributeValue: isOn ? '#3fb950' : '#00a5c9'}\n]};",
-        "outputs": 1,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 480,
-        "y": 160,
-        "wires": [
-            [
-                "cae633df9457557f"
-            ]
-        ]
-    },
-    {
-        "id": "rotator_lpsp_http_in",
-        "type": "http in",
-        "z": "3d26c2c5270bdb37",
-        "name": "POST /rotator/lpsp",
-        "url": "/rotator/lpsp",
-        "method": "post",
-        "upload": false,
-        "swaggerDoc": "",
-        "x": 150,
-        "y": 250,
-        "wires": [
-            [
-                "rotator_lpsp_response",
-                "rotator_lpsp_fn"
-            ]
-        ]
-    },
-    {
-        "id": "rotator_lpsp_response",
-        "type": "http response",
-        "z": "3d26c2c5270bdb37",
-        "name": "200 OK",
-        "statusCode": "200",
-        "headers": {},
-        "x": 400,
-        "y": 220,
-        "wires": []
-    },
-    {
-        "id": "rotator_lpsp_fn",
-        "type": "function",
-        "z": "3d26c2c5270bdb37",
-        "name": "LP/SP → toggle_180",
-        "func": "return {payload: 'toggle_180'};",
-        "outputs": 1,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 400,
-        "y": 280,
-        "wires": [
-            [
-                "40ef419559a726ff"
-            ]
-        ]
-    },
-    {
-        "id": "rotator_go_http_in",
-        "type": "http in",
-        "z": "3d26c2c5270bdb37",
-        "name": "POST /rotator/go",
-        "url": "/rotator/go",
-        "method": "post",
-        "upload": false,
-        "swaggerDoc": "",
-        "x": 150,
-        "y": 350,
-        "wires": [
-            [
-                "rotator_go_response",
-                "rotator_go_fn"
-            ]
-        ]
-    },
-    {
-        "id": "rotator_go_response",
-        "type": "http response",
-        "z": "3d26c2c5270bdb37",
-        "name": "200 OK",
-        "statusCode": "200",
-        "headers": {},
-        "x": 400,
-        "y": 320,
-        "wires": []
-    },
-    {
-        "id": "rotator_go_fn",
-        "type": "function",
-        "z": "3d26c2c5270bdb37",
-        "name": "GO + ensure power on",
-        "func": "// Get heading from request body\nvar hdg = msg.payload && msg.payload.hdg;\nif(hdg === undefined || isNaN(hdg)) return null;\n\n// Output 1: Power ON (idempotent — Tasmota ignores if already on)\nnode.send([null, {payload: 'ON'}]);\n\n// Output 0: Send heading after 200ms so power has time to engage if it was off\nsetTimeout(function(){\n    node.send([{payload: hdg}, null]);\n}, 200);\nreturn null;\n",
-        "outputs": 2,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 400,
-        "y": 380,
-        "wires": [
-            [
-                "40ef419559a726ff"
-            ],
-            [
-                "rotator_go_pwr_mqtt"
-            ]
-        ]
-    },
-    {
-        "id": "rotator_stop_http_in",
-        "type": "http in",
-        "z": "3d26c2c5270bdb37",
-        "name": "POST /rotator/stop",
-        "url": "/rotator/stop",
-        "method": "post",
-        "upload": false,
-        "swaggerDoc": "",
-        "x": 150,
-        "y": 450,
-        "wires": [
-            [
-                "rotator_stop_response",
-                "rotator_stop_fn"
-            ]
-        ]
-    },
-    {
-        "id": "rotator_stop_response",
-        "type": "http response",
-        "z": "3d26c2c5270bdb37",
-        "name": "200 OK",
-        "statusCode": "200",
-        "headers": {},
-        "x": 400,
-        "y": 420,
-        "wires": []
-    },
-    {
-        "id": "rotator_stop_fn",
-        "type": "function",
-        "z": "3d26c2c5270bdb37",
-        "name": "STOP → stop",
-        "func": "return {payload: 'stop'};",
-        "outputs": 1,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 400,
-        "y": 480,
-        "wires": [
-            [
-                "40ef419559a726ff"
-            ]
-        ]
-    },
-    {
-        "id": "rotator_go_pwr_mqtt",
-        "type": "mqtt out",
-        "z": "3d26c2c5270bdb37",
-        "name": "GO Power → MQTT",
-        "topic": "cmnd/powerstrip1/POWER2",
-        "qos": "1",
-        "retain": false,
-        "respTopic": "",
-        "contentType": "",
-        "userProps": "",
-        "correl": "",
-        "expiry": "",
-        "broker": "f4785be9863eab08",
-        "x": 700,
-        "y": 380,
-        "wires": []
-    },
-    {
-        "id": "rotator_controls_combined_01",
-        "type": "ui_template",
-        "z": "3d26c2c5270bdb37",
-        "group": "84143f78d088f01d",
-        "name": "Rotator Controls (LP/SP + HDG + GO + STOP)",
-        "order": 2,
-        "width": 8,
-        "height": 1,
-        "format": "<div style=\"display:flex;gap:6px;align-items:center;width:100%;\">\n  <button id=\"lpsp-btn\" title=\"Toggle ±180° (long path / short path)\" style=\"padding:8px 8px;border:1.5px solid #00a5c9;background:#000510;color:#00e5ff;border-radius:3px;cursor:pointer;font-weight:bold;font-size:11px;flex-shrink:0;font-family:Consolas,monospace;\">LP/SP</button>\n  <input id=\"hdg-input\" type=\"number\" placeholder=\"0-359\" min=\"0\" max=\"359\" style=\"flex:1;min-width:0;width:60px;padding:8px 4px;border:1.5px solid #005c70;background:#000510;color:#00e5ff;border-radius:3px;font-size:13px;text-align:center;font-family:Consolas,monospace;\" />\n  <button id=\"go-btn\" style=\"padding:8px 10px;border:1.5px solid #00e5ff;background:#000510;color:#00e5ff;border-radius:3px;cursor:pointer;font-weight:bold;font-size:12px;flex-shrink:0;font-family:Consolas,monospace;\">GO</button>\n  <button id=\"stop-btn\" style=\"padding:8px 8px;border:1.5px solid #f85149;background:#1a0808;color:#f85149;border-radius:3px;cursor:pointer;font-weight:bold;font-size:11px;flex-shrink:0;font-family:Consolas,monospace;\">■ STOP</button>\n</div>\n<script>\n(function(){\n  function post(url, body){\n    return fetch(url, {\n      method: 'POST',\n      headers: body ? {'Content-Type':'application/json'} : {},\n      body: body ? JSON.stringify(body) : undefined\n    }).catch(function(e){ console.warn(url + ' failed:', e); });\n  }\n  document.getElementById('lpsp-btn').onclick = function(){\n    post('/rotator/lpsp');\n  };\n  document.getElementById('go-btn').onclick = function(){\n    var inp = document.getElementById('hdg-input');\n    var v = parseInt(inp.value);\n    if(isNaN(v) || v < 0 || v > 359) return;\n    post('/rotator/go', {hdg: v});\n    inp.value = '';\n  };\n  document.getElementById('stop-btn').onclick = function(){\n    post('/rotator/stop');\n  };\n  document.getElementById('hdg-input').addEventListener('keypress', function(e){\n    if(e.key === 'Enter') document.getElementById('go-btn').click();\n  });\n  // Aviation knob handler (called from SVG onclick)\n  window._rotatorPowerToggle = function(){\n    post('/rotator/power-toggle');\n  };\n})();\n</script>",
-        "storeOutMessages": true,
-        "fwdInMessages": false,
-        "resendOnRefresh": false,
-        "templateScope": "local",
-        "className": "",
-        "wires": [
-            []
-        ]
-    },
-    {
-        "id": "uib_shack_01",
-        "type": "uibuilder",
-        "z": "vue_dashboard_tab_01",
-        "name": "Shack Vue",
-        "topic": "",
-        "url": "shack",
-        "fwdInMessages": false,
-        "allowScripts": false,
-        "allowStyles": false,
-        "copyIndex": true,
-        "templateFolder": "blank",
-        "extTemplate": "",
-        "showfolder": false,
-        "reload": false,
-        "sourceFolder": "src",
-        "deployedVersion": "7.6.2",
-        "showMsgUib": false,
-        "title": "",
-        "descr": "",
-        "x": 300,
-        "y": 100,
-        "wires": [
-            [
-                "vue_lightning_cmd_router_01",
-                "vue_dxcc_cmd_router_01",
-                "vue_rpi_cmd_router_01",
-                "vue_pwr_cmd_router_01",
-                "vue_spe_cmd_router_01",
-                "vue_lp_cmd_router_01"
-            ],
-            []
-        ]
-    },
-    {
-        "id": "vue_lightning_tick_01",
-        "type": "inject",
-        "z": "75e2cac8ab96f556",
-        "name": "Push to Vue every 3s",
-        "props": [
-            {
-                "p": "payload"
-            }
-        ],
-        "repeat": "3",
-        "crontab": "",
-        "once": true,
-        "onceDelay": "2",
-        "topic": "",
-        "payload": "",
-        "payloadType": "str",
-        "x": 110,
-        "y": 1300,
-        "wires": [
-            [
-                "vue_lightning_builder_01"
-            ]
-        ]
-    },
-    {
-        "id": "vue_lightning_builder_01",
-        "type": "function",
-        "z": "75e2cac8ab96f556",
-        "name": "Build Lightning state for Vue",
-        "func": "// Pull all Lightning + AS3935 state into one payload for the Vue card.\n// Reads from flow context (this tab's scope) for Lightning data,\n// and from global context for AS3935 status/hb/last_event (cross-tab).\n\nvar s = {};\n\n// Bypass\ns.bypassActive    = flow.get('bypass_active')     || false;\ns.bypassExpiresAt = flow.get('bypass_expires_at') || null;\n\n// Config (set by Init Defaults on this tab)\ns.callsign     = flow.get('callsign')     || 'VU2CPL';\ns.grid         = flow.get('grid_square')  || 'MK83TE';\ns.thresholdKm  = flow.get('threshold_km') ?? 40;\ns.reconnectMin = flow.get('reconnect_min') ?? 20;\n\n// Strike stats (object: total, near, mid, far, closest)\nvar stats = flow.get('stats') || {};\ns.totalStrikes = stats.total   ?? 0;\ns.lt40         = stats.near    ?? 0;   // <40 km zone\ns.lt50         = stats.mid     ?? 0;   // 40–50 km\ns.gt50         = stats.far     ?? 0;   // >50 km\ns.closestKm    = (stats.closest != null && stats.closest < 9999) ? stats.closest : null;\n\n// Antenna state (note: flow.antenna_off is boolean; UI shows ON state)\ns.antennaOn = !flow.get('antenna_off');\n\n// AS3935 status from GLOBAL context (mirrored from AS3935 Tuning tab)\nvar status = global.get('as3935_status') || flow.get('as3935_status') || {};\nvar hb     = global.get('as3935_hb')     || flow.get('as3935_hb')     || {};\nvar lwt    = status.event === 'offline';\ns.as3935Status = (status && Object.keys(status).length && !lwt) ? 'ready' : 'offline';\n/* lwt-nulls */ if (lwt || s.as3935Status === 'offline') {\n    s.nf = null; s.irq = null; s.uptime = null; s.vbat = null; s.counters = null; s.tunables = {};\n    return { topic: 'lightning', payload: s };\n}\ns.nf     = status.nf      ?? hb.nf      ?? null;\ns.irq    = status.irq     ?? hb.irq     ?? (hb.counters ? hb.counters.irq : null);\n// Format uptime nicely (seconds → \"23h 12m\")\nvar ups = hb.uptime_s ?? status.uptime_s ?? null;\nif (ups != null) {\n    var d_ = Math.floor(ups / 86400), h_ = Math.floor((ups % 86400) / 3600), m_ = Math.floor((ups % 3600) / 60);\n    s.uptime = (d_ ? d_+'d ' : '') + (h_||d_ ? h_+'h ' : '') + m_+'m';\n} else s.uptime = null;\ns.vbat = status.vbat_mv ?? hb.vbat_mv ?? null;\ns.counters = hb.counters || null;\n// Query-battery ack carries vbat_mv=NNNN in the cmd reply string.\n// Mirror to status so the battery row updates without waiting for next /hb.\nvar ack = global.get('as3935_cmd_ack') || {};\nif (ack && typeof ack.cmd === 'string' && ack.cmd.indexOf('vbat_mv=') >= 0) {\n    var m = ack.cmd.match(/vbat_mv=(\\d+)/);\n    if (m && status && Object.keys(status).length) {\n        status.vbat_mv = Number(m[1]);\n        s.vbat = status.vbat_mv;\n    }\n}\n\n\n// AS3935 tunables (from /status payload)\ns.tunables = {\n    nf:                 status.nf,\n    wdth:               status.wdth,\n    srej:               status.srej,\n    tun_cap:            status.tun_cap,\n    mask_dist:          status.mask_dist,\n    min_num_lightning:  status.min_num_lightning,\n    afe_gb:             status.afe_gb,\n    modem_sleep:        status.modem_sleep\n};\n\n// AS3935 last event (retained MQTT mirror)\nvar ev = global.get('as3935_evt_last') || flow.get('as3935_evt_last') || {};\ns.as3935Distance = ev.distance ?? null;\ns.as3935Energy   = ev.energy   ?? null;\ns.as3935Event    = ev.event    ?? null;\ns.as3935LastTs   = ev.ts_epoch_ms ?? null;\n\n// CAPE + Open-Meteo state\n// Writer is `Parse Open-Meteo → Strike` (593f22a507b46335) on this same tab.\n// It writes `om_cape_latest` + `om_state` (+ `om_wc_latest`). Don't change\n// these key names without updating that node too — Vue dashboard goes silent.\ns.cape    = flow.get('om_cape_latest') ?? null;\ns.omState = flow.get('om_state')       ?? null;\n\n// Event log (most recent first, last 30 rows)\nvar log = flow.get('event_log') || [];\ns.eventLog = log.slice(0, 30).map(function(r) {\n    if (typeof r === 'string') return r;\n    if (r && r.html)           return r.html;\n    if (r && r.ts && r.text)   return '<span style=\\\"color:var(--muted)\\\">' + r.ts + '</span> ' + r.text;\n    return JSON.stringify(r);\n});\n\nreturn { topic: 'lightning', payload: s };\n",
-        "outputs": 1,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 360,
-        "y": 1300,
-        "wires": [
-            [
-                "uib_shack_01"
-            ]
-        ]
-    },
-    {
-        "id": "vue_lightning_cmd_router_01",
-        "type": "function",
-        "z": "75e2cac8ab96f556",
-        "name": "Route Vue commands",
-        "func": "if (msg.topic && msg.topic !== 'lightning/cmd') return null;\n// Incoming from Vue: { topic: 'lightning/cmd', payload: { type, value } }\n// Routes to existing Lightning + AS3935 actions via multiple outputs:\n//   0: HTTP-equivalent payload (antenna ON, bypass toggle)  → wire to existing handlers\n//   1: flow context update (threshold/reconnect sliders)     → also triggers a state push\n//   2: AS3935 cmd publish (republish, calibrate, reboot...)  → wire to AS3935 cmd MQTT-out\n//   3: AS3935 TEST inject publish (synthetic events)         → wire to AS3935 TEST publisher\n\nif (!msg.payload || !msg.payload.type) return [null, null, null, null];\nvar t = msg.payload.type, v = msg.payload.value;\n\n// --- Operational actions ---\nif (t === 'antennaOn') {\n    // Same as POST /lightning/ant-on\n    return [{ payload: { source: 'vue', action: 'antenna_on' } }, null, null, null];\n}\nif (t === 'bypassToggle') {\n    // Same as the existing Bypass Handler trigger\n    return [{ payload: { source: 'vue', action: 'bypass_toggle' } }, null, null, null];\n}\n\n// --- Slider updates ---\nif (t === 'setThreshold' && typeof v === 'number') {\n    flow.set('cfg_threshold_km', v);\n    return [null, { payload: { source: 'vue', cfg: 'threshold', value: v } }, null, null];\n}\nif (t === 'setReconnect' && typeof v === 'number') {\n    flow.set('cfg_reconnect_min', v);\n    return [null, { payload: { source: 'vue', cfg: 'reconnect', value: v } }, null, null];\n}\n\n// --- AS3935 tunable update (sends { set: { key: value } } to bridge cmd channel) ---\nif (t === 'setTunable' && msg.payload.key !== undefined && v !== undefined) {\n    // Bridge expects: { set: \"<key>\", value: <value> }\n    return [null, null, { topic: 'lightning/as3935/cmd', payload: { set: msg.payload.key, value: v } }, null];\n}\n\n// --- AS3935 maintenance ---\nvar asCmd = null;\nif (t === 'as3935Republish')      asCmd = 'republish_status';\nif (t === 'as3935Calibrate')      asCmd = 'calibrate_tun_cap';\nif (t === 'as3935QueryBattery')   asCmd = 'query_battery';\nif (t === 'as3935Reboot')         asCmd = 'reboot';\nif (t === 'as3935FactoryReset')   asCmd = 'factory_reset_wifi';\nif (asCmd) {\n    // For reboot / factory_reset_wifi: clear the cached hb + status so the builder\n    // returns nulls until the bridge comes back online with fresh data.\n    if (asCmd === 'reboot' || asCmd === 'factory_reset_wifi') {\n        global.set('as3935_hb', null);\n        global.set('as3935_status', { event: 'offline' });\n    }\n    return [null, null, { topic: 'lightning/as3935/cmd', payload: { action: asCmd } }, null];\n}\n\n// --- TEST injects (bench only) ---\nif (t === 'testStrike') {\n    var ev;\n    if (v === 'near')      ev = { event: 'lightning', distance: 5,  energy: 12000 };\n    else if (v === 'far')  ev = { event: 'lightning', distance: 25, energy: 4000 };\n    else if (v === 'oor')  ev = { event: 'lightning', distance: 63, energy: 0 };\n    else if (v === 'disturber') ev = { event: 'disturber', distance: 0, energy: 0 };\n    else if (v === 'noise')     ev = { event: 'noise', distance: 0, energy: 0 };\n    if (ev) {\n        ev.timestamp = Date.now();\n        ev.test = true;\n        return [null, null, null, { topic: 'lightning/as3935', payload: ev }];\n    }\n}\n\nnode.warn('Unknown Vue command: ' + JSON.stringify(msg.payload));\nreturn [null, null, null, null];\n",
-        "outputs": 4,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 360,
-        "y": 1380,
-        "wires": [
-            [],
-            [
-                "vue_lightning_builder_01"
-            ],
-            [
-                "82f732a0dac14945"
-            ],
-            [
-                "as3935_evt_test_out"
-            ]
-        ]
-    },
-    {
-        "id": "vue_dxcc_tick_01",
-        "type": "inject",
-        "z": "d110d176c0aad308",
-        "name": "Push DXCC to Vue every 3s",
-        "props": [
-            {
-                "p": "payload"
-            }
-        ],
-        "repeat": "3",
-        "crontab": "",
-        "once": true,
-        "onceDelay": "3",
-        "topic": "",
-        "payload": "",
-        "payloadType": "str",
-        "x": 110,
-        "y": 1500,
-        "wires": [
-            [
-                "vue_dxcc_builder_01"
-            ]
-        ]
-    },
-    {
-        "id": "vue_dxcc_builder_01",
-        "type": "function",
-        "z": "d110d176c0aad308",
-        "name": "Build DXCC state for Vue",
-        "func": "// Pull DXCC state into one payload for the Vue card. Triggered by the 3s tick.\nvar s = {};\n\n// Stats (totals + last update time)\nvar ws = flow.get('workedStats') || {};\ns.stats = {\n    // Semantic fields - \"entities\" and \"slots\" are different units!\n    // ws.entities      = unique DXCC entities worked (319)\n    // ws.bandSlots     = total entity-band combinations (2432)\n    // ws.confirmed     = band SLOTS confirmed via QSL/LoTW (2395)\n    // ws.unconfirmed   = band slots unconfirmed (37; 2395+37=2432)\n    entities:       ws.entities    ?? null,\n    bandSlots:      ws.bandSlots   ?? null,\n    confirmedSlots: ws.confirmed   ?? null,\n    unconfirmedSlots: ws.unconfirmed ?? null,\n    // Legacy alias for the collapsed-summary header (still says \"X worked\")\n    totalWorked:    ws.entities    ?? null,\n    // Legacy field kept for backwards compatibility - now correctly\n    // labelled in the template as 'confirmed slots' not 'confirmed entities'\n    totalConfirmed: ws.confirmed   ?? null,\n    seedAge:        null\n};\n\n// Seed age — mtime of nr_dxcc_seed.json (rewritten by the daily Club Log\n// fetch via Fetch All Modes + Parse, so mtime = last successful fetch).\n// Format as a short relative-time string for the Vue card header.\nvar flowsDir = flow.get('cfg_flows_dir') || (os.homedir() + '/.node-red/projects/vu2cpl-shack');\nvar seedPaths = [\n    flowsDir + '/nr_dxcc_seed.json',\n    os.homedir() + '/.node-red/nr_dxcc_seed.json'\n];\nfor (var i = 0; i < seedPaths.length; i++) {\n    try {\n        if (fs.existsSync(seedPaths[i])) {\n            var st = fs.statSync(seedPaths[i]);\n            var ageMs = Date.now() - st.mtimeMs;\n            var ageMin = Math.floor(ageMs / 60000);\n            var ageHr  = Math.floor(ageMin / 60);\n            var ageDay = Math.floor(ageHr  / 24);\n            if      (ageMin < 1)   s.stats.seedAge = 'just now';\n            else if (ageMin < 60)  s.stats.seedAge = ageMin + 'm ago';\n            else if (ageHr  < 24)  s.stats.seedAge = ageHr  + 'h ago';\n            else if (ageDay < 30)  s.stats.seedAge = ageDay + 'd ago';\n            else                   s.stats.seedAge = Math.floor(ageDay / 30) + 'mo ago';\n            s.stats.seedMtime = st.mtimeMs;\n            break;\n        }\n    } catch (e) { /* fall through to next path */ }\n}\n\n// Cluster status — keyed by cluster1..4; map via the .name field to friendly names\nvar rawCs = flow.get('clusterStatus') || {};\ns.clusterStatus = {};\nObject.keys(rawCs).forEach(function(k) {\n    var c = rawCs[k] || {};\n    if (c.name) {\n        s.clusterStatus[c.name] = {\n            connected: !!c.connected,\n            reconnecting: !!c.reconnecting,\n            lastSpot: c.lastSpot || (c.lastSpotTs ? new Date(c.lastSpotTs).toISOString().substr(11,5) : null),\n            spotCount: c.count || 0\n        };\n    }\n});\n\n// Mute state (global so the Login+Parse function can read it)\ns.muted = global.get('dxcc_cluster_mute') || {};\n\n// Alert list — Format Alert function populates flow.alertList\nvar alerts = flow.get('alertList') || [];\ns.alertList = alerts.slice(0, 50).map(function(a){\n    // freq comes as \"14.290000 MHz\" string — trim to e.g. \"14.290\"\n    var f = a.freq || '';\n    var m = /([0-9]+\\.[0-9]+)/.exec(f);\n    return {\n        time:   a.time || '',\n        freq:   m ? Number(m[1]).toFixed(3) : f,\n        mode:   a.mode || '',\n        call:   a.call || '',\n        entity: a.entity || '',\n        type:   a.type || a.alertType || ''\n    };\n});\n\n// \"New\" since last seen — just total alert list size for now\ns.newAlerts = alerts.length;\n\n// Blacklist\ns.blacklist = flow.get('dxccBlacklist') || [];\n\n// Filter state — read with 'file' since Save Alert Filters HTTP writes file-backed\nvar bandsOn = flow.get('filterBands', 'file') || {};\ns.filters = {\n    types: {\n        dxcc:       flow.get('filterNewDxcc',       'file') !== false,\n        band:       flow.get('filterNewBand',       'file') !== false,\n        bandUnconf: flow.get('filterNewBandUnconf', 'file') !== false,\n        mode:       flow.get('filterNewMode',       'file') !== false,\n        modeUnconf: flow.get('filterNewModeUnconf', 'file') !== false\n    },\n    modes: {\n        cw:    flow.get('filterModeCW',    'file') !== false,\n        phone: flow.get('filterModePhone', 'file') !== false,\n        data:  flow.get('filterModeData',  'file') !== false\n    },\n    bands: bandsOn,\n    ttl:   flow.get('spotTTL', 'file') || 20\n};\n\n\nreturn { topic: 'dxcc', payload: s };\n",
-        "outputs": 1,
-        "libs": [
-            {
-                "var": "fs",
-                "module": "fs"
-            },
-            {
-                "var": "os",
-                "module": "os"
-            }
-        ],
-        "x": 360,
-        "y": 1500,
-        "wires": [
-            [
-                "uib_shack_01"
-            ]
-        ]
-    },
-    {
-        "id": "vue_dxcc_cmd_router_01",
-        "type": "function",
-        "z": "d110d176c0aad308",
-        "name": "Route Vue DXCC commands",
-        "func": "if (msg.topic && msg.topic !== 'dxcc/cmd') return null;\n// Incoming from Vue: { topic: 'dxcc/cmd', payload: { type, value, key } }\nif (!msg.payload || !msg.payload.type) return null;\nvar t = msg.payload.type;\n\nif (t === 'muteCluster' && msg.payload.key) {\n    var mute = global.get('dxcc_cluster_mute') || {};\n    mute[msg.payload.key] = !!msg.payload.value;\n    global.set('dxcc_cluster_mute', mute);\n    node.status({fill:'blue', shape:'dot', text:'mute ' + msg.payload.key + ' = ' + mute[msg.payload.key]});\n    return null;\n}\n\nnode.warn('Unknown DXCC command: ' + JSON.stringify(msg.payload));\nreturn null;\n",
-        "outputs": 1,
-        "x": 360,
-        "y": 1580,
-        "wires": [
-            []
-        ]
-    },
-    {
-        "id": "vue_net_tick_01",
-        "type": "inject",
-        "z": "b05f8c028b368ae9",
-        "name": "Push Net to Vue every 3s",
-        "props": [
-            {
-                "p": "payload"
-            }
-        ],
-        "repeat": "3",
-        "crontab": "",
-        "once": true,
-        "onceDelay": "2",
-        "topic": "",
-        "payload": "",
-        "payloadType": "str",
-        "x": 110,
-        "y": 800,
-        "wires": [
-            [
-                "vue_net_builder_01"
-            ]
-        ]
-    },
-    {
-        "id": "vue_net_builder_01",
-        "type": "function",
-        "z": "b05f8c028b368ae9",
-        "name": "Build Network state for Vue",
-        "func": "// Read flow.net_state and forward to Vue with topic 'network'.\nvar ns = flow.get('net_state') || {};\nvar ageStr = function (sec) {\n    if (sec == null) return null;\n    if (sec < 60)    return Math.round(sec) + 's ago';\n    if (sec < 3600)  return Math.round(sec/60) + 'm ago';\n    if (sec < 86400) return Math.round(sec/3600) + 'h ago';\n    return Math.round(sec/86400) + 'd ago';\n};\nreturn {\n    topic: 'network',\n    payload: {\n        pings:      ns.pings || {},\n        status:     ns.status,\n        totalFails: ns.totalFails,\n        lastFail:   ageStr(ns.lastFail)\n    }\n};\n",
-        "outputs": 1,
-        "x": 360,
-        "y": 800,
-        "wires": [
-            [
-                "uib_shack_01"
-            ]
-        ]
-    },
-    {
-        "id": "vue_rpi_tick_01",
-        "type": "inject",
-        "z": "d5fec2fea3dd37f4",
-        "name": "Push RPi to Vue every 3s",
-        "props": [
-            {
-                "p": "payload"
-            }
-        ],
-        "repeat": "3",
-        "crontab": "",
-        "once": true,
-        "onceDelay": "2",
-        "topic": "",
-        "payload": "",
-        "payloadType": "str",
-        "x": 110,
-        "y": 800,
-        "wires": [
-            [
-                "vue_rpi_builder_01"
-            ]
-        ]
-    },
-    {
-        "id": "vue_rpi_builder_01",
-        "type": "function",
-        "z": "d5fec2fea3dd37f4",
-        "name": "Build RPi state for Vue",
-        "func": "// flow.rpi_dash is file-backed by the existing RPi State Aggregator\nvar d = flow.get('rpi_dash', 'file') || flow.get('rpi_dash') || {};\nreturn { topic: 'rpi', payload: { devices: d.devices || {} } };\n",
-        "outputs": 1,
-        "x": 360,
-        "y": 800,
-        "wires": [
-            [
-                "uib_shack_01"
-            ]
-        ]
-    },
-    {
-        "id": "vue_rpi_cmd_router_01",
-        "type": "function",
-        "z": "d5fec2fea3dd37f4",
-        "name": "Route Vue RPi commands",
-        "func": "// From Vue: { topic: 'rpi/cmd', payload: { type:'rpiReboot'|'rpiShutdown', host:'<name>' } }\nif (msg.topic && msg.topic !== 'rpi/cmd') return null;\nif (!msg.payload || !msg.payload.type || !msg.payload.host) return null;\nvar t = msg.payload.type;\nvar host = msg.payload.host;\nvar cmd = null;\nif (t === 'rpiReboot')   cmd = 'reboot';\nif (t === 'rpiShutdown') cmd = 'shutdown';\nif (!cmd) return null;\n// Re-emit in the shape Route CMD expects: { topic: 'rpi/<host>/cmd', payload: 'reboot'|'shutdown' }\nreturn { topic: 'rpi/' + host + '/cmd', payload: cmd };\n",
-        "outputs": 1,
-        "x": 360,
-        "y": 880,
-        "wires": [
-            [
-                "a0695975fec84e2c"
-            ]
-        ]
-    },
-    {
-        "id": "vue_pwr_tick_01",
-        "type": "inject",
-        "z": "b76a5310767803b4",
-        "name": "Push Power to Vue every 3s",
-        "props": [
-            {
-                "p": "payload"
-            }
-        ],
-        "repeat": "3",
-        "crontab": "",
-        "once": true,
-        "onceDelay": "2",
-        "topic": "",
-        "payload": "",
-        "payloadType": "str",
-        "x": 110,
-        "y": 900,
-        "wires": [
-            [
-                "vue_pwr_builder_01"
-            ]
-        ]
-    },
-    {
-        "id": "vue_pwr_builder_01",
-        "type": "function",
-        "z": "b76a5310767803b4",
-        "name": "Build Power state for Vue",
-        "func": "// flow.power_states is keyed by stat/<dev>/POWERn → 'ON'|'OFF'\n// Plus flow.energy_state for the 16A master, flow.rotatorTimerEnd for rotator auto-off\nvar raw = flow.get('power_states') || {};\n// Vue indexes by cmnd topic. Map stat → cmnd by simple string swap.\nvar byCmnd = {};\nObject.keys(raw).forEach(function(k){\n    var cmnd = k.replace(/^stat\\//, 'cmnd/');\n    byCmnd[cmnd] = raw[k];\n    byCmnd[k] = raw[k];  // also keep the original in case some keys are already cmnd\n});\n\nvar e = flow.get('energy_state') || {};\nvar energy = {\n    voltage: e.voltage,\n    current: e.current,\n    power:   e.power,\n    today:   e.today\n};\n\nreturn {\n    topic: 'power',\n    payload: {\n        power: byCmnd,\n        energy: energy.voltage != null || energy.power != null ? energy : null,\n        rotatorTimerEnd: flow.get('rotatorTimerEnd') || null\n    }\n};\n",
-        "outputs": 1,
-        "x": 360,
-        "y": 900,
-        "wires": [
-            [
-                "uib_shack_01"
-            ]
-        ]
-    },
-    {
-        "id": "vue_pwr_cmd_router_01",
-        "type": "function",
-        "z": "b76a5310767803b4",
-        "name": "Route Vue Power commands",
-        "func": "if (msg.topic && msg.topic !== 'power/cmd') return null;\nif (!msg.payload || msg.payload.type !== 'togglePlug' || !msg.payload.plug) return null;\n// Convert to the shape Power TOGGLE Router expects: { topic: 'cmnd/.../POWERn' }\nreturn { topic: msg.payload.plug };\n",
-        "outputs": 1,
-        "x": 360,
-        "y": 980,
-        "wires": [
-            [
-                "a1fbb636a745e687"
-            ]
-        ]
-    },
-    {
-        "id": "vue_solar_tick_01",
-        "type": "inject",
-        "z": "590e889d44815afb",
-        "name": "Push Solar to Vue every 5s",
-        "props": [
-            {
-                "p": "payload"
-            }
-        ],
-        "repeat": "5",
-        "crontab": "",
-        "once": true,
-        "onceDelay": "3",
-        "topic": "",
-        "payload": "",
-        "payloadType": "str",
-        "x": 110,
-        "y": 1100,
-        "wires": [
-            [
-                "vue_solar_builder_01"
-            ]
-        ]
-    },
-    {
-        "id": "vue_solar_builder_01",
-        "type": "function",
-        "z": "590e889d44815afb",
-        "name": "Build Solar state for Vue",
-        "func": "// flow.solarState is file-backed by the existing Solar State Aggregator.\nvar s = flow.get('solarState', 'file') || flow.get('solarState') || {};\nfunction rnd(v, n) { return (typeof v === 'number') ? Number(v.toFixed(n)) : v; }\nreturn {\n    topic: 'solar',\n    payload: {\n        sfi:    s.sfi,            sfiLbl: s.sfiLabel,\n        k:      s.k != null ? Number(s.k.toFixed(2)) : null,\n        kLbl:   s.kLabel,\n        a:      s.a,              aLbl:   s.aLabel,\n        muf:    rnd(s.muf,  1),\n        fof2:   rnd(s.fof2, 1),\n        xnow:   s.xray2,\n        x24:    s.xray24,\n        rsg:    { cur: s.rsgCur, h24: s.rsg24, pred: s.rsgPred }\n    }\n};\n",
-        "outputs": 1,
-        "x": 360,
-        "y": 1100,
-        "wires": [
-            [
-                "uib_shack_01"
-            ]
-        ]
-    },
-    {
-        "id": "vue_flex_tick_01",
-        "type": "inject",
-        "z": "a0a882f85c89cffc",
-        "name": "Push Flex to Vue every 2s",
-        "props": [
-            {
-                "p": "payload"
-            }
-        ],
-        "repeat": "2",
-        "crontab": "",
-        "once": true,
-        "onceDelay": "3",
-        "topic": "",
-        "payload": "",
-        "payloadType": "str",
-        "x": 110,
-        "y": 1500,
-        "wires": [
-            [
-                "vue_flex_builder_01"
-            ]
-        ]
-    },
-    {
-        "id": "vue_flex_builder_01",
-        "type": "function",
-        "z": "a0a882f85c89cffc",
-        "name": "Build Flex state for Vue",
-        "func": "// flow.flexState is in-memory only; read it and pass through to Vue.\nvar s = flow.get('flexState') || {};\nreturn {\n    topic: 'flex',\n    payload: {\n        model:        s.model         || null,\n        callsign:     s.callsign      || null,\n        clients:      s.clients       || [],\n        slices:       s.slices        || {},\n        activeSlices: s.activeSlices  || [],\n        rfpower:      s.rfpower       != null ? s.rfpower   : null,\n        tunepower:    s.tunepower     != null ? s.tunepower : null,\n        patemp:       s.patemp        != null ? s.patemp    : null,\n        pavolts:      s.pavolts       != null ? s.pavolts   : null,\n        involts:      s.involts       != null ? s.involts   : null,\n        fan:          s.fan           != null ? s.fan       : null,\n        txstate:      s.txstate       || null\n    }\n};\n",
-        "outputs": 1,
-        "x": 360,
-        "y": 1500,
-        "wires": [
-            [
-                "uib_shack_01"
-            ]
-        ]
-    },
-    {
-        "id": "vue_spe_bridge_01",
-        "type": "function",
-        "z": "spe_ws_tab_01",
-        "name": "Build SPE state for Vue",
-        "func": "// ws_format_state already builds the flat panel-ready object.\n// Wrap with topic 'spe' for the uibuilder client.\nreturn { topic: 'spe', payload: msg.payload };\n",
-        "outputs": 1,
-        "x": 700,
-        "y": 200,
-        "wires": [
-            [
-                "uib_shack_01"
-            ]
-        ]
-    },
-    {
-        "id": "vue_spe_cmd_router_01",
-        "type": "function",
-        "z": "spe_ws_tab_01",
-        "name": "Route Vue SPE commands",
-        "func": "if (msg.topic && msg.topic !== 'spe/cmd') return null;\nif (!msg.payload || !msg.payload.type) return null;\n// Vue sends { type: 'spePower' | 'speCmd', value: 'ON_SPE' | 'OFF_SPE' | 'MODE' | 'TUNE' | ... }\n// ws_btn_router accepts the same alphabetic command codes via msg.payload.\nif (msg.payload.type === 'spePower' || msg.payload.type === 'speCmd') {\n    return { payload: msg.payload.value };\n}\n// Sweep commands from the Vue SPECard. Translate into the\n// tune_band:<band> / tune_stop payloads spe-remote expects;\n// ws_btn_router already passes those through.\nif (msg.payload.type === 'speTuneBand') {\n    return { payload: 'tune_band:' + msg.payload.value };\n}\nif (msg.payload.type === 'speTuneStop') {\n    return { payload: 'tune_stop' };\n}\nreturn null;\n",
-        "outputs": 1,
-        "x": 360,
-        "y": 280,
-        "wires": [
-            [
-                "ws_btn_router"
-            ]
-        ]
-    },
-    {
-        "id": "vue_lp_tick_01",
-        "type": "inject",
-        "z": "18fb42443172f33c",
-        "name": "Push LP-700 to Vue every 1s",
-        "props": [
-            {
-                "p": "payload"
-            }
-        ],
-        "repeat": "1",
-        "crontab": "",
-        "once": true,
-        "onceDelay": "2",
-        "topic": "",
-        "payload": "",
-        "payloadType": "str",
-        "x": 110,
-        "y": 800,
-        "wires": [
-            [
-                "vue_lp_builder_01"
-            ]
-        ]
-    },
-    {
-        "id": "vue_lp_builder_01",
-        "type": "function",
-        "z": "18fb42443172f33c",
-        "name": "Build LP-700 state for Vue",
-        "func": "// flow.lpState = { avg, peak, swr, channel, range, scale }\nvar s = flow.get('lpState') || {};\nreturn {\n    topic: 'lp700',\n    payload: {\n        avg:     s.avg     != null ? s.avg     : null,\n        peak:    s.peak    != null ? s.peak    : null,\n        swr:     s.swr     != null ? s.swr     : null,\n        channel: s.channel != null ? s.channel : null,\n        range:   s.range   != null ? s.range   : null,\n        scale:   s.scale   != null ? s.scale   : null\n    }\n};\n",
-        "outputs": 1,
-        "x": 360,
-        "y": 800,
-        "wires": [
-            [
-                "uib_shack_01"
-            ]
-        ]
-    },
-    {
-        "id": "vue_lp_cmd_router_01",
-        "type": "function",
-        "z": "18fb42443172f33c",
-        "name": "Route Vue LP-700 commands",
-        "func": "if (msg.topic && msg.topic !== 'lp700/cmd') return null;\nif (!msg.payload || !msg.payload.type) return null;\n// Convert to the topic LP Button Router expects: 'lp700_ch' or 'lp700_rng'\nif (msg.payload.type === 'channelStep') return { topic: 'lp700_ch' };\nif (msg.payload.type === 'rangeStep')   return { topic: 'lp700_rng' };\nreturn null;\n",
-        "outputs": 1,
-        "x": 360,
-        "y": 880,
-        "wires": [
-            [
-                "0feb87f388ee869b"
-            ]
-        ]
-    },
-    {
-        "id": "vue_rotator_tick_01",
-        "type": "inject",
-        "z": "3d26c2c5270bdb37",
-        "name": "Push Rotator to Vue every 1s",
-        "props": [
-            {
-                "p": "payload"
-            }
-        ],
-        "repeat": "1",
-        "crontab": "",
-        "once": true,
-        "onceDelay": "2",
-        "topic": "",
-        "payload": "",
-        "payloadType": "str",
-        "x": 110,
-        "y": 1200,
-        "wires": [
-            [
-                "vue_rotator_builder_01"
-            ]
-        ]
-    },
-    {
-        "id": "vue_rotator_builder_01",
-        "type": "function",
-        "z": "3d26c2c5270bdb37",
-        "name": "Build Rotator state for Vue",
-        "func": "// flow.rotator_heading is written by Slice heading on each poll.\n// flow.target_hdg is set by Build Rotator String when a heading is sent.\n// Power state mirrors the Tasmota powerstrip1/POWER2 outlet (rotator),\n// which Power tab tracks in flow.power_states (memory-only on Power tab).\n// Easier: read global.dxcc_xxx — no, that's not it. Use a global mirror.\n// Tasmota state for rotator outlet: stat/powerstrip1/POWER2 'ON' | 'OFF'.\n// The Power Control tab tracks it in its own flow scope. Bridge via global is\n// already done for AS3935; for rotator we'll use the flow.rotatorTimerEnd hint:\n// if a timer is active, the rotator power is ON.\nvar hdg = flow.get('rotator_heading');\nvar tgt = flow.get('target_hdg');\n\n// Power state — pull from global if present, else infer\nvar pwr = global.get('rotator_power');\nif (pwr == null) {\n    // Fallback: assume ON if heading is being received (rotator needs power to report)\n    pwr = (hdg != null);\n}\n\nreturn {\n    topic: 'rotator',\n    payload: {\n        heading:  hdg != null ? Number(hdg) : null,\n        target:   tgt != null ? Number(tgt) : null,\n        power:    !!pwr,\n        timerEnd: flow.get('rotatorTimerEnd') || null\n    }\n};\n",
-        "outputs": 1,
-        "x": 360,
-        "y": 1200,
-        "wires": [
-            [
-                "uib_shack_01"
-            ]
-        ]
-    },
-    {
-        "id": "vue_gpsntp_bridge_01",
-        "type": "function",
-        "z": "4590ed80de4873b1",
-        "name": "GPS NTP → Vue",
-        "func": "// Wrap the retained chrony JSON for the uibuilder client\nif (!msg.payload) return null;\n// MQTT-in may deliver string or already-parsed JSON; tolerate both\nvar p = msg.payload;\nif (typeof p === 'string') { try { p = JSON.parse(p); } catch (e) { return null; } }\nreturn { topic: 'gpsntp', payload: p };\n",
-        "outputs": 1,
-        "x": 400,
-        "y": 200,
-        "wires": [
-            [
-                "uib_shack_01"
-            ]
-        ]
-    },
-    {
-        "id": "vue_rbn_tick_01",
-        "type": "inject",
-        "z": "f9a0e3ad0e019052",
-        "name": "Push RBN to Vue every 5s",
-        "props": [
-            {
-                "p": "payload"
-            }
-        ],
-        "repeat": "5",
-        "crontab": "",
-        "once": true,
-        "onceDelay": "3",
-        "topic": "",
-        "payload": "",
-        "payloadType": "str",
-        "x": 110,
-        "y": 1100,
-        "wires": [
-            [
-                "vue_rbn_builder_01"
-            ]
-        ]
-    },
-    {
-        "id": "vue_rbn_builder_01",
-        "type": "function",
-        "z": "f9a0e3ad0e019052",
-        "name": "Build RBN state for Vue",
-        "func": "// flow.rbn_dash is file-backed by the existing RBN State Aggregator\nvar s = flow.get('rbn_dash', 'file') || flow.get('rbn_dash') || {};\nreturn {\n    topic: 'rbn',\n    payload: {\n        skimmers:   s.skimmers   || {},\n        calFetched: s.calFetched || null,\n        sk1:        s.sk1, sk2: s.sk2\n    }\n};\n",
-        "outputs": 1,
-        "x": 360,
-        "y": 1100,
-        "wires": [
-            [
-                "uib_shack_01"
-            ]
-        ]
-    },
-    {
-        "id": "tx_inhibit_setter_01",
-        "type": "function",
-        "z": "75e2cac8ab96f556",
-        "name": "TX Inhibit Setter",
-        "func": "// TX Inhibit Setter — wired from Trigger Disconnect / Execute Reconnect /\n// Force Reconnect / HTTP→Antenna ON / Manual Override.\n//\n// Command lineage discovered 2026-05-27 via spray-and-pray + status_code\n// inspection (status_code=0 means radio ack'd, 0x5000002D means rejected):\n//   xmit 0                            → 0 ack (universal PTT release)\n//   interlock tx1_inhibit=N           → 0x5000002D rejected\n//   radio set tx_inhibit=N            → 0x5000002D rejected\n//   transmit set inhibit=N            → 0 ack  ← this is the working form\n//   interlock tx1_inhibit_value=N     → 0x5000002D rejected\n//\n// We send `xmit 0` first on inhibit-ON so any in-progress TX drops\n// immediately (then the inhibit prevents future key-up). On inhibit-\n// OFF we only need to clear the inhibit flag.\n//\n// Idempotent: same value sent multiple times is harmless.\nlet inhibit;\nif (msg.cmd === 'DISCONNECT')      inhibit = 1;\nelse if (msg.cmd === 'RECONNECT')  inhibit = 0;\nelse if (msg.cmd === 'BYPASS_ON')  inhibit = 0;\nelse return null;\n\nconst cmds = inhibit\n    ? ['xmit 0', 'transmit set inhibit=1']    // stop now + inhibit future\n    : ['transmit set inhibit=0'];              // clear inhibit\n\nconst out = { payload: cmds, _txInhibitValue: inhibit };\nnode.status({\n    fill: inhibit ? 'red' : 'green', shape: 'dot',\n    text: 'TX ' + (inhibit ? 'INHIBITED' : 'OK')\n});\nreturn out;\n",
-        "outputs": 1,
-        "timeout": "",
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 700,
-        "y": 700,
-        "wires": [
-            [
-                "flexradio_tx_inhibit_01"
-            ]
-        ]
-    },
-    {
-        "id": "flexradio_tx_inhibit_01",
-        "type": "flexradio-request",
-        "z": "75e2cac8ab96f556",
-        "name": "FlexRadio TX Inhibit",
-        "radio": "94d0df28ae5cccfc",
-        "x": 920,
-        "y": 700,
-        "wires": [
-            []
-        ]
-    },
-    {
-        "id": "dxcc_seed_age_tick_01",
-        "type": "inject",
-        "z": "d110d176c0aad308",
-        "name": "Seed-age tick (30s)",
-        "props": [
-            {
-                "p": "payload"
-            }
-        ],
-        "repeat": "30",
-        "crontab": "",
-        "once": true,
-        "onceDelay": "3",
-        "topic": "",
-        "payload": "",
-        "payloadType": "date",
-        "x": 170,
-        "y": 920,
-        "wires": [
-            [
-                "dxcc_seed_age_fn_01"
-            ]
-        ]
-    },
-    {
-        "id": "dxcc_seed_age_fn_01",
-        "type": "function",
-        "z": "d110d176c0aad308",
-        "name": "Compute DXCC Seed Age",
-        "func": "// Computes the age of nr_dxcc_seed.json via fs.statSync and emits a\n// short relative-time string for the DXCC Dashboard's Seed row.\n// Driven by a 30s inject. Mirrors what vue_dxcc_builder_01 does for\n// the /shack DXCC card.\nvar flowsDir = flow.get('cfg_flows_dir')\n  || (os.homedir() + '/.node-red/projects/vu2cpl-shack');\nvar seedPaths = [\n    flowsDir + '/nr_dxcc_seed.json',\n    os.homedir() + '/.node-red/nr_dxcc_seed.json'\n];\nfor (var i = 0; i < seedPaths.length; i++) {\n    try {\n        if (fs.existsSync(seedPaths[i])) {\n            var st = fs.statSync(seedPaths[i]);\n            var ageMs = Date.now() - st.mtimeMs;\n            var ageMin = Math.floor(ageMs / 60000);\n            var ageHr  = Math.floor(ageMin / 60);\n            var ageDay = Math.floor(ageHr  / 24);\n            var ageStr;\n            if      (ageMin < 1)   ageStr = 'just now';\n            else if (ageMin < 60)  ageStr = ageMin + 'm ago';\n            else if (ageHr  < 24)  ageStr = ageHr  + 'h ago';\n            else if (ageDay < 30)  ageStr = ageDay + 'd ago';\n            else                   ageStr = Math.floor(ageDay / 30) + 'mo ago';\n            node.status({fill:'green', shape:'dot', text:'seed ' + ageStr});\n            return { topic: 'seed_age', payload: { age: ageStr, mtime: st.mtimeMs } };\n        }\n    } catch (e) { /* try next path */ }\n}\nnode.status({fill:'grey', shape:'ring', text:'seed file not found'});\nreturn null;\n",
-        "outputs": 1,
-        "libs": [
-            {
-                "var": "fs",
-                "module": "fs"
-            },
-            {
-                "var": "os",
-                "module": "os"
-            }
-        ],
-        "timeout": "",
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "x": 400,
-        "y": 920,
-        "wires": [
-            [
-                "38a6451a95a57685"
-            ]
-        ]
-    },
-    {
-        "id": "dxcc_mute_handler_01",
-        "type": "function",
-        "z": "d110d176c0aad308",
-        "name": "DXCC Cluster Mute Handler",
-        "func": "// Closes #27 - server-side handler for D1 dashboard's cluster mute\n// click. Receives msg.topic='dxcc_mute' with payload {name, mute}\n// and updates global.dxcc_cluster_mute - same global already\n// honoured by login-parse-dedup-v2's mute check (used by the Vue\n// /shack DXCC card too, so this works across both dashboards).\nif (msg.topic !== 'dxcc_mute') return null;\nvar p = msg.payload || {};\nif (!p.name) return null;\nvar mute = global.get('dxcc_cluster_mute') || {};\nmute[p.name] = !!p.mute;\nglobal.set('dxcc_cluster_mute', mute);\nnode.status({fill:'blue', shape:'dot',\n  text: 'mute ' + p.name + ' = ' + mute[p.name]});\nreturn null;\n",
-        "outputs": 1,
-        "libs": [],
-        "timeout": "",
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "x": 700,
-        "y": 880,
-        "wires": [
-            []
-        ]
-    },
-    {
-        "id": "cty_bootstrap_fn_01",
-        "type": "function",
-        "z": "d110d176c0aad308",
-        "name": "Bootstrap cty.xml from file",
-        "func": "// 2026-05-28 - resilience fix. Reads nr_cty_maps.json (written by\n// Parse cty.xml -> Prefix Maps after each successful Club Log fetch)\n// and populates the three flow context keys the prefix-lookup function\n// needs. Fires at onceDelay:1 - well before the live Club Log fetch\n// at onceDelay:5 - so DXCC alert classification has a working prefix\n// map from the moment spots start arriving.\n//\n// If Club Log is unreachable at restart, the cached maps continue\n// to serve. If Club Log later succeeds, the live fetch overwrites\n// both flow context AND the cache file with fresher data.\n//\n// First-time deploys (no cache yet): no-op; the live fetch at +5s\n// populates from scratch and writes the cache for next time.\n\nvar flowsDir = flow.get('cfg_flows_dir') || (os.homedir() + '/.node-red');\nvar cachePath = flowsDir + '/nr_cty_maps.json';\n\n// Fallback path in case cfg_flows_dir isn't set yet (Credentials node\n// fires at onceDelay:0.5 - we run at 1 - timing is generally safe but\n// being defensive is cheap).\n// Two probe paths - cfg_flows_dir if Credentials node has fired, then\n// the generic fallback. os is already imported via the libs declaration\n// (require() is NOT available in Node-RED function nodes).\nvar paths = [\n    cachePath,\n    os.homedir() + '/.node-red/nr_cty_maps.json'\n];\n\nfor (var i = 0; i < paths.length; i++) {\n    try {\n        if (fs.existsSync(paths[i])) {\n            var raw = fs.readFileSync(paths[i], 'utf8');\n            var cached = JSON.parse(raw);\n            if (cached.prefixMap && cached.entityNames) {\n                flow.set('dxccPrefixMap',  cached.prefixMap);\n                flow.set('dxccExceptions', cached.exceptions || {});\n                flow.set('dxccSeedNames',  cached.entityNames);\n                var ageMs = Date.now() - new Date(cached.parsedAt || 0).getTime();\n                var ageMin = Math.floor(ageMs / 60000);\n                var ageStr = ageMin < 60 ? ageMin + 'm'\n                           : ageMin < 1440 ? Math.floor(ageMin/60) + 'h'\n                           : Math.floor(ageMin/1440) + 'd';\n                var s = cached.stats || {};\n                node.status({fill:'blue', shape:'dot',\n                    text: 'cached ' + (s.entities||'?') + 'ent ' + (s.prefixes||'?') + 'pfx (age ' + ageStr + ')'});\n                node.warn('cty bootstrap from cache: ' + paths[i] + ' (' + ageStr + ' old)');\n                return null;\n            }\n        }\n    } catch (e) {\n        node.warn('cty cache read failed at ' + paths[i] + ': ' + e.message);\n    }\n}\nnode.status({fill:'grey', shape:'ring', text:'no cty cache - waiting for live fetch'});\nreturn null;\n",
-        "outputs": 0,
-        "timeout": "",
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [
-            {
-                "var": "fs",
-                "module": "fs"
-            },
-            {
-                "var": "os",
-                "module": "os"
-            },
-            {
-                "var": "path",
-                "module": "path"
-            }
-        ],
-        "x": 470,
-        "y": 200,
-        "wires": []
-    },
-    {
-        "id": "cty_bootstrap_tick_01",
-        "type": "inject",
-        "z": "d110d176c0aad308",
-        "name": "Load cty.xml from cache (early)",
-        "props": [
-            {
-                "p": "payload"
-            }
-        ],
-        "repeat": "",
-        "crontab": "",
-        "once": true,
-        "onceDelay": "1",
-        "topic": "",
-        "payload": "",
-        "payloadType": "date",
-        "x": 200,
-        "y": 200,
-        "wires": [
-            [
-                "cty_bootstrap_fn_01"
-            ]
-        ]
-    },
-    {
-        "id": "lightning_antoff_http_in_01",
-        "type": "http in",
-        "z": "75e2cac8ab96f556",
-        "name": "POST /lightning/ant-off",
-        "url": "/lightning/ant-off",
-        "method": "post",
-        "upload": false,
-        "swaggerDoc": "",
-        "x": 1270,
-        "y": 600,
-        "wires": [
-            [
-                "lightning_antoff_fn_01"
-            ]
-        ]
-    },
-    {
-        "id": "lightning_antoff_fn_01",
-        "type": "function",
-        "z": "75e2cac8ab96f556",
-        "name": "HTTP → Antenna OFF",
-        "func": "// Dashboard ANT OFF toggle — symmetric to HTTP → Antenna ON.\n// Sets sticky manual_off (file scope, survives Pi restart) so any\n// auto-strike that follows goes through Trigger Disconnect's\n// manual-off early-exit (alert-only). See HANDOVER #33.\nconst strip = flow.get('power_strip') || 'powerstrip1';\nconst ch    = flow.get('power_ch')    || 'POWER5';\nconst ts    = new Date().toLocaleString();\nflow.set('antenna_off', true);\nflow.set('manual_off',  true, 'file');\nnode.send([\n    { payload: 'OK', res: msg.res },\n    { topic: 'cmnd/' + strip + '/' + ch, payload: 'OFF',\n      cmd: 'DISCONNECT', reason: 'Manual via dashboard',\n      timestamp: ts, distance: null },\n    { payload: 'cancel' },\n    { event_record: { type: 'manual_off', source: 'dashboard',\n      ts: Date.now() } }\n]);\nnode.status({fill:'red', shape:'dot', text:'Antenna OFF (manual)'});\nreturn null;\n",
-        "outputs": 4,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 1540,
-        "y": 600,
-        "wires": [
-            [
-                "lightning_antoff_res_01"
-            ],
-            [
-                "b2e2ed6a2bba24af",
-                "tx_inhibit_setter_01"
-            ],
-            [
-                "dabc283d78fa8081"
-            ],
-            [
-                "light_jsonl_append_01"
-            ]
-        ]
-    },
-    {
-        "id": "lightning_antoff_res_01",
-        "type": "http response",
-        "z": "75e2cac8ab96f556",
-        "name": "",
-        "statusCode": "",
-        "headers": {},
-        "x": 1740,
-        "y": 600,
-        "wires": []
-    },
-    {
-        "id": "rotator_ws_client",
-        "type": "websocket-client",
-        "path": "ws://localhost:8090/ws",
-        "tls": "",
-        "wholemsg": "false",
-        "hb": "30",
-        "subprotocol": "",
-        "headers": []
-    },
-    {
-        "id": "rotator_ws_out",
-        "type": "websocket out",
-        "z": "3d26c2c5270bdb37",
-        "name": "ws → rotator-remote",
-        "server": "",
-        "client": "rotator_ws_client",
-        "x": 900,
-        "y": 400,
-        "wires": []
-    },
-    {
-        "id": "rotator_ws_in",
-        "type": "websocket in",
-        "z": "3d26c2c5270bdb37",
-        "name": "ws ← rotator-remote",
-        "server": "",
-        "client": "rotator_ws_client",
-        "x": 560,
-        "y": 180,
-        "wires": [
-            [
-                "rotator_ws_parse"
-            ]
-        ]
-    },
-    {
-        "id": "rotator_ws_parse",
-        "type": "function",
-        "z": "3d26c2c5270bdb37",
-        "name": "Parse Rotator WS",
-        "func": "// Inbound state from rotator-remote. Replaces the serial receive chain\n// (serial in → Receive → rbe → trigger → Slice heading). Cache live heading\n// and emit it downstream so the compass renders exactly as before.\n// Heartbeats and null-heading frames ignored. target_hdg stays owned by\n// the command functions (instant feedback; arrival-clear in Rotator fmt).\nvar f;\ntry { f = JSON.parse(msg.payload); } catch (e) { return null; }\nif (!f || f.type !== 'state' || f.heading == null) return null;\nflow.set('rotator_heading', f.heading);\nmsg.payload = f.heading;\nreturn msg;\n",
-        "outputs": 1,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 720,
-        "y": 180,
-        "wires": [
-            [
-                "78d79f019261723c",
-                "48d90f1e7b0172b0"
-            ]
-        ]
-    },
-    {
-        "id": "ubersdr_tab",
-        "type": "tab",
-        "label": "UberSDR",
-        "disabled": false,
-        "info": "UberSDR receiver monitor. Subscribes to ubersdr/metrics/sessions + ubersdr/metrics/voice_activity/# on the shack broker (192.168.1.169), aggregates in 'Aggregate UberSDR', and feeds both the D1 /ui card (Shack Monitoring tools tab) and the Vue /shack UberSdrCard (topic 'ubersdr')."
-    },
-    {
-        "id": "ubersdr_grp",
-        "type": "ui_group",
-        "name": "UberSDR",
-        "tab": "bcce4e07ac31b882",
-        "order": 30,
-        "disp": false,
-        "width": 12,
-        "collapse": false,
-        "className": ""
-    },
-    {
         "id": "ubersdr_mqtt_sessions",
         "type": "mqtt in",
         "z": "ubersdr_tab",
@@ -10330,7 +10257,7 @@
         "topic": "ubersdr/metrics/sessions",
         "qos": "0",
         "datatype": "auto-detect",
-        "broker": "mqttbroker.shack",
+        "broker": "f4785be9863eab08",
         "nl": false,
         "rap": false,
         "inputs": 0,
@@ -10350,7 +10277,7 @@
         "topic": "ubersdr/metrics/voice_activity/#",
         "qos": "0",
         "datatype": "auto-detect",
-        "broker": "mqttbroker.shack",
+        "broker": "f4785be9863eab08",
         "nl": false,
         "rap": false,
         "inputs": 0,
@@ -10443,9 +10370,7 @@
         "x": 760,
         "y": 200,
         "wires": [
-            [
-                "uib_shack_01"
-            ]
+            []
         ]
     },
     {
