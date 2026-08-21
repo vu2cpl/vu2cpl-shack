@@ -8,13 +8,23 @@ reverting everything done since the tab loaded — three times in 2026
 (07-13, 08-21 x2) that wiped every Vue-bridge wire into uib_shack_01,
 the dashboard CSS, and assorted AS3935/rotator wires.
 
-This script checks the structural invariants those wipes break:
+Root cause (established 2026-08-21 after wipe #5): the May 2026 Vue
+migration hand-wrote CROSS-TAB wires (and a non-standard ui_base css
+field) directly into flows.json. The runtime executes them; the editor
+cannot even represent them, so EVERY editor Deploy silently stripped
+them. Fixed the same day by refactoring all cross-tab hops onto
+link in / link out pairs (the editor-legal mechanism) and moving the
+CSS into a site-<head> ui_template.
+
+This script checks the structural invariants:
 
   1. flows.json parses as a JSON array with a sane node count
-  2. at least MIN_UIB_FEEDERS nodes wire into the uibuilder node
-     (healthy count 2026-08: 14 — a wipe drops it to 0)
-  3. if a ui_base node exists, its dashboard CSS is non-empty
-     (the wipes null it out)
+  2. at least MIN_UIB_FEEDERS nodes feed the uibuilder node — directly
+     wired, or a `link out` linked to a `link in` that wires into it
+     (healthy count 2026-08 post-refactor: 14 — a wipe drops it to 0)
+  3. ZERO cross-tab or dead wires — the editor-illegal construct that
+     caused all five 2026 wipes must never be reintroduced by a hand
+     edit of flows.json
 
 Sibling file `flows_guard_middleware.js` enforces the SAME invariants
 server-side at deploy time (httpAdminMiddleware in settings.js, added
@@ -64,18 +74,45 @@ def check(flows):
         return ["flows.json is not a JSON array"]
     if len(flows) < MIN_NODE_COUNT:
         fails.append(f"node count {len(flows)} < {MIN_NODE_COUNT}")
+    nodes = [n for n in flows if isinstance(n, dict) and n.get("id")]
+    byid = {n["id"]: n for n in nodes}
+
+    def wires_to(n, target):
+        return any(isinstance(out, list) and target in out
+                   for out in n.get("wires", []))
+
+    # feeders = nodes wired into the uibuilder node directly, plus
+    # link-out nodes linked to a link-in that wires into it
+    link_ins_to_uib = {n["id"] for n in nodes
+                       if n.get("type") == "link in" and wires_to(n, UIB_NODE_ID)}
     feeders = sum(
-        1 for n in flows if isinstance(n, dict)
-        for out in n.get("wires", []) if UIB_NODE_ID in out
+        1 for n in nodes
+        if wires_to(n, UIB_NODE_ID)
+        or (n.get("type") == "link out"
+            and any(l in link_ins_to_uib for l in n.get("links", [])))
     )
     if feeders < MIN_UIB_FEEDERS:
-        fails.append(f"only {feeders} nodes wire into {UIB_NODE_ID} "
+        fails.append(f"only {feeders} nodes feed {UIB_NODE_ID} "
                      f"(need >= {MIN_UIB_FEEDERS}) — Vue-bridge wiring wiped?")
-    for n in flows:
-        if isinstance(n, dict) and n.get("type") == "ui_base":
-            css = n.get("css")
-            if not (isinstance(css, str) and css.strip()):
-                fails.append("ui_base dashboard CSS is empty/null — wiped?")
+
+    # zero cross-tab / dead wires (the editor strips these on every Deploy;
+    # cross-tab hops must use link in / link out pairs)
+    bad = []
+    for n in nodes:
+        if not n.get("z"):
+            continue
+        for out in n.get("wires", []):
+            for t in (out if isinstance(out, list) else []):
+                tn = byid.get(t)
+                if tn is None:
+                    bad.append(f"{n.get('name') or n['id']} → {t} (missing node)")
+                elif tn.get("z") != n.get("z"):
+                    bad.append(f"{n.get('name') or n['id']} → "
+                               f"{tn.get('name') or t} (cross-tab)")
+    if bad:
+        shown = "; ".join(bad[:3]) + (f"; … +{len(bad)-3} more" if len(bad) > 3 else "")
+        fails.append(f"{len(bad)} cross-tab/dead wire(s) — editor-illegal, "
+                     f"use link in/out pairs: {shown}")
     return fails
 
 

@@ -42,20 +42,47 @@ function checkFlows(flows) {
     if (flows.length < MIN_NODE_COUNT) {
         fails.push(`node count ${flows.length} < ${MIN_NODE_COUNT}`);
     }
+    const nodes = flows.filter(n => n && typeof n === 'object' && n.id);
+    const byid = new Map(nodes.map(n => [n.id, n]));
+    const wiresTo = (n, target) => Array.isArray(n.wires) &&
+        n.wires.some(out => Array.isArray(out) && out.includes(target));
+
+    // feeders = nodes wired into the uibuilder node directly, plus
+    // link-out nodes linked to a link-in that wires into it
+    const linkInsToUib = new Set(nodes
+        .filter(n => n.type === 'link in' && wiresTo(n, UIB_NODE_ID))
+        .map(n => n.id));
     let feeders = 0;
-    for (const n of flows) {
-        if (!n || typeof n !== 'object') continue;
-        if (Array.isArray(n.wires) &&
-            n.wires.some(out => Array.isArray(out) && out.includes(UIB_NODE_ID))) {
+    for (const n of nodes) {
+        if (wiresTo(n, UIB_NODE_ID) ||
+            (n.type === 'link out' && Array.isArray(n.links) &&
+             n.links.some(l => linkInsToUib.has(l)))) {
             feeders++;
-        }
-        if (n.type === 'ui_base' && !(typeof n.css === 'string' && n.css.trim())) {
-            fails.push('ui_base dashboard CSS is empty/null — wiped?');
         }
     }
     if (feeders < MIN_UIB_FEEDERS) {
-        fails.push(`only ${feeders} nodes wire into ${UIB_NODE_ID} ` +
+        fails.push(`only ${feeders} nodes feed ${UIB_NODE_ID} ` +
                    `(need >= ${MIN_UIB_FEEDERS}) — Vue-bridge wiring wiped?`);
+    }
+
+    // zero cross-tab / dead wires (editor-illegal; use link in/out pairs)
+    const bad = [];
+    for (const n of nodes) {
+        if (!n.z || !Array.isArray(n.wires)) continue;
+        for (const out of n.wires) {
+            if (!Array.isArray(out)) continue;
+            for (const t of out) {
+                const tn = byid.get(t);
+                if (!tn) bad.push(`${n.name || n.id} → ${t} (missing node)`);
+                else if (tn.z !== n.z) bad.push(`${n.name || n.id} → ${tn.name || t} (cross-tab)`);
+            }
+        }
+    }
+    if (bad.length) {
+        const shown = bad.slice(0, 3).join('; ') +
+            (bad.length > 3 ? `; … +${bad.length - 3} more` : '');
+        fails.push(`${bad.length} cross-tab/dead wire(s) — editor-illegal, ` +
+                   `use link in/out pairs: ${shown}`);
     }
     return fails;
 }
@@ -81,9 +108,11 @@ module.exports = function flowsGuardMiddleware(req, res, next) {
             if (fails.length) {
                 console.log('flows_guard REJECTED a deploy: ' + fails.join('; '));
                 res.status(400).json({
-                    message: 'flows_guard REJECTED this deploy — the editor is holding a ' +
-                             'wiped flow model. CLOSE this editor tab entirely, open a fresh ' +
-                             'one, and redo the edit. Details: ' + fails.join('; ')
+                    message: 'flows_guard REJECTED this deploy — the flow config fails ' +
+                             'structural invariants. If wiring looks missing, close this ' +
+                             'editor tab and open a fresh one; if you just wired across two ' +
+                             'flow tabs, use link in / link out nodes instead. Details: ' +
+                             fails.join('; ')
                 });
                 return;
             }
