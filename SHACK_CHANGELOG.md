@@ -92,6 +92,60 @@ constraint. All formatting is done outside the app.
   connections keep working, so it looks fine until a device reconnects.
   Correct is `root:mosquitto` `640`. Documented in `MQTT_AUTH.md`.
 
+### Stale-tab wipes #3 and #4 — Vue bridge re-wiped twice in one day; flows_guard tripwire added
+
+Third and fourth occurrences of the 2026-07-13 failure mode, both today,
+and the fourth landed in git history — which is what finally forced a
+real guard instead of a protocol note.
+
+- **Wipe #3 (morning):** a Deploy (`41696b7`, during the MQTT-auth
+  broker consolidation) reverted the Vue-bridge wiring
+  (`uib_shack_01` full-text refs 15→1). Fixed at 14:57 in `7910cab` by
+  rebuilding from the last healthy commit and re-applying only the
+  broker consolidation.
+- **Wipe #4 (evening):** the AetherSDR Display deploy (`200c836`,
+  17:20) came from an editor tab that predated the 14:57 fix — the
+  operator had **only one tab open**, which is the key lesson: this
+  was never a multiple-tabs problem. A single tab goes stale the
+  moment an out-of-band flows.json change lands underneath it
+  (git pull + `systemctl restart nodered`); the editor keeps its old
+  in-memory model across the restart, and Deploy writes back the
+  ENTIRE model. The wipe rode into `nrsave` → commit → merge
+  (`7b5b72e`), so `git restore` could no longer fix it. Noticed when a
+  later small edit (RBN SDR ping repoint) "broke the Vue dashboard" —
+  the repoint was innocent; HEAD itself was broken.
+- **Recovery (`f6df05d`):** per-node semantic rebuild — last-healthy
+  `afe8981` base + `200c836`'s intended changes only (9 `aetherdisp_*`
+  nodes, which are fully self-contained, + the one-line
+  `global.set('lpState')` mirror in LP State Aggregator) + the
+  operator's pending RBN SDR ping repoint `192.168.1.241`→`.235`.
+  Collateral restored: `uib_shack_01` wires/`okToGo`, all 13 Vue
+  builders' wires, Master Dashboard + Parse+route + Raw HDG wires,
+  AS3935 cache/replay wires, dashboard dark-mode CSS (the same
+  catalog as 07-13). Follow-up commit completed the repoint's other
+  half — the `stamp RBN_SDR` display addr (the stamp function owns
+  label/addr/maxMs per the 07-31 convention).
+- **Permanent guard (`flows_guard.py`, same day):** validates
+  flows.json structural invariants (≥10 nodes wiring into
+  `uib_shack_01` — healthy is 14 — ui_base CSS non-empty, sane node
+  count). Installed two ways: **(a)** git `pre-commit` hook in both
+  the Pi and Mac clones — a wiped flows.json is now uncommittable
+  (`nrsave` fails loudly), so HEAD stays healthy and recovery is
+  always `git checkout -- flows.json` + restart, never another
+  forensic rebuild; **(b)** 1-minute cron on the Pi (`--cron`) —
+  Telegram ⚠️ within 60 s of a live wipe (with the recovery
+  one-liner), ✅ on recovery, alerts only on state transitions. The
+  bot token is read from the running Node-RED process environment
+  (`/proc/<pid>/environ` — same user), so no secret is copied out of
+  the root-only systemd drop-in. Hook block-test and Telegram path
+  verified live. `rebuild_pi.sh` installs both (Stage 7 hook,
+  Stage 9 cron); manual steps in `REBUILD_PI.md` Step 7. New CLAUDE.md
+  **critical rule #7** documents the protocol: reload any open editor
+  tab after every Pi-side pull+restart, and never deploy over the
+  "flows changed on server" dialog — review/merge instead. If a
+  deliberate refactor changes the invariants, update the
+  `flows_guard.py` constants in the same commit.
+
 ## 2026-07-31
 
 ### Stale Node-RED editor tab reverted `flows.json` — second occurrence

@@ -458,6 +458,28 @@ sudo visudo -c                            # must print "parsed OK"
  echo '* * * * *  /home/vu2cpl/monitor.sh') | crontab -
 crontab -l | grep monitor.sh              # one line expected
 
+# flows_guard — stale-tab wipe protection (added 2026-08-21).
+# (a) cron tripwire: validates the live flows.json every minute, Telegram-
+#     alerts on a structural wipe (runs from the repo path, no copy needed);
+# (b) git pre-commit hook: makes a wiped flows.json uncommittable, so git
+#     HEAD stays healthy and recovery is always
+#     `git checkout -- flows.json && sudo systemctl restart nodered`.
+# rebuild_pi.sh installs both (Stage 7 hook, Stage 9 cron); manual install:
+(crontab -l 2>/dev/null | grep -v 'flows_guard' ; \
+ echo '* * * * *  python3 /home/vu2cpl/.node-red/projects/vu2cpl-shack/flows_guard.py --cron') | crontab -
+cat > ~/.node-red/projects/vu2cpl-shack/.git/hooks/pre-commit <<'HOOK'
+#!/bin/sh
+# Block committing a flows.json that fails flows_guard (stale-tab wipe protection)
+if git diff --cached --name-only | grep -qx "flows.json"; then
+    git show :flows.json | python3 "$(git rev-parse --show-toplevel)/flows_guard.py" --stdin || {
+        echo "pre-commit: flows.json failed flows_guard — commit BLOCKED." >&2
+        exit 1
+    }
+fi
+HOOK
+chmod +x ~/.node-red/projects/vu2cpl-shack/.git/hooks/pre-commit
+python3 ~/.node-red/projects/vu2cpl-shack/flows_guard.py   # expect: flows_guard: OK
+
 # Enable + start rpi-agent. NOTE: as3935 is intentionally NOT enabled.
 # The ESP32 bridge (vu2cpl-as3935-bridge repo) is the primary publisher
 # to lightning/as3935/*. The Pi daemon's files stay installed as a
@@ -700,6 +722,7 @@ If 15 fails but other cards are fine: not a noderedpi4 problem — it's gpsntp.l
 | `rpi_agent.py` | `/home/vu2cpl/rpi_agent.py` |
 | `rpi-agent.service` | `/etc/systemd/system/rpi-agent.service` |
 | `monitor.sh` | `/home/vu2cpl/monitor.sh` (+ user crontab `* * * * *`) |
+| `flows_guard.py` | run in-place from the repo (user crontab `* * * * *` `--cron` + `.git/hooks/pre-commit`) |
 | `power_spe_on.py` | `/home/vu2cpl/power_spe_on.py` |
 | `enable_file_context.sh` | run once in-place from the repo |
 | `flows.json` | loaded by Node-RED when the project is active |

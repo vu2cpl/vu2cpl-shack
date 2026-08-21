@@ -264,6 +264,7 @@ from `sm7iun.se/rbnskew.csv` every 6 h.
 ├── rpi_agent.py                     HTTP reboot/shutdown agent (→ rpi-agent.service)
 ├── rpi-agent.service                systemd unit for rpi_agent
 ├── monitor.sh                       MQTT telemetry cron (every minute)
+├── flows_guard.py                   Stale-tab wipe tripwire (git pre-commit hook + 1-min cron w/ Telegram alert)
 ├── power_spe_on.py                  SPE amp FTDI DTR/RTS power-on helper
 ├── enable_file_context.sh           One-shot Node-RED file context store enabler
 ├── rebuild_pi.sh                    Automated bare-metal rebuild script (paired with REBUILD_PI.md)

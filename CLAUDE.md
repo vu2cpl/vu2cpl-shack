@@ -1,7 +1,7 @@
 # CLAUDE.md — VU2CPL Shack Automation
 **Operator:** Manoj (VU2CPL) | MK83TE | Bengaluru, India
 **Repo:** github.com/vu2cpl/vu2cpl-shack (private)
-**Last updated:** July 2026
+**Last updated:** August 2026
 
 ---
 
@@ -51,6 +51,7 @@ sudo systemctl restart nodered
    ```
 5. **Never put file upload instructions inside index.html** (vu2cpl.com website). Give them as chat instructions only.
 6. **When updating `SHACK_CHANGELOG.md`**, always regenerate `SHACK_CHANGELOG.pdf` (`npx --yes md-to-pdf SHACK_CHANGELOG.md`, ~3s, no rename needed — matches the DXCC.md/PDF stem convention) and commit both together. Mirrors rule #3 for the DXCC doc. **Added 2026-07-01** after the PDF was found 12 commits stale (last regenerated 2026-06-12) with no rule enforcing the pairing — regenerated once for a clean baseline, then formalized so it can't silently drift again.
+7. **Stale editor tabs clobber flows.json on Deploy.** The browser editor holds the whole flow model in memory, and Deploy writes back that ENTIRE model — so a tab that outlives ANY out-of-band flows.json change (git pull + `systemctl restart nodered`), even the only tab open, silently reverts everything done since it loaded. Bitten 4× (2026-07-13, 2026-07-31, 2026-08-21 ×2 — the fourth wipe got committed in `200c836` and needed a forensic rebuild, `f6df05d`). **Protocol: after any Pi-side git pull + restart, reload every open Node-RED editor tab before the next Deploy**; if the editor shows a "flows changed on server" dialog, always review/merge — never deploy over it. **Guards (added 2026-08-21, `flows_guard.py`):** a git pre-commit hook (installed in both the Pi and Mac clones, and by `rebuild_pi.sh` Stage 7) blocks committing a structurally wiped flows.json, and a 1-min Pi cron (`--cron`) Telegram-alerts within 60 s of a live wipe with the recovery one-liner (`git checkout -- flows.json && sudo systemctl restart nodered`). If a deliberate refactor legitimately changes the invariants (nodes feeding `uib_shack_01`, ui_base CSS), update the constants in `flows_guard.py` in the same commit.
 
 ---
 
@@ -103,7 +104,7 @@ git push
 
 ---
 
-## FLOW TABS (12 total)
+## FLOW TABS (13 total)
 
 | Tab Label | Tab ID | Nodes | Dashboard Group |
 |-----------|--------|-------|-----------------|
@@ -119,6 +120,7 @@ git push
 | All Power Strips | `b76a5310767803b4` | 48 | `vu2cpl_grp_power` |
 | DXCC Tracker | `d110d176c0aad308` | 77 | `grp_dxcc_stats` |
 | UberSDR | `ubersdr_tab` | 9 | `ubersdr_grp` (on Shack Monitoring tools) |
+| AetherSDR Display | `aetherdisp_tab_01` | 9 | — (no UI — humanizes shack MQTT topics onto `aether/*` for the external AetherSDR panadapter display; see `nodered/aether-display/README.md`) |
 
 > Node counts drift as flows evolve — treat as approximate; re-count against
 > `flows.json` if exact. (Re-counted live 2026-06-27.) The SPE tab is
@@ -722,12 +724,15 @@ a new device — see the "Please Read!!" comment node on this tab.
 | `Flex`      | FlexRadio  | 192.168.1.148  | 5 |
 | `OpenwebRX` | OpenwebRX+ | 192.168.1.158  | 5 |
 | `RBN_PC`    | RBN PC/PI  | 192.168.1.164  | 5 |
-| `RBN_SDR`   | RBN SDR    | 192.168.1.241  | 5 |
+| `RBN_SDR`   | RBN SDR    | 192.168.1.235  | 5 |
 | `UBERSDR`   | Ubersdr    | 192.168.1.109  | 5 |
 
 `RBN_PC` was "Mac RBN", pinging a Mac (`192.168.1.245`) that's no
 longer active — repointed 2026-07-31 to the Pi running `meridian`
-(`192.168.1.164`). `UBERSDR` is a new tile added the same day, for
+(`192.168.1.164`). `RBN_SDR` repointed `192.168.1.241` → `.235` on
+2026-08-21 (ping node host + stamp function display addr — remember
+the stamp owns the displayed address, so both must change together).
+`UBERSDR` is a new tile added the same day, for
 the ubersdr box also running `meridian` (`192.168.1.109`).
 
 ### UberSDR
@@ -973,6 +978,7 @@ Pi-side scripts already in this repo (canonical paths shown):
 | `monitor.sh` | `/home/vu2cpl/monitor.sh` | MQTT telemetry cron (every minute) |
 | `power_spe_on.py` | `/home/vu2cpl/power_spe_on.py` | SPE Expert 1.5 KFA power-on via FTDI DTR/RTS toggle |
 | `enable_file_context.sh` | `/home/vu2cpl/enable_file_context.sh` | One-time idempotent settings.js patcher to enable Node-RED `localfilesystem` context store |
+| `flows_guard.py` | run in-place from the repo (user crontab `--cron` every minute + `.git/hooks/pre-commit` on Pi and Mac clones) | Stale-tab wipe tripwire (critical rule #7) — blocks committing a structurally wiped flows.json; Telegram-alerts within 60 s of a live wipe |
 
 For a full from-scratch rebuild of this Pi (blank SD card → working
 shack), see [`REBUILD_PI.md`](REBUILD_PI.md). For onboarding a

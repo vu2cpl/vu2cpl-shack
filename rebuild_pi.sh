@@ -898,6 +898,26 @@ nrsave() {
 EOF
     fi
 
+    # flows_guard pre-commit hook — refuses to commit a flows.json that a
+    # stale-editor-tab Deploy has structurally wiped (Vue-bridge wires /
+    # dashboard CSS gone). Keeps git HEAD always healthy so recovery is
+    # one `git checkout -- flows.json` + restart. See flows_guard.py.
+    step "Install flows_guard pre-commit hook (stale-tab wipe protection)"
+    cat > "$REPO_DIR/.git/hooks/pre-commit" <<'HOOK'
+#!/bin/sh
+# Block committing a flows.json that fails flows_guard (stale-tab wipe protection)
+if git diff --cached --name-only | grep -qx "flows.json"; then
+    git show :flows.json | python3 "$(git rev-parse --show-toplevel)/flows_guard.py" --stdin || {
+        echo "" >&2
+        echo "pre-commit: flows.json failed flows_guard — commit BLOCKED." >&2
+        echo "If this is a deliberate structural change, update the constants" >&2
+        echo "in flows_guard.py first (same commit)." >&2
+        exit 1
+    }
+fi
+HOOK
+    chmod +x "$REPO_DIR/.git/hooks/pre-commit"
+
     # ── Sweep the shipped 192.168.1.169 hardcodes out of flows.json — ALWAYS ──
     # The whole shack rides on MQTT. None of this may depend on the opt-in Stage
     # 13 customize (which a bare Enter skips). We patch, in this always-run stage,
@@ -1052,12 +1072,13 @@ stage_09_pi_scripts() {
     # `crontab -l` exits 1 when no crontab exists; under set -e + pipefail
     # this kills the script silently. Capture the current crontab (or
     # empty), filter out any prior monitor.sh entry, append ours, install.
-    step "Schedule monitor.sh in user crontab"
+    step "Schedule monitor.sh + flows_guard in user crontab"
     local existing_cron
     existing_cron=$(crontab -l 2>/dev/null || true)
     {
-        echo "$existing_cron" | grep -v 'monitor.sh' || true
+        echo "$existing_cron" | grep -v 'monitor.sh' | grep -v 'flows_guard' || true
         echo "* * * * *  /home/$ACTUAL_USER/monitor.sh"
+        echo "* * * * *  python3 $REPO_DIR/flows_guard.py --cron"
     } | crontab -
 
     # Enable + start rpi-agent only.
