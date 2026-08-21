@@ -8,6 +8,32 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-08-21
+
+### MQTT broker authentication + credential encryption + broker consolidation
+
+Part of the shack-wide MQTT migration off anonymous access (broker
+`192.168.1.169`, tracked in the `vlan-setup` repo's SECURITY-AUDIT.md).
+Three related changes:
+
+- **Node-RED now authenticates** to the broker with the dedicated
+  `nodered` account (ACL-scoped once enforcement lands). The `iot`
+  account covers the Tasmota fleet + the as3935 bridge; `ha` and `svc`
+  accounts remain to be wired on their respective hosts.
+- **Duplicate broker config removed.** The project carried *two*
+  `mqtt-broker` config nodes both pointing at `192.168.1.169:1883`
+  ("Tasmota MQTT Broker" `f4785be9863eab08` with 35 nodes and
+  "shack-mqtt" `mqttbroker.shack` with 4). The 4 nodes (Rotator Power,
+  gpsntp/chrony, two UberSDR metrics) were repointed to the single
+  keeper and `shack-mqtt` deleted.
+- **`flows_cred.json` is now encrypted.** ⚠️ It is git-tracked in this
+  **public** repo, and `credentialSecret` was `false` (plaintext). The
+  `nodered` password was briefly committed in plaintext **locally** but
+  caught before push. Fix: set a project `credentialSecret` (stored in
+  `~/.node-red/.config.projects.json` on the Pi — **outside** this repo;
+  back it up, losing it makes creds undecryptable), re-encrypted
+  `flows_cred.json`, and verified the public history is plaintext-free.
+
 ## 2026-07-31
 
 ### Stale Node-RED editor tab reverted `flows.json` — second occurrence
