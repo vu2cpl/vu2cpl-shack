@@ -146,6 +146,47 @@ real guard instead of a protocol note.
   deliberate refactor changes the invariants, update the
   `flows_guard.py` constants in the same commit.
 
+### Wipe #5 same evening — client hygiene defeated; server-side deploy rejection added
+
+Within the hour, a fifth wipe — and the forensics changed the diagnosis.
+The operator deployed again ~18:36 after being told to reload the
+editor tab first. The guard cron caught it in under 2 minutes (first
+real ⚠️ Telegram alert), HEAD was still healthy (pre-commit hook doing
+its job — the wipe stayed uncommitted), recovery was the documented
+one-liner. But the per-node fingerprint of the broken file was the
+smoking gun: **513 of 518 nodes byte-identical to the 200c836 wipe
+model** (including `uib_shack_01`'s `okToGo:true`, which the healthy
+lineage doesn't carry) — *yet it also contained server-side content
+that only existed since 18:25* (the `stamp RBN_SDR` `.235` fix). A
+freshly-reloaded editor cannot produce that file. Conclusion: the
+deploy went through the editor's **conflict/"review changes" dialog**,
+which merged the newer server-side edits into a client model whose
+base was still the broken one — carrying the wiped wiring straight
+through. Client-side hygiene (reload first, close tabs) therefore
+cannot fully close this hole.
+
+**Third guard layer — server-side rejection (`flows_guard_middleware.js`,
+commit `358d9c7`):** wired as `httpAdminMiddleware` in the Pi's
+`settings.js` (backup kept at `settings.js.bak-flowsguard`), it
+intercepts `POST /flows` and 400-rejects any config failing the
+flows_guard invariants **before anything is written or restarted** —
+the editor surfaces it as an error toast telling the operator to close
+the tab and start fresh; the runtime keeps running the healthy flows.
+Any client, any device, any browser state: a wiped model can no longer
+be deployed at all. Implementation notes: parses the request body
+itself and hands it to the admin API via `req.body` + `req._body`
+(body-parser honors the flag and skips re-reading); Node-RED POSTs the
+complete config regardless of deploy type, so partial deploys are
+covered; "reload"-type POSTs (no flows array) and all other admin
+routes pass through untouched. Unit-tested against the healthy and
+wiped configs (v1 array / v2 `{flows,rev}` / reload / garbage bodies)
+and probe-verified live on the Pi (garbage POST → our 400). Installed
+by `rebuild_pi.sh` Stage 5 on a rebuild (idempotent, inserted after
+`module.exports = {`; safe that the repo isn't cloned until Stage 7 —
+the snippet's try/catch no-ops until the first restart after the
+clone). Keep the constants in sync across `flows_guard.py` and
+`flows_guard_middleware.js`.
+
 ## 2026-07-31
 
 ### Stale Node-RED editor tab reverted `flows.json` — second occurrence

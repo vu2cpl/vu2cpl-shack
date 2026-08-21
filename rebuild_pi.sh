@@ -735,6 +735,42 @@ PYEOF
         ok "uibuilder.uibRoot patched + verified ($uib_verify)"
     fi
 
+    # flows_guard deploy-rejection middleware (wipe #5, 2026-08-21) — wire
+    # httpAdminMiddleware to the repo's flows_guard_middleware.js so a Deploy
+    # carrying a structurally wiped flows.json is 400-rejected server-side
+    # before anything is written. The inserted snippet wraps its require in
+    # try/catch, so it is safe that the repo isn't cloned until Stage 7 —
+    # the middleware goes live on the first Node-RED restart after the clone.
+    if grep -q "flows_guard_middleware.js" "$settings"; then
+        ok "flows_guard middleware already wired in settings.js"
+    else
+        step "Wire flows_guard deploy-rejection middleware into settings.js"
+        SETTINGS_PATH="$settings" GUARD_REPO_DIR="$REPO_DIR" python3 - <<'PYEOF' || fail "settings.js middleware patch failed"
+import os, sys
+path = os.environ["SETTINGS_PATH"]; repo = os.environ["GUARD_REPO_DIR"]
+snippet = ('    // flows_guard: reject any Deploy that would write a structurally wiped\n'
+           '    // flows.json (stale-editor-tab protection). Logic + invariants live in\n'
+           '    // the project repo: flows_guard_middleware.js.\n'
+           '    httpAdminMiddleware: (() => { try {\n'
+           '        return require("' + repo + '/flows_guard_middleware.js");\n'
+           '    } catch (e) {\n'
+           '        console.log("flows_guard middleware NOT loaded: " + e.message);\n'
+           '        return function (req, res, next) { next(); };\n'
+           '    } })(),\n')
+lines = open(path).readlines()
+out, done = [], False
+for ln in lines:
+    out.append(ln)
+    if not done and ln.strip().startswith("module.exports") and ln.rstrip().endswith("{"):
+        out.append(snippet)
+        done = True
+open(path, "w").writelines(out)
+print("  inserted after module.exports:", done)
+if not done:
+    sys.exit(1)
+PYEOF
+    fi
+
     step "Restart Node-RED to pick up the change (waiting up to 60 s)"
     sudo systemctl restart nodered
     sleep 5

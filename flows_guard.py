@@ -16,6 +16,11 @@ This script checks the structural invariants those wipes break:
   3. if a ui_base node exists, its dashboard CSS is non-empty
      (the wipes null it out)
 
+Sibling file `flows_guard_middleware.js` enforces the SAME invariants
+server-side at deploy time (httpAdminMiddleware in settings.js, added
+after wipe #5 rode in through the editor's conflict-merge dialog) —
+keep the constants in both files in sync.
+
 Used two ways:
   * git pre-commit hook (Pi + Mac clones):
         git show :flows.json | flows_guard.py --stdin

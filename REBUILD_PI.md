@@ -480,6 +480,24 @@ HOOK
 chmod +x ~/.node-red/projects/vu2cpl-shack/.git/hooks/pre-commit
 python3 ~/.node-red/projects/vu2cpl-shack/flows_guard.py   # expect: flows_guard: OK
 
+# (c) server-side deploy rejection (added same day, after wipe #5 rode in
+#     through the editor's conflict-merge dialog): flows_guard_middleware.js
+#     wired as httpAdminMiddleware in ~/.node-red/settings.js — 400-rejects
+#     any Deploy failing the invariants before it's written. rebuild_pi.sh
+#     Stage 5 inserts it automatically; manual install = add this inside
+#     module.exports in settings.js, then restart Node-RED:
+#
+#     httpAdminMiddleware: (() => { try {
+#         return require("/home/vu2cpl/.node-red/projects/vu2cpl-shack/flows_guard_middleware.js");
+#     } catch (e) {
+#         console.log("flows_guard middleware NOT loaded: " + e.message);
+#         return function (req, res, next) { next(); };
+#     } })(),
+#
+#     Verify after restart (rejection comes from the middleware itself):
+#     curl -s -X POST http://localhost:1880/flows -H 'Content-Type: application/json' -d '{oops'
+#     # expect: {"message":"flows_guard: POST /flows body is not valid JSON"}
+
 # Enable + start rpi-agent. NOTE: as3935 is intentionally NOT enabled.
 # The ESP32 bridge (vu2cpl-as3935-bridge repo) is the primary publisher
 # to lightning/as3935/*. The Pi daemon's files stay installed as a
@@ -723,6 +741,7 @@ If 15 fails but other cards are fine: not a noderedpi4 problem — it's gpsntp.l
 | `rpi-agent.service` | `/etc/systemd/system/rpi-agent.service` |
 | `monitor.sh` | `/home/vu2cpl/monitor.sh` (+ user crontab `* * * * *`) |
 | `flows_guard.py` | run in-place from the repo (user crontab `* * * * *` `--cron` + `.git/hooks/pre-commit`) |
+| `flows_guard_middleware.js` | required in-place from the repo by `httpAdminMiddleware` in `~/.node-red/settings.js` (Stage 5) |
 | `power_spe_on.py` | `/home/vu2cpl/power_spe_on.py` |
 | `enable_file_context.sh` | run once in-place from the repo |
 | `flows.json` | loaded by Node-RED when the project is active |
