@@ -132,3 +132,15 @@ Everything is in the Node-RED `Humanize -> aether` function (and
 `LP-700 -> aether` for power/SWR). Edit the string, Deploy — AetherSDR
 picks up the new retained value on the next publish. No rebuild, no app
 config change.
+
+## Gotcha — mqtt-in "auto-detect" hands you an object, not a string
+
+The four `mqtt in` nodes use `datatype: auto-detect`, so Node-RED
+**already parses** the JSON topics (`chrony`, `as3935/status`,
+`last_event`) into JavaScript objects before they reach the function.
+Plain topics (`POWER5` = `ON`) stay strings. So the function must **not**
+blindly `JSON.parse(msg.payload)` — that throws on the already-parsed
+object, and the `try/catch` swallows it, leaving those `aether/*` topics
+silently unpublished (only `Antenna` and the global-sourced `Power`
+appear). The shipped `obj()` helper normalises object / string / Buffer
+to an object. If you rebuild the function by hand, keep that helper.
