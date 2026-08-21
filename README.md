@@ -19,8 +19,10 @@ dashboard. Hardware talks to Node-RED via:
 - **MQTT** (Mosquitto on the same Pi) — Tasmota power outlets, AS3935
   lightning sensor, RPi telemetry, UberSDR receiver metrics.
   **Authenticated** (anonymous disabled 2026-08-21) — role accounts
-  `iot`/`svc`/`nodered`/`ha` with per-account ACLs; see
-  [`MQTT_AUTH.md`](MQTT_AUTH.md)
+  `iot`/`svc`/`nodered`/`ha`/`display` with per-account ACLs; see
+  [`MQTT_AUTH.md`](MQTT_AUTH.md). The read-only `display` account feeds
+  the AetherSDR panadapter status overlay via a Node-RED humanizer flow
+  ([`nodered/aether-display/`](nodered/aether-display/)).
 - **Direct TCP/UDP** — FlexRadio (4992), DX clusters
 - **Serial** — SPE amplifier (via `spe-remote` gateway)
 - **WebSocket** — LP-700 power/SWR meter (via the

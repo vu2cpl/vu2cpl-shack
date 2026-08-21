@@ -2,7 +2,7 @@
 
 **As-built 2026-08-21.** The shack Mosquitto broker (`192.168.1.169:1883`,
 also TLS `:8883` and websockets `:9001`) **no longer accepts anonymous
-connections.** Every client authenticates with one of four role accounts,
+connections.** Every client authenticates with one of the role accounts,
 and an ACL scopes each account to the topics it needs.
 
 > Security analysis and the migration story live in the (private)
@@ -21,6 +21,7 @@ and an ACL scopes each account to the topics it needs.
 | `svc` | Pi telemetry publishers: `monitor.sh` (rpi metrics), `gpsntp-mqtt-publish.sh` (chrony), ubersdr | read+write `rpi/#`, `shack/#`, `ubersdr/#` only |
 | `nodered` | Node-RED (the dashboard + automation controller) | read+write `#` (everything except `$SYS`) |
 | `ha` | Home Assistant | read+write `#` (everything except `$SYS`) |
+| `display` | AetherSDR panadapter status overlay | **read `aether/#` only** — the humanized status tree Node-RED publishes. Nothing else. |
 
 The `iot` scoping is the point of the ACL: a compromised IoT device holds
 the `iot` credential but still cannot read the rest of the shack or command
@@ -39,13 +40,20 @@ All under `/etc/mosquitto/` — **not** version-controlled, so back it up
 
 - `conf.d/00-auth.conf` — `password_file /etc/mosquitto/passwd` +
   `acl_file /etc/mosquitto/aclfile` (loads before the listener files).
-- `passwd` — the four accounts, `mosquitto_passwd`-hashed (`$7$` sha512-pbkdf2).
-  Owned `mosquitto:mosquitto`, `chmod 600`.
+- `passwd` — the accounts, `mosquitto_passwd`-hashed (`$7$` sha512-pbkdf2).
+  Owned `root:mosquitto`, `chmod 640` (root-owned satisfies the ownership
+  check newer mosquitto enforces; the `mosquitto` group makes it readable
+  by the broker process, which runs as user `mosquitto`). **Do not** make
+  it `root:root 600` — the broker can't read it and *all new auth fails*
+  (existing persistent connections survive, so it looks fine until a
+  device reconnects). Learned 2026-08-21.
 - `aclfile` — the per-account `topic` rules above. Same ownership/mode.
 - `conf.d/{lan,tls,websockets}.conf` — the three listeners, each
   `allow_anonymous false`.
 
-Reload after any change: `sudo systemctl restart mosquitto`.
+Reload after a `passwd`/`aclfile` change: `sudo systemctl reload mosquitto`
+(SIGHUP re-reads both files **without** dropping connected clients).
+A full `restart` is only needed for listener/`conf.d` changes.
 
 ---
 
@@ -60,6 +68,7 @@ Reload after any change: `sudo systemctl restart mosquitto`.
 | **`monitor.sh`** (rpi metrics) | `svc` | `MQTT_USER`/`MQTT_PASS` in `/etc/default/vu2cpl-shack` **or** the per-user `~/.config/vu2cpl-shack.env` (no-sudo fallback, `chmod 600`). `rebuild_pi.sh` writes the `/etc/default` one. |
 | **`gpsntp-mqtt-publish.sh`** (chrony) | `svc` | `MQTT_USER`/`MQTT_PASS` env lines in `/etc/cron.d/gpsntp-mqtt` (runs as root). `install.sh` in `pi-gps-ntp-server` writes them. |
 | **ubersdr** | `svc` | ubersdr's own web UI |
+| **AetherSDR** | `display` | MQTT applet settings (host/user/pass + `aether/*` topics). Reads the humanized status tree only. See [`nodered/aether-display/`](nodered/aether-display/). |
 
 ### Node-RED credential encryption
 

@@ -1,0 +1,147 @@
+[
+  {
+    "id": "aetherdisp_tab_01",
+    "type": "tab",
+    "label": "AetherSDR Display",
+    "disabled": false,
+    "info": "Humanizes shack MQTT + LP-700 state into aether/* topics for the AetherSDR MQTT applet. Update-proof: AetherSDR only subscribes."
+  },
+  {
+    "id": "aetherdisp_in0",
+    "type": "mqtt in",
+    "z": "aetherdisp_tab_01",
+    "name": "POWER5",
+    "topic": "stat/powerstrip1/POWER5",
+    "qos": "0",
+    "datatype": "auto-detect",
+    "broker": "f4785be9863eab08",
+    "x": 180,
+    "y": 80,
+    "wires": [
+      [
+        "aetherdisp_humanize"
+      ]
+    ]
+  },
+  {
+    "id": "aetherdisp_in1",
+    "type": "mqtt in",
+    "z": "aetherdisp_tab_01",
+    "name": "last_event",
+    "topic": "lightning/as3935/last_event",
+    "qos": "0",
+    "datatype": "auto-detect",
+    "broker": "f4785be9863eab08",
+    "x": 180,
+    "y": 140,
+    "wires": [
+      [
+        "aetherdisp_humanize"
+      ]
+    ]
+  },
+  {
+    "id": "aetherdisp_in2",
+    "type": "mqtt in",
+    "z": "aetherdisp_tab_01",
+    "name": "status",
+    "topic": "lightning/as3935/status",
+    "qos": "0",
+    "datatype": "auto-detect",
+    "broker": "f4785be9863eab08",
+    "x": 180,
+    "y": 200,
+    "wires": [
+      [
+        "aetherdisp_humanize"
+      ]
+    ]
+  },
+  {
+    "id": "aetherdisp_in3",
+    "type": "mqtt in",
+    "z": "aetherdisp_tab_01",
+    "name": "chrony",
+    "topic": "shack/gpsntp/chrony",
+    "qos": "0",
+    "datatype": "auto-detect",
+    "broker": "f4785be9863eab08",
+    "x": 180,
+    "y": 260,
+    "wires": [
+      [
+        "aetherdisp_humanize"
+      ]
+    ]
+  },
+  {
+    "id": "aetherdisp_humanize",
+    "type": "function",
+    "z": "aetherdisp_tab_01",
+    "name": "Humanize -> aether",
+    "func": "\nfunction ago(ms){ if(!ms) return '?';\n  var s=Math.max(0,(Date.now()-ms)/1000);\n  if(s<90) return Math.round(s)+' sec ago';\n  var m=s/60; if(m<90) return Math.round(m)+' min ago';\n  var h=m/60; if(h<48) return Math.round(h)+' hr ago';\n  return Math.round(h/24)+' d ago'; }\nfunction cap(x){ x=String(x||''); return x.charAt(0).toUpperCase()+x.slice(1); }\nvar t=msg.topic;\nvar raw=(typeof msg.payload==='string')?msg.payload:(msg.payload&&msg.payload.toString?msg.payload.toString():String(msg.payload));\nvar o=null;\ntry{\n  if(t==='stat/powerstrip1/POWER5'){\n    o={topic:'aether/Antenna', payload:String(raw), retain:true};\n  } else if(t==='lightning/as3935/last_event'){\n    var d=JSON.parse(raw);\n    o={topic:'aether/Lightning', payload:cap(d.event)+', '+ago(d.ts_epoch_ms), retain:true};\n  } else if(t==='lightning/as3935/status'){\n    var d=JSON.parse(raw);\n    o={topic:'aether/AS3935', payload:(d.event==='offline'?'Offline':'Active'), retain:true};\n  } else if(t==='shack/gpsntp/chrony'){\n    var d=JSON.parse(raw);\n    var off=d.last_offset_s||0, ns=off*1e9, os;\n    if(Math.abs(ns)<1000) os=(ns>=0?'+':'')+Math.round(ns)+' ns';\n    else if(Math.abs(ns)<1e6) os=(ns>=0?'+':'')+(ns/1000).toFixed(1)+' us';\n    else os=(off>=0?'+':'')+(off*1000).toFixed(2)+' ms';\n    o={topic:'aether/GPS', payload:'S'+(d.stratum!=null?d.stratum:'?')+' '+os, retain:true};\n  }\n}catch(e){}\nreturn o;\n",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 480,
+    "y": 160,
+    "wires": [
+      [
+        "aetherdisp_out"
+      ]
+    ]
+  },
+  {
+    "id": "aetherdisp_out",
+    "type": "mqtt out",
+    "z": "aetherdisp_tab_01",
+    "name": "aether/*",
+    "topic": "",
+    "qos": "0",
+    "retain": "true",
+    "broker": "f4785be9863eab08",
+    "x": 720,
+    "y": 220,
+    "wires": []
+  },
+  {
+    "id": "aetherdisp_tick",
+    "type": "inject",
+    "z": "aetherdisp_tab_01",
+    "name": "every 2s",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "2",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "1",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 170,
+    "y": 360,
+    "wires": [
+      [
+        "aetherdisp_lpfn"
+      ]
+    ]
+  },
+  {
+    "id": "aetherdisp_lpfn",
+    "type": "function",
+    "z": "aetherdisp_tab_01",
+    "name": "LP-700 -> aether",
+    "func": "\nvar s=global.get('lpState');\nif(!s) return null;\nvar p=(s.avg!=null?s.avg:(s.peak!=null?s.peak:null));\nvar swr=(s.swr!=null?s.swr:null);\nreturn [\n  p!=null   ? {topic:'aether/Power', payload:String(p)+' W', retain:true} : null,\n  swr!=null ? {topic:'aether/SWR',   payload:parseFloat(swr).toFixed(2)+':1', retain:true} : null\n];\n",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 470,
+    "y": 360,
+    "wires": [
+      [
+        "aetherdisp_out"
+      ]
+    ]
+  }
+]
