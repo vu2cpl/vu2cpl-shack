@@ -33,6 +33,64 @@ Three related changes:
   `~/.node-red/.config.projects.json` on the Pi — **outside** this repo;
   back it up, losing it makes creds undecryptable), re-encrypted
   `flows_cred.json`, and verified the public history is plaintext-free.
+  Later that day `flows_cred.json` was also `git rm --cached` +
+  gitignored, so no credential blob remains in the repo tree at all.
+
+### MQTT enforcement complete + Pi publishers on `svc`
+
+- **All clients migrated, then enforcement flipped.** The `svc` account
+  was wired onto the Pi telemetry publishers — `monitor.sh` (rpi metrics,
+  4 Pis) and `gpsntp-mqtt-publish.sh` (chrony) both gained optional
+  MQTT auth; `ha` was set in Home Assistant, ubersdr in its own UI. The
+  broker then had `password_file` + `allow_anonymous false` + an
+  `acl_file` applied and verified in stages (each account authenticates,
+  anonymous refused, `iot` topic-scoped away from services topics, all
+  telemetry still flowing). **The broker no longer accepts anonymous
+  connections** — full detail in [`MQTT_AUTH.md`](MQTT_AUTH.md).
+- **`monitor.sh`** now passes `-u/-P` to `mosquitto_pub` when
+  `MQTT_USER`/`MQTT_PASS` are set (empty ⇒ anonymous). Reads them from
+  `/etc/default/vu2cpl-shack` or a new no-sudo `~/.config/vu2cpl-shack.env`
+  override.
+- **`rebuild_pi.sh`** (the Pi installer) now prompts for the MQTT
+  username/password in the mandatory broker inventory and writes them to
+  `/etc/default/vu2cpl-shack` (`root:<user>`, `chmod 640` since it holds a
+  password). Empty username keeps the previous anonymous behaviour, so
+  forks are unaffected.
+- **New doc [`MQTT_AUTH.md`](MQTT_AUTH.md)** — the operational reference:
+  the accounts, the ACL, per-client credential locations, and how to
+  onboard or rotate a client.
+
+### AetherSDR panadapter status display — external humanizer flow
+
+Show live shack status on the AetherSDR panadapter overlay
+(`Antenna: ON`, `Lightning: Disturber, 3 min ago`, `AS3935: Active`,
+`GPS: S1 +9 ns`, `Power: 100 W`, `SWR: 1.20:1`) **without any AetherSDR
+code changes, now or on future releases** — the operator's hard
+constraint. All formatting is done outside the app.
+
+- **New Node-RED flow [`nodered/aether-display/`](nodered/aether-display/)** —
+  subscribes to the raw shack topics (`stat/powerstrip1/POWER5`,
+  `lightning/as3935/{last_event,status}`, `shack/gpsntp/chrony`),
+  formats each into a human-readable one-liner, and re-publishes them
+  **retained** under a dedicated `aether/*` tree. AetherSDR only
+  subscribes to `aether/*` and prints `leaf: payload` verbatim — it never
+  parses a payload, so a raw-format change is a one-function edit in
+  Node-RED, never an app rebuild. Importable JSON + full README in that
+  folder.
+- **LP-700 power/SWR** aren't on MQTT (they arrive over
+  `ws://lp700-server/ws` into `flow.lpState`, tab-scoped). One line added
+  to `LP State Aggregator` — `global.set('lpState', st)` — mirrors that
+  state to global context so the new flow can read it and publish
+  `aether/Power` + `aether/SWR`.
+- **New read-only `display` MQTT account** — ACL `topic read aether/#`
+  only, so AetherSDR holds a least-privilege credential in its on-disk
+  QSettings rather than the broad `nodered`/`ha` one. See
+  [`MQTT_AUTH.md`](MQTT_AUTH.md).
+- **Gotcha caught same day:** `chown root:root chmod 600` on
+  `/etc/mosquitto/passwd` makes it unreadable to the broker (runs as user
+  `mosquitto`) → *all new auth fails* while existing persistent
+  connections keep working, so it looks fine until a device reconnects.
+  Correct is `root:mosquitto` `640`. Documented in `MQTT_AUTH.md`.
 
 ## 2026-07-31
 

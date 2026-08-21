@@ -1,0 +1,147 @@
+[
+  {
+    "id": "aetherdisp_tab_01",
+    "type": "tab",
+    "label": "AetherSDR Display",
+    "disabled": false,
+    "info": "Humanizes shack MQTT + LP-700 state into aether/* topics for the AetherSDR MQTT applet. Update-proof: AetherSDR only subscribes."
+  },
+  {
+    "id": "aetherdisp_in0",
+    "type": "mqtt in",
+    "z": "aetherdisp_tab_01",
+    "name": "POWER5",
+    "topic": "stat/powerstrip1/POWER5",
+    "qos": "0",
+    "datatype": "auto-detect",
+    "broker": "f4785be9863eab08",
+    "x": 180,
+    "y": 80,
+    "wires": [
+      [
+        "aetherdisp_humanize"
+      ]
+    ]
+  },
+  {
+    "id": "aetherdisp_in1",
+    "type": "mqtt in",
+    "z": "aetherdisp_tab_01",
+    "name": "last_event",
+    "topic": "lightning/as3935/last_event",
+    "qos": "0",
+    "datatype": "auto-detect",
+    "broker": "f4785be9863eab08",
+    "x": 180,
+    "y": 140,
+    "wires": [
+      [
+        "aetherdisp_humanize"
+      ]
+    ]
+  },
+  {
+    "id": "aetherdisp_in2",
+    "type": "mqtt in",
+    "z": "aetherdisp_tab_01",
+    "name": "status",
+    "topic": "lightning/as3935/status",
+    "qos": "0",
+    "datatype": "auto-detect",
+    "broker": "f4785be9863eab08",
+    "x": 180,
+    "y": 200,
+    "wires": [
+      [
+        "aetherdisp_humanize"
+      ]
+    ]
+  },
+  {
+    "id": "aetherdisp_in3",
+    "type": "mqtt in",
+    "z": "aetherdisp_tab_01",
+    "name": "chrony",
+    "topic": "shack/gpsntp/chrony",
+    "qos": "0",
+    "datatype": "auto-detect",
+    "broker": "f4785be9863eab08",
+    "x": 180,
+    "y": 260,
+    "wires": [
+      [
+        "aetherdisp_humanize"
+      ]
+    ]
+  },
+  {
+    "id": "aetherdisp_humanize",
+    "type": "function",
+    "z": "aetherdisp_tab_01",
+    "name": "Humanize -> aether",
+    "func": "function ago(ms){ if(!ms) return '?';\n  var s=Math.max(0,(Date.now()-ms)/1000);\n  if(s<90) return Math.round(s)+' sec ago';\n  var m=s/60; if(m<90) return Math.round(m)+' min ago';\n  var h=m/60; if(h<48) return Math.round(h)+' hr ago';\n  return Math.round(h/24)+' d ago'; }\nfunction cap(x){ x=String(x||''); return x.charAt(0).toUpperCase()+x.slice(1); }\n// mqtt-in \"auto-detect\" hands us a parsed object for JSON topics, a string\n// for plain ones, or a Buffer. Normalise to an object here.\nfunction obj(p){\n  if(p && typeof p==='object' && typeof p.length==='undefined') return p; // already parsed\n  try { return JSON.parse(typeof p==='string' ? p : p.toString()); } catch(e){ return null; }\n}\nvar t=msg.topic, o=null;\ntry{\n  if(t==='stat/powerstrip1/POWER5'){\n    var v=(msg.payload && typeof msg.payload==='object')\n            ? (msg.payload.POWER5 || msg.payload.POWER || JSON.stringify(msg.payload))\n            : String(msg.payload);\n    o={topic:'aether/Antenna', payload:String(v), retain:true};\n  } else if(t==='lightning/as3935/last_event'){\n    var d=obj(msg.payload); if(!d) return null;\n    // Stash event + timestamp; the timer function recomputes \"N min ago\" live.\n    var l={event:d.event, ts:d.ts_epoch_ms};\n    flow.set('lastLightning', l);\n    o={topic:'aether/Lightning', payload:cap(l.event)+', '+ago(l.ts), retain:true};\n  } else if(t==='lightning/as3935/status'){\n    var d=obj(msg.payload); if(!d) return null;\n    o={topic:'aether/AS3935', payload:(d.event==='offline'?'Offline':'Active'), retain:true};\n  } else if(t==='shack/gpsntp/chrony'){\n    var d=obj(msg.payload); if(!d) return null;\n    var off=d.last_offset_s||0, ns=off*1e9, os;\n    if(Math.abs(ns)<1000) os=(ns>=0?'+':'')+Math.round(ns)+' ns';\n    else if(Math.abs(ns)<1e6) os=(ns>=0?'+':'')+(ns/1000).toFixed(1)+' us';\n    else os=(off>=0?'+':'')+(off*1000).toFixed(2)+' ms';\n    o={topic:'aether/GPS', payload:'S'+(d.stratum!=null?d.stratum:'?')+' '+os, retain:true};\n  }\n}catch(e){}\nreturn o;\n",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 480,
+    "y": 160,
+    "wires": [
+      [
+        "aetherdisp_out"
+      ]
+    ]
+  },
+  {
+    "id": "aetherdisp_out",
+    "type": "mqtt out",
+    "z": "aetherdisp_tab_01",
+    "name": "aether/*",
+    "topic": "",
+    "qos": "0",
+    "retain": "true",
+    "broker": "f4785be9863eab08",
+    "x": 720,
+    "y": 220,
+    "wires": []
+  },
+  {
+    "id": "aetherdisp_tick",
+    "type": "inject",
+    "z": "aetherdisp_tab_01",
+    "name": "every 2s",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "2",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "1",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 170,
+    "y": 360,
+    "wires": [
+      [
+        "aetherdisp_lpfn"
+      ]
+    ]
+  },
+  {
+    "id": "aetherdisp_lpfn",
+    "type": "function",
+    "z": "aetherdisp_tab_01",
+    "name": "Timer -> aether (Power/SWR/Lightning)",
+    "func": "function ago(ms){ if(!ms) return '?';\n  var s=Math.max(0,(Date.now()-ms)/1000);\n  if(s<90) return Math.round(s)+' sec ago';\n  var m=s/60; if(m<90) return Math.round(m)+' min ago';\n  var h=m/60; if(h<48) return Math.round(h)+' hr ago';\n  return Math.round(h/24)+' d ago'; }\nfunction cap(x){ x=String(x||''); return x.charAt(0).toUpperCase()+x.slice(1); }\nvar out=[];\n// LP-700 power/SWR from global (mirrored by LP State Aggregator)\nvar s=global.get('lpState');\nif(s){\n  var p=(s.avg!=null?s.avg:(s.peak!=null?s.peak:null));\n  var swr=(s.swr!=null?s.swr:null);\n  if(p!=null)   out.push({topic:'aether/Power', payload:String(p)+' W', retain:true});\n  if(swr!=null) out.push({topic:'aether/SWR',   payload:parseFloat(swr).toFixed(2)+':1', retain:true});\n}\n// Lightning \"N min ago\" recomputed live from the stashed last event\nvar l=flow.get('lastLightning');\nif(l && l.ts){\n  out.push({topic:'aether/Lightning', payload:cap(l.event)+', '+ago(l.ts), retain:true});\n}\n// Single output \u2192 wrap the array so ALL messages are sent (not just out[0]).\nreturn [ out ];\n",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 470,
+    "y": 360,
+    "wires": [
+      [
+        "aetherdisp_out"
+      ]
+    ]
+  }
+]
