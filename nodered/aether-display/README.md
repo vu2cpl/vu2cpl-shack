@@ -82,7 +82,7 @@ revert other flows on deploy), at `http://192.168.1.169:1880`:
    [`aether-display-flow.json`](aether-display-flow.json) → **Import**.
 2. It lands as a new tab **"AetherSDR Display"** (4 MQTT inputs → a
    `Humanize -> aether` function → one `aether/*` MQTT output, plus a
-   2-second timer feeding `LP-700 -> aether`).
+   2-second timer feeding `Timer -> aether (Power/SWR/Lightning)`).
 3. **Deploy.**
 
 The four MQTT-sourced values (`Antenna`, `Lightning`, `AS3935`, `GPS`)
@@ -104,9 +104,17 @@ deploy**:
    ```
 3. **Deploy.** `aether/Power` and `aether/SWR` now populate.
 
-`LP-700 -> aether` publishes `lpState.avg` as watts and `lpState.swr` as
-`x.xx:1` every 2 s (retained). To show peak instead of average watts,
+`Timer -> aether (Power/SWR/Lightning)` runs every 2 s and publishes
+(retained): `lpState.avg` as watts, `lpState.swr` as `x.xx:1`, and the
+**live-ticking** Lightning "N min ago" recomputed from the last event
+that `Humanize -> aether` stashed in `flow.lastLightning`. That's why the
+Lightning age keeps counting up between events instead of freezing at the
+value from when the event arrived. To show peak instead of average watts,
 change `s.avg` to `s.peak` in that function.
+
+> The timer node has **one** output but emits several messages per tick,
+> so it must `return [ out ]` (array-wrapped) — `return out` would send
+> only the first message and silently drop SWR/Lightning.
 
 ### 3. Configure AetherSDR
 
@@ -129,9 +137,9 @@ last topic segment as the label and the payload as the value — e.g.
 ## Changing a format later
 
 Everything is in the Node-RED `Humanize -> aether` function (and
-`LP-700 -> aether` for power/SWR). Edit the string, Deploy — AetherSDR
-picks up the new retained value on the next publish. No rebuild, no app
-config change.
+`Timer -> aether (Power/SWR/Lightning)` for power/SWR/lightning-age).
+Edit the string, Deploy — AetherSDR picks up the new retained value on
+the next publish. No rebuild, no app config change.
 
 ## Gotcha — mqtt-in "auto-detect" hands you an object, not a string
 
