@@ -5,8 +5,21 @@
 if [ -z "$MQTT_BROKER" ] && [ -f /etc/default/vu2cpl-shack ]; then
     . /etc/default/vu2cpl-shack
 fi
+# Per-user override, for hosts where /etc/default is not writable without a
+# sudo password. Holds MQTT_USER/MQTT_PASS (and optionally MQTT_BROKER);
+# keep it chmod 600. Values here win over the /etc file.
+if [ -f "$HOME/.config/vu2cpl-shack.env" ]; then
+    . "$HOME/.config/vu2cpl-shack.env"
+fi
 BROKER="${MQTT_BROKER:-127.0.0.1}"
 ID=$(hostname)
+
+# MQTT auth (optional): set MQTT_USER / MQTT_PASS in /etc/default/vu2cpl-shack
+# (the same file that carries MQTT_BROKER, sourced above). Empty MQTT_USER ⇒
+# anonymous connect, backward-compatible until the broker sets
+# allow_anonymous false. The shack account for these publishers is 'svc'.
+AUTH=""
+[ -n "$MQTT_USER" ] && AUTH="-u $MQTT_USER -P $MQTT_PASS"
 
 CPU=$(top -bn1 | grep 'Cpu(s)' | awk '{print $2}' | cut -d. -f1)
 MEM=$(free | awk '/Mem:/ {printf "%.0f", $3/$2 * 100}')
@@ -22,10 +35,10 @@ fi
 # IP: get only the first IP, trimmed cleanly
 IP=$(hostname -I | awk '{print $1}' | tr -d '[:space:]')
 
-mosquitto_pub -h $BROKER -t "rpi/$ID/cpu"    -m "$CPU"
-mosquitto_pub -h $BROKER -t "rpi/$ID/mem"    -m "$MEM"
-mosquitto_pub -h $BROKER -t "rpi/$ID/temp"   -m "$TEMP"
-mosquitto_pub -h $BROKER -t "rpi/$ID/disk"   -m "$DISK"
-mosquitto_pub -h $BROKER -t "rpi/$ID/uptime" -m "$UPTIME"
-mosquitto_pub -h $BROKER -t "rpi/$ID/ip"     -m "$IP"
-mosquitto_pub -h $BROKER -t "rpi/$ID/status" -m "online"
+mosquitto_pub -h $BROKER $AUTH -t "rpi/$ID/cpu"    -m "$CPU"
+mosquitto_pub -h $BROKER $AUTH -t "rpi/$ID/mem"    -m "$MEM"
+mosquitto_pub -h $BROKER $AUTH -t "rpi/$ID/temp"   -m "$TEMP"
+mosquitto_pub -h $BROKER $AUTH -t "rpi/$ID/disk"   -m "$DISK"
+mosquitto_pub -h $BROKER $AUTH -t "rpi/$ID/uptime" -m "$UPTIME"
+mosquitto_pub -h $BROKER $AUTH -t "rpi/$ID/ip"     -m "$IP"
+mosquitto_pub -h $BROKER $AUTH -t "rpi/$ID/status" -m "online"

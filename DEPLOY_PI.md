@@ -82,6 +82,29 @@ ls -la /home/vu2cpl/monitor.sh /home/vu2cpl/rpi_agent.py
 
 ---
 
+## Step 2b — MQTT credentials (broker auth migration, 2026-08-21+)
+
+The broker at `192.168.1.169` is moving off anonymous access. `monitor.sh`
+publishes with the **`svc`** account when `MQTT_USER` / `MQTT_PASS` are set
+(empty ⇒ anonymous, backward-compatible). It reads them from either:
+
+- `/etc/default/vu2cpl-shack` (root-owned; also carries `MQTT_BROKER`), **or**
+- `~/.config/vu2cpl-shack.env` (per-user, no sudo needed; `chmod 600`) —
+  values here win, and it may also set `MQTT_BROKER`.
+
+Set the `svc` password (from the shack password manager) via whichever is
+convenient on the host:
+
+```bash
+# Option A — root-owned env file (needs sudo):
+printf 'MQTT_USER=svc\nMQTT_PASS=<svc-password>\n' | sudo tee -a /etc/default/vu2cpl-shack
+
+# Option B — per-user (no sudo; add MQTT_BROKER here too if /etc file is absent):
+mkdir -p ~/.config
+printf 'MQTT_BROKER=192.168.1.169\nMQTT_USER=svc\nMQTT_PASS=<svc-password>\n' > ~/.config/vu2cpl-shack.env
+chmod 600 ~/.config/vu2cpl-shack.env
+```
+
 ## Step 3 — Install MQTT client + smoke-test telemetry
 
 ```bash
