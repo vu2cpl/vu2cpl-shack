@@ -285,7 +285,7 @@
         "x": 14,
         "y": 359,
         "w": 852,
-        "h": 580
+        "h": 542
     },
     {
         "id": "f925c3107b5f407e",
@@ -384,7 +384,8 @@
                 "px": 0,
                 "py": 0
             }
-        }
+        },
+        "css": "\n/* Tell browser to render native UI in dark mode (incl. scrollbars on Mac/Win/Linux) */\n:root, html, body {\n  color-scheme: dark;\n}\n\n/* Firefox-native scrollbar styling (uses system dark theme if color-scheme set) */\n* {\n  scrollbar-width: thin;\n  scrollbar-color: #30363d #161b22;\n}\n\n/* WebKit (Safari, Chrome, Edge) scrollbar styling - applies everywhere */\n::-webkit-scrollbar {\n  width: 8px;\n  height: 8px;\n}\n::-webkit-scrollbar-track {\n  background: #0d1117;\n}\n::-webkit-scrollbar-thumb {\n  background: #30363d;\n  border-radius: 4px;\n  border: 1px solid #161b22;\n}\n::-webkit-scrollbar-thumb:hover {\n  background: #58a6ff;\n}\n::-webkit-scrollbar-corner {\n  background: #0d1117;\n}\n\n/* Minimal mobile-only optimization */\n@media (max-width: 600px) {\n  body { font-size: 13px; }\n  md-content { overflow-x: hidden !important; }\n}\n\n/* Scroll only for specific growing-data containers (not entire cards) */\n#logLines,\n#log-container,\n.lightning-events,\n#dxccTable tbody,\n#a35ev-list,\n.evt-list,\n.skimmer-spots,\n.rbn-spots {\n  max-height: 200px;\n  overflow-y: auto;\n}\n"
     },
     {
         "id": "94d0df28ae5cccfc",
@@ -622,7 +623,6 @@
         "name": "Shack Vue",
         "topic": "",
         "url": "shack",
-        "okToGo": true,
         "fwdInMessages": false,
         "allowScripts": false,
         "allowStyles": false,
@@ -639,7 +639,14 @@
         "x": 300,
         "y": 100,
         "wires": [
-            [],
+            [
+                "vue_lightning_cmd_router_01",
+                "vue_dxcc_cmd_router_01",
+                "vue_rpi_cmd_router_01",
+                "vue_pwr_cmd_router_01",
+                "vue_spe_cmd_router_01",
+                "vue_lp_cmd_router_01"
+            ],
             []
         ]
     },
@@ -670,7 +677,9 @@
         "x": 720,
         "y": 240,
         "wires": [
-            []
+            [
+                "27a6286454485995"
+            ]
         ]
     },
     {
@@ -1130,8 +1139,6 @@
         "resendOnRefresh": false,
         "templateScope": "local",
         "className": "",
-        "x": 0,
-        "y": 0,
         "wires": [
             []
         ]
@@ -1171,7 +1178,9 @@
         "x": 360,
         "y": 1200,
         "wires": [
-            []
+            [
+                "uib_shack_01"
+            ]
         ]
     },
     {
@@ -2201,7 +2210,9 @@
         "x": 360,
         "y": 1500,
         "wires": [
-            []
+            [
+                "uib_shack_01"
+            ]
         ]
     },
     {
@@ -2601,7 +2612,9 @@
         "x": 360,
         "y": 800,
         "wires": [
-            []
+            [
+                "uib_shack_01"
+            ]
         ]
     },
     {
@@ -3337,7 +3350,9 @@
         "x": 360,
         "y": 1100,
         "wires": [
-            []
+            [
+                "uib_shack_01"
+            ]
         ]
     },
     {
@@ -3758,7 +3773,9 @@
         "x": 360,
         "y": 1100,
         "wires": [
-            []
+            [
+                "uib_shack_01"
+            ]
         ]
     },
     {
@@ -4389,7 +4406,9 @@
         "x": 360,
         "y": 800,
         "wires": [
-            []
+            [
+                "uib_shack_01"
+            ]
         ]
     },
     {
@@ -4487,7 +4506,7 @@
         "protocol": "Automatic",
         "mode": null,
         "name": "RBN SDR",
-        "host": "192.168.1.241",
+        "host": "192.168.1.235",
         "timer": "10",
         "inputs": 0,
         "x": 140,
@@ -5010,7 +5029,9 @@
         "x": 360,
         "y": 800,
         "wires": [
-            []
+            [
+                "uib_shack_01"
+            ]
         ]
     },
     {
@@ -5513,7 +5534,8 @@
         "y": 180,
         "wires": [
             [
-                "88ce7a0b9c27747d"
+                "88ce7a0b9c27747d",
+                "82f732a0dac14945"
             ]
         ]
     },
@@ -6725,7 +6747,9 @@
         "x": 360,
         "y": 1300,
         "wires": [
-            []
+            [
+                "uib_shack_01"
+            ]
         ]
     },
     {
@@ -6746,8 +6770,12 @@
             [
                 "vue_lightning_builder_01"
             ],
-            [],
-            []
+            [
+                "82f732a0dac14945"
+            ],
+            [
+                "as3935_evt_test_out"
+            ]
         ]
     },
     {
@@ -7782,7 +7810,9 @@
         "x": 360,
         "y": 900,
         "wires": [
-            []
+            [
+                "uib_shack_01"
+            ]
         ]
     },
     {
@@ -9442,7 +9472,9 @@
         "x": 360,
         "y": 1500,
         "wires": [
-            []
+            [
+                "uib_shack_01"
+            ]
         ]
     },
     {
@@ -9632,7 +9664,8 @@
                 "ws_pwr_result_dbg"
             ],
             [
-                "ws_panel_node"
+                "ws_panel_node",
+                "uib_shack_01"
             ]
         ]
     },
@@ -9774,7 +9807,9 @@
         "x": 700,
         "y": 200,
         "wires": [
-            []
+            [
+                "uib_shack_01"
+            ]
         ]
     },
     {
@@ -9845,7 +9880,9 @@
         "x": 400,
         "y": 200,
         "wires": [
-            []
+            [
+                "uib_shack_01"
+            ]
         ]
     },
     {
@@ -9944,7 +9981,9 @@
         "x": 320,
         "y": 100,
         "wires": [
-            []
+            [
+                "557083037f168b22"
+            ]
         ]
     },
     {
@@ -9962,7 +10001,9 @@
         "x": 320,
         "y": 160,
         "wires": [
-            []
+            [
+                "557083037f168b22"
+            ]
         ]
     },
     {
@@ -9980,7 +10021,9 @@
         "x": 320,
         "y": 220,
         "wires": [
-            []
+            [
+                "557083037f168b22"
+            ]
         ]
     },
     {
@@ -10024,7 +10067,9 @@
         "x": 380,
         "y": 300,
         "wires": [
-            []
+            [
+                "557083037f168b22"
+            ]
         ]
     },
     {
@@ -10043,7 +10088,9 @@
         "x": 160,
         "y": 440,
         "wires": [
-            []
+            [
+                "557083037f168b22"
+            ]
         ]
     },
     {
@@ -10082,7 +10129,9 @@
         "x": 420,
         "y": 500,
         "wires": [
-            []
+            [
+                "557083037f168b22"
+            ]
         ]
     },
     {
@@ -10100,7 +10149,9 @@
         "x": 420,
         "y": 560,
         "wires": [
-            []
+            [
+                "557083037f168b22"
+            ]
         ]
     },
     {
@@ -10377,7 +10428,9 @@
         "x": 760,
         "y": 200,
         "wires": [
-            []
+            [
+                "uib_shack_01"
+            ]
         ]
     },
     {
