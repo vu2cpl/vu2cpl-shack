@@ -187,6 +187,56 @@ the snippet's try/catch no-ops until the first restart after the
 clone). Keep the constants in sync across `flows_guard.py` and
 `flows_guard_middleware.js`.
 
+### ROOT CAUSE FOUND — cross-tab wires; link-node refactor ends the wipe saga
+
+The middleware immediately earned its keep — six rejected deploy
+attempts at 18:54 — but the decisive clue came when the operator opened
+a **brand-new** editor tab and the Shack Vue node *still* showed no
+incoming wires. That forced a check nobody had made in three months:
+**which tab does each Vue feeder live on?** Answer: all 14 of them on
+*other* tabs — `Build Flex state for Vue` on FlexRadio, `Build DXCC…`
+on DXCC Tracker, etc. — wired straight across tabs into `uib_shack_01`
+on Vue Dashboard. Full inventory: **30 cross-tab wires** (14 Vue data
+fan-in, 6 Vue cmd fan-out, 9 AS3935 Tuning ↔ Lightning, 1
+Master Dashboard → AS3935 Cmd via router) **+ 1 dead wire** (`Raw HDG
+to display` → a long-deleted node), plus a `css` field on `ui_base`
+that dashboard 3.6.6's node schema doesn't contain at all.
+
+The Node-RED **runtime** executes cross-tab wires happily; the
+**editor** cannot represent them — each tab renders separately, so the
+wires have been *invisible in the editor since May*. Consequence: ANY
+Deploy from ANY editor session normalized them away. Every wipe date
+was simply an editor-deploy date, five for five. The stale-tab
+narrative (and the day's conflict-merge theory, hereby retracted) was
+misdirection: stale tabs only added the field reverts (cluster port,
+template sizes) seen in the early incidents. All these constructs came
+from the May 2026 Vue migration being written directly into flows.json
+— valid for the runtime, illegal for the editor, and never
+editor-round-tripped until 07-13.
+
+**Fix (`9ad16f7`) — link-node refactor, 28 new nodes:** every
+cross-tab hop replaced with `link in`/`link out` pairs (the sanctioned
+mechanism, pure pass-through): 13 per-tab `link out`s + one `Builders →
+Shack Vue` `link in` for the data fan-in (the Vue wiring is now
+*visible in the editor* for the first time); one `Shack Vue cmds →`
+`link out` + 6 `link in`s for the command fan-out; shared pairs for the
+7 AS3935→Master Dashboard feeds, →AS3935 Cmd (2 sources), and →TEST
+publish. Dead wire deleted; `Rotator Controls` ui_template given real
+canvas coordinates (it had none — the editor stamped 0,0 on every
+deploy); the dark-scrollbar CSS moved from the inert `ui_base.css`
+field into a proper site-`<head>` `ui_template` ("D1 global CSS", GPS
+NTP (card) tab). All 30 original logical paths machine-verified
+reachable through the link hops before deploying.
+
+**Guards updated in the same commit:** feeder count now traverses link
+pairs; the css check is replaced by a **zero cross-tab/dead wires**
+invariant, so the editor-illegal construct can never be silently
+reintroduced by a future hand edit — the pre-commit hook refuses to
+commit it and the middleware refuses to deploy *around* it. Verified:
+guards pass the refactored file, reject the pre-refactor file (31
+cross-tab) and the wiped model (0 feeders). Editor deploys are
+round-trip-safe from here on; rule #7 rewritten accordingly.
+
 ## 2026-07-31
 
 ### Stale Node-RED editor tab reverted `flows.json` — second occurrence
