@@ -33,6 +33,32 @@ Three related changes:
   `~/.node-red/.config.projects.json` on the Pi — **outside** this repo;
   back it up, losing it makes creds undecryptable), re-encrypted
   `flows_cred.json`, and verified the public history is plaintext-free.
+  Later that day `flows_cred.json` was also `git rm --cached` +
+  gitignored, so no credential blob remains in the repo tree at all.
+
+### MQTT enforcement complete + Pi publishers on `svc`
+
+- **All clients migrated, then enforcement flipped.** The `svc` account
+  was wired onto the Pi telemetry publishers — `monitor.sh` (rpi metrics,
+  4 Pis) and `gpsntp-mqtt-publish.sh` (chrony) both gained optional
+  MQTT auth; `ha` was set in Home Assistant, ubersdr in its own UI. The
+  broker then had `password_file` + `allow_anonymous false` + an
+  `acl_file` applied and verified in stages (each account authenticates,
+  anonymous refused, `iot` topic-scoped away from services topics, all
+  telemetry still flowing). **The broker no longer accepts anonymous
+  connections** — full detail in [`MQTT_AUTH.md`](MQTT_AUTH.md).
+- **`monitor.sh`** now passes `-u/-P` to `mosquitto_pub` when
+  `MQTT_USER`/`MQTT_PASS` are set (empty ⇒ anonymous). Reads them from
+  `/etc/default/vu2cpl-shack` or a new no-sudo `~/.config/vu2cpl-shack.env`
+  override.
+- **`rebuild_pi.sh`** (the Pi installer) now prompts for the MQTT
+  username/password in the mandatory broker inventory and writes them to
+  `/etc/default/vu2cpl-shack` (`root:<user>`, `chmod 640` since it holds a
+  password). Empty username keeps the previous anonymous behaviour, so
+  forks are unaffected.
+- **New doc [`MQTT_AUTH.md`](MQTT_AUTH.md)** — the operational reference:
+  the four accounts, the ACL, per-client credential locations, and how to
+  onboard or rotate a client.
 
 ## 2026-07-31
 

@@ -174,7 +174,11 @@ Critical Node-RED IDs (per CLAUDE.md):
 - `d62fb0c3c40f03b7` Trigger Disconnect
 - `593f22a507b46335` Parse Open-Meteo → Strike (CAPE-based)
 - `61dca3d98a0e4c28` Refresh Stats — fan-out hub for all 30 s replays
-- `f4785be9863eab08` MQTT broker config (192.168.1.169:1883, no auth)
+- `f4785be9863eab08` MQTT broker config (192.168.1.169:1883). **Auth
+  required since 2026-08-21** — this node uses the `nodered` account
+  (creds in the project's encrypted `flows_cred.json`). The duplicate
+  `mqttbroker.shack` node was removed the same day. See
+  [`MQTT_AUTH.md`](MQTT_AUTH.md).
 
 ---
 

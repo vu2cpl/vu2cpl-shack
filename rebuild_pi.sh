@@ -143,6 +143,21 @@ ask_broker_ip() {
         [[ "$MQTT_IP" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] && break
         c_red "    Invalid IP — must be dotted-quad (e.g. 192.168.1.50)"
     done
+
+    # Broker auth. The shack broker requires authentication (anonymous access
+    # was disabled 2026-08-21). The Pi-side publishers (monitor.sh, chrony)
+    # authenticate with the ACL-scoped 'svc' account. Blank username =>
+    # anonymous connect (only for a broker that still allows it).
+    echo
+    c_yellow "  MQTT credentials — the shack broker requires auth. Pi-side"
+    c_yellow "  publishers use the 'svc' account. Blank password = anonymous."
+    read -r -p "  MQTT username (default svc): " MQTT_USER
+    MQTT_USER="${MQTT_USER:-svc}"
+    MQTT_PASS=""
+    if [ -n "$MQTT_USER" ]; then
+        read -r -s -p "  MQTT password for '$MQTT_USER' (input hidden): " MQTT_PASS
+        echo
+    fi
 }
 
 stage_done()    { grep -qx "$1" "$STATE_FILE" 2>/dev/null; }
@@ -973,8 +988,21 @@ stage_09_pi_scripts() {
     # as3935.service reads it via EnvironmentFile; monitor.sh sources it (cron
     # can't use systemd EnvironmentFile). Value from the mandatory inventory.
     local mqtt_target="${MQTT_IP:-$(hostname -I 2>/dev/null | awk '{print $1}')}"
-    step "Write /etc/default/vu2cpl-shack (MQTT_BROKER=$mqtt_target)"
-    echo "MQTT_BROKER=$mqtt_target" | sudo tee /etc/default/vu2cpl-shack > /dev/null
+    local mqtt_user="${MQTT_USER:-}"
+    local mqtt_pass="${MQTT_PASS:-}"
+    step "Write /etc/default/vu2cpl-shack (MQTT_BROKER=$mqtt_target${mqtt_user:+, MQTT_USER=$mqtt_user})"
+    {
+        echo "MQTT_BROKER=$mqtt_target"
+        [ -n "$mqtt_user" ] && echo "MQTT_USER=$mqtt_user"
+        [ -n "$mqtt_pass" ] && echo "MQTT_PASS=$mqtt_pass"
+    } | sudo tee /etc/default/vu2cpl-shack > /dev/null
+    # Holds the broker password ⇒ drop world-read. monitor.sh sources it as
+    # the shack user (via cron), so it needs group-read → root:$ACTUAL_USER 640.
+    # (as3935.service reads it via systemd EnvironmentFile, as root, either way.)
+    if [ -n "$mqtt_pass" ]; then
+        sudo chown "root:$ACTUAL_USER" /etc/default/vu2cpl-shack
+        sudo chmod 640 /etc/default/vu2cpl-shack
+    fi
 
     # Systemd units — copied, then retargeted from the upstream 'vu2cpl' user/home
     # to whoever runs this install ($ACTUAL_USER). The sed patterns are

@@ -79,7 +79,7 @@ Node-RED shack automation running on Raspberry Pi 4B. Controls and monitors:
 | Flows file | `~/.node-red/projects/vu2cpl-shack/flows.json` |
 | Node-RED dashboard | `http://192.168.1.169:1880/ui` |
 | Node-RED editor | `http://192.168.1.169:1880` |
-| MQTT broker | Mosquitto @ `192.168.1.169:1883` (plain, no auth, LAN only) |
+| MQTT broker | Mosquitto @ `192.168.1.169:1883` (LAN only). **Auth required as of 2026-08-21** — anonymous disabled; accounts `iot`/`svc`/`nodered`/`ha` with per-account ACL. See [`MQTT_AUTH.md`](MQTT_AUTH.md). Node-RED uses `nodered`; the Pi publishers (`monitor.sh`, chrony) use `svc`. |
 | UberSDR metrics | External UberSDR receiver publishing to the shack broker: `ubersdr/metrics/sessions` (session list) + `ubersdr/metrics/voice_activity/<band>` (12 bands). **Read-only** — the `UberSDR` flow tab aggregates + displays, publishes nothing back. |
 | MQTT broker node ID | `f4785be9863eab08` |
 | FlexRadio | `192.168.1.148:4992` (TCP API + UDP discovery) |

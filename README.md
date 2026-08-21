@@ -17,7 +17,10 @@ A single Node-RED instance on a Raspberry Pi 4B (`noderedpi4`,
 dashboard. Hardware talks to Node-RED via:
 
 - **MQTT** (Mosquitto on the same Pi) — Tasmota power outlets, AS3935
-  lightning sensor, RPi telemetry, UberSDR receiver metrics
+  lightning sensor, RPi telemetry, UberSDR receiver metrics.
+  **Authenticated** (anonymous disabled 2026-08-21) — role accounts
+  `iot`/`svc`/`nodered`/`ha` with per-account ACLs; see
+  [`MQTT_AUTH.md`](MQTT_AUTH.md)
 - **Direct TCP/UDP** — FlexRadio (4992), DX clusters
 - **Serial** — SPE amplifier (via `spe-remote` gateway)
 - **WebSocket** — LP-700 power/SWR meter (via the
