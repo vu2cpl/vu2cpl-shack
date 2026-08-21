@@ -4941,7 +4941,7 @@
         "z": "b05f8c028b368ae9",
         "g": "0cffa681c4abed74",
         "name": "stamp RBN_SDR",
-        "func": "var p=msg.payload;\nif(!st) var st=flow.get('net_state')||{};\nif(!st.pings) st.pings={};\nst.pings['RBN_SDR']={ms:p===false?null:parseFloat(p)||0, up:p!==false, label:'RBN SDR', addr:'192.168.1.241', maxMs:5};\nflow.set('net_state',st);\nmsg.payload=Object.assign({},st);\nreturn msg;",
+        "func": "var p=msg.payload;\nif(!st) var st=flow.get('net_state')||{};\nif(!st.pings) st.pings={};\nst.pings['RBN_SDR']={ms:p===false?null:parseFloat(p)||0, up:p!==false, label:'RBN SDR', addr:'192.168.1.235', maxMs:5};\nflow.set('net_state',st);\nmsg.payload=Object.assign({},st);\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
