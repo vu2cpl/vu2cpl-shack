@@ -951,7 +951,11 @@ for node in d:
                          r"\g<1>" + ip + r"\g<2>", node.get('func', ''))
         if k:
             node['func'] = new; c['const'] += k
-json.dump(d, open(path, 'w'), indent=4)
+# ensure_ascii=False + trailing \n: match Node-RED's own serialization
+# (SHACK_CHANGELOG 2026-07-13 — default escaping inflates the diff)
+with open(path, 'w') as f:
+    json.dump(d, f, indent=4, ensure_ascii=False)
+    f.write('\n')
 print(f"  broker nodes -> {ip}: {c['broker']} | ws-client paths -> localhost: {c['ws']} | Init Defaults const: {c['const']}")
 # fail-loud residual sweep (skip when our own target IS .169 — VU2CPL's value)
 if ip != OLD:
@@ -1523,7 +1527,8 @@ for env_key, tab_id in SAFE_TABS.items():
         print(f"  disabled flow tab: {tab.get('label', tab_id)}")
 
 with open('flows.json', 'w') as f:
-    json.dump(d, f, indent=4)
+    json.dump(d, f, indent=4, ensure_ascii=False)
+    f.write('\n')
 print('  flows.json patched')
 PYEOF
     ok "flows.json Init Defaults + broker + safe-subset tabs patched"
@@ -1630,7 +1635,8 @@ try:
     m['short_name'] = 'Shack'
     m['description'] = '${callsign} amateur radio shack control'
     with open('uibuilder/shack/src/manifest.json', 'w') as f:
-        json.dump(m, f, indent=2)
+        json.dump(m, f, indent=2, ensure_ascii=False)
+        f.write('\n')
     print('  manifest.json patched (name + description = ${callsign})')
 except Exception as e:
     print(f'  WARN: manifest.json patch skipped: {e}')
