@@ -10,6 +10,22 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-08-22
 
+### Web-888 joins the fleet too — same script, zero changes
+
+The `.235` mystery box from the Red Pitaya detour (below) is the
+**Web-888 receiver** (operator-confirmed) — which also resolves what
+the 08-21 RBN_SDR tile repoint pointed at: intentional and correct.
+It turned out to be another Zynq/Alpine/BusyBox platform (XADC at
+`iio:device0`, `lbu` persistence, recent Alpine with OpenSSH 9.7), so
+`monitor_redpitaya.sh` deployed **unchanged**: `rpi/web-888/*` topics
+live (61.8 °C XADC at install, 2d5h uptime), `svc` creds piped
+machine-to-machine, `apk add mosquitto-clients` (unlike the RP, not
+pre-installed), `crond` enabled (also stopped here — apparently the
+Alpine-appliance default), `lbu commit -d` clean, autonomous cron
+publish verified on the broker. Script header + DEPLOY_PI.md special
+case now cover both boxes; fleet count: `noderedpi4`, `openwebrxplus`,
+`rp-f02054`, `web-888` (+ HassPi pending).
+
 ### Red Pitaya joins the RPi Fleet Monitor (telemetry only)
 
 The Red Pitaya skimmer `rp-f02054` (`rp-f02054.local` — `192.168.1.241`

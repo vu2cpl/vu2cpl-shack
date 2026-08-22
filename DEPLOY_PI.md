@@ -244,12 +244,21 @@ itself; just confirm the topics are flowing with `mosquitto_sub -h
 Reboot/shutdown for HassPi can be wired through HA's REST API later
 (HANDOVER follow-up #4 — Bearer token).
 
-### Red Pitaya (Alpine/BusyBox — telemetry only)
+### Zynq/Alpine SDR appliances — Red Pitaya + Web-888 (telemetry only)
 
-The Red Pitaya skimmer `rp-f02054` (`rp-f02054.local` — `192.168.1.241`
-via DHCP as of 2026-08-22; Zynq-7010, 2020-era Alpine image, OpenSSH
-8.3) joins the fleet with **`monitor_redpitaya.sh`**
-instead of `monitor.sh` — every probe differs on that platform (temp
+Two SDR appliances share this recipe, both Zynq-based Alpine/BusyBox
+boxes running **the same `monitor_redpitaya.sh` unchanged** (the name
+is historical — the Red Pitaya was onboarded first):
+
+- **Red Pitaya skimmer** `rp-f02054` (`rp-f02054.local` —
+  `192.168.1.241` via DHCP as of 2026-08-22; Zynq-7010, 2020-era
+  Alpine, OpenSSH 8.3; `mosquitto_pub` already on the image)
+- **Web-888 receiver** `web-888` (`192.168.1.235`; recent Alpine,
+  OpenSSH 9.7; needed `apk add mosquitto-clients`)
+
+Both needed `crond` enabled (`rc-update add crond default`) and both
+persist via `lbu commit -d`. The script replaces `monitor.sh` on this
+platform — every probe differs (temp
 from the Zynq XADC via IIO sysfs, cpu% from a `/proc/stat` delta, mem%
 from `MemAvailable`, `ip route get` instead of `hostname -I`, BusyBox
 uptime). Same topics and cadence, so the host auto-appears on the

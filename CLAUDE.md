@@ -191,7 +191,8 @@ persists across reboots. Verify with empty-payload read:
 | `openwebrxplus` | `vu2cpl` | Agent running |
 | (2 more Pis) | — | Pending |
 | Home Assistant Pi | — | Pending — HA REST API Bearer token |
-| Red Pitaya `rp-f02054` (`rp-f02054.local` — `192.168.1.241` via DHCP as of 2026-08-22) | `root` | Telemetry live via `monitor_redpitaya.sh` (Alpine/BusyBox, Zynq XADC temp; no control agent) — see DEPLOY_PI.md special cases. NOT the `.235` box (that's a different machine — see 2026-08-22 changelog) |
+| Red Pitaya `rp-f02054` (`rp-f02054.local` — `192.168.1.241` via DHCP as of 2026-08-22) | `root` | Telemetry live via `monitor_redpitaya.sh` (Alpine/BusyBox, Zynq XADC temp; no control agent) — see DEPLOY_PI.md special cases |
+| Web-888 receiver `web-888` (`192.168.1.235` — the RBN_SDR network-monitor tile's target) | `root` | Telemetry live via the same `monitor_redpitaya.sh` (also Zynq/Alpine — script runs unchanged; no control agent). Added 2026-08-22 |
 
 Agent endpoints: `POST /reboot`, `POST /shutdown`
 
@@ -733,6 +734,8 @@ longer active — repointed 2026-07-31 to the Pi running `meridian`
 (`192.168.1.164`). `RBN_SDR` repointed `192.168.1.241` → `.235` on
 2026-08-21 (ping node host + stamp function display addr — remember
 the stamp owns the displayed address, so both must change together).
+`.235` is the **Web-888 receiver** (operator-confirmed 2026-08-22);
+`.241` is the Red Pitaya `rp-f02054` — both are on the RPi fleet.
 `UBERSDR` is a new tile added the same day, for
 the ubersdr box also running `meridian` (`192.168.1.109`).
 

@@ -1,6 +1,9 @@
 #!/bin/sh
-# monitor_redpitaya.sh — RPi Fleet Monitor telemetry from a Red Pitaya
-# (Zynq-7010, Alpine/BusyBox image, e.g. Pavel Demin's skimmer builds).
+# monitor_redpitaya.sh — RPi Fleet Monitor telemetry from a Zynq/Alpine
+# SDR appliance. Deployed unchanged on BOTH such boxes in this shack:
+#   - Red Pitaya skimmer  rp-f02054.local (Zynq-7010, 2020-era Alpine)
+#   - Web-888 receiver    192.168.1.235 / web-888 (Zynq, recent Alpine)
+# The name is historical — the Red Pitaya was first.
 #
 # Same topics/cadence as monitor.sh (rpi/<hostname>/{cpu,temp,mem,disk,
 # uptime,ip,status}, once a minute from cron) so the host auto-appears on
