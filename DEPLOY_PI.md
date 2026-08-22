@@ -246,8 +246,9 @@ Reboot/shutdown for HassPi can be wired through HA's REST API later
 
 ### Red Pitaya (Alpine/BusyBox — telemetry only)
 
-The RBN SDR Red Pitaya (`192.168.1.235`, Zynq-7010, Pavel Demin-style
-Alpine skimmer image) joins the fleet with **`monitor_redpitaya.sh`**
+The Red Pitaya skimmer `rp-f02054` (`rp-f02054.local` — `192.168.1.241`
+via DHCP as of 2026-08-22; Zynq-7010, 2020-era Alpine image, OpenSSH
+8.3) joins the fleet with **`monitor_redpitaya.sh`**
 instead of `monitor.sh` — every probe differs on that platform (temp
 from the Zynq XADC via IIO sysfs, cpu% from a `/proc/stat` delta, mem%
 from `MemAvailable`, `ip route get` instead of `hostname -I`, BusyBox
@@ -256,11 +257,12 @@ fleet tab (the flow derives devices from `rpi/#`). No control agent —
 reboot/shutdown buttons are unwired for this host, like HassPi.
 
 ```sh
-# From the Mac: copy the script over
-scp monitor_redpitaya.sh root@192.168.1.235:/root/
+# From the Mac: copy the script over (use the mDNS name — the box is on
+# DHCP; an IP written here would rot)
+scp -O monitor_redpitaya.sh root@rp-f02054.local:/root/
 
 # On the Red Pitaya (as root):
-apk add mosquitto-clients
+which mosquitto_pub || apk add mosquitto-clients   # the image ships it
 chmod +x /root/monitor_redpitaya.sh
 mkdir -p /root/.config
 cat > /root/.config/vu2cpl-shack.env <<'ENV'

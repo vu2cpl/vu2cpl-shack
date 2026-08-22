@@ -12,9 +12,25 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ### Red Pitaya joins the RPi Fleet Monitor (telemetry only)
 
-The RBN SDR Red Pitaya (`192.168.1.235`, Zynq-7010 on a Pavel
-Demin-style Alpine skimmer image — identified by its modern OpenSSH and
-missing `/opt/redpitaya` vendor tools) now publishes fleet telemetry.
+The Red Pitaya skimmer `rp-f02054` (`rp-f02054.local` — `192.168.1.241`
+via DHCP; Zynq-7010, 2020-era Alpine image, OpenSSH 8.3, no
+`/opt/redpitaya` vendor tools) now publishes fleet telemetry — live
+same day, verified end-to-end (all 7 topics on the broker, cron firing
+autonomously, `lbu status` clean).
+
+**Wrong-box detour, for the record:** the install first targeted
+`192.168.1.235` — the address the RBN_SDR ping tile was repointed to
+on 08-21 — on the assumption that tile = this Red Pitaya. SSH key auth
+kept failing there despite a byte-perfect `authorized_keys`; the tell
+was version skew (port 22 on `.235` banners OpenSSH 9.7, while a debug
+`sshd -d` run in the operator's actual shell reported OpenSSH 8.3),
+and host-key fingerprinting settled it: `.235` is a **different
+machine**, and `rp-f02054.local` still answers at `.241`. Identity of
+the `.235` box: operator to confirm (the RBN_SDR network-monitor tile
+currently pings it). Fleet docs reference the mDNS name, not the DHCP
+address. Also caught during install: busybox `crond` was neither
+running nor enabled on this image — `rc-update add crond default` is
+part of the runbook.
 New repo script **`monitor_redpitaya.sh`**: same `rpi/<hostname>/*`
 topics and 1-min cadence as `monitor.sh`, so the host auto-appears on
 the fleet tab (the flow derives its device list from `rpi/#` — no flow
