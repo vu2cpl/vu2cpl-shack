@@ -191,6 +191,7 @@ persists across reboots. Verify with empty-payload read:
 | `openwebrxplus` | `vu2cpl` | Agent running |
 | (2 more Pis) | — | Pending |
 | Home Assistant Pi | — | Pending — HA REST API Bearer token |
+| Red Pitaya (RBN SDR, `192.168.1.235`) | `root` | Telemetry only via `monitor_redpitaya.sh` (Alpine/BusyBox, Zynq XADC temp; no control agent) — see DEPLOY_PI.md special cases. Added 2026-08-22 |
 
 Agent endpoints: `POST /reboot`, `POST /shutdown`
 
@@ -976,6 +977,7 @@ Pi-side scripts already in this repo (canonical paths shown):
 | `rpi_agent.py` | `/home/vu2cpl/rpi_agent.py` | HTTP reboot/shutdown — `rpi-agent.service` |
 | `rpi-agent.service` | `/etc/systemd/system/rpi-agent.service` | systemd unit for rpi_agent |
 | `monitor.sh` | `/home/vu2cpl/monitor.sh` | MQTT telemetry cron (every minute) |
+| `monitor_redpitaya.sh` | `/root/monitor_redpitaya.sh` on the Red Pitaya (`192.168.1.235`) | Fleet telemetry for the Alpine/BusyBox Red Pitaya (Zynq XADC temp) — remember `lbu commit -d` after any change there |
 | `power_spe_on.py` | `/home/vu2cpl/power_spe_on.py` | SPE Expert 1.5 KFA power-on via FTDI DTR/RTS toggle |
 | `enable_file_context.sh` | `/home/vu2cpl/enable_file_context.sh` | One-time idempotent settings.js patcher to enable Node-RED `localfilesystem` context store |
 | `flows_guard.py` | run in-place from the repo (user crontab `--cron` every minute + `.git/hooks/pre-commit` on Pi and Mac clones) | Stale-tab wipe tripwire (critical rule #7) — blocks committing a structurally wiped flows.json; Telegram-alerts within 60 s of a live wipe |

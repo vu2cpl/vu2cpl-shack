@@ -264,6 +264,7 @@ from `sm7iun.se/rbnskew.csv` every 6 h.
 ├── rpi_agent.py                     HTTP reboot/shutdown agent (→ rpi-agent.service)
 ├── rpi-agent.service                systemd unit for rpi_agent
 ├── monitor.sh                       MQTT telemetry cron (every minute)
+├── monitor_redpitaya.sh             Fleet telemetry variant for the Red Pitaya (Alpine/BusyBox, Zynq XADC temp)
 ├── flows_guard.py                   Stale-tab wipe tripwire (git pre-commit hook + 1-min cron w/ Telegram alert)
 ├── flows_guard_middleware.js        Server-side deploy rejection (httpAdminMiddleware in settings.js)
 ├── power_spe_on.py                  SPE amp FTDI DTR/RTS power-on helper

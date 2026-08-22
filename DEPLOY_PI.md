@@ -244,6 +244,44 @@ itself; just confirm the topics are flowing with `mosquitto_sub -h
 Reboot/shutdown for HassPi can be wired through HA's REST API later
 (HANDOVER follow-up #4 — Bearer token).
 
+### Red Pitaya (Alpine/BusyBox — telemetry only)
+
+The RBN SDR Red Pitaya (`192.168.1.235`, Zynq-7010, Pavel Demin-style
+Alpine skimmer image) joins the fleet with **`monitor_redpitaya.sh`**
+instead of `monitor.sh` — every probe differs on that platform (temp
+from the Zynq XADC via IIO sysfs, cpu% from a `/proc/stat` delta, mem%
+from `MemAvailable`, `ip route get` instead of `hostname -I`, BusyBox
+uptime). Same topics and cadence, so the host auto-appears on the
+fleet tab (the flow derives devices from `rpi/#`). No control agent —
+reboot/shutdown buttons are unwired for this host, like HassPi.
+
+```sh
+# From the Mac: copy the script over
+scp monitor_redpitaya.sh root@192.168.1.235:/root/
+
+# On the Red Pitaya (as root):
+apk add mosquitto-clients
+chmod +x /root/monitor_redpitaya.sh
+mkdir -p /root/.config
+cat > /root/.config/vu2cpl-shack.env <<'ENV'
+MQTT_BROKER=192.168.1.169
+MQTT_USER=svc
+MQTT_PASS=<svc password from the shack password manager>
+ENV
+chmod 600 /root/.config/vu2cpl-shack.env
+/root/monitor_redpitaya.sh            # test run — should publish silently
+( crontab -l 2>/dev/null | grep -v monitor_redpitaya ; \
+  echo '* * * * * /root/monitor_redpitaya.sh' ) | crontab -
+rc-update add crond default && rc-service crond start   # if not already running
+lbu commit -d                         # CRITICAL — see below
+```
+
+**Alpine-diskless gotcha:** these images run from RAM; without
+`lbu commit -d` every change above (package, script, creds, crontab)
+evaporates on reboot. After the first reboot, verify `mosquitto_pub`
+still exists — if the package didn't survive, enable the apk cache on
+the boot media (`setup-apkcache`) and `lbu commit -d` again.
+
 ### Pis without `mosquitto-clients` available in apt
 
 Some minimal RaspiOS images don't have `mosquitto-clients` in their

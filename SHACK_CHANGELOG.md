@@ -8,6 +8,31 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-08-22
+
+### Red Pitaya joins the RPi Fleet Monitor (telemetry only)
+
+The RBN SDR Red Pitaya (`192.168.1.235`, Zynq-7010 on a Pavel
+Demin-style Alpine skimmer image — identified by its modern OpenSSH and
+missing `/opt/redpitaya` vendor tools) now publishes fleet telemetry.
+New repo script **`monitor_redpitaya.sh`**: same `rpi/<hostname>/*`
+topics and 1-min cadence as `monitor.sh`, so the host auto-appears on
+the fleet tab (the flow derives its device list from `rpi/#` — no flow
+edit needed), but every probe is platform-specific: **temp from the
+Zynq's on-chip XADC** via IIO sysfs (`(raw+offset)×scale/1000` °C —
+`/sys/class/thermal` doesn't exist on Zynq), cpu% from a 1-s
+`/proc/stat` delta (BusyBox `top` format differs), mem% from
+`MemAvailable`, IP via `ip route get` (no `hostname -I` in BusyBox),
+prettified `/proc/uptime`. MQTT auth via the `svc` account from
+`/root/.config/vu2cpl-shack.env`. Telemetry-only like HassPi — no
+control agent, reboot/shutdown buttons unwired for this host. Install
+runbook in DEPLOY_PI.md "Special cases", including the
+**Alpine-diskless gotcha**: the image runs from RAM, so package +
+script + creds + crontab all need `lbu commit -d` to survive a reboot.
+Note: the Zynq idles warm (45–65 °C) — the fleet's shared >75 °C
+Telegram alert may need a per-host threshold if it turns out noisy
+under skimmer load in summer.
+
 ## 2026-08-21
 
 ### MQTT broker authentication + credential encryption + broker consolidation
