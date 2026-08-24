@@ -10,6 +10,25 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-08-24
 
+### DXCC band row — 70CM button (operator follow-up)
+
+After confirming 60M/2M work on both dashboards, operator asked for
+the 70CM button too (it's in the Club Log download) and confirmed the
+default selection: 160–6 **excluding 60M, 2M and 70CM** — which the
+existing defaults already satisfied, so 70CM just defaults off like
+the other two. The plumbing was already in place from the entry below
+(`meterToBand` maps `'70'→'70CM'`, `getBand()` classifies 420–450 MHz)
+— this is purely buttons + filter map + presets:
+
+- `dxcc_fn_filters_01` `bm` map: added `b70:'70CM'`.
+- D1 `DXCC Dashboard`: `70cm` button after `2` (13 band buttons),
+  `b70:false` in `def.b`, localStorage backfill for `b70`, VHF preset
+  now sets `b6+b2+b70`.
+- Vue: `70CM` in `bandKeys`, `'70CM':'b70'` in `bandKeyMap`, `70CM`
+  in `VHF_BANDS`. Build `v23`, `index.js?v=23` (CSS unchanged).
+- 13CM stays button-less: worked-table only, no spot can classify
+  there (`getBand()` tops out at 70CM).
+
 ### DXCC band row — 2M added, Vue gets All/HF/VHF presets, Club Log map completed
 
 Follow-up to the 60m fix below, operator-steered: base the button set

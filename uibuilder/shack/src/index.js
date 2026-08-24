@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v22 · 2026-08-24 DXCC band row: 2M + All/HF/VHF presets';
+window.__shackBuild = 'v23 · 2026-08-24 DXCC band row: 70CM button';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -768,13 +768,13 @@ const DXCCCard = {
       { k:'phone', lbl:'Phone' },
       { k:'data',  lbl:'Data' }
     ];
-    const bandKeys = ['160M','80M','60M','40M','30M','20M','17M','15M','12M','10M','6M','2M'];
+    const bandKeys = ['160M','80M','60M','40M','30M','20M','17M','15M','12M','10M','6M','2M','70CM'];
     const bandKeyMap = {  // band label → backend key ("b160" etc.)
       '160M':'b160','80M':'b80','60M':'b60','40M':'b40','30M':'b30','20M':'b20',
-      '17M':'b17','15M':'b15','12M':'b12','10M':'b10','6M':'b6','2M':'b2'
+      '17M':'b17','15M':'b15','12M':'b12','10M':'b10','6M':'b6','2M':'b2','70CM':'b70'
     };
     const HF_BANDS  = ['160M','80M','60M','40M','30M','20M','17M','15M','12M','10M'];
-    const VHF_BANDS = ['6M','2M'];
+    const VHF_BANDS = ['6M','2M','70CM'];
 
     function isBandOn(band) {
       return !!(state.filters?.bands && state.filters.bands[band]);
