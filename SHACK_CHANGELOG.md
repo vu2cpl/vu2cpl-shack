@@ -8,6 +8,47 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-08-24
+
+### DXCC Tracker — 60m band now selectable (both dashboards)
+
+Operator report: 60m couldn't be selected in the DXCC Tracker band
+filter. Two distinct symptoms, one root cause chain:
+
+- **D1 `/ui`:** no 60 button existed at all — the BANDS row in the
+  `DXCC Dashboard` ui_template (`38a6451a95a57685`) is hand-written
+  HTML listing 160/80/40/30/20/17/15/12/10/6 only, and the default
+  filter-state object had no `b60` key. (Oddly the HF preset handler
+  *did* already include `'b60'` in its list.)
+- **Vue `/shack`:** the 60 button existed (`bandKeys` has `60M`,
+  `bandKeyMap` has `'60M':'b60'`) but wouldn't stay selected — the
+  click optimistically set state and POSTed `b60:true` to
+  `/dxcc/filters`, but the server-side `Save Alert Filters HTTP`
+  function (`dxcc_fn_filters_01`) translates UI keys through a
+  `bm` map that had **no `b60` entry** and silently drops unknown
+  keys, so `60M` never entered `flow.filterBands`; the next `dxcc`
+  bridge echo (`Object.assign(state, msg.payload)`) overwrote the
+  optimistic toggle and the button reverted.
+
+Consequence beyond the UI: with band filtering active (non-empty
+`filterBands`, the default), the classifier's `!filterBands[band]`
+check dropped **every 60m spot** before the alert table / Telegram —
+the frequency table already knew 5250–5450 kHz → `60M`, so spots
+parsed fine and then always filtered.
+
+Fix — flows.json only, no Vue change (build stamp unchanged):
+1. `dxcc_fn_filters_01`: added `b60: '60M'` to the `bm` map.
+2. D1 `DXCC Dashboard` template: added the `data-band="b60"` button
+   (between 80 and 40) and `b60:true` in the `def` state object.
+   Button render + click wiring are generic
+   (`querySelectorAll('[data-band]')`), so no other JS touched.
+   Existing browsers with saved localStorage state simply see the
+   new button unselected until clicked (missing key = falsy).
+
+DXCC.md Dashboard Features row updated + PDF regenerated (rule #3).
+
+---
+
 ## 2026-08-22
 
 ### Web-888 joins the fleet too — same script, zero changes
