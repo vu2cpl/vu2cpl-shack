@@ -520,6 +520,11 @@ html, body {
   border-color: var(--green-bd);
   color: var(--green);
 }
+.pill--preset {
+  background: var(--accent-bg);
+  border-color: var(--accent-bd);
+  color: var(--accent);
+}
 .pill { transition: transform 0.1s, background 0.15s, color 0.15s, border-color 0.15s; }
 
 /* === DXCC Tracker — cluster pills row === */

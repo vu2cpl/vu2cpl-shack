@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v21 · 2026-07-31 powerstrip1/POWER3 relabeled UberSDR';
+window.__shackBuild = 'v22 · 2026-08-24 DXCC band row: 2M + All/HF/VHF presets';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -724,6 +724,9 @@ const DXCCCard = {
               <button v-for="b in bandKeys" :key="b" class="pill"
                       :class="{ 'pill--active': isBandOn(b) }"
                       @click="toggleBand(b)">{{ b }}</button>
+              <button class="pill pill--preset" @click="setBandPreset(bandKeys)">All</button>
+              <button class="pill pill--preset" @click="setBandPreset(HF_BANDS)">HF</button>
+              <button class="pill pill--preset" @click="setBandPreset(VHF_BANDS)">VHF</button>
             </div>
 
             <!-- Spot TTL stepper -->
@@ -765,11 +768,13 @@ const DXCCCard = {
       { k:'phone', lbl:'Phone' },
       { k:'data',  lbl:'Data' }
     ];
-    const bandKeys = ['160M','80M','60M','40M','30M','20M','17M','15M','12M','10M','6M'];
+    const bandKeys = ['160M','80M','60M','40M','30M','20M','17M','15M','12M','10M','6M','2M'];
     const bandKeyMap = {  // band label → backend key ("b160" etc.)
       '160M':'b160','80M':'b80','60M':'b60','40M':'b40','30M':'b30','20M':'b20',
       '17M':'b17','15M':'b15','12M':'b12','10M':'b10','6M':'b6','2M':'b2'
     };
+    const HF_BANDS  = ['160M','80M','60M','40M','30M','20M','17M','15M','12M','10M'];
+    const VHF_BANDS = ['6M','2M'];
 
     function isBandOn(band) {
       return !!(state.filters?.bands && state.filters.bands[band]);
@@ -803,6 +808,14 @@ const DXCCCard = {
     function toggleBand(band) {
       if (!state.filters.bands) state.filters.bands = {};
       state.filters.bands[band] = !state.filters.bands[band];
+      postFilters();
+    }
+    function setBandPreset(list) {
+      // All/HF/VHF — same semantics as the D1 dashboard presets: replace the
+      // whole selection rather than adding to it.
+      const b = {};
+      list.forEach(bk => { b[bk] = true; });
+      state.filters.bands = b;
       postFilters();
     }
     function bumpTtl(d) {
@@ -916,8 +929,8 @@ const DXCCCard = {
       alertTypeShort, alertTypeColor, alertSeverityClass,
       ackLabel, doRefresh, doClear,
       newBlacklistCall, doBlacklistAdd, doBlacklistRemove,
-      alertTypes, modeKeys, bandKeys,
-      isBandOn, toggleFilter, toggleBand, bumpTtl
+      alertTypes, modeKeys, bandKeys, HF_BANDS, VHF_BANDS,
+      isBandOn, toggleFilter, toggleBand, setBandPreset, bumpTtl
     };
   }
 };

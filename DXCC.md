@@ -109,7 +109,7 @@ All POST endpoints: 2-output pattern (output 1 → downstream, output 2 → http
 | Feature | Detail |
 |---------|--------|
 | Cluster status header | 4 source cards — name, spot count, last spot time |
-| Band filters | 160M–6M (11 bands, incl. 60M since 2026-08-24) with All/HF/VHF presets |
+| Band filters | 160M–2M, 12 buttons (60M + 2M added 2026-08-24) with All/HF/VHF presets, on both dashboards. Default selection: 160M–6M excluding 60M. Button set mirrors the bands present in the Club Log download (which also returns 70CM/13CM — mapped into the worked table but not given buttons; no spots can classify there from HF clusters) |
 | Alert types | DXCC / BAND / ? BAND / MODE / ? MODE |
 | Mode filters | CW / Phone / Data |
 | Spot lifetime | Slider 5–60 min |

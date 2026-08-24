@@ -10,6 +10,47 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-08-24
 
+### DXCC band row — 2M added, Vue gets All/HF/VHF presets, Club Log map completed
+
+Follow-up to the 60m fix below, operator-steered: base the button set
+on what the Club Log download actually contains, add the missing
+presets to Vue, and set a sane default.
+
+**What Club Log returns** (probed live with the account's own creds —
+probe ran Pi-side so secrets never left the Pi): band keys
+`160/80/60/40/30/20/17/15/12/10/6/2` plus single-entity `70` and `13`
+(cm bands). The parse function's `meterToBand` map only accepted
+160–6 **without 60** — so 60M/2M/70CM/13CM worked-slots were silently
+dropped from the worked table, meaning a 60m spot of an
+already-worked-on-60m entity would have false-alerted as NEW_BAND.
+
+Changes:
+
+- **`Fetch All Modes + Parse lotw only`** (`aa7434df62b95ebc`):
+  `meterToBand` extended with `'60':'60M'`, `'2':'2M'`, `'70':'70CM'`,
+  `'13':'13CM'`. Labels match `getBand()` in `login-parse-dedup-v2`
+  (which already classified spots up to 2M/70CM — no freq-table change
+  needed). `bandSlots` stat grows accordingly (~+83).
+- **D1 `DXCC Dashboard`**: `2` button added after `6` (12 band buttons
+  total); default `def.b` is now **160–6 all on, 60M + 2M off**
+  (`b160` and `b6` flipped to true per operator's "default = 160-6
+  without 60m"); localStorage backfill lines add missing `b60`/`b2`
+  keys as false so the All preset covers them on existing browsers.
+- **Vue `/shack` DxccCard**: `2M` added to `bandKeys`; new
+  **All / HF / VHF preset pills** (accent-blue `.pill--preset`)
+  mirroring D1 semantics exactly — replace the whole selection: All =
+  all 12, HF = 160M–10M incl 60M, VHF = 6M+2M. Build `v22`,
+  `index.js?v=22`, `index.css?v=5` (new class).
+- Server-side `bm` map already had `b2` and gained `b60` in the
+  previous entry — no change needed.
+
+Also fixed the Mac's `npx md-to-pdf` (used for the PDF pairing rules
+#3/#6): its npx-cached puppeteer 24.42.0 had no browser in
+`~/.cache/puppeteer` — installed the pinned Chrome for Testing
+147.0.7727.57 via md-to-pdf's own `puppeteer browsers install chrome`,
+so the plain `npx md-to-pdf` invocation works again with no env-var
+workaround.
+
 ### DXCC Tracker — 60m band now selectable (both dashboards)
 
 Operator report: 60m couldn't be selected in the DXCC Tracker band
