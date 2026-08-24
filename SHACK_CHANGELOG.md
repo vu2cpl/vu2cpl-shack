@@ -10,6 +10,39 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-08-24
 
+### VE7CC cluster diagnosed down (server-side) + `your call:` prompt fragment added
+
+Operator asked why VE7CC shows disconnected. Diagnosis (all probes
+Pi-side): **not our setup — VE7CC's login processing is dead.** TCP is
+stable (4 brief drops in 26 h), the node config is correct, and the
+socket counters proved the login went out: since the last reconnect
+Node-RED had received exactly 1345 bytes (the banner: 222+1116+7-byte
+chunks) and sent exactly 10 bytes (`VU2CPL-1\r\n`), then silence.
+Interactive probes with a throwaway `VU2CPL-9` confirmed: banner →
+`Please enter your call:` → a bare `login:` re-prompt 200 ms later →
+then the server ignores every callsign sent (immediate, delayed,
+retried — 45 s of silence), identically on **both** port 23 and its
+native user port 7373 (7300/7000/8000 closed). A healthy CC Cluster
+answers a login instantly. Nothing to fix locally; watch the CC-User
+groups.io list if it persists. The tile is red because `clusterStatus`
+only marks a source connected after ≥1 parsed spot.
+
+One real (minor) local gap the diagnosis surfaced: the login handlers'
+prompt-fragment list matched `login:`/`callsign:` variants but not CC
+Cluster's primary `…your call:` prompt (`call:` ≠ `callsign:` under
+`endsWith`). Today VE7CC's `login:` re-prompt masks it, but that's
+luck. Added `lastLine.endsWith('your call:')` to **both** handlers
+(`login-parse-dedup-v2` on the DXCC tab and `Login Handler VU2CPL` on
+the RBN tab — kept mirrored per convention). Not a fix for the outage
+— replying to the first prompt was probed and equally ignored — just
+robustness for any CC Cluster-style host.
+
+Also checked (operator request): **DXClusterAggregator** (the macOS
+Swift app) does *not* share the gap — its `promptSuffixes`
+(`DXClusterClient.swift`) already include `call:` and `please enter
+your call:`, and its buffered line-splitter skips empty lines, so the
+2026-07-31 `\r\n`-terminated-prompt bug class doesn't apply either.
+
 ### DXCC band row — 70CM button (operator follow-up)
 
 After confirming 60M/2M work on both dashboards, operator asked for
