@@ -172,6 +172,99 @@ sensor('ubersdr_sessions', 'Total sessions', DEV_UBER, UT,
        tpl='{{ value_json.count }}', state_class='measurement',
        icon='mdi:counter', expire=300)
 
+# ---------- Phase-2 gateway bridges (Node-RED → shack/<subsystem>/state) ----------
+# Fed by the 2026-08-25 bridge nodes: retained JSON per tab, read-only taps.
+
+def binary2(uid, name, device, state_topic, *, tpl, icon=None, expire=None):
+    c = {'name': name, 'unique_id': uid, 'object_id': uid,
+         'state_topic': state_topic, 'value_template': tpl,
+         'payload_on': 'ON', 'payload_off': 'OFF', 'device': device}
+    if icon: c['icon'] = icon
+    if expire: c['expire_after'] = expire
+    configs.append((f'homeassistant/binary_sensor/{uid}/config', c))
+
+DEV_FLEX = {'identifiers': ['shack_flex'], 'name': 'FlexRadio',
+            'manufacturer': 'VU2CPL shack', 'model': 'FLEX-6600 (TCP bridge)'}
+FT = 'shack/flex/state'
+binary2('flex_connected', 'Connected', DEV_FLEX, FT,
+        tpl="{{ 'ON' if value_json.connected else 'OFF' }}",
+        icon='mdi:radio', expire=30)
+binary2('flex_transmitting', 'Transmitting', DEV_FLEX, FT,
+        tpl="{{ 'ON' if value_json.transmitting else 'OFF' }}",
+        icon='mdi:access-point', expire=30)
+sensor('flex_state', 'State', DEV_FLEX, FT,
+       tpl='{{ value_json.txstate }}', icon='mdi:radio-tower',
+       expire=30, attrs_topic=FT)
+
+DEV_SPE = {'identifiers': ['shack_spe'], 'name': 'SPE Amplifier',
+           'manufacturer': 'VU2CPL shack', 'model': 'Expert 1.5K-FA (WS bridge)'}
+ST = 'shack/spe/state'
+sensor('spe_mode', 'Mode', DEV_SPE, ST, tpl='{{ value_json.mode }}',
+       icon='mdi:amplifier', expire=30, attrs_topic=ST)
+binary2('spe_transmitting', 'Transmitting', DEV_SPE, ST,
+        tpl="{{ 'ON' if value_json.rxtx == 'TRANSMIT' else 'OFF' }}",
+        icon='mdi:access-point', expire=30)
+binary2('spe_tuning', 'Tuning', DEV_SPE, ST,
+        tpl="{{ 'ON' if value_json.tune else 'OFF' }}",
+        icon='mdi:tune-vertical', expire=30)
+sensor('spe_power', 'Power out', DEV_SPE, ST, tpl='{{ value_json.pwr }}',
+       unit='W', dev_class='power', state_class='measurement', expire=30)
+sensor('spe_power_peak', 'Power peak', DEV_SPE, ST, tpl='{{ value_json.pwr_peak }}',
+       unit='W', dev_class='power', state_class='measurement', expire=30)
+sensor('spe_swr', 'Antenna SWR', DEV_SPE, ST, tpl='{{ value_json.antswr }}',
+       state_class='measurement', icon='mdi:swap-vertical', expire=30)
+sensor('spe_band', 'Band', DEV_SPE, ST, tpl='{{ value_json.band }}',
+       icon='mdi:sine-wave', expire=30)
+sensor('spe_temp', 'PA temp', DEV_SPE, ST, tpl='{{ value_json.tempUpper }}',
+       unit='°C', dev_class='temperature', state_class='measurement', expire=30)
+
+DEV_LP = {'identifiers': ['shack_lp700'], 'name': 'LP-700',
+          'manufacturer': 'VU2CPL shack', 'model': 'Telepost meter (WS bridge)'}
+LT = 'shack/lp700/state'
+sensor('lp700_avg', 'Power avg', DEV_LP, LT, tpl='{{ value_json.avg }}',
+       unit='W', dev_class='power', state_class='measurement', expire=30)
+sensor('lp700_peak', 'Power peak', DEV_LP, LT, tpl='{{ value_json.peak }}',
+       unit='W', dev_class='power', state_class='measurement', expire=30)
+sensor('lp700_swr', 'SWR', DEV_LP, LT, tpl='{{ value_json.swr }}',
+       state_class='measurement', icon='mdi:swap-vertical', expire=30)
+
+DEV_ROT = {'identifiers': ['shack_rotator'], 'name': 'Rotator',
+           'manufacturer': 'VU2CPL shack', 'model': 'Rotor-EZ (WS bridge)'}
+RT = 'shack/rotator/state'
+sensor('rotator_heading', 'Heading', DEV_ROT, RT, tpl='{{ value_json.heading }}',
+       unit='°', state_class='measurement', icon='mdi:compass', expire=30)
+sensor('rotator_target', 'Target', DEV_ROT, RT,
+       tpl='{% if value_json.target is not none %}{{ value_json.target }}{% endif %}',
+       unit='°', icon='mdi:compass-outline', expire=30)
+
+DEV_DXCC = {'identifiers': ['shack_dxcc'], 'name': 'DXCC Tracker',
+            'manufacturer': 'VU2CPL shack', 'model': 'Club Log / cluster alerts'}
+DT = 'shack/dxcc/state'
+sensor('dxcc_entities', 'Entities worked', DEV_DXCC, DT,
+       tpl='{{ value_json.stats.entities }}', icon='mdi:earth',
+       expire=120, attrs_topic=DT)
+sensor('dxcc_confirmed', 'Confirmed slots', DEV_DXCC, DT,
+       tpl='{{ value_json.stats.confirmed }}', icon='mdi:check-decagram', expire=120)
+sensor('dxcc_band_slots', 'Band slots', DEV_DXCC, DT,
+       tpl='{{ value_json.stats.bandSlots }}', icon='mdi:view-grid', expire=120)
+sensor('dxcc_clusters_online', 'Clusters online', DEV_DXCC, DT,
+       tpl="{{ value_json.clusters.values() | selectattr('connected') | list | length }}",
+       icon='mdi:server-network', expire=120)
+
+DEV_RBN = {'identifiers': ['shack_rbn'], 'name': 'RBN Skimmers',
+           'manufacturer': 'VU2CPL shack', 'model': 'CW/RTTY skimmer monitor'}
+BT = 'shack/rbn/state'
+sensor('rbn_state', 'State', DEV_RBN, BT,
+       tpl=("{{ (value_json.skimmers.values() | selectattr('status', 'eq', 'online') "
+            "| list | length) }} online"),
+       icon='mdi:radio-tower', expire=60, attrs_topic=BT)
+sensor('rbn_vu2cpl_h1', 'VU2CPL spots (1h)', DEV_RBN, BT,
+       tpl="{{ value_json.skimmers['VU2CPL'].h1_total }}",
+       state_class='measurement', icon='mdi:counter', expire=60)
+sensor('rbn_vu2oy_h1', 'VU2OY spots (1h)', DEV_RBN, BT,
+       tpl="{{ value_json.skimmers['VU2OY'].h1_total }}",
+       state_class='measurement', icon='mdi:counter', expire=60)
+
 if __name__ == '__main__':
     if '--dry' in sys.argv:
         for t, c in configs:

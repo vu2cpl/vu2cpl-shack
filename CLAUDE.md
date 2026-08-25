@@ -840,6 +840,31 @@ stale. A static reservation (or pointing the ping node at
 `UBERSDR` is a new tile added the same day, for
 the ubersdr box also running `meridian` (`192.168.1.109`).
 
+### HA state bridges (2026-08-25, operator-approved)
+
+Every subsystem the HA Radio dashboard mirrors gets its state from a
+**read-only Node-RED → MQTT bridge**: a per-tab trio (inject tick →
+function reading the tab's existing aggregated context → `mqtt out`,
+retained, broker `f4785be9863eab08`) publishing JSON on
+`shack/<subsystem>/state`. None of them changes flow behaviour; the
+SPE one is the only stream tap (SPE keeps no context — its function
+`spe_state_pub_01` hangs off `ws_format_state`'s output with a 5 s
+internal throttle). HA consumes them via the retained MQTT-discovery
+configs in `ha_discovery_publish.py` (90 configs total).
+
+| Topic | Nodes | Tab | Source | Tick |
+|---|---|---|---|---|
+| `shack/lightning/state` | `light_state_{tick,fn,mqtt}_01` | Lightning | flow ctx (bypass/manual/om/threshold) | 10 s |
+| `shack/flex/state` | `flex_state_{tick,fn,mqtt}_01` | FlexRadio | `flow.flexState` (trimmed: model/txstate/slices/PA) | 5 s |
+| `shack/spe/state` | `spe_state_{pub,mqtt}_01` | SPE (WS) | `ws_format_state` output (whole flat panel payload) | ≥5 s |
+| `shack/lp700/state` | `lp700_state_{tick,fn,mqtt}_01` | LP-700-HID ws | `global.lpState` (avg/peak/swr/range) | 5 s |
+| `shack/rotator/state` | `rot_state_{tick,fn,mqtt}_01` | Rotator | `flow.rotator_heading` + `flow.target_hdg` | 5 s |
+| `shack/dxcc/state` | `dxcc_state_{tick,fn,mqtt}_01` | DXCC Tracker | `workedStats` + last-5 `alertList` + `clusterStatus` | 30 s |
+| `shack/rbn/state` | `rbn_state_{tick,fn,mqtt}_01` | RBN Skimmer | `flow.rbn_dash` (**file scope**, arrays trimmed to 5) | 10 s |
+
+HA sensors carry `expire_after` ≈ 3× the tick, so a dead bridge (or
+stopped Node-RED) reads *unavailable* in HA rather than stale.
+
 ### UberSDR
 
 **Telegram offline/back alert (2026-07-31).** `ubersdr_agg` already
@@ -1015,7 +1040,7 @@ historical context lives in `SHACK_CHANGELOG.md`, indexed by date.
 
 | # | Item | Status |
 |---|------|--------|
-| 41 | **HA Radio dashboard phase 2** — the Flex/SPE/LP-700/Rotator/DXCC/RBN cards still need Node-RED→MQTT state bridges (flow change ⇒ rule #1 approval; pattern to copy = the lightning one: `light_state_tick_01`→`fn`→`mqtt` publishing retained `shack/lightning/state`, landed 2026-08-25 with operator approval). Phase 1 (7 data-ready cards) live at `/193-radio` since 2026-08-25; lightning ANT + BYPASS are now single state-lit toggle buttons (HA scripts `shack_ant_toggle`/`shack_byp_toggle` branch on entity state → `rest_command.shack_*`; basic-auth `!secret nodered_http_password` in HassPi's `secrets.yaml`; note `reload_all` won't load a brand-new YAML domain — core restart needed). See HANDOVER #41 | Pending (lightning done) |
+| 41 | ~~**HA Radio dashboard = full Vue-dashboard equivalent**~~ | **Done 2026-08-25** — all phases landed in one day. Phase 1: 7 data-ready cards via 61 MQTT-discovery entities + ping entries. Lightning controls: `rest_command.shack_*` + state-lit ANT/BYPASS toggle scripts. Phase 2: **HA state bridges** for Flex/SPE/LP-700/Rotator/DXCC/RBN (see the "HA state bridges" flow-notes section — 17 nodes, 6 tabs, retained `shack/<subsystem>/state`) + 23 more discovery entities (90 total) + 6 consolidated cards. Dashboard = 2 tabs: Radio (operating) / Fleet (monitoring). See HANDOVER #41. |
 | 40 | **HA ↔ inverter grid-state disagreement** — HA's `binary_sensor.inverter_grid` and the per-minute voltage log disagreed on a 08-25 outage window; both poll the same client-limited Solarman logger, one likely got a stale/failed read. Decides which source defines outage windows in the utility evidence. See HANDOVER #40 | Pending |
 | 39 | **Retrospective evidence — Solarman cloud export.** Export delivered + analysed 2026-08-25 (`deye_history_report.py`): 32 days, **49 interruptions, 74.3 h without supply, 89% of it between 22:00–06:00**, onset ~4 Aug. **Voltage is not recoverable for that period** — the cloud export has no voltage channel, and the inverter reads downstream of the stabiliser anyway. Over-voltage evidence therefore depends on the forward log. See HANDOVER #39. | Partly done — outages evidenced, voltage pending forward log |
 | 36 | **FT8 spots on the RBN Skimmer tab** — waiting on `~/projects/meridian` completion. The VU2CPL feed reached via `vu2cpl.ddns.net:7550` was UberSDR's Aggregator, CW/RTTY-only by design; meridian's dxcluster server speaks the same wire contract and is expected to serve FT8 too. Both `tcp in` nodes follow the DDNS name, so switching servers = repointing the **router's `:7550` port-forward** (operator started that flip to meridian on 2026-07-31 evening) — no Node-RED change needed, login handlers already cover both prompt styles. Remaining: verify spots (incl. FT8) once meridian's decoder pipeline is complete. See HANDOVER #36. | Pending (external) |

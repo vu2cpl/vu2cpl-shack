@@ -10,6 +10,55 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-08-25
 
+### HA Radio dashboard — phase 2: all six gateway cards (project complete)
+
+Operator: "go ahead with the bridge for remaining cards" — the
+rule-#1 approval for extending the lightning bridge pattern to the
+six subsystems HA couldn't see. **17 new nodes across 6 flow tabs**
+(`89f6211`), every one a read-only tap publishing retained JSON:
+
+- `shack/flex/state` — `flow.flexState` trimmed (model, callsign,
+  txstate, active slices, PA readings), 5 s tick
+- `shack/spe/state` — the one **stream tap**: the SPE tab keeps no
+  context, so `spe_state_pub_01` hangs off `ws_format_state`'s
+  output fan-out with an internal 5 s throttle and forwards the
+  whole flat panel payload (all keys known: mode/rxtx/band/pwr/
+  pwr_avg/pwr_peak/atuswr/antswr/tune/temps/alarms/…)
+- `shack/lp700/state` — `global.lpState` (avg/peak/swr/range), 5 s
+- `shack/rotator/state` — `flow.rotator_heading` + `target_hdg`, 5 s
+- `shack/dxcc/state` — `workedStats` + last-5 `alertList` (key
+  whitelist) + `clusterStatus`, 30 s
+- `shack/rbn/state` — `flow.rbn_dash` (**file scope** — the
+  aggregator file-backs it) with nested arrays trimmed to 5, 10 s
+
+flows_guard OK; deployed (push → Pi pull → restart) and all six
+topics sampled live before touching HA — which also confirmed real
+operating data: FLEX-6600 connected/READY, SPE Operate on 12M
+(Middle), heading 353°, DXCC 320 entities / 2474 confirmed / 3 of 4
+clusters up, both RBN skimmers online at 13 spots/h.
+
+HA side: **23 new discovery entities** (90 configs total in
+`ha_discovery_publish.py` — per-subsystem devices with the
+history-worthy scalars as real sensors and the full payload as
+attributes on one state sensor each), then six consolidated
+one-card sections on the Radio tab: FlexRadio markdown (connected
+dot · TRANSMIT/RECEIVE · slice lines), SPE markdown (mode/band/
+power-level · W · pk · SWR · PA °C · ⚡ TUNE chip · alarms line,
+with an OFFLINE fallback when the sensor expires), LP-700 glance
+(Avg/Peak/SWR), Rotator needle gauge 0–360° + target tile, DXCC
+markdown (stats line + last-5 alerts), RBN markdown (per-skimmer
+dot · spots/h · last frequency). All entities verified live before
+`lovelace/config/save`; backup `dashboard-193-radio-shack-v11.json`.
+
+Liveness convention across all bridges: HA `expire_after` ≈ 3× the
+publish tick, so a stopped Node-RED or dead gateway shows
+*unavailable* rather than a stale number. Reference table for all
+seven bridges (incl. lightning): CLAUDE.md "HA state bridges".
+**This closes HANDOVER #41 — the HA Radio dashboard is now the full
+Vue-dashboard equivalent**, in one day: phase 1 (7 data-ready
+cards) → lightning controls → state-lit toggles + lightning bridge
+→ layout polish + tabs split → gateway bridges + cards.
+
 ### HA Radio dashboard — Vue-dashboard equivalent, phase 1
 
 Operator asked for "an equivalent of the Vue dashboard in Home
