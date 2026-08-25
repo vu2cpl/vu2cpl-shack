@@ -10,6 +10,33 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-08-25
 
+### HA dashboards reorganised: one console + four satellites, original hidden
+
+Continuation of the "193, Utopia 2.0" work, driven card-by-card by the
+operator with screenshots. End state: **193, Utopia 2.0** = At a Glance
+(clock + live weather glyph + nav buttons) and one **Power** section
+(grid tile, battery + 24 h graph, voltage gauges, geysers, load graphs,
+4 switches with watts beneath); satellites **Radio / Security / Lights /
+Energy**, each with a full-width Home button; original **193, Utopia**
+hidden from the sidebar (config intact, restorable). All six backed up
+as `dashboard-*-settled.json` beside the automation snapshots.
+
+Grid gotchas that cost real iterations, recorded so they're not re-paid:
+
+- A section's internal grid is 12 columns × its **effective**
+  `column_span`, and the span is **clamped to the view's
+  `max_columns`** — a span-3 section on a 2-column view has a 24-unit
+  grid, not 36. Sizing against the wrong denominator made every card a
+  third narrower than intended, and only operator screenshots exposed it.
+- A `sensor` card with `grid_options.rows: 3` **saves fine and then
+  silently doesn't render**. Use `rows: auto` or `2`.
+- N cards that don't divide the grid (5 geyser buttons, 7 shack
+  switches) only get true equal widths from a nested `grid` card with
+  `columns: N` — per-card grid_options can't express sevenths.
+- Lovelace dashboards are WebSocket-only (`lovelace/config`,
+  `config/save`, `dashboards/create|update`); `ha_ws.py` in the backups
+  folder wraps auth + calls.
+
 ### HA dashboard: "193, Utopia" → "193, Utopia 2.0"
 
 Operator asked for a copy of the house HA dashboard, optimised, with one
