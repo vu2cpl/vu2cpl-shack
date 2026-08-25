@@ -118,7 +118,7 @@ git push
 | RPi Fleet Monitor | `d5fec2fea3dd37f4` | 30 | `f8d1f7eb7403a442` |
 | Internet and network monitor | `b05f8c028b368ae9` | 30 | `f10110e00bae2689` |
 | Lightning Antenna Protector | `75e2cac8ab96f556` | 92 | `8b723cd03854ac2c` |
-| All Power Strips | `b76a5310767803b4` | 58 | `vu2cpl_grp_power` |
+| All Power Strips | `b76a5310767803b4` | 60 | `vu2cpl_grp_power` |
 | DXCC Tracker | `d110d176c0aad308` | 77 | `grp_dxcc_stats` |
 | UberSDR | `ubersdr_tab` | 9 | `ubersdr_grp` (on Shack Monitoring tools) |
 | AetherSDR Display | `aetherdisp_tab_01` | 9 | — (no UI — humanizes shack MQTT topics onto `aether/*` for the external AetherSDR panadapter display; see `nodered/aether-display/README.md`) |
