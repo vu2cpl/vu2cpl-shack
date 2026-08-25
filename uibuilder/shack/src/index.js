@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v27 · 2026-08-25 Power card: house tiles toggle; one-line grid volts';
+window.__shackBuild = 'v28 · 2026-08-25 Power card: solar/house rows 2-across, volts fill the tile';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -2163,13 +2163,13 @@ const PowerCard = {
         </div>
 
         <!-- Solar inverter row (Deye via shack/solar/inverter, 1-min cron) -->
-        <div v-if="solar" class="energy-row">
+        <div v-if="solar" class="energy-row energy-row--wide">
           <div class="energy-tile">
             <div class="energy-tile__lbl">Grid</div>
             <div class="energy-tile__val" :style="{color: solarColor(solar.grid_on ? 'var(--green)' : 'var(--red)')}">
               {{ solar.grid_on ? 'ON' : 'OFF' }}
             </div>
-            <div class="energy-tile__sub">{{ gridVText }}</div>
+            <div class="energy-tile__sub energy-tile__sub--volts">{{ gridVText }}</div>
           </div>
           <div class="energy-tile">
             <div class="energy-tile__lbl">Battery</div>
@@ -2190,7 +2190,7 @@ const PowerCard = {
         </div>
 
         <!-- House load circuits (Tasmota switches + energy monitors) — tile = switch -->
-        <div v-if="state.energy?.house" class="energy-row">
+        <div v-if="state.energy?.house" class="energy-row energy-row--wide">
           <div v-for="h in houseTiles" :key="h.key" class="energy-tile energy-tile--btn"
                title="Click to toggle" @click="toggleHouse(h)">
             <div class="energy-tile__lbl">{{ h.label }}</div>
@@ -2269,9 +2269,10 @@ const PowerCard = {
     function solarColor(c) { return solarStale.value ? 'var(--text-dim)' : c; }
     const gridVText = computed(() => {
       const v = solar.value?.grid_v;   // inverter grid-input phase voltages (regs 598-600)
-      // Slash-separated, no spaces — three 3-digit readings have to fit one
-      // line inside a quarter-width tile (operator: it was wrapping).
-      return Array.isArray(v) ? v.map(x => Math.round(x)).join('/') + ' V' : '';
+      // Bare "233/234/232" — no separator spaces, no unit. 11 chars is the
+      // budget that lets the sub-line fill the tile at a readable size; the
+      // "V" is implied by the Grid tile it sits under.
+      return Array.isArray(v) ? v.map(x => Math.round(x)).join('/') : '';
     });
     const socColor = computed(() => {
       const s = solar.value?.batt_soc;

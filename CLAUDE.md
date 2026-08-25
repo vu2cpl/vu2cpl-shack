@@ -597,15 +597,21 @@ Two extra rows under the 16A voltage/current/power/today tiles on
 House Loads", `height` 2→6; Vue PowerCard build `v25`):
 
 - **Solar row** — Grid ON/OFF with the inverter's grid-**input** phase
-  voltages beneath as `233/234/232 V` (they ARE L1/L2/L3 in that order —
+  voltages beneath as `233/234/232` (they ARE L1/L2/L3 in that order —
   verified against regs 598-600; load-side outputs are 644-646 and not
   read; explicit `L1 ·` labels were tried and removed on operator
-  request, v26). **The sub-line must stay one line** — a quarter-width
-  tile is ~95 px inside its padding, so the separator is a bare `/`
-  (no spaces) and the sub-label runs smaller than `--fs-xs` with
-  `white-space:nowrap` (v27 — at `--fs-xs` with ` · ` it wrapped to a
-  second line and broke the row's alignment). Same treatment on the
-  house tiles' `W · kWh` sub-line. Then Battery % (green ≥50,
+  request, v26; the `V` unit dropped in v28 as implied by the Grid tile).
+  **These two rows are 2-across, not 4** — the masonry `column-width` is
+  320 px, so a Vue card is ~330 px wide *whatever the screen*, and
+  4-across leaves each tile ~61 px inside its padding: the sub-line gets
+  clamped to a clipped 10-11 px. 2-across gives ~145 px, and the volts
+  line renders at its 19 px cap with nothing clipped (measured in a
+  browser harness across 330/420 px cards, not estimated). The sub-line
+  sizes itself with **container query units** (`cqw` against the tile,
+  which sets `container-type:inline-size`) so it fills the tile instead
+  of guessing from `vw`; each rule carries a plain-px first declaration
+  as the no-`cqw` fallback. Separator is a bare `/` with no spaces and
+  `white-space:nowrap`. Then Battery % (green ≥50,
   amber ≥20, red below), Battery power W (signed, negative = charging),
   Batt State (`⚡ CHG` green / `▼ DIS` amber / `IDLE` dim). Source:
   retained `shack/solar/inverter` published by `solar_inverter_mqtt.py`

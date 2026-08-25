@@ -1080,11 +1080,21 @@ html, body {
   padding-top: var(--sp-3);
   border-top: 1px solid var(--border-2);
 }
+/* Rows whose tiles carry a sub-line (solar volts, house W/kWh) go 2-across.
+   The masonry column-width is 320px, so a card is ~330px whatever the screen:
+   4-across leaves each tile ~61px inside its padding, which forces the
+   sub-line down to a clipped 10-11px. 2-across gives ~145px — the volts line
+   renders at 19px, nothing clips. Measured, not guessed. */
+.energy-row--wide { grid-template-columns: repeat(2, 1fr); }
 .energy-tile {
   text-align: center;
   background: var(--bg);
   border-radius: 6px;
   padding: var(--sp-2);
+  /* Query container so .energy-tile__sub can size itself to the tile's own
+     width (cqw) instead of the viewport — a quarter-width tile is far
+     narrower than any vw-based guess would assume. */
+  container-type: inline-size;
 }
 .energy-tile__lbl { font-size: var(--fs-xs); color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.4px; font-weight: 500; }
 .energy-tile__val {
@@ -1097,13 +1107,22 @@ html, body {
 }
 .energy-tile__val .unit { font-size: var(--fs-xs); color: var(--text-dim); margin-left: 2px; font-weight: 400; font-family: var(--font-sans); }
 .energy-tile__sub {
-  /* Deliberately smaller than --fs-xs: a quarter-width tile is ~95px inside
-     its padding, and "233/234/232 V" at --fs-xs wraps to a second line. */
-  font-size: clamp(9px, 0.7vw, 11px);
+  /* Sized to FILL the tile rather than to a fixed small value: monospace
+     advance is ~0.6em, so N chars fit when font-size ≈ 95cqw / (0.6·N).
+     Default here is the ~16-char house line ("123 W · 0.25 kWh") ⇒ ~10cqw.
+     The first declaration is the fallback for engines without cqw. */
+  font-size: 11px;
+  font-size: clamp(10px, 9.5cqw, 14px);
   color: var(--text-dim); margin-top: 1px;
   font-family: var(--font-mono); font-variant-numeric: tabular-nums;
   white-space: nowrap; overflow: hidden; text-overflow: clip;
   letter-spacing: -0.2px;
+}
+/* 11-char "233/234/232" — shorter string, so it can run much larger. */
+.energy-tile__sub--volts {
+  font-size: 14px;
+  font-size: clamp(11px, 14cqw, 19px);
+  color: var(--text);
 }
 .energy-tile--btn { cursor: pointer; transition: opacity 0.15s; }
 .energy-tile--btn:hover { opacity: 0.8; }

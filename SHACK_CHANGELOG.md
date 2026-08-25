@@ -117,17 +117,35 @@ changes:
    UIs (operator preference after seeing them; the values are still
    L1/L2/L3 in that order — register identity documented in CLAUDE.md).
 4. **Grid-voltage sub-line forced onto one line** (v27, operator: "lots
-   of space and it wraps to second line"). Two causes: the ` · `
-   separator cost 4 characters of pure padding, and `--fs-xs`
-   (12–14 px) put a 13-character mono string past the ~95 px a
-   quarter-width tile has inside its padding. Fix: bare `/` separator
-   (`233/234/232 V`) plus a sub-label font below `--fs-xs`
-   (`clamp(9px,0.7vw,11px)`), `white-space:nowrap`, slight negative
-   letter-spacing — applied to the house tiles' `W · kWh` sub-line too,
-   which had the same latent overflow. D1 gets the equivalent inline
-   style on its `gh-lbl` sub-divs. **`index.css` cache-buster bumped
-   `?v=5`→`?v=6`** — the fix lives in the stylesheet, so bumping only
-   `index.js` would have served the old CSS from cache.
+   of space and it wraps to second line"), then **sized to actually fill
+   the tile** (v28, operator: "now its tiny, just drop V and use the
+   full width, max font will take"). The v27 pass fixed the wrap by
+   shrinking the font, which traded one complaint for another — the real
+   constraint was the tile, not the string.
+
+   Measured it properly in a throwaway browser harness (tile markup +
+   the app's real CSS vars, rendered at 330/420 px card widths, probing
+   computed font-size and `scrollWidth > clientWidth`): the masonry
+   `column-width: 320px` means **a card is ~330 px wide no matter the
+   screen**, so a 4-across row leaves each tile **61 px** inside its
+   padding. At 61 px an 11-character string cannot exceed ~10 px without
+   clipping — and it *was* clipping (`233/234/23…`), on the house
+   `W · kWh` lines too. No amount of font tuning fixes that.
+
+   Fix: **the two new rows go 2-across** (`.energy-row--wide`; D1's
+   inline `repeat(4,1fr)`→`repeat(2,1fr)`, card `height` 6→8). Tile
+   inner width becomes ~145 px, the volts line renders at its **19 px**
+   cap with nothing clipped, and the house lines sit at ~13.8 px. The
+   sub-line now sizes itself in **container query units** (`cqw` against
+   the tile, which becomes a `container-type:inline-size` query
+   container) rather than `vw` — a quarter-of-a-card tile bears no
+   relation to viewport width — with a plain-px first declaration in
+   each rule as the fallback for engines without `cqw`. Unit `V` dropped
+   (implied by the Grid tile above it), bare `/` separator, `nowrap`.
+   The 16A row above stays 4-across: short values, no sub-line.
+   **`index.css` cache-buster `?v=5`→`?v=7`** across the two passes —
+   the fix lives in the stylesheet, so bumping only `index.js` would
+   have served stale CSS.
 
 Also closed HANDOVER #38 (the operator's visual check).
 
