@@ -10175,7 +10175,8 @@
         "wires": [
             [
                 "ws_panel_node",
-                "vue_spe_bridge_01"
+                "vue_spe_bridge_01",
+                "spe_state_pub_01"
             ]
         ]
     },
@@ -11315,6 +11316,359 @@
         "broker": "f4785be9863eab08",
         "x": 740,
         "y": 2140,
+        "wires": []
+    },
+    {
+        "id": "flex_state_tick_01",
+        "type": "inject",
+        "z": "a0a882f85c89cffc",
+        "name": "Flex state tick (5s)",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "5",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 2,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 190,
+        "y": 1180,
+        "wires": [
+            [
+                "flex_state_fn_01"
+            ]
+        ]
+    },
+    {
+        "id": "flex_state_fn_01",
+        "type": "function",
+        "z": "a0a882f85c89cffc",
+        "name": "Flex state → MQTT",
+        "func": "// Publishes retained FlexRadio state for Home Assistant (shack/flex/state).\n// Read-only tap of flow.flexState on a 5 s tick — touches no flow behaviour.\nvar s = flow.get('flexState') || {};\nvar slices = (s.activeSlices || []).map(function (sl) {\n    return { slice: sl.slice, freq: sl.freq, mode: sl.mode, isTx: sl.isTx ? 1 : 0, client: sl.client || null };\n});\nmsg.payload = {\n    connected: !!s.model,\n    model: s.model || null,\n    callsign: s.callsign || null,\n    txstate: s.txstate || null,\n    transmitting: !!(s.txstate && s.txstate !== 'READY'),\n    slices: slices,\n    rfpower: s.rfpower != null ? s.rfpower : null,\n    patemp: s.patemp != null ? s.patemp : null,\n    pavolts: s.pavolts != null ? s.pavolts : null,\n    fan: s.fan != null ? s.fan : null,\n    ts: Date.now()\n};\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 1180,
+        "wires": [
+            [
+                "flex_state_mqtt_01"
+            ]
+        ]
+    },
+    {
+        "id": "flex_state_mqtt_01",
+        "type": "mqtt out",
+        "z": "a0a882f85c89cffc",
+        "name": "shack/flex/state (retained)",
+        "topic": "shack/flex/state",
+        "qos": "0",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "f4785be9863eab08",
+        "x": 680,
+        "y": 1180,
+        "wires": []
+    },
+    {
+        "id": "spe_state_pub_01",
+        "type": "function",
+        "z": "spe_ws_tab_01",
+        "name": "SPE state → MQTT (5s throttle)",
+        "func": "// Publishes retained SPE state for Home Assistant (shack/spe/state).\n// Tapped off ws_format_state's output; rate-limited to one publish per 5 s.\n// Read-only — forwards the flat panel payload untouched (+ ts).\nvar now = Date.now();\nvar last = context.get('lastPub') || 0;\nif (now - last < 5000) return null;\ncontext.set('lastPub', now);\nvar p = (typeof msg.payload === 'object' && msg.payload) ? msg.payload : {};\nvar out = {};\nObject.keys(p).forEach(function (k) { out[k] = p[k]; });\nout.ts = now;\nreturn { payload: out };\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 850,
+        "y": 120,
+        "wires": [
+            [
+                "spe_state_mqtt_01"
+            ]
+        ]
+    },
+    {
+        "id": "spe_state_mqtt_01",
+        "type": "mqtt out",
+        "z": "spe_ws_tab_01",
+        "name": "shack/spe/state (retained)",
+        "topic": "shack/spe/state",
+        "qos": "0",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "f4785be9863eab08",
+        "x": 1100,
+        "y": 120,
+        "wires": []
+    },
+    {
+        "id": "lp700_state_tick_01",
+        "type": "inject",
+        "z": "18fb42443172f33c",
+        "name": "LP-700 state tick (5s)",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "5",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 2,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 190,
+        "y": 640,
+        "wires": [
+            [
+                "lp700_state_fn_01"
+            ]
+        ]
+    },
+    {
+        "id": "lp700_state_fn_01",
+        "type": "function",
+        "z": "18fb42443172f33c",
+        "name": "LP-700 state → MQTT",
+        "func": "// Publishes retained LP-700 state for Home Assistant (shack/lp700/state).\n// Read-only tap of global.lpState (mirrored by LP State Aggregator) on a 5 s tick.\nvar s = global.get('lpState') || {};\nmsg.payload = {\n    avg: s.avg != null ? s.avg : null,\n    peak: s.peak != null ? s.peak : null,\n    swr: s.swr != null ? s.swr : null,\n    channel: s.channel || null,\n    range: s.range || null,\n    scale: s.scale || null,\n    ts: Date.now()\n};\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 430,
+        "y": 640,
+        "wires": [
+            [
+                "lp700_state_mqtt_01"
+            ]
+        ]
+    },
+    {
+        "id": "lp700_state_mqtt_01",
+        "type": "mqtt out",
+        "z": "18fb42443172f33c",
+        "name": "shack/lp700/state (retained)",
+        "topic": "shack/lp700/state",
+        "qos": "0",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "f4785be9863eab08",
+        "x": 690,
+        "y": 640,
+        "wires": []
+    },
+    {
+        "id": "rot_state_tick_01",
+        "type": "inject",
+        "z": "3d26c2c5270bdb37",
+        "name": "Rotator state tick (5s)",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "5",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 2,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 190,
+        "y": 900,
+        "wires": [
+            [
+                "rot_state_fn_01"
+            ]
+        ]
+    },
+    {
+        "id": "rot_state_fn_01",
+        "type": "function",
+        "z": "3d26c2c5270bdb37",
+        "name": "Rotator state → MQTT",
+        "func": "// Publishes retained rotator state for Home Assistant (shack/rotator/state).\n// Read-only tap of flow context (heading cached by Parse Rotator WS) on a 5 s tick.\nvar h = flow.get('rotator_heading');\nif (h && typeof h === 'object') h = h.heading;\nvar t = flow.get('target_hdg');\nmsg.payload = {\n    heading: (typeof h === 'number') ? h : null,\n    target: (typeof t === 'number') ? t : null,\n    ts: Date.now()\n};\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 430,
+        "y": 900,
+        "wires": [
+            [
+                "rot_state_mqtt_01"
+            ]
+        ]
+    },
+    {
+        "id": "rot_state_mqtt_01",
+        "type": "mqtt out",
+        "z": "3d26c2c5270bdb37",
+        "name": "shack/rotator/state (retained)",
+        "topic": "shack/rotator/state",
+        "qos": "0",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "f4785be9863eab08",
+        "x": 690,
+        "y": 900,
+        "wires": []
+    },
+    {
+        "id": "dxcc_state_tick_01",
+        "type": "inject",
+        "z": "d110d176c0aad308",
+        "name": "DXCC state tick (30s)",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "30",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 5,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 190,
+        "y": 2200,
+        "wires": [
+            [
+                "dxcc_state_fn_01"
+            ]
+        ]
+    },
+    {
+        "id": "dxcc_state_fn_01",
+        "type": "function",
+        "z": "d110d176c0aad308",
+        "name": "DXCC state → MQTT",
+        "func": "// Publishes retained DXCC tracker state for Home Assistant (shack/dxcc/state).\n// Read-only tap of flow context on a 30 s tick. Alerts trimmed to the last 5.\nvar stats = flow.get('workedStats') || {};\nvar alerts = flow.get('alertList') || [];\nvar KEEP = ['ts', 'time', 'call', 'callsign', 'band', 'mode', 'type', 'alertType', 'entity', 'freq', 'spotter'];\nvar trimmed = alerts.slice(0, 5).map(function (a) {\n    var o = {};\n    KEEP.forEach(function (k) { if (a && a[k] !== undefined) o[k] = a[k]; });\n    return o;\n});\nvar clusters = flow.get('clusterStatus') || {};\nmsg.payload = { stats: stats, alerts: trimmed, clusters: clusters, ts: Date.now() };\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 2200,
+        "wires": [
+            [
+                "dxcc_state_mqtt_01"
+            ]
+        ]
+    },
+    {
+        "id": "dxcc_state_mqtt_01",
+        "type": "mqtt out",
+        "z": "d110d176c0aad308",
+        "name": "shack/dxcc/state (retained)",
+        "topic": "shack/dxcc/state",
+        "qos": "0",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "f4785be9863eab08",
+        "x": 680,
+        "y": 2200,
+        "wires": []
+    },
+    {
+        "id": "rbn_state_tick_01",
+        "type": "inject",
+        "z": "f9a0e3ad0e019052",
+        "name": "RBN state tick (10s)",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "10",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 3,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 190,
+        "y": 780,
+        "wires": [
+            [
+                "rbn_state_fn_01"
+            ]
+        ]
+    },
+    {
+        "id": "rbn_state_fn_01",
+        "type": "function",
+        "z": "f9a0e3ad0e019052",
+        "name": "RBN state → MQTT",
+        "func": "// Publishes retained RBN skimmer state for Home Assistant (shack/rbn/state).\n// Read-only tap of flow.rbn_dash (file scope) on a 10 s tick; nested arrays\n// trimmed to their last 5 entries to keep the retained payload small.\nvar s = flow.get('rbn_dash', 'file') || flow.get('rbn_dash') || {};\nfunction trim(v) {\n    if (Array.isArray(v)) return v.slice(-5);\n    if (v && typeof v === 'object') {\n        var o = {};\n        Object.keys(v).forEach(function (k) { o[k] = trim(v[k]); });\n        return o;\n    }\n    return v;\n}\nmsg.payload = { skimmers: trim(s.skimmers || {}), sk1: s.sk1 || null, sk2: s.sk2 || null, ts: Date.now() };\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 780,
+        "wires": [
+            [
+                "rbn_state_mqtt_01"
+            ]
+        ]
+    },
+    {
+        "id": "rbn_state_mqtt_01",
+        "type": "mqtt out",
+        "z": "f9a0e3ad0e019052",
+        "name": "shack/rbn/state (retained)",
+        "topic": "shack/rbn/state",
+        "qos": "0",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "f4785be9863eab08",
+        "x": 680,
+        "y": 780,
         "wires": []
     }
 ]
