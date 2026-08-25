@@ -143,9 +143,41 @@ changes:
    each rule as the fallback for engines without `cqw`. Unit `V` dropped
    (implied by the Grid tile above it), bare `/` separator, `nowrap`.
    The 16A row above stays 4-across: short values, no sub-line.
-   **`index.css` cache-buster `?v=5`→`?v=7`** across the two passes —
-   the fix lives in the stylesheet, so bumping only `index.js` would
-   have served stale CSS.
+5. **Final layout, operator-specified (v29).** The 2-across compromise
+   was rejected ("i dont like this layout") in favour of an explicit
+   shape: the solar data on **two half-row tiles**, the house loads
+   **all four across one row**.
+   - **Grid** tile: ON/OFF + `233V 234V 232V` — the wider tile has room
+     for the per-phase `V` again (14 chars ≈ 16 px at ~145 px inner).
+   - **Battery** tile: all three battery values merged — SOC % as the
+     headline, `⚡ CHG 2022W` on the sub-line (state colour-coded;
+     wattage as a magnitude, since CHG/DIS already carries the sign).
+     `Batt Power` and `Batt State` cease to exist as separate tiles.
+   - **House** row: four tiles across, with watts and today's kWh as
+     **two short stacked lines** (`1234W` / `12.5kWh`) — a quarter-row
+     tile is ~61 px inside its padding, where the joined
+     `123 W · 0.25 kWh` clips at any readable size.
+   - Tile **labels** are now `nowrap` + `clamp(10px,12cqw,14px)`:
+     `DRYER KIT` was wrapping at the 330 px card width and knocking that
+     tile's contents out of alignment with its neighbours.
+   - **D1 CSS scoped to `.en-card`.** Caught on review: `ui_template`
+     CSS is injected page-wide, so the `.gh-card .gh-box` rule added in
+     v28 was setting `container-type: inline-size` on **every box on the
+     D1 dashboard**, not just this card. Now every rule in the template
+     is scoped to a card-specific class.
+   - D1 card `height` 8→7 (solar row back to a single line).
+   Verified by re-rendering the tiles in the harness at 330/380/430 px
+   and asserting no label and no sub-line clips or wraps at any width.
+   **`index.css` cache-buster `?v=5`→`?v=8`** across the passes — the
+   fixes live in the stylesheet, so bumping only `index.js` would have
+   served stale CSS.
+
+   **Lesson worth keeping:** v25→v28 each tried to fix a too-small /
+   clipped sub-line by tuning the font, and each traded one complaint
+   for another. The constraint was never the font — it was that the
+   masonry pins a card at ~330 px, so tile width is fixed and *content
+   has to be laid out to fit it*. Measuring the rendered tile (rather
+   than reasoning about it) surfaced that in one pass.
 
 Also closed HANDOVER #38 (the operator's visual check).
 

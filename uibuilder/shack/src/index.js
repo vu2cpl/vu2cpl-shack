@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v28 · 2026-08-25 Power card: solar/house rows 2-across, volts fill the tile';
+window.__shackBuild = 'v29 · 2026-08-25 Power card: Grid + Battery half-row tiles, house 4-across';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -2162,40 +2162,37 @@ const PowerCard = {
           </div>
         </div>
 
-        <!-- Solar inverter row (Deye via shack/solar/inverter, 1-min cron) -->
+        <!-- Solar inverter row (Deye via shack/solar/inverter, 1-min cron).
+             Two tiles, each half the row: Grid (state + per-phase volts) and
+             Battery (SOC + charge state + power merged onto one tile). -->
         <div v-if="solar" class="energy-row energy-row--wide">
           <div class="energy-tile">
             <div class="energy-tile__lbl">Grid</div>
             <div class="energy-tile__val" :style="{color: solarColor(solar.grid_on ? 'var(--green)' : 'var(--red)')}">
               {{ solar.grid_on ? 'ON' : 'OFF' }}
             </div>
-            <div class="energy-tile__sub energy-tile__sub--volts">{{ gridVText }}</div>
+            <div class="energy-tile__sub energy-tile__sub--big">{{ gridVText }}</div>
           </div>
           <div class="energy-tile">
             <div class="energy-tile__lbl">Battery</div>
             <div class="energy-tile__val" :style="{color: solarColor(socColor)}">
               {{ solar.batt_soc ?? '—' }}<span class="unit">%</span>
             </div>
-          </div>
-          <div class="energy-tile">
-            <div class="energy-tile__lbl">Batt Power</div>
-            <div class="energy-tile__val">{{ solar.batt_p_w ?? '—' }}<span class="unit">W</span></div>
-          </div>
-          <div class="energy-tile">
-            <div class="energy-tile__lbl">Batt State</div>
-            <div class="energy-tile__val" :style="{color: solarColor(battStateColor)}">
-              {{ battStateText }}
-            </div>
+            <div class="energy-tile__sub energy-tile__sub--big"
+                 :style="{color: solarColor(battStateColor)}">{{ battSummary }}</div>
           </div>
         </div>
 
-        <!-- House load circuits (Tasmota switches + energy monitors) — tile = switch -->
-        <div v-if="state.energy?.house" class="energy-row energy-row--wide">
+        <!-- House load circuits (Tasmota switches + energy monitors) — tile = switch.
+             All four across one row, so the W / kWh readings stack as two short
+             lines rather than one long one that would clip at this tile width. -->
+        <div v-if="state.energy?.house" class="energy-row">
           <div v-for="h in houseTiles" :key="h.key" class="energy-tile energy-tile--btn"
                title="Click to toggle" @click="toggleHouse(h)">
             <div class="energy-tile__lbl">{{ h.label }}</div>
             <div class="energy-tile__val" :style="{color: h.color}">{{ h.value }}</div>
-            <div class="energy-tile__sub">{{ h.sub }}</div>
+            <div class="energy-tile__sub">{{ h.watts }}</div>
+            <div v-if="h.kwh" class="energy-tile__sub">{{ h.kwh }}</div>
           </div>
         </div>
       </div>
@@ -2269,10 +2266,9 @@ const PowerCard = {
     function solarColor(c) { return solarStale.value ? 'var(--text-dim)' : c; }
     const gridVText = computed(() => {
       const v = solar.value?.grid_v;   // inverter grid-input phase voltages (regs 598-600)
-      // Bare "233/234/232" — no separator spaces, no unit. 11 chars is the
-      // budget that lets the sub-line fill the tile at a readable size; the
-      // "V" is implied by the Grid tile it sits under.
-      return Array.isArray(v) ? v.map(x => Math.round(x)).join('/') : '';
+      // "233V 234V 232V" — a half-row tile has room for the per-phase unit
+      // (14 chars ≈ 16px at the ~145px inner width); space is the separator.
+      return Array.isArray(v) ? v.map(x => Math.round(x) + 'V').join(' ') : '';
     });
     const socColor = computed(() => {
       const s = solar.value?.batt_soc;
@@ -2286,6 +2282,13 @@ const PowerCard = {
     const battStateColor = computed(() => {
       const st = solar.value?.batt_state;
       return st === 'charging' ? 'var(--green)' : st === 'discharging' ? 'var(--amber)' : 'var(--text-dim)';
+    });
+    // Charge state + power on one line under the SOC — the sign is already
+    // carried by CHG/DIS, so the wattage shows as a magnitude.
+    const battSummary = computed(() => {
+      const s = solar.value;
+      if (!s || s.batt_p_w == null) return battStateText.value;
+      return battStateText.value + ' ' + Math.abs(s.batt_p_w) + 'W';
     });
 
     // --- House load circuits (state.energy.house, keyed by Tasmota topic) ---
@@ -2304,13 +2307,13 @@ const PowerCard = {
         // SENSOR arrives every ~60 s; treat >5 min silence (or LWT Offline) as offline
         const offline = !d || d.online === false || !d.ts || (now - d.ts) > 300;
         const relay = d?.relay;
-        const bits = [];
-        if (!offline && d.p != null) bits.push(d.p + ' W');
-        if (!offline && d.today != null) bits.push(d.today + ' kWh');
         return {
           key, label,
           value: offline ? '—' : relay === true ? 'ON' : relay === false ? 'OFF' : '—',
-          sub: offline ? 'offline' : bits.join(' · '),
+          // Two short lines instead of "123 W · 0.25 kWh": a quarter-row tile
+          // is ~61px inside its padding and the joined string clips there.
+          watts: offline ? 'offline' : (d.p != null ? d.p + 'W' : ''),
+          kwh:   offline ? '' : (d.today != null ? d.today + 'kWh' : ''),
           color: offline ? 'var(--text-dim)' : relay ? 'var(--green)' : 'var(--red)'
         };
       });
@@ -2355,7 +2358,8 @@ const PowerCard = {
     });
 
     return { expanded, state, plugs, plugRows, plugClass, plugIsOn, toggle, onCount, rotatorRemain,
-             solar, solarColor, gridVText, socColor, battStateText, battStateColor, houseTiles, toggleHouse };
+             solar, solarColor, gridVText, socColor, battStateText, battStateColor, battSummary,
+             houseTiles, toggleHouse };
   }
 };
 

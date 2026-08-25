@@ -1096,7 +1096,14 @@ html, body {
      narrower than any vw-based guess would assume. */
   container-type: inline-size;
 }
-.energy-tile__lbl { font-size: var(--fs-xs); color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.4px; font-weight: 500; }
+.energy-tile__lbl {
+  color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.4px; font-weight: 500;
+  /* One line always: "DRYER KIT" wraps in a quarter-row tile at --fs-xs and
+     knocks that tile's contents out of alignment with its neighbours. */
+  white-space: nowrap; overflow: hidden;
+  font-size: var(--fs-xs);
+  font-size: clamp(10px, 12cqw, 14px);
+}
 .energy-tile__val {
   font-size: var(--fs-lg);
   font-weight: 600;
@@ -1109,19 +1116,21 @@ html, body {
 .energy-tile__sub {
   /* Sized to FILL the tile rather than to a fixed small value: monospace
      advance is ~0.6em, so N chars fit when font-size ≈ 95cqw / (0.6·N).
-     Default here is the ~16-char house line ("123 W · 0.25 kWh") ⇒ ~10cqw.
-     The first declaration is the fallback for engines without cqw. */
+     Default is the house tiles' short "1234W" / "12.5kWh" lines (≤8 chars)
+     in a quarter-row tile (~61px inner) ⇒ ~19cqw. The first declaration in
+     each rule is the fallback for engines without cqw. */
   font-size: 11px;
-  font-size: clamp(10px, 9.5cqw, 14px);
+  font-size: clamp(9px, 19cqw, 13px);
   color: var(--text-dim); margin-top: 1px;
   font-family: var(--font-mono); font-variant-numeric: tabular-nums;
   white-space: nowrap; overflow: hidden; text-overflow: clip;
   letter-spacing: -0.2px;
 }
-/* 11-char "233/234/232" — shorter string, so it can run much larger. */
-.energy-tile__sub--volts {
+/* Half-row tiles (Grid / Battery): ~145px inner, ~14-char lines
+   ("233V 234V 232V", "⚡ CHG 2022W") ⇒ ~11cqw. */
+.energy-tile__sub--big {
   font-size: 14px;
-  font-size: clamp(11px, 14cqw, 19px);
+  font-size: clamp(11px, 11cqw, 17px);
   color: var(--text);
 }
 .energy-tile--btn { cursor: pointer; transition: opacity 0.15s; }

@@ -183,10 +183,11 @@ consumption monitoring. The rotator outlet has a 5 min auto-off timer
 with idempotent retrigger guard + 10 s cooldown to prevent reset loops.
 
 Below the 16 A voltage/current/power/today line, both dashboards carry
-two further rows (added 2026-08-25): a **solar row** — grid ON/OFF with
-per-phase input voltages L1/L2/L3, battery %, battery power, and
-charge state, read directly from the Deye hybrid inverter's Solarman
-logger by `solar_inverter_mqtt.py` (1-min cron → retained
+two further rows (added 2026-08-25): a **solar row** of two half-width
+tiles — **Grid** (ON/OFF plus the three input phase voltages) and
+**Battery** (state of charge, with charge state and power on one line)
+— read directly from the Deye hybrid inverter's Solarman logger by
+`solar_inverter_mqtt.py` (1-min cron → retained
 `shack/solar/inverter`) — and a **house-loads row** showing the four
 house Tasmota circuits (FF Load, GF Load, Dryer Kit, Utility): relay
 ON/OFF, live watts, and today's kWh. Each house tile is also the

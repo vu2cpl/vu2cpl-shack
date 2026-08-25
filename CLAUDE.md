@@ -596,32 +596,27 @@ Two extra rows under the 16A voltage/current/power/today tiles on
 **both** dashboards (D1 card retitled "Energy — 16A Master · Solar ·
 House Loads", `height` 2→6; Vue PowerCard build `v25`):
 
-- **Solar row** — Grid ON/OFF with the inverter's grid-**input** phase
-  voltages beneath as `233/234/232` (they ARE L1/L2/L3 in that order —
+- **Solar row — 2 half-row tiles** (v29, operator's layout call):
+  **Grid** = ON/OFF with the inverter's grid-**input** phase voltages
+  beneath as `233V 234V 232V` (they ARE L1/L2/L3 in that order —
   verified against regs 598-600; load-side outputs are 644-646 and not
-  read; explicit `L1 ·` labels were tried and removed on operator
-  request, v26; the `V` unit dropped in v28 as implied by the Grid tile).
-  **These two rows are 2-across, not 4** — the masonry `column-width` is
-  320 px, so a Vue card is ~330 px wide *whatever the screen*, and
-  4-across leaves each tile ~61 px inside its padding: the sub-line gets
-  clamped to a clipped 10-11 px. 2-across gives ~145 px, and the volts
-  line renders at its 19 px cap with nothing clipped (measured in a
-  browser harness across 330/420 px cards, not estimated). The sub-line
-  sizes itself with **container query units** (`cqw` against the tile,
-  which sets `container-type:inline-size`) so it fills the tile instead
-  of guessing from `vw`; each rule carries a plain-px first declaration
-  as the no-`cqw` fallback. Separator is a bare `/` with no spaces and
-  `white-space:nowrap`. Then Battery % (green ≥50,
-  amber ≥20, red below), Battery power W (signed, negative = charging),
-  Batt State (`⚡ CHG` green / `▼ DIS` amber / `IDLE` dim). Source:
+  read; explicit `L1 ·` prefixes were tried and dropped in v26, the
+  per-phase `V` restored in v29 once the wider tile had room), and
+  **Battery** = SOC % as the headline with charge state + power merged
+  onto its sub-line (`⚡ CHG 2022W` green / `▼ DIS` amber / `IDLE` dim;
+  wattage shown as a magnitude since CHG/DIS already carries the sign).
+  Source:
   retained `shack/solar/inverter` published by `solar_inverter_mqtt.py`
   (1-min cron on the Pi — see the Solar inverter row in INFRASTRUCTURE).
   The whole row dims when the payload `ts` is >5 min stale (publisher
   dead or logger unreachable); the retained message means the last
   reading survives Node-RED restarts.
-- **House-loads row** — FF Load / GF Load / Dryer Kit / Utility: relay
-  ON (green) / OFF (red) with `W · kWh today` beneath, "offline" +
-  dimmed on LWT Offline or >5 min without a SENSOR (TelePeriod is 60 s).
+- **House-loads row — all 4 across one row**: relay ON (green) / OFF
+  (red) with the watts and today's kWh stacked as **two short lines**
+  (`1234W` / `12.5kWh`), "offline" + dimmed on LWT Offline or >5 min
+  without a SENSOR (TelePeriod is 60 s). Two lines, not one joined
+  string, because a quarter-row tile is only ~61 px inside its padding —
+  `123 W · 0.25 kWh` clips there at any readable size.
   **Each tile is also the switch** (operator request, same day —
   initially display-only): click → `confirm()` → `POST
   /power/house-toggle {dev}` → `House Toggle HTTP` fn (validates dev
@@ -638,6 +633,23 @@ House Loads", `height` 2→6; Vue PowerCard build `v25`):
   `energy.house`); D1 renders in the same `16A Energy Monitor` template.
   Wildcard subs overlap the per-device 16A/powerstrip subs harmlessly
   (broker fans out; `house_parse_fn` filters to the 4 house topics).
+
+**Sizing rule for these tiles — don't hand-tune the font, check the
+width.** The Vue masonry uses `column-width: 320px`, so a card is
+~330 px wide *whatever the screen*: a half-row tile has ~145 px inside
+its padding, a quarter-row tile only ~61 px. Both dashboards size the
+tile sub-lines in **container-query units** (`cqw` against the tile,
+which sets `container-type: inline-size`) so text fills its own tile
+rather than guessing from `vw`, and every such rule carries a plain-px
+first declaration as the no-`cqw` fallback. Labels are `nowrap` +
+`clamp(10px,12cqw,14px)` so `DRYER KIT` can't wrap and knock one tile
+out of alignment. **In the D1 template every rule is scoped to
+`.en-card`** — `ui_template` CSS is injected page-wide, so an unscoped
+`.gh-box` rule would have applied `container-type` to every card on the
+dashboard. Layout changes here were verified by rendering the tiles in
+a throwaway browser harness at 330/380/430 px and asserting
+`scrollWidth <= clientWidth` — three earlier passes (v25→v28) each
+"fixed" the font and missed that the tile width was the real limit.
 
 ### FlexRadio
 - All slice state in `flexState` flow context
