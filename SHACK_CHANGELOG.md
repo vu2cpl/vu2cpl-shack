@@ -10,6 +10,44 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-08-25
 
+### HA dashboard: "193, Utopia" → "193, Utopia 2.0"
+
+Operator asked for a copy of the house HA dashboard, optimised, with one
+new feature: grid voltages, battery state, and the four house-load
+switches in one place. ("193, Utopia" is the house — which finally
+explains the Telegram bot name `Utopialertbot`.)
+
+**Lovelace configs are WebSocket-only** — no REST route exists
+(`/api/panels` 404s). New `ha_ws.py` (kept with the other HA tooling in
+`~/Documents/vu2cpl-ha-backups/`, needs the `websockets` package) covers
+auth + `lovelace/dashboards/list`, `lovelace/config`,
+`lovelace/dashboards/create`, `lovelace/config/save`.
+
+The copy is a **separate dashboard** at `/193-utopia-2` ("193, Utopia
+2.0" in the sidebar) — the original is untouched and its config is
+backed up beside the helper. Dashboard JSON stays out of this repo for
+the same reason as the automation dumps: household names throughout, and
+the repo is public.
+
+New **Grid · Battery · Loads** section, placed right after At a Glance:
+
+- **3 phase-voltage needle gauges** banded to the utility case: amber
+  below 207 V, green to 243.8 V (+6%), amber to 253 V (+10%), red above —
+  so the condition that tripped the stabiliser for a month is visible at
+  a glance, on the same instrument HA already reads.
+- **Battery SOC gauge** banded to match the load-shed ladder (red <50,
+  amber <90, green ≥90) plus state / power / temperature / volts tiles.
+- **The four load switches** (GF, FF, Utility, Dryer Kitchen) as
+  tap-to-toggle tiles with live-watts tiles beneath. Gotcha kept from
+  the automation work: the Utility *circuit* is `switch.tasmota_3`;
+  `switch.utility_area` is a camera.
+
+Also fixed on the copy: one button card had a stray `{'type':'device'}`
+**object** as its `name` (the UI renders the dict literally), and the
+unlabelled energy section gained a "Energy Flows" heading. All 17
+entities referenced by the new section were verified live before the
+config was saved.
+
 ### Home Assistant under management via REST — and a load-shed threshold fixed
 
 Operator asked whether HA automations could be handled from Claude Code
