@@ -636,6 +636,7 @@
         "showMsgUib": false,
         "title": "",
         "descr": "",
+        "editurl": "vscode://vscode-remote/ssh-remote+192.168.1.169/home/vu2cpl/.node-red/projects/vu2cpl-shack/uibuilder/shack/?windowId=_blank",
         "x": 300,
         "y": 100,
         "wires": [
@@ -4657,7 +4658,7 @@
         "protocol": "Automatic",
         "mode": null,
         "name": "RBN SDR",
-        "host": "192.168.1.235",
+        "host": "192.168.1.241",
         "timer": "10",
         "inputs": 0,
         "x": 140,
@@ -5092,8 +5093,9 @@
         "z": "b05f8c028b368ae9",
         "g": "0cffa681c4abed74",
         "name": "stamp RBN_SDR",
-        "func": "var p=msg.payload;\nif(!st) var st=flow.get('net_state')||{};\nif(!st.pings) st.pings={};\nst.pings['RBN_SDR']={ms:p===false?null:parseFloat(p)||0, up:p!==false, label:'RBN SDR', addr:'192.168.1.235', maxMs:5};\nflow.set('net_state',st);\nmsg.payload=Object.assign({},st);\nreturn msg;",
+        "func": "var p=msg.payload;\nif(!st) var st=flow.get('net_state')||{};\nif(!st.pings) st.pings={};\nst.pings['RBN_SDR']={ms:p===false?null:parseFloat(p)||0, up:p!==false, label:'RBN SDR', addr:'192.168.1.241', maxMs:5};\nflow.set('net_state',st);\nmsg.payload=Object.assign({},st);\nreturn msg;",
         "outputs": 1,
+        "timeout": "",
         "noerr": 0,
         "initialize": "",
         "finalize": "",
@@ -8095,6 +8097,201 @@
         ]
     },
     {
+        "id": "solar_inv_mqtt_in",
+        "type": "mqtt in",
+        "z": "b76a5310767803b4",
+        "name": "shack/solar/inverter",
+        "topic": "shack/solar/inverter",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "f4785be9863eab08",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 710,
+        "y": 820,
+        "wires": [
+            [
+                "solar_inv_parse_fn"
+            ]
+        ]
+    },
+    {
+        "id": "solar_inv_parse_fn",
+        "type": "function",
+        "z": "b76a5310767803b4",
+        "name": "Parse Solar Inverter",
+        "func": "// shack/solar/inverter — retained JSON from solar_inverter_mqtt.py (1-min cron on this Pi).\n// Reads the Deye SG0*LP3 hybrid via its Solarman logger (192.168.30.193).\nvar p = msg.payload;\nif (typeof p === 'string') { try { p = JSON.parse(p); } catch (e) { return null; } }\nif (!p || typeof p !== 'object' || p.batt_soc === undefined) return null;\nreturn { topic: 'energy/solar', payload: p };\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 960,
+        "y": 820,
+        "wires": [
+            [
+                "e72813d4b7791246"
+            ]
+        ]
+    },
+    {
+        "id": "house_state_mqtt_in",
+        "type": "mqtt in",
+        "z": "b76a5310767803b4",
+        "name": "tele/+/STATE",
+        "topic": "tele/+/STATE",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "f4785be9863eab08",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 710,
+        "y": 880,
+        "wires": [
+            [
+                "house_parse_fn"
+            ]
+        ]
+    },
+    {
+        "id": "house_sensor_mqtt_in",
+        "type": "mqtt in",
+        "z": "b76a5310767803b4",
+        "name": "tele/+/SENSOR",
+        "topic": "tele/+/SENSOR",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "f4785be9863eab08",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 710,
+        "y": 920,
+        "wires": [
+            [
+                "house_parse_fn"
+            ]
+        ]
+    },
+    {
+        "id": "house_lwt_mqtt_in",
+        "type": "mqtt in",
+        "z": "b76a5310767803b4",
+        "name": "tele/+/LWT",
+        "topic": "tele/+/LWT",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "f4785be9863eab08",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 710,
+        "y": 960,
+        "wires": [
+            [
+                "house_parse_fn"
+            ]
+        ]
+    },
+    {
+        "id": "house_stat_mqtt_in",
+        "type": "mqtt in",
+        "z": "b76a5310767803b4",
+        "name": "stat/+/POWER",
+        "topic": "stat/+/POWER",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "f4785be9863eab08",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 710,
+        "y": 1000,
+        "wires": [
+            [
+                "house_parse_fn"
+            ]
+        ]
+    },
+    {
+        "id": "house_parse_fn",
+        "type": "function",
+        "z": "b76a5310767803b4",
+        "name": "Parse House Loads",
+        "func": "// House-load Tasmota circuits: relay = HA load-shedding switch, ENERGY = per-circuit meter.\n// Fed by wildcard subs tele/+/STATE, tele/+/SENSOR, tele/+/LWT, stat/+/POWER —\n// shack devices (powerstrips, 4relayboard, 16Amasterswitch) are filtered out here.\n// stat/+/POWER only matches single-relay devices, which is exactly the house set.\nvar HOUSE = { FF_LOAD: 1, GF_LOAD: 1, GF_Dryer_Kit: 1, GF_UTILITY: 1 };\nvar parts = (msg.topic || '').split('/');\nif (parts.length !== 3 || !HOUSE[parts[1]]) return null;\nvar dev = parts[1], leaf = parts[2];\nvar p = msg.payload;\nif (typeof p === 'string' && (leaf === 'STATE' || leaf === 'SENSOR')) {\n    try { p = JSON.parse(p); } catch (e) { return null; }\n}\nvar upd = { dev: dev, ts: Math.floor(Date.now() / 1000) };\nif (leaf === 'LWT') {\n    upd.online = /online/i.test(String(msg.payload));\n} else if (leaf === 'POWER') {\n    upd.relay = String(msg.payload).toUpperCase() === 'ON';\n    upd.online = true;\n} else if (leaf === 'STATE') {\n    if (p.POWER !== undefined) upd.relay = String(p.POWER).toUpperCase() === 'ON';\n    upd.online = true;\n} else if (leaf === 'SENSOR') {\n    var e = p.ENERGY || {};\n    if (e.Power !== undefined) upd.p = e.Power;\n    if (e.Today !== undefined) upd.today = e.Today;\n    if (e.Voltage !== undefined) upd.v = e.Voltage;\n    upd.online = true;\n} else {\n    return null;\n}\nreturn { topic: 'energy/house', payload: upd };\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 960,
+        "y": 940,
+        "wires": [
+            [
+                "e72813d4b7791246"
+            ]
+        ]
+    },
+    {
+        "id": "house_toggle_http_in",
+        "type": "http in",
+        "z": "b76a5310767803b4",
+        "name": "POST /power/house-toggle",
+        "url": "/power/house-toggle",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 710,
+        "y": 1060,
+        "wires": [
+            [
+                "house_toggle_fn"
+            ]
+        ]
+    },
+    {
+        "id": "house_toggle_fn",
+        "type": "function",
+        "z": "b76a5310767803b4",
+        "name": "House Toggle HTTP",
+        "func": "// POST /power/house-toggle {dev:'FF_LOAD'} — toggle a house-load relay.\n// These are HA's load-shedding switches; operator OK'd a manual toggle\n// path from the dashboards on 2026-08-25 (was display-only at first).\n// out 0 → MQTT Publish (dynamic topic) · out 1 → http response\nvar HOUSE = { FF_LOAD: 1, GF_LOAD: 1, GF_Dryer_Kit: 1, GF_UTILITY: 1 };\nvar dev = msg.payload && msg.payload.dev;\nif (!dev || !HOUSE[dev]) {\n    return [null, { statusCode: 400, payload: { ok: false, error: 'unknown dev' } }];\n}\nreturn [\n    { topic: 'cmnd/' + dev + '/POWER', payload: 'TOGGLE' },\n    { payload: { ok: true, dev: dev } }\n];\n",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 960,
+        "y": 1060,
+        "wires": [
+            [
+                "fa472f4b461b6b2b"
+            ],
+            [
+                "house_toggle_http_resp"
+            ]
+        ]
+    },
+    {
+        "id": "house_toggle_http_resp",
+        "type": "http response",
+        "z": "b76a5310767803b4",
+        "name": "200/400",
+        "statusCode": "",
+        "x": 1180,
+        "y": 1080,
+        "wires": []
+    },
+    {
         "id": "a7d9bd0a663b8133",
         "type": "inject",
         "z": "d110d176c0aad308",
@@ -11056,199 +11253,5 @@
                 "aetherdisp_out"
             ]
         ]
-    },
-    {
-        "id": "solar_inv_mqtt_in",
-        "type": "mqtt in",
-        "z": "b76a5310767803b4",
-        "name": "shack/solar/inverter",
-        "topic": "shack/solar/inverter",
-        "qos": "0",
-        "datatype": "auto-detect",
-        "broker": "f4785be9863eab08",
-        "nl": false,
-        "rap": true,
-        "rh": 0,
-        "inputs": 0,
-        "x": 710,
-        "y": 820,
-        "wires": [
-            [
-                "solar_inv_parse_fn"
-            ]
-        ]
-    },
-    {
-        "id": "solar_inv_parse_fn",
-        "type": "function",
-        "z": "b76a5310767803b4",
-        "name": "Parse Solar Inverter",
-        "func": "// shack/solar/inverter — retained JSON from solar_inverter_mqtt.py (1-min cron on this Pi).\n// Reads the Deye SG0*LP3 hybrid via its Solarman logger (192.168.30.193).\nvar p = msg.payload;\nif (typeof p === 'string') { try { p = JSON.parse(p); } catch (e) { return null; } }\nif (!p || typeof p !== 'object' || p.batt_soc === undefined) return null;\nreturn { topic: 'energy/solar', payload: p };\n",
-        "outputs": 1,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 960,
-        "y": 820,
-        "wires": [
-            [
-                "e72813d4b7791246"
-            ]
-        ]
-    },
-    {
-        "id": "house_state_mqtt_in",
-        "type": "mqtt in",
-        "z": "b76a5310767803b4",
-        "name": "tele/+/STATE",
-        "topic": "tele/+/STATE",
-        "qos": "0",
-        "datatype": "auto-detect",
-        "broker": "f4785be9863eab08",
-        "nl": false,
-        "rap": true,
-        "rh": 0,
-        "inputs": 0,
-        "x": 710,
-        "y": 880,
-        "wires": [
-            [
-                "house_parse_fn"
-            ]
-        ]
-    },
-    {
-        "id": "house_sensor_mqtt_in",
-        "type": "mqtt in",
-        "z": "b76a5310767803b4",
-        "name": "tele/+/SENSOR",
-        "topic": "tele/+/SENSOR",
-        "qos": "0",
-        "datatype": "auto-detect",
-        "broker": "f4785be9863eab08",
-        "nl": false,
-        "rap": true,
-        "rh": 0,
-        "inputs": 0,
-        "x": 710,
-        "y": 920,
-        "wires": [
-            [
-                "house_parse_fn"
-            ]
-        ]
-    },
-    {
-        "id": "house_lwt_mqtt_in",
-        "type": "mqtt in",
-        "z": "b76a5310767803b4",
-        "name": "tele/+/LWT",
-        "topic": "tele/+/LWT",
-        "qos": "0",
-        "datatype": "auto-detect",
-        "broker": "f4785be9863eab08",
-        "nl": false,
-        "rap": true,
-        "rh": 0,
-        "inputs": 0,
-        "x": 710,
-        "y": 960,
-        "wires": [
-            [
-                "house_parse_fn"
-            ]
-        ]
-    },
-    {
-        "id": "house_stat_mqtt_in",
-        "type": "mqtt in",
-        "z": "b76a5310767803b4",
-        "name": "stat/+/POWER",
-        "topic": "stat/+/POWER",
-        "qos": "0",
-        "datatype": "auto-detect",
-        "broker": "f4785be9863eab08",
-        "nl": false,
-        "rap": true,
-        "rh": 0,
-        "inputs": 0,
-        "x": 710,
-        "y": 1000,
-        "wires": [
-            [
-                "house_parse_fn"
-            ]
-        ]
-    },
-    {
-        "id": "house_parse_fn",
-        "type": "function",
-        "z": "b76a5310767803b4",
-        "name": "Parse House Loads",
-        "func": "// House-load Tasmota circuits: relay = HA load-shedding switch, ENERGY = per-circuit meter.\n// Fed by wildcard subs tele/+/STATE, tele/+/SENSOR, tele/+/LWT, stat/+/POWER —\n// shack devices (powerstrips, 4relayboard, 16Amasterswitch) are filtered out here.\n// stat/+/POWER only matches single-relay devices, which is exactly the house set.\nvar HOUSE = { FF_LOAD: 1, GF_LOAD: 1, GF_Dryer_Kit: 1, GF_UTILITY: 1 };\nvar parts = (msg.topic || '').split('/');\nif (parts.length !== 3 || !HOUSE[parts[1]]) return null;\nvar dev = parts[1], leaf = parts[2];\nvar p = msg.payload;\nif (typeof p === 'string' && (leaf === 'STATE' || leaf === 'SENSOR')) {\n    try { p = JSON.parse(p); } catch (e) { return null; }\n}\nvar upd = { dev: dev, ts: Math.floor(Date.now() / 1000) };\nif (leaf === 'LWT') {\n    upd.online = /online/i.test(String(msg.payload));\n} else if (leaf === 'POWER') {\n    upd.relay = String(msg.payload).toUpperCase() === 'ON';\n    upd.online = true;\n} else if (leaf === 'STATE') {\n    if (p.POWER !== undefined) upd.relay = String(p.POWER).toUpperCase() === 'ON';\n    upd.online = true;\n} else if (leaf === 'SENSOR') {\n    var e = p.ENERGY || {};\n    if (e.Power !== undefined) upd.p = e.Power;\n    if (e.Today !== undefined) upd.today = e.Today;\n    if (e.Voltage !== undefined) upd.v = e.Voltage;\n    upd.online = true;\n} else {\n    return null;\n}\nreturn { topic: 'energy/house', payload: upd };\n",
-        "outputs": 1,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 960,
-        "y": 940,
-        "wires": [
-            [
-                "e72813d4b7791246"
-            ]
-        ]
-    },
-    {
-        "id": "house_toggle_http_in",
-        "type": "http in",
-        "z": "b76a5310767803b4",
-        "name": "POST /power/house-toggle",
-        "url": "/power/house-toggle",
-        "method": "post",
-        "upload": false,
-        "swaggerDoc": "",
-        "x": 710,
-        "y": 1060,
-        "wires": [
-            [
-                "house_toggle_fn"
-            ]
-        ]
-    },
-    {
-        "id": "house_toggle_fn",
-        "type": "function",
-        "z": "b76a5310767803b4",
-        "name": "House Toggle HTTP",
-        "func": "// POST /power/house-toggle {dev:'FF_LOAD'} — toggle a house-load relay.\n// These are HA's load-shedding switches; operator OK'd a manual toggle\n// path from the dashboards on 2026-08-25 (was display-only at first).\n// out 0 → MQTT Publish (dynamic topic) · out 1 → http response\nvar HOUSE = { FF_LOAD: 1, GF_LOAD: 1, GF_Dryer_Kit: 1, GF_UTILITY: 1 };\nvar dev = msg.payload && msg.payload.dev;\nif (!dev || !HOUSE[dev]) {\n    return [null, { statusCode: 400, payload: { ok: false, error: 'unknown dev' } }];\n}\nreturn [\n    { topic: 'cmnd/' + dev + '/POWER', payload: 'TOGGLE' },\n    { payload: { ok: true, dev: dev } }\n];\n",
-        "outputs": 2,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 960,
-        "y": 1060,
-        "wires": [
-            [
-                "fa472f4b461b6b2b"
-            ],
-            [
-                "house_toggle_http_resp"
-            ]
-        ]
-    },
-    {
-        "id": "house_toggle_http_resp",
-        "type": "http response",
-        "z": "b76a5310767803b4",
-        "name": "200/400",
-        "statusCode": "",
-        "x": 1180,
-        "y": 1080
     }
 ]
