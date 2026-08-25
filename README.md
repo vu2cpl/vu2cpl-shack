@@ -226,6 +226,29 @@ exporting PV lifts the voltage at its own terminals (so daytime
 figures are arguable, while the night window has neither PV nor
 export).
 
+#### Historic supply interruptions
+
+For the period *before* local logging began, the only record is what the
+inverter had already uploaded to the manufacturer's cloud.
+[`deye_history_report.py`](deye_history_report.py) parses Solarman's
+"PlantsDetails-History" `.xlsx` exports (5-minute telemetry, one file
+per day) into a supply-interruption report, a day-by-day timeline SVG,
+and a CSV:
+
+```bash
+python3 deye_history_report.py --dir "~/Downloads/deye data" \
+    --out outages.md --svg outages.svg --csv outages.csv
+```
+
+That export carries **no voltage channel**, so it evidences outages
+rather than over-voltage. An interruption is only counted where grid
+power is zero *and* the battery is discharging to carry the house (or
+there is no solar to do so) — a full battery with PV covering the load
+also draws nothing from the grid and would otherwise be miscounted. The
+battery's state of charge falling is independent confirmation that
+supply was genuinely absent, which is the first thing a utility will
+question.
+
 ### Solar Conditions
 
 Polls NOAA SWPC every 15 min for SFI, K-index (8 × 3-hour planetary
@@ -311,6 +334,7 @@ from `sm7iun.se/rbnskew.csv` every 6 h.
 ├── monitor.sh                       MQTT telemetry cron (every minute)
 ├── solar_inverter_mqtt.py           Deye inverter → retained shack/solar/inverter + ~/grid_voltage.csv (1-min cron)
 ├── grid_voltage_report.py           grid_voltage.csv → Markdown + SVG evidence report (pure stdlib)
+├── deye_history_report.py           Solarman xlsx cloud exports → supply-interruption report + timeline (pure stdlib)
 ├── monitor_redpitaya.sh             Fleet telemetry variant for the Red Pitaya (Alpine/BusyBox, Zynq XADC temp)
 ├── flows_guard.py                   Stale-tab wipe tripwire (git pre-commit hook + 1-min cron w/ Telegram alert)
 ├── flows_guard_middleware.js        Server-side deploy rejection (httpAdminMiddleware in settings.js)

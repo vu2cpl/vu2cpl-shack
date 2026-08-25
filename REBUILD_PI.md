@@ -753,6 +753,7 @@ If 15 fails but other cards are fine: not a noderedpi4 problem — it's gpsntp.l
 | `monitor.sh` | `/home/vu2cpl/monitor.sh` (+ user crontab `* * * * *`) |
 | `solar_inverter_mqtt.py` | `/home/vu2cpl/solar_inverter_mqtt.py` (+ user crontab `* * * * *`; needs `pip3 install --user pysolarmanv5`). Appends `~/grid_voltage.csv` — back that file up before wiping, it is the only copy |
 | `grid_voltage_report.py` | run in-place from the repo (no install) |
+| `deye_history_report.py` | run in-place from the repo (no install; Mac-side analysis of Solarman cloud exports) |
 | `flows_guard.py` | run in-place from the repo (user crontab `* * * * *` `--cron` + `.git/hooks/pre-commit`) |
 | `flows_guard_middleware.js` | required in-place from the repo by `httpAdminMiddleware` in `~/.node-red/settings.js` (Stage 5) |
 | `power_spe_on.py` | `/home/vu2cpl/power_spe_on.py` |

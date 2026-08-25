@@ -10,6 +10,62 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-08-25
 
+### Solarman cloud export → 32 days of supply-interruption evidence
+
+The operator exported the month from the Deye/Solarman cloud — 33 daily
+`PlantsDetails-History*.xlsx` files. New **`deye_history_report.py`**
+turns them into a report for the supply utility.
+
+**Reading them without a dependency.** These sheets store every value
+inline (no `sharedStrings` table), so a ~20-line regex reader over
+`xl/worksheets/sheet1.xml` is enough — no openpyxl, no pandas, matching
+the pure-stdlib idiom of `rpi_agent.py` and the rest. The daily files
+overlap on a 00:00 boundary row and carry all-zero padding rows; both
+are dropped (538 of 8,502) rather than being left to skew the numbers.
+
+**What the export does not contain: voltage.** The channels are
+Production / Consumption / Grid / Battery / SOC / PV / Generator /
+Grid-tied Inverter Power, all kW, 5-minute resolution. So this evidences
+*interruptions*, not the over-voltage causing them — and the inverter
+reads downstream of the servo stabiliser anyway, so even a voltage
+channel would have shown the stabiliser's regulated ~220 V for any
+period it was engaged. The over-voltage half of the case rests entirely
+on the forward log started the same day.
+
+**The methodological point that makes the report defensible.**
+`Grid = 0 kW` is *not* by itself an outage: a hybrid inverter with a
+full battery and PV covering the load also imports nothing, and looks
+identical in that column. An episode is only counted where the battery
+had to carry the property — SOC fell ≥ 1% — or there was no PV to do so.
+**71 zero-import episodes were excluded on that test.** The report says
+so explicitly and prints the basis for every episode it does count,
+because that is the first thing a utility will challenge. The battery's
+state of charge falling is independent physical corroboration that
+supply was genuinely absent.
+
+**Result over 25 Jul → 25 Aug 2026 (32 days):**
+
+- **49 interruptions ≥ 10 min, 74.3 hours without supply** — 139
+  min/day average.
+- **63% began between 22:00 and 06:00, accounting for 89% of all lost
+  hours** — matching the operator's account exactly.
+- Worst single event: **445 minutes on 24 Aug (22:50 → 06:10)**, battery
+  99% → 39%.
+- Lost minutes peak at 02:00-04:00 (895 and 965 minutes across the
+  month); 10:00-14:00 is almost entirely clear.
+- A weekly roll-up dates the onset without the report having to assert
+  one: **0.9 h and 0.2 h** in the two weeks to 2 Aug, then **24.4 h,
+  29.5 h, 10.8 h, 8.5 h**. Something changed around 4 August.
+
+Outputs: Markdown report, a CSV of the interruption table, and a
+day-by-day timeline SVG (one row per day, 24 h across, interruptions in
+red, the 22:00-06:00 window shaded) — the timeline is the one that makes
+the overnight clustering obvious at a glance.
+
+Telemetry gaps are listed separately and **not** counted as
+interruptions: the inverter reporting nothing could equally be a loss of
+internet connectivity, and claiming them would weaken everything else.
+
 ### Grid voltage logging — building an evidence file for the utility
 
 Operator asked for two weeks of L1/L2/L3 to hand the supply company,
