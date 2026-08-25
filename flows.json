@@ -11253,5 +11253,68 @@
                 "aetherdisp_out"
             ]
         ]
+    },
+    {
+        "id": "light_state_tick_01",
+        "type": "inject",
+        "z": "75e2cac8ab96f556",
+        "name": "Lightning state tick (10s)",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "10",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 2,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 200,
+        "y": 2140,
+        "wires": [
+            [
+                "light_state_fn_01"
+            ]
+        ]
+    },
+    {
+        "id": "light_state_fn_01",
+        "type": "function",
+        "z": "75e2cac8ab96f556",
+        "name": "Lightning state → MQTT",
+        "func": "// Publishes retained lightning state for Home Assistant (shack/lightning/state).\n// Read-only tap of flow context on a 10 s tick — touches no flow behaviour.\n// Consumed by HA's MQTT-discovery entities (see ha_discovery_publish.py):\n// bypass / manual-hold / antenna indications on the HA Radio dashboard.\nmsg.payload = {\n    bypass_active: flow.get('bypass_active') === true,\n    bypass_expires_at: flow.get('bypass_expires_at') || null,\n    antenna_off: flow.get('antenna_off') === true,\n    radio_off: flow.get('radio_off') === true,\n    manual_off: flow.get('manual_off', 'file') === true,\n    om_state: flow.get('om_state') || 'cold',\n    threshold_km: (flow.get('threshold_km') !== undefined) ? flow.get('threshold_km') : null,\n    reconnect_min: (flow.get('reconnect_min') !== undefined) ? flow.get('reconnect_min') : null,\n    ts: Date.now()\n};\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 450,
+        "y": 2140,
+        "wires": [
+            [
+                "light_state_mqtt_01"
+            ]
+        ]
+    },
+    {
+        "id": "light_state_mqtt_01",
+        "type": "mqtt out",
+        "z": "75e2cac8ab96f556",
+        "name": "shack/lightning/state (retained)",
+        "topic": "shack/lightning/state",
+        "qos": "0",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "f4785be9863eab08",
+        "x": 740,
+        "y": 2140,
+        "wires": []
     }
 ]
