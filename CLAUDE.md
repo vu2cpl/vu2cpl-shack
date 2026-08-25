@@ -118,7 +118,7 @@ git push
 | RPi Fleet Monitor | `d5fec2fea3dd37f4` | 30 | `f8d1f7eb7403a442` |
 | Internet and network monitor | `b05f8c028b368ae9` | 30 | `f10110e00bae2689` |
 | Lightning Antenna Protector | `75e2cac8ab96f556` | 92 | `8b723cd03854ac2c` |
-| All Power Strips | `b76a5310767803b4` | 55 | `vu2cpl_grp_power` |
+| All Power Strips | `b76a5310767803b4` | 58 | `vu2cpl_grp_power` |
 | DXCC Tracker | `d110d176c0aad308` | 77 | `grp_dxcc_stats` |
 | UberSDR | `ubersdr_tab` | 9 | `ubersdr_grp` (on Shack Monitoring tools) |
 | AetherSDR Display | `aetherdisp_tab_01` | 9 | — (no UI — humanizes shack MQTT topics onto `aether/*` for the external AetherSDR panadapter display; see `nodered/aether-display/README.md`) |
@@ -164,9 +164,11 @@ their old IDs (`dd11372f9c492be8`, `tab_ui_dxcc`) no longer exist.
 `192.168.30.x` — the other 4 of the 9 `iot` devices in MQTT_AUTH.md).
 These are **Home Assistant's battery-SOC load-shedding relays** with
 per-circuit energy monitoring (TelePeriod 60 s, `tele/<dev>/SENSOR`
-carries a full `ENERGY` block + `ANALOG.Temperature1`). Node-RED
-displays them **read-only** on the Power card since 2026-08-25 — no
-toggle path on purpose; HA owns the relays:
+carries a full `ENERGY` block + `ANALOG.Temperature1`). Shown on the
+Power card since 2026-08-25; initially display-only, then made
+**toggleable the same day on operator request** (tile = switch, confirm
+dialog, `POST /power/house-toggle`). HA's automations still drive them
+— a manual toggle can be overridden by the next load-shed/restore rule:
 
 | Device topic | Displayed as | Notes |
 |--------------|--------------|-------|
@@ -175,7 +177,10 @@ toggle path on purpose; HA owns the relays:
 | `GF_Dryer_Kit` | Dryer Kit | dryer + kitchen circuit |
 | `GF_UTILITY` | Utility | utility circuit |
 
-All 5 shack devices: `Timezone +05:30` (IST), set 2026-05-14. Required so
+All 9 devices: `Timezone +05:30` (IST) — the 5 shack devices set
+2026-05-14, the 4 house devices set 2026-08-25 (via a temporary
+one-shot inject at deploy; all four acked `+05:30` on
+`stat/<dev>/RESULT`, closing HANDOVER #37). Required so
 `ENERGY.Today` on `16Amasterswitch` rolls over at local midnight (not
 00:00 UTC = 05:30 IST). Set per device via web Console
 (`Timezone 5:30`) or MQTT
@@ -291,6 +296,7 @@ Agent endpoints: `POST /reboot`, `POST /shutdown`
 | `solar_inv_parse_fn` | Parse Solar Inverter | validates payload → `energy/solar` → Energy Aggregator |
 | `house_state_mqtt_in` / `house_sensor_mqtt_in` / `house_lwt_mqtt_in` / `house_stat_mqtt_in` | tele/+/STATE · tele/+/SENSOR · tele/+/LWT · stat/+/POWER | wildcard mqtt ins feeding Parse House Loads (`stat/+/POWER` only matches single-relay devices = exactly the house set) |
 | `house_parse_fn` | Parse House Loads | filters to the 4 house devices, emits `energy/house` per-device updates (relay/p/today/v/online/ts) |
+| `house_toggle_http_in` / `house_toggle_fn` / `house_toggle_http_resp` | POST /power/house-toggle | house-tile switch path: validate dev → `cmnd/<dev>/POWER TOGGLE` via the dynamic `MQTT Publish` node (`fa472f4b461b6b2b`); 400 on unknown dev |
 
 ### FlexRadio (`a0a882f85c89cffc`)
 
@@ -353,6 +359,7 @@ Agent endpoints: `POST /reboot`, `POST /shutdown`
 | POST | `/dxcc/clear` | DXCC | Clear alert table |
 | POST | `/dxcc/blacklist-add` | DXCC | Add callsign to blacklist |
 | POST | `/dxcc/blacklist-remove` | DXCC | Remove from blacklist |
+| POST | `/power/house-toggle` | All Power Strips | `{dev}` → toggle a house-load relay (FF_LOAD / GF_LOAD / GF_Dryer_Kit / GF_UTILITY only; 400 otherwise) |
 
 ---
 
@@ -590,8 +597,15 @@ Two extra rows under the 16A voltage/current/power/today tiles on
 House Loads", `height` 2→6; Vue PowerCard build `v25`):
 
 - **Solar row** — Grid ON/OFF with the inverter's grid-**input** phase
-  voltages labelled `L1 · L2 · L3` (verified against regs 598-600;
-  load-side outputs are 644-646 and not read), Battery % (green ≥50,
+  voltages beneath as `233/234/232 V` (they ARE L1/L2/L3 in that order —
+  verified against regs 598-600; load-side outputs are 644-646 and not
+  read; explicit `L1 ·` labels were tried and removed on operator
+  request, v26). **The sub-line must stay one line** — a quarter-width
+  tile is ~95 px inside its padding, so the separator is a bare `/`
+  (no spaces) and the sub-label runs smaller than `--fs-xs` with
+  `white-space:nowrap` (v27 — at `--fs-xs` with ` · ` it wrapped to a
+  second line and broke the row's alignment). Same treatment on the
+  house tiles' `W · kWh` sub-line. Then Battery % (green ≥50,
   amber ≥20, red below), Battery power W (signed, negative = charging),
   Batt State (`⚡ CHG` green / `▼ DIS` amber / `IDLE` dim). Source:
   retained `shack/solar/inverter` published by `solar_inverter_mqtt.py`
@@ -602,9 +616,15 @@ House Loads", `height` 2→6; Vue PowerCard build `v25`):
 - **House-loads row** — FF Load / GF Load / Dryer Kit / Utility: relay
   ON (green) / OFF (red) with `W · kWh today` beneath, "offline" +
   dimmed on LWT Offline or >5 min without a SENSOR (TelePeriod is 60 s).
-  **Display-only by design** — these relays belong to HA's battery-SOC
-  load-shedding automations (see HARDWARE MAP); Node-RED must not grow
-  a toggle path for them without an explicit operator decision.
+  **Each tile is also the switch** (operator request, same day —
+  initially display-only): click → `confirm()` → `POST
+  /power/house-toggle {dev}` → `House Toggle HTTP` fn (validates dev
+  against the house allow-list, 400 otherwise) → the existing dynamic
+  `MQTT Publish` node → `cmnd/<dev>/POWER TOGGLE`. No optimistic flip —
+  the device's `stat/<dev>/POWER` echo repaints the tile within ~1 s
+  (D1 immediately via the aggregator emit; Vue on the 3-s tick). Note
+  HA's load-shedding automations still own these relays and may
+  override a manual toggle on their next SOC-threshold rule.
 - Plumbing: `solar_inv_mqtt_in`→`solar_inv_parse_fn` and the 4 wildcard
   mqtt-ins→`house_parse_fn` all feed the existing **Energy Aggregator**
   (`ctx.solar` set whole; `ctx.house[dev]` merged per key). The Vue side

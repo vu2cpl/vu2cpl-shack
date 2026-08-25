@@ -85,6 +85,52 @@ have no `Timezone 5:30` set — their `Today` rolls at 05:30 IST
 (HANDOVER #37). `rebuild_pi.sh` Stage 9 + REBUILD_PI.md now deploy the
 publisher + pysolarmanv5 + cron on a rebuild.
 
+### Same-day follow-ups: house tiles = switches · IST on house Tasmotas · plain volts
+
+Operator verified both dashboards ("look good") and steered three
+changes:
+
+1. **House tiles are the switches now.** Each of the four house-load
+   tiles toggles its relay: click → `confirm()` → `POST
+   /power/house-toggle {dev}` — fetch+http-in per the repo's dashboard
+   convention (never `send()`/`ng-click`) — → `House Toggle HTTP`
+   validates against the house allow-list (400 otherwise) → the
+   existing dynamic `MQTT Publish` node → `cmnd/<dev>/POWER TOGGLE`.
+   Deliberately no optimistic flip: the device's `stat/<dev>/POWER`
+   echo repaints the tile within ~1 s through the normal parse path.
+   D1 uses an inline `onclick` + `window._houseToggle` (the SPE
+   pill-toggle pattern); Vue adds `energy-tile--btn` (cursor + hover)
+   and a `toggleHouse()` handler — build `v26`, cache-buster `?v=26`.
+   3 new nodes (http in / function ×2 outputs / http response), tab at
+   58, `flows_guard` green. Caveat stated in CLAUDE.md: HA's
+   load-shedding automations still own these relays and may override a
+   manual toggle at the next SOC threshold.
+2. **`Timezone 5:30` stamped on the 4 house Tasmotas** (closes
+   HANDOVER #37, operator-approved): a TEMP inject+function pair fired
+   once 5 s after deploy, publishing `cmnd/<dev>/Timezone 5:30` to all
+   four via the same dynamic MQTT Publish node; a packet capture over
+   the restart showed all four devices ack `{"Timezone":"+05:30"}` on
+   `stat/<dev>/RESULT`; the TEMP nodes were then removed in the
+   follow-on commit. All 9 Tasmotas now report IST — `ENERGY.Today`
+   (displayed on the house row) rolls at local midnight everywhere.
+3. **L1/L2/L3 labels dropped** from the grid-voltage sub-line on both
+   UIs (operator preference after seeing them; the values are still
+   L1/L2/L3 in that order — register identity documented in CLAUDE.md).
+4. **Grid-voltage sub-line forced onto one line** (v27, operator: "lots
+   of space and it wraps to second line"). Two causes: the ` · `
+   separator cost 4 characters of pure padding, and `--fs-xs`
+   (12–14 px) put a 13-character mono string past the ~95 px a
+   quarter-width tile has inside its padding. Fix: bare `/` separator
+   (`233/234/232 V`) plus a sub-label font below `--fs-xs`
+   (`clamp(9px,0.7vw,11px)`), `white-space:nowrap`, slight negative
+   letter-spacing — applied to the house tiles' `W · kWh` sub-line too,
+   which had the same latent overflow. D1 gets the equivalent inline
+   style on its `gh-lbl` sub-divs. **`index.css` cache-buster bumped
+   `?v=5`→`?v=6`** — the fix lives in the stylesheet, so bumping only
+   `index.js` would have served the old CSS from cache.
+
+Also closed HANDOVER #38 (the operator's visual check).
+
 ---
 
 ## 2026-08-24

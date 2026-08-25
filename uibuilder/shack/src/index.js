@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v26 · 2026-08-25 Power card: house tiles toggle; plain grid volts';
+window.__shackBuild = 'v27 · 2026-08-25 Power card: house tiles toggle; one-line grid volts';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -2269,7 +2269,9 @@ const PowerCard = {
     function solarColor(c) { return solarStale.value ? 'var(--text-dim)' : c; }
     const gridVText = computed(() => {
       const v = solar.value?.grid_v;   // inverter grid-input phase voltages (regs 598-600)
-      return Array.isArray(v) ? v.map(x => Math.round(x)).join(' · ') + ' V' : '';
+      // Slash-separated, no spaces — three 3-digit readings have to fit one
+      // line inside a quarter-width tile (operator: it was wrapping).
+      return Array.isArray(v) ? v.map(x => Math.round(x)).join('/') + ' V' : '';
     });
     const socColor = computed(() => {
       const s = solar.value?.batt_soc;

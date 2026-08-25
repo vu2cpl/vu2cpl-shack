@@ -1096,7 +1096,15 @@ html, body {
   font-variant-numeric: tabular-nums;
 }
 .energy-tile__val .unit { font-size: var(--fs-xs); color: var(--text-dim); margin-left: 2px; font-weight: 400; font-family: var(--font-sans); }
-.energy-tile__sub { font-size: var(--fs-xs); color: var(--text-dim); margin-top: 1px; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.energy-tile__sub {
+  /* Deliberately smaller than --fs-xs: a quarter-width tile is ~95px inside
+     its padding, and "233/234/232 V" at --fs-xs wraps to a second line. */
+  font-size: clamp(9px, 0.7vw, 11px);
+  color: var(--text-dim); margin-top: 1px;
+  font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+  white-space: nowrap; overflow: hidden; text-overflow: clip;
+  letter-spacing: -0.2px;
+}
 .energy-tile--btn { cursor: pointer; transition: opacity 0.15s; }
 .energy-tile--btn:hover { opacity: 0.8; }
 
