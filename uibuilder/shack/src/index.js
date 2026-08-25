@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v23 · 2026-08-24 DXCC band row: 70CM button';
+window.__shackBuild = 'v24 · 2026-08-25 Power card: solar/grid + house-load rows';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -2161,6 +2161,42 @@ const PowerCard = {
             <div class="energy-tile__val">{{ state.energy.today ?? '—' }}<span class="unit">kWh</span></div>
           </div>
         </div>
+
+        <!-- Solar inverter row (Deye via shack/solar/inverter, 1-min cron) -->
+        <div v-if="solar" class="energy-row">
+          <div class="energy-tile">
+            <div class="energy-tile__lbl">Grid</div>
+            <div class="energy-tile__val" :style="{color: solarColor(solar.grid_on ? 'var(--green)' : 'var(--red)')}">
+              {{ solar.grid_on ? 'ON' : 'OFF' }}
+            </div>
+            <div class="energy-tile__sub">{{ gridVText }}</div>
+          </div>
+          <div class="energy-tile">
+            <div class="energy-tile__lbl">Battery</div>
+            <div class="energy-tile__val" :style="{color: solarColor(socColor)}">
+              {{ solar.batt_soc ?? '—' }}<span class="unit">%</span>
+            </div>
+          </div>
+          <div class="energy-tile">
+            <div class="energy-tile__lbl">Batt Power</div>
+            <div class="energy-tile__val">{{ solar.batt_p_w ?? '—' }}<span class="unit">W</span></div>
+          </div>
+          <div class="energy-tile">
+            <div class="energy-tile__lbl">Batt State</div>
+            <div class="energy-tile__val" :style="{color: solarColor(battStateColor)}">
+              {{ battStateText }}
+            </div>
+          </div>
+        </div>
+
+        <!-- House load circuits (Tasmota energy monitors, tele/+/SENSOR) -->
+        <div v-if="state.energy?.house" class="energy-row">
+          <div v-for="h in houseTiles" :key="h.key" class="energy-tile">
+            <div class="energy-tile__lbl">{{ h.label }}</div>
+            <div class="energy-tile__val" :style="{color: h.color}">{{ h.value }}</div>
+            <div class="energy-tile__sub">{{ h.sub }}</div>
+          </div>
+        </div>
       </div>
     </div>
   `,
@@ -2224,6 +2260,58 @@ const PowerCard = {
     }
     const onCount = computed(() => plugs.filter(p => plugIsOn(p.topic)).length);
 
+    // --- Solar inverter row (state.energy.solar from shack/solar/inverter) ---
+    const solar = computed(() => state.energy?.solar || null);
+    // Publisher crons every minute; grey the row out if the reading is stale.
+    const solarStale = computed(() =>
+      !solar.value?.ts || (Date.now() / 1000 - solar.value.ts) > 300);
+    function solarColor(c) { return solarStale.value ? 'var(--text-dim)' : c; }
+    const gridVText = computed(() => {
+      const v = solar.value?.grid_v;
+      return Array.isArray(v) ? v.map(x => Math.round(x)).join(' · ') + ' V' : '';
+    });
+    const socColor = computed(() => {
+      const s = solar.value?.batt_soc;
+      if (s == null) return 'var(--text-dim)';
+      return s >= 50 ? 'var(--green)' : s >= 20 ? 'var(--amber)' : 'var(--red)';
+    });
+    const battStateText = computed(() => {
+      const st = solar.value?.batt_state;
+      return st === 'charging' ? '⚡ CHG' : st === 'discharging' ? '▼ DIS' : st ? 'IDLE' : '—';
+    });
+    const battStateColor = computed(() => {
+      const st = solar.value?.batt_state;
+      return st === 'charging' ? 'var(--green)' : st === 'discharging' ? 'var(--amber)' : 'var(--text-dim)';
+    });
+
+    // --- House load circuits (state.energy.house, keyed by Tasmota topic) ---
+    // FORK: match these keys/labels to your own Tasmota house-load devices.
+    const HOUSE_ORDER = [
+      { key: 'FF_LOAD',      label: 'FF Load' },
+      { key: 'GF_LOAD',      label: 'GF Load' },
+      { key: 'GF_Dryer_Kit', label: 'Dryer Kit' },
+      { key: 'GF_UTILITY',   label: 'Utility' }
+    ];
+    const houseTiles = computed(() => {
+      const house = state.energy?.house || {};
+      const now = Date.now() / 1000;
+      return HOUSE_ORDER.map(({ key, label }) => {
+        const d = house[key];
+        // SENSOR arrives every ~60 s; treat >5 min silence (or LWT Offline) as offline
+        const offline = !d || d.online === false || !d.ts || (now - d.ts) > 300;
+        const relay = d?.relay;
+        const bits = [];
+        if (!offline && d.p != null) bits.push(d.p + ' W');
+        if (!offline && d.today != null) bits.push(d.today + ' kWh');
+        return {
+          key, label,
+          value: offline ? '—' : relay === true ? 'ON' : relay === false ? 'OFF' : '—',
+          sub: offline ? 'offline' : bits.join(' · '),
+          color: offline ? 'var(--text-dim)' : relay ? 'var(--green)' : 'var(--red)'
+        };
+      });
+    });
+
     // Rotator auto-off countdown (driven by flow.rotatorTimerEnd from Node-RED)
     const rotatorRemain = ref(null);
     let rotInt = null;
@@ -2249,7 +2337,8 @@ const PowerCard = {
       });
     });
 
-    return { expanded, state, plugs, plugRows, plugClass, plugIsOn, toggle, onCount, rotatorRemain };
+    return { expanded, state, plugs, plugRows, plugClass, plugIsOn, toggle, onCount, rotatorRemain,
+             solar, solarColor, gridVText, socColor, battStateText, battStateColor, houseTiles };
   }
 };
 

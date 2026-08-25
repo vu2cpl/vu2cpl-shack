@@ -7911,7 +7911,7 @@
         "type": "function",
         "z": "b76a5310767803b4",
         "name": "Energy Aggregator",
-        "func": "var ctx=flow.get('energy_state')||{};\nvar t=msg.topic,p=msg.payload;\nif(t==='energy/voltage')ctx.voltage=p;\nelse if(t==='energy/current')ctx.current=p;\nelse if(t==='energy/power')ctx.power=p;\nelse if(t==='energy/today')ctx.today=p;\nelse if(t==='energy/total')ctx.total=p;\nelse return null;\nflow.set('energy_state',ctx);\nmsg.payload=ctx;\nreturn msg;",
+        "func": "var ctx=flow.get('energy_state')||{};\nvar t=msg.topic,p=msg.payload;\nif(t==='energy/voltage')ctx.voltage=p;\nelse if(t==='energy/current')ctx.current=p;\nelse if(t==='energy/power')ctx.power=p;\nelse if(t==='energy/today')ctx.today=p;\nelse if(t==='energy/total')ctx.total=p;\nelse if(t==='energy/solar')ctx.solar=p;\nelse if(t==='energy/house'){var h=ctx.house||{};var d=h[p.dev]||{};Object.keys(p).forEach(function(k){if(k!=='dev')d[k]=p[k];});h[p.dev]=d;ctx.house=h;}\nelse return null;\nflow.set('energy_state',ctx);\nmsg.payload=ctx;\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "x": 1230,
@@ -7930,8 +7930,8 @@
         "name": "16A Energy Monitor",
         "order": 2,
         "width": 8,
-        "height": 2,
-        "format": "<div class=\"gh-card\">\n<div class=\"gh-sec\">16A Master Switch — Energy Monitor</div>\n<div style=\"display:grid;grid-template-columns:repeat(4,1fr);gap:6px;\">\n  <div class=\"gh-box\"><div class=\"gh-lbl\">Voltage</div><div class=\"gh-val\" style=\"color:var(--gh-blue);\" id=\"en-volt\">— V</div></div>\n  <div class=\"gh-box\"><div class=\"gh-lbl\">Current</div><div class=\"gh-val\" style=\"color:var(--gh-amber);\" id=\"en-amp\">— A</div></div>\n  <div class=\"gh-box\"><div class=\"gh-lbl\">Power</div><div class=\"gh-val\" style=\"color:var(--gh-green);\" id=\"en-watt\">— W</div></div>\n  <div class=\"gh-box\"><div class=\"gh-lbl\">Today</div><div class=\"gh-val\" style=\"color:var(--gh-blue);\" id=\"en-today\">— kWh</div></div>\n</div>\n</div>\n<script>\nscope.$watch('msg',function(msg){\n  if(!msg||!msg.payload)return;\n  var d=msg.payload;\n  function set(id,v){var e=document.getElementById(id);if(e)e.textContent=v;}\n  if(d.voltage!==undefined)set('en-volt',d.voltage+' V');\n  if(d.current!==undefined)set('en-amp',d.current+' A');\n  if(d.power!==undefined)set('en-watt',d.power+' W');\n  if(d.today!==undefined)set('en-today',d.today+' kWh');\n});\n</script>",
+        "height": 6,
+        "format": "<div class=\"gh-card\">\n<div class=\"gh-sec\">Energy — 16A Master · Solar · House Loads</div>\n<div style=\"display:grid;grid-template-columns:repeat(4,1fr);gap:6px;\">\n  <div class=\"gh-box\"><div class=\"gh-lbl\">Voltage</div><div class=\"gh-val\" style=\"color:var(--gh-blue);\" id=\"en-volt\">— V</div></div>\n  <div class=\"gh-box\"><div class=\"gh-lbl\">Current</div><div class=\"gh-val\" style=\"color:var(--gh-amber);\" id=\"en-amp\">— A</div></div>\n  <div class=\"gh-box\"><div class=\"gh-lbl\">Power</div><div class=\"gh-val\" style=\"color:var(--gh-green);\" id=\"en-watt\">— W</div></div>\n  <div class=\"gh-box\"><div class=\"gh-lbl\">Today</div><div class=\"gh-val\" style=\"color:var(--gh-blue);\" id=\"en-today\">— kWh</div></div>\n</div>\n<div style=\"display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px;\">\n  <div class=\"gh-box\"><div class=\"gh-lbl\">Grid</div><div class=\"gh-val\" id=\"en-grid\">—</div><div class=\"gh-lbl\" id=\"en-gridv\"></div></div>\n  <div class=\"gh-box\"><div class=\"gh-lbl\">Battery</div><div class=\"gh-val\" id=\"en-soc\">— %</div></div>\n  <div class=\"gh-box\"><div class=\"gh-lbl\">Batt Power</div><div class=\"gh-val\" style=\"color:var(--gh-blue);\" id=\"en-bp\">— W</div></div>\n  <div class=\"gh-box\"><div class=\"gh-lbl\">Batt State</div><div class=\"gh-val\" id=\"en-bstate\">—</div></div>\n</div>\n<div style=\"display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px;\">\n  <div class=\"gh-box\"><div class=\"gh-lbl\">FF Load</div><div class=\"gh-val\" id=\"en-h-FF_LOAD\">—</div><div class=\"gh-lbl\" id=\"en-hs-FF_LOAD\"></div></div>\n  <div class=\"gh-box\"><div class=\"gh-lbl\">GF Load</div><div class=\"gh-val\" id=\"en-h-GF_LOAD\">—</div><div class=\"gh-lbl\" id=\"en-hs-GF_LOAD\"></div></div>\n  <div class=\"gh-box\"><div class=\"gh-lbl\">Dryer Kit</div><div class=\"gh-val\" id=\"en-h-GF_Dryer_Kit\">—</div><div class=\"gh-lbl\" id=\"en-hs-GF_Dryer_Kit\"></div></div>\n  <div class=\"gh-box\"><div class=\"gh-lbl\">Utility</div><div class=\"gh-val\" id=\"en-h-GF_UTILITY\">—</div><div class=\"gh-lbl\" id=\"en-hs-GF_UTILITY\"></div></div>\n</div>\n</div>\n<script>\nscope.$watch('msg',function(msg){\n  if(!msg||!msg.payload)return;\n  var d=msg.payload;\n  function set(id,v){var e=document.getElementById(id);if(e)e.textContent=v;}\n  if(d.voltage!==undefined)set('en-volt',d.voltage+' V');\n  if(d.current!==undefined)set('en-amp',d.current+' A');\n  if(d.power!==undefined)set('en-watt',d.power+' W');\n  if(d.today!==undefined)set('en-today',d.today+' kWh');\n  if(d.solar){var s=d.solar,stale=!s.ts||((Date.now()/1000)-s.ts)>300;\n    var DIM='#8b949e',GRN='#3fb950',AMB='#e3b341',RED='#f85149',BLU='#58a6ff';\n    var col=function(c){return stale?DIM:c;},el;\n    el=document.getElementById('en-grid');\n    if(el){el.textContent=s.grid_on?'ON':'OFF';el.style.color=col(s.grid_on?GRN:RED);}\n    el=document.getElementById('en-gridv');\n    if(el&&Array.isArray(s.grid_v))el.textContent=s.grid_v.map(function(x){return Math.round(x);}).join(' \\u00b7 ')+' V';\n    el=document.getElementById('en-soc');\n    if(el&&s.batt_soc!=null){el.textContent=s.batt_soc+' %';el.style.color=col(s.batt_soc>=50?GRN:(s.batt_soc>=20?AMB:RED));}\n    el=document.getElementById('en-bp');\n    if(el&&s.batt_p_w!=null){el.textContent=s.batt_p_w+' W';el.style.color=col(BLU);}\n    el=document.getElementById('en-bstate');\n    if(el){el.textContent=s.batt_state==='charging'?'\\u26a1 CHG':(s.batt_state==='discharging'?'\\u25bc DIS':'IDLE');\n      el.style.color=col(s.batt_state==='charging'?GRN:(s.batt_state==='discharging'?AMB:DIM));}\n  }\n  if(d.house)Object.keys(d.house).forEach(function(k){\n    var h=d.house[k],el=document.getElementById('en-h-'+k),sub=document.getElementById('en-hs-'+k);\n    if(!el)return;\n    var off=!h||h.online===false||!h.ts||((Date.now()/1000)-h.ts)>300;\n    if(off){el.textContent='\\u2014';el.style.color='#8b949e';if(sub)sub.textContent='offline';return;}\n    el.textContent=h.relay===true?'ON':(h.relay===false?'OFF':'\\u2014');\n    el.style.color=h.relay?'#3fb950':'#f85149';\n    if(sub){var b=[];if(h.p!=null)b.push(h.p+' W');if(h.today!=null)b.push(h.today+' kWh');sub.textContent=b.join(' \\u00b7 ');}\n  });\n});\n</script>",
         "storeOutMessages": true,
         "fwdInMessages": false,
         "resendOnRefresh": true,
@@ -8040,7 +8040,7 @@
         "type": "function",
         "z": "b76a5310767803b4",
         "name": "Build Power state for Vue",
-        "func": "// flow.power_states is keyed by stat/<dev>/POWERn → 'ON'|'OFF'\n// Plus flow.energy_state for the 16A master, flow.rotatorTimerEnd for rotator auto-off\nvar raw = flow.get('power_states') || {};\n// Vue indexes by cmnd topic. Map stat → cmnd by simple string swap.\nvar byCmnd = {};\nObject.keys(raw).forEach(function(k){\n    var cmnd = k.replace(/^stat\\//, 'cmnd/');\n    byCmnd[cmnd] = raw[k];\n    byCmnd[k] = raw[k];  // also keep the original in case some keys are already cmnd\n});\n\nvar e = flow.get('energy_state') || {};\nvar energy = {\n    voltage: e.voltage,\n    current: e.current,\n    power:   e.power,\n    today:   e.today\n};\n\nreturn {\n    topic: 'power',\n    payload: {\n        power: byCmnd,\n        energy: energy.voltage != null || energy.power != null ? energy : null,\n        rotatorTimerEnd: flow.get('rotatorTimerEnd') || null\n    }\n};\n",
+        "func": "// flow.power_states is keyed by stat/<dev>/POWERn → 'ON'|'OFF'\n// Plus flow.energy_state for the 16A master, flow.rotatorTimerEnd for rotator auto-off\nvar raw = flow.get('power_states') || {};\n// Vue indexes by cmnd topic. Map stat → cmnd by simple string swap.\nvar byCmnd = {};\nObject.keys(raw).forEach(function(k){\n    var cmnd = k.replace(/^stat\\//, 'cmnd/');\n    byCmnd[cmnd] = raw[k];\n    byCmnd[k] = raw[k];  // also keep the original in case some keys are already cmnd\n});\n\nvar e = flow.get('energy_state') || {};\nvar energy = {\n    voltage: e.voltage,\n    current: e.current,\n    power:   e.power,\n    today:   e.today,\n    solar:   e.solar || null,\n    house:   e.house || null\n};\n\nreturn {\n    topic: 'power',\n    payload: {\n        power: byCmnd,\n        energy: (energy.voltage != null || energy.power != null || energy.solar || energy.house) ? energy : null,\n        rotatorTimerEnd: flow.get('rotatorTimerEnd') || null\n    }\n};\n",
         "outputs": 1,
         "x": 360,
         "y": 900,
@@ -11054,6 +11054,151 @@
         "wires": [
             [
                 "aetherdisp_out"
+            ]
+        ]
+    },
+    {
+        "id": "solar_inv_mqtt_in",
+        "type": "mqtt in",
+        "z": "b76a5310767803b4",
+        "name": "shack/solar/inverter",
+        "topic": "shack/solar/inverter",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "f4785be9863eab08",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 710,
+        "y": 820,
+        "wires": [
+            [
+                "solar_inv_parse_fn"
+            ]
+        ]
+    },
+    {
+        "id": "solar_inv_parse_fn",
+        "type": "function",
+        "z": "b76a5310767803b4",
+        "name": "Parse Solar Inverter",
+        "func": "// shack/solar/inverter — retained JSON from solar_inverter_mqtt.py (1-min cron on this Pi).\n// Reads the Deye SG0*LP3 hybrid via its Solarman logger (192.168.30.193).\nvar p = msg.payload;\nif (typeof p === 'string') { try { p = JSON.parse(p); } catch (e) { return null; } }\nif (!p || typeof p !== 'object' || p.batt_soc === undefined) return null;\nreturn { topic: 'energy/solar', payload: p };\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 960,
+        "y": 820,
+        "wires": [
+            [
+                "e72813d4b7791246"
+            ]
+        ]
+    },
+    {
+        "id": "house_state_mqtt_in",
+        "type": "mqtt in",
+        "z": "b76a5310767803b4",
+        "name": "tele/+/STATE",
+        "topic": "tele/+/STATE",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "f4785be9863eab08",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 710,
+        "y": 880,
+        "wires": [
+            [
+                "house_parse_fn"
+            ]
+        ]
+    },
+    {
+        "id": "house_sensor_mqtt_in",
+        "type": "mqtt in",
+        "z": "b76a5310767803b4",
+        "name": "tele/+/SENSOR",
+        "topic": "tele/+/SENSOR",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "f4785be9863eab08",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 710,
+        "y": 920,
+        "wires": [
+            [
+                "house_parse_fn"
+            ]
+        ]
+    },
+    {
+        "id": "house_lwt_mqtt_in",
+        "type": "mqtt in",
+        "z": "b76a5310767803b4",
+        "name": "tele/+/LWT",
+        "topic": "tele/+/LWT",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "f4785be9863eab08",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 710,
+        "y": 960,
+        "wires": [
+            [
+                "house_parse_fn"
+            ]
+        ]
+    },
+    {
+        "id": "house_stat_mqtt_in",
+        "type": "mqtt in",
+        "z": "b76a5310767803b4",
+        "name": "stat/+/POWER",
+        "topic": "stat/+/POWER",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "f4785be9863eab08",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 710,
+        "y": 1000,
+        "wires": [
+            [
+                "house_parse_fn"
+            ]
+        ]
+    },
+    {
+        "id": "house_parse_fn",
+        "type": "function",
+        "z": "b76a5310767803b4",
+        "name": "Parse House Loads",
+        "func": "// House-load Tasmota circuits: relay = HA load-shedding switch, ENERGY = per-circuit meter.\n// Fed by wildcard subs tele/+/STATE, tele/+/SENSOR, tele/+/LWT, stat/+/POWER —\n// shack devices (powerstrips, 4relayboard, 16Amasterswitch) are filtered out here.\n// stat/+/POWER only matches single-relay devices, which is exactly the house set.\nvar HOUSE = { FF_LOAD: 1, GF_LOAD: 1, GF_Dryer_Kit: 1, GF_UTILITY: 1 };\nvar parts = (msg.topic || '').split('/');\nif (parts.length !== 3 || !HOUSE[parts[1]]) return null;\nvar dev = parts[1], leaf = parts[2];\nvar p = msg.payload;\nif (typeof p === 'string' && (leaf === 'STATE' || leaf === 'SENSOR')) {\n    try { p = JSON.parse(p); } catch (e) { return null; }\n}\nvar upd = { dev: dev, ts: Math.floor(Date.now() / 1000) };\nif (leaf === 'LWT') {\n    upd.online = /online/i.test(String(msg.payload));\n} else if (leaf === 'POWER') {\n    upd.relay = String(msg.payload).toUpperCase() === 'ON';\n    upd.online = true;\n} else if (leaf === 'STATE') {\n    if (p.POWER !== undefined) upd.relay = String(p.POWER).toUpperCase() === 'ON';\n    upd.online = true;\n} else if (leaf === 'SENSOR') {\n    var e = p.ENERGY || {};\n    if (e.Power !== undefined) upd.p = e.Power;\n    if (e.Today !== undefined) upd.today = e.Today;\n    if (e.Voltage !== undefined) upd.v = e.Voltage;\n    upd.online = true;\n} else {\n    return null;\n}\nreturn { topic: 'energy/house', payload: upd };\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 960,
+        "y": 940,
+        "wires": [
+            [
+                "e72813d4b7791246"
             ]
         ]
     }
