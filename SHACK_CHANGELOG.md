@@ -10,6 +10,27 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-08-25
 
+### HA Radio dashboard — rotator card rework (compass + controls)
+
+Operator, screenshot in hand: "the rotator ui has to be changed, its
+useless now in its current state." Fair — an HA gauge maps 0-360°
+onto a linear arc (not a compass), and the Target tile sat at
+"Unknown" whenever idle. Replaced in place (matched by entity, not
+section, since the operator had regrouped cards): a compass markdown
+line (`🧭 353° NNW · → 270°` while moving, 16-wind cardinal), a
+target slider (`input_number.shack_rotator_target` helper created
+over WS, tile with the `numeric-input` slider feature), and a
+**GO · STOP · N · E · S · W** button row. GO uses a passed `heading`
+(presets) or the slider value, via script `shack_rotator_go` →
+`rest_command.shack_rotator_go`. Two facts worth keeping: the
+`/rotator/go` body key is **`hdg`** (not `heading`) and the
+endpoint's handler powers the rotator on before moving; and since
+the `rest_command` domain was already loaded, `rest_command.reload`
+picked the new commands up without an HA restart. STOP verified 200
+end-to-end (safe no-op while idle); GO deliberately left for the
+operator to fire first — it turns a physical antenna. Backup
+`dashboard-193-radio-shack-v12.json`.
+
 ### HA Radio dashboard — phase 2: all six gateway cards (project complete)
 
 Operator: "go ahead with the bridge for remaining cards" — the
