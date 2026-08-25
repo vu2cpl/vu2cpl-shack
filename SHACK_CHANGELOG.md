@@ -10,6 +10,33 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-08-25
 
+### HA Radio dashboard — lightning-card polish + compass degree fix
+
+Operator screenshots drove three fixes. **(1)** The compass hub read
+`353°°` — a `state-label` renders the sensor state *with its unit*,
+so the explicit `°` suffix doubled it; suffixes removed (v16).
+**(2)** The Batt/RSSI/Strikes/Disturbers glance sat at *Unavailable*:
+the AS3935 bridge publishes heartbeats every 30 s (firmware
+`HEARTBEAT_MS`, retained) but the outdoor unit runs
+`modem_sleep: max` and its radio naps can hold messages up for
+minutes (watched its 4.5-day-old MQTT session flap offline→ready
+live at 00:09:42); `expire_after` on the four hb sensors raised
+180 → 600 s — HA now flags only real outages, and Node-RED's 3-min
+Telegram alert stays the authoritative liveness alarm. **(3)** The
+Distance tile showed `0 km` for a *disturber* (reads like "lightning
+overhead"): template now yields a distance only when the last event
+is actual lightning, `out of range` for the 63 marker, `—`
+otherwise. **MQTT-discovery gotcha worth remembering:** updating a
+retained discovery config does NOT re-evaluate the entity against
+the retained state message (same topic ⇒ no re-subscribe) — the new
+template only runs on the *next* publish; force it by echoing the
+retained payload back via `mqtt.publish`. Used twice tonight.
+Follow-on operator asks, same pass: the Sensor tile + Batt/RSSI/
+Strikes/Disturbers glance merged into one **state-coloured** markdown
+line (sensor dot green/red; battery 🟢 ≥3.9 V / 🟡 ≥3.5 / 🔴 below;
+RSSI 🟢 ≥-67 dBm / 🟡 ≥-75 / 🔴 below; strikes red only when >0) and
+the **16A Master button got a confirmation dialog** (v17).
+
 ### HA Radio dashboard — rotator compass (third pass, the real one)
 
 Operator on the slider ("how can you use a volume slider to turn a

@@ -56,21 +56,25 @@ sensor('as3935_state', 'State', DEV_AS3935, T + '/status',
        attrs_topic=T + '/status')
 sensor('as3935_rssi', 'WiFi RSSI', DEV_AS3935, T + '/hb',
        tpl='{{ value_json.rssi }}', unit='dBm', dev_class='signal_strength',
-       state_class='measurement', expire=180)
+       state_class='measurement', expire=600)
 sensor('as3935_battery', 'Battery', DEV_AS3935, T + '/hb',
        tpl='{{ (value_json.vbat_mv / 1000) | round(2) }}', unit='V',
-       dev_class='voltage', state_class='measurement', expire=180)
+       dev_class='voltage', state_class='measurement', expire=600)
 sensor('as3935_disturbers', 'Disturber count', DEV_AS3935, T + '/hb',
        tpl='{{ value_json.counters.disturber }}', state_class='total_increasing',
-       icon='mdi:waveform', expire=180)
+       icon='mdi:waveform', expire=600)
 sensor('as3935_strikes', 'Lightning count', DEV_AS3935, T + '/hb',
        tpl='{{ value_json.counters.lightning }}', state_class='total_increasing',
-       icon='mdi:lightning-bolt', expire=180)
+       icon='mdi:lightning-bolt', expire=600)
 sensor('as3935_last_event', 'Last event', DEV_AS3935, T + '/last_event',
        tpl='{{ value_json.event }}', icon='mdi:history',
        attrs_topic=T + '/last_event')
 sensor('as3935_last_event_distance', 'Last event distance', DEV_AS3935, T + '/last_event',
-       tpl='{{ value_json.distance }}', unit='km', icon='mdi:map-marker-distance')
+       tpl=("{% if value_json.event == 'lightning' %}"
+            "{% if value_json.distance == 63 %}out of range"
+            "{% else %}{{ value_json.distance }} km{% endif %}"
+            "{% else %}—{% endif %}"),
+       icon='mdi:map-marker-distance')
 sensor('as3935_last_event_time', 'Last event time', DEV_AS3935, T + '/last_event',
        tpl='{{ (value_json.ts_epoch_ms / 1000) | timestamp_utc }}',
        dev_class='timestamp')
