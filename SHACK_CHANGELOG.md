@@ -10,6 +10,33 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-08-25
 
+### Network monitor: RBN SDR tile back on the Red Pitaya (`.241`)
+
+Operator repointed the `RBN SDR` **ping** node `192.168.1.235` →
+`192.168.1.241` in the editor and deployed, then reported the Vue card
+still showing `.235`. Not a cache miss or a stale build — both
+dashboards render `pings.RBN_SDR.addr`, and that string is owned by the
+**`stamp RBN_SDR` function**, not the ping node (Vue:
+`uibuilder/shack/src/index.js`, `addr: p?.addr || ''`; D1's `Network
+Monitor Panel` does the same). So the flow was pinging `.241` while
+both UIs displayed `.235`. Fixed by editing the stamp's `addr` to
+match — committed Pi-side as `2d58ba7` ("ping + stamp addr"). The
+08-21 `.241` → `.235` hop needed the same pair of edits; the tab's
+"Please Read!!" comment node and the CLAUDE.md network-monitor section
+both already said so, which is why this was one grep rather than a
+debugging session.
+
+**What `.241` is:** the Red Pitaya skimmer `rp-f02054` — the SDR
+feeding the RBN chain (operator-confirmed 2026-08-25). `.235`, the
+Web-888 receiver, keeps its fleet telemetry (`rpi/web-888/*` via
+`monitor_redpitaya.sh`) but no longer has a network-monitor tile.
+
+**Standing risk worth closing:** `.241` is a DHCP lease, not a
+reservation. If it drifts, the tile reds out *and* the displayed
+address goes stale. A static reservation — or pointing the ping node at
+`rp-f02054.local` rather than a literal IP — removes the failure mode
+for good.
+
 ### Power card: solar inverter + house-load rows (both dashboards)
 
 Operator request: grid on/off + battery % under the 16A master's

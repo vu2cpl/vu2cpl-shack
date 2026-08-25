@@ -212,8 +212,8 @@ persists across reboots. Verify with empty-payload read:
 | `openwebrxplus` | `vu2cpl` | Agent running |
 | (2 more Pis) | — | Pending |
 | Home Assistant Pi | — | Pending — HA REST API Bearer token |
-| Red Pitaya `rp-f02054` (`rp-f02054.local` — `192.168.1.241` via DHCP as of 2026-08-22) | `root` | Telemetry live via `monitor_redpitaya.sh` (Alpine/BusyBox, Zynq XADC temp; no control agent) — see DEPLOY_PI.md special cases |
-| Web-888 receiver `web-888` (`192.168.1.235` — the RBN_SDR network-monitor tile's target) | `root` | Telemetry live via the same `monitor_redpitaya.sh` (also Zynq/Alpine — script runs unchanged; no control agent). Added 2026-08-22 |
+| Red Pitaya `rp-f02054` (`rp-f02054.local` — `192.168.1.241` via DHCP as of 2026-08-22; **the `RBN_SDR` network-monitor tile's target** again since 2026-08-25) | `root` | Telemetry live via `monitor_redpitaya.sh` (Alpine/BusyBox, Zynq XADC temp; no control agent) — see DEPLOY_PI.md special cases |
+| Web-888 receiver `web-888` (`192.168.1.235`) | `root` | Telemetry live via the same `monitor_redpitaya.sh` (also Zynq/Alpine — script runs unchanged; no control agent). Added 2026-08-22. Held the `RBN_SDR` ping tile 08-21 → 08-25; still fleet-monitored via `rpi/web-888/*`, but no longer has a network-monitor tile |
 
 Agent endpoints: `POST /reboot`, `POST /shutdown`
 
@@ -814,16 +814,25 @@ a new device — see the "Please Read!!" comment node on this tab.
 | `Flex`      | FlexRadio  | 192.168.1.148  | 5 |
 | `OpenwebRX` | OpenwebRX+ | 192.168.1.158  | 5 |
 | `RBN_PC`    | RBN PC/PI  | 192.168.1.164  | 5 |
-| `RBN_SDR`   | RBN SDR    | 192.168.1.235  | 5 |
+| `RBN_SDR`   | RBN SDR    | 192.168.1.241  | 5 |
 | `UBERSDR`   | Ubersdr    | 192.168.1.109  | 5 |
 
 `RBN_PC` was "Mac RBN", pinging a Mac (`192.168.1.245`) that's no
 longer active — repointed 2026-07-31 to the Pi running `meridian`
-(`192.168.1.164`). `RBN_SDR` repointed `192.168.1.241` → `.235` on
-2026-08-21 (ping node host + stamp function display addr — remember
-the stamp owns the displayed address, so both must change together).
-`.235` is the **Web-888 receiver** (operator-confirmed 2026-08-22);
-`.241` is the Red Pitaya `rp-f02054` — both are on the RPi fleet.
+(`192.168.1.164`). `RBN_SDR` has moved twice: `192.168.1.241` → `.235`
+on 2026-08-21, then **back to `.241` on 2026-08-25** (operator-
+confirmed) — the tile watches the Red Pitaya skimmer `rp-f02054`, the
+SDR feeding the RBN chain. `.235` is the **Web-888 receiver**
+(operator-confirmed 2026-08-22); it stays on the RPi fleet
+(`rpi/web-888/*`) but no longer has a ping tile.
+**Both hops needed two edits — the `ping` node's host AND the matching
+`stamp RBN_SDR` function's `addr`.** The stamp owns the *displayed*
+address, so changing only the ping node leaves both dashboards showing
+the old IP while silently pinging the new one; that is exactly what
+happened on 08-25 until the stamp caught up. **Caveat: `.241` is a DHCP
+lease** — if it drifts, the tile reds out and the shown addr goes
+stale. A static reservation (or pointing the ping node at
+`rp-f02054.local`) would be sturdier.
 `UBERSDR` is a new tile added the same day, for
 the ubersdr box also running `meridian` (`192.168.1.109`).
 
