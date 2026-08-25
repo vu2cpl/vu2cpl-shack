@@ -58,13 +58,32 @@ than a stale number; and `switch.tasmota`/`_2`/`_3` are the house
 loads GF/FF/Utility (Tasmota autodiscovery's default naming), not
 shack strips.
 
-**Deferred (HANDOVER #41):** lightning ANT/BYPASS buttons need
-`rest_command` YAML — SSH to HassPi is closed and reading the Samba
-add-on's password via the supervisor API was blocked (correctly), so
-the operator mounts `smb://192.168.1.36/config` once and the YAML +
-tile tap-actions land in a follow-up. Flex/SPE/LP-700/Rotator and
-DXCC/RBN cards need a Node-RED→MQTT state bridge (rule #1 proposal)
-before HA can see them. Also found: `/lightning/bypass` existed in
+**Lightning controls — landed the same evening.** The operator
+mounted HassPi's Samba `config` share (credentials read from the
+Samba add-on's Configuration page — direct URL
+`/hassio/addon/core_samba/config`; SSH is closed and reading the
+password via the supervisor API from here was blocked, correctly).
+A `rest_command:` block went into `configuration.yaml` — 5 services
+(`rest_command.shack_ant_on / ant_off / radio_on / bypass_on /
+bypass_off`) calling the Node-RED lightning endpoints with basic
+auth: `username: vu2cpl`, `password: !secret nodered_http_password`
+(the secret line typed into `secrets.yaml` by the operator, never
+seen or handled here). **Gotcha:** `homeassistant.reload_all` does
+NOT set up a YAML domain that was never loaded — `check_config`
+passed but the services only appeared after a core restart. Four
+confirm-gated buttons (ANT ON / ANT OFF / BYP ON / BYP OFF, nested
+`grid columns: 4`) were appended to the Lightning section.
+End-to-end verified: `rest_command.shack_ant_on?return_response` →
+`{"content": "OK", "status": 200}` through httpNodeAuth, plus the
+✅ ANTENNA ON (manual) Telegram. Note HA has no bypass-*state*
+entity yet (bypass lives in Node-RED flow context) — the BYP
+buttons fire blind until the phase-2 bridge publishes it. Backups:
+`configuration.yaml.pre-restcommand` and
+`dashboard-193-radio-shack-v2.json` beside the others.
+
+**Deferred (HANDOVER #41):** Flex/SPE/LP-700/Rotator and DXCC/RBN
+cards need a Node-RED→MQTT state bridge (rule #1 proposal) before
+HA can see them. Also found: `/lightning/bypass` existed in
 flows.json but was missing from CLAUDE.md's endpoint table (fixed),
 and web-888 is fully offline — its fleet tiles honestly read
 unavailable.
