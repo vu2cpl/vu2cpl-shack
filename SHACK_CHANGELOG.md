@@ -81,9 +81,38 @@ buttons fire blind until the phase-2 bridge publishes it. Backups:
 `configuration.yaml.pre-restcommand` and
 `dashboard-193-radio-shack-v2.json` beside the others.
 
+**Indications round (operator: "there are no indications…").** The
+four blind buttons became two **state-lit toggles**. ANTENNA: an
+entity-bound button on the antenna relay (icon lights + state text,
+repainted within ~1 s of any change from either side) tapping HA
+script `shack_ant_toggle`, which branches on the relay state and
+calls the matching NR endpoint — Vue-toggle semantics exactly.
+BYPASS needed state that existed only in NR flow context, so the
+**first NR→MQTT bridge brick** landed with operator approval (rule
+#1): 3 nodes on the Lightning tab — `light_state_tick_01` (inject,
+10 s) → `light_state_fn_01` (read-only context tap: bypass_active/
+expires_at, antenna_off, radio_off, manual_off [file scope],
+om_state, threshold_km, reconnect_min) → `light_state_mqtt_01`
+(retained `shack/lightning/state`). flows_guard OK — its constants
+are minimums, so +3 nodes needs no constant edit. Deployed
+Mac-edit → push → Pi pull → restart; six new discovery entities
+under a "Lightning Protection" device (`ha_discovery_publish.py`
+now 67 configs, `expire_after: 60` so a dead bridge reads
+*unavailable*); dashboard v4 = ANTENNA + BYPASS toggle pair
+(BYPASS branches on `binary_sensor.lightning_protection_bypass`
+via script `shack_byp_toggle`) + a protection glance (Manual hold ·
+Storm · Threshold · Reconnect · Byp left). **Verified live,
+including by accident:** the test bypass-ON propagated MQTT→HA in
+~10 s, then 14 s later the state flipped off — briefly chased as a
+bug until `nr_lightning_events.jsonl` showed `bypass_off
+source:operator`: the operator tapping their new toggle
+mid-verification, branch correct. Lesson recorded: when a state
+"mysteriously" reverts on a live system, check the event log for a
+concurrent human before suspecting the code.
+
 **Deferred (HANDOVER #41):** Flex/SPE/LP-700/Rotator and DXCC/RBN
-cards need a Node-RED→MQTT state bridge (rule #1 proposal) before
-HA can see them. Also found: `/lightning/bypass` existed in
+cards need Node-RED→MQTT state bridges (rule #1 proposal per tab;
+copy the lightning pattern) before HA can see them. Also found: `/lightning/bypass` existed in
 flows.json but was missing from CLAUDE.md's endpoint table (fixed),
 and web-888 is fully offline — its fleet tiles honestly read
 unavailable.

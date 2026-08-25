@@ -123,6 +123,41 @@ for host in FLEET:
     sensor(f'rpi_{slug}_ip', 'IP', dev, base + '/ip', icon='mdi:ip-network',
            expire=180)
 
+# ---------- Lightning protection state (Node-RED bridge) ----------
+# Fed by the "Lightning state → MQTT" nodes on the Lightning tab publishing
+# retained JSON on shack/lightning/state every 10 s (added 2026-08-25).
+DEV_LPROT = {'identifiers': ['shack_lightning_protection'], 'name': 'Lightning Protection',
+             'manufacturer': 'VU2CPL shack', 'model': 'Node-RED lightning logic'}
+LS = 'shack/lightning/state'
+
+def binary(uid, name, device, state_topic, *, tpl, icon=None, expire=None):
+    c = {'name': name, 'unique_id': uid, 'object_id': uid,
+         'state_topic': state_topic, 'value_template': tpl,
+         'payload_on': 'ON', 'payload_off': 'OFF', 'device': device}
+    if icon: c['icon'] = icon
+    if expire: c['expire_after'] = expire
+    configs.append((f'homeassistant/binary_sensor/{uid}/config', c))
+
+binary('lprot_bypass', 'Bypass', DEV_LPROT, LS,
+       tpl="{{ 'ON' if value_json.bypass_active else 'OFF' }}",
+       icon='mdi:shield-off-outline', expire=60)
+binary('lprot_manual_hold', 'Manual hold', DEV_LPROT, LS,
+       tpl="{{ 'ON' if value_json.manual_off else 'OFF' }}",
+       icon='mdi:hand-back-left', expire=60)
+sensor('lprot_om_state', 'Storm state (OM)', DEV_LPROT, LS,
+       tpl='{{ value_json.om_state }}', icon='mdi:weather-lightning-rainy',
+       expire=60)
+sensor('lprot_threshold', 'Threshold', DEV_LPROT, LS,
+       tpl='{{ value_json.threshold_km }}', unit='km',
+       icon='mdi:map-marker-radius', expire=60)
+sensor('lprot_reconnect', 'Reconnect timer', DEV_LPROT, LS,
+       tpl='{{ value_json.reconnect_min }}', unit='min',
+       icon='mdi:timer-refresh-outline', expire=60)
+sensor('lprot_bypass_remaining', 'Bypass remaining', DEV_LPROT, LS,
+       tpl=('{{ ((value_json.bypass_expires_at - value_json.ts) / 60000) | round(0) '
+            'if value_json.bypass_expires_at else 0 }}'),
+       unit='min', icon='mdi:timer-sand', expire=60)
+
 # ---------- UberSDR ----------
 DEV_UBER = {'identifiers': ['shack_ubersdr'], 'name': 'UberSDR',
             'manufacturer': 'VU2CPL shack', 'model': 'WebSDR receiver'}
