@@ -10,6 +10,25 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-08-25
 
+### HA Radio dashboard — rotator compass (third pass, the real one)
+
+Operator on the slider ("how can you use a volume slider to turn a
+compass rotator?") — correct, and the stepper variant was no better.
+Stock HA has no compass input, so one was built from primitives: a
+**picture-elements card** over `/local/rotator/rose.svg` (generated
+into HassPi's `config/www/rotator/` via the mounted Samba share —
+GitHub-dark rose, degree ticks, 8-wind labels) with **16 pre-rotated
+needle SVGs shown via conditional elements** keyed on a new
+`sensor.rotator_sector` (16-wind discovery sensor off
+`shack/rotator/state`; 91 configs now) — a live rotating needle with
+zero custom cards. The rim carries **16 tap points (every 22.5°)**
+firing `script.shack_rotator_go` with that bearing; the hub shows the
+exact heading and an amber `→ target°` while turning. Below: a
+compact "Exact" stepper + GO/STOP for precise aims. Backup
+`dashboard-193-radio-shack-v15.json` (v13/v14 were the interim text
+layouts; one was also lost to the operator's open dashboard editor —
+see the edit-mode gotcha in HANDOVER).
+
 ### HA Radio dashboard — rotator card rework (compass + controls)
 
 Operator, screenshot in hand: "the rotator ui has to be changed, its

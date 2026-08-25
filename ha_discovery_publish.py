@@ -236,6 +236,11 @@ sensor('rotator_heading', 'Heading', DEV_ROT, RT, tpl='{{ value_json.heading }}'
 sensor('rotator_target', 'Target', DEV_ROT, RT,
        tpl='{% if value_json.target is not none %}{{ value_json.target }}{% endif %}',
        unit='°', icon='mdi:compass-outline', expire=30)
+sensor('rotator_sector', 'Sector', DEV_ROT, RT,
+       tpl=("{% set h = value_json.heading %}{% if h is not none %}"
+            "{{ ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW',"
+            "'W','WNW','NW','NNW'][((h / 22.5) + 0.5) | int % 16] }}{% endif %}"),
+       icon='mdi:compass-rose', expire=30)
 
 DEV_DXCC = {'identifiers': ['shack_dxcc'], 'name': 'DXCC Tracker',
             'manufacturer': 'VU2CPL shack', 'model': 'Club Log / cluster alerts'}
