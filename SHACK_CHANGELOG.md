@@ -10,6 +10,66 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-08-25
 
+### Grid voltage logging — building an evidence file for the utility
+
+Operator asked for two weeks of L1/L2/L3 to hand the supply company,
+which he is disputing over a **nightly outage around midnight**: a
+servo stabiliser holds the house at 220 V across an 180-270 V input
+range, and when mains climbs past 270 V at night it can't hold and
+trips — which presents as an outage.
+
+**There was no such data.** Worth recording exactly what was checked,
+so nobody re-runs the search: the inverter feed publishes a *retained*
+MQTT message (last value only, by definition); no InfluxDB, Grafana,
+Telegraf, Prometheus, or any DB runs on the Pi; `mosquitto.db` holds
+only retained payloads; Node-RED writes exactly one data file
+(`nr_lightning_events.jsonl`) and it isn't energy; and
+`solar_inverter_mqtt.py` itself first ran that morning at 06:37. The
+honest answer was "it was never recorded", not a reconstruction.
+
+**Forward logging** (`solar_inverter_mqtt.py`): one CSV row per run to
+`~/grid_voltage.csv` — `ts_iso, ts_epoch, status, l1_v, l2_v, l3_v,
+grid_on, batt_soc, batt_p_w`. Written inside the existing read cycle,
+so there is no second poller and no extra TCP client on a Solarman
+logger that tolerates only a couple (HA holds one). Failed reads emit
+`status=read_fail` instead of leaving a bare timestamp gap, because
+"collision with HA's poll" and "the site lost power" must stay
+distinguishable in something being used as evidence. The whole logging
+path is wrapped so it can never break publishing. Live from 13:11 IST.
+
+**Reporting** (`grid_voltage_report.py`, new, pure stdlib — no
+matplotlib, no pandas): daily per-phase min/mean/max with time-of-peak,
+a night-window section, over-voltage episodes, and supply
+interruptions, plus a hand-written SVG chart with nominal / +10% / trip
+reference lines and the night hours shaded. Details that took a second
+pass: voltage statistics exclude samples taken while the grid was
+absent (a 0 V reading is not a supply voltage, and letting it into
+`min` understates the case); episodes crossing midnight print the end
+date; sub-3-minute excursions are summarised rather than listed, or
+threshold noise fills the table with one-minute rows.
+
+**Two caveats the report states on its own front page,** because both
+change what the numbers prove:
+
+1. **The inverter's grid input is downstream of the servo stabiliser**
+   (operator-confirmed). The log is true incoming mains only while the
+   stabiliser is in **bypass** — which it is now, and which is why the
+   13:05 reading was 254.6 / 253.8 / 262.1 V. With the stabiliser
+   engaged the same registers would read its regulated ~220 V, so
+   historical data from an engaged period evidences *interruptions*,
+   not over-voltage.
+2. **PV export lifts the voltage at the inverter's own terminals**, so
+   daytime figures are arguable and the utility will say so. The
+   night window has neither PV nor export — and is the disputed period
+   anyway.
+
+First live reading, 13:05 IST: **L1 254.6 · L2 253.8 · L3 262.1 V** —
+all three above +10% of 230 V nominal, in the middle of the afternoon,
+with L3 about 8 V under the stabiliser's trip point.
+
+The retrospective fortnight is coming from the Solarman cloud export
+(HANDOVER follow-up #39).
+
 ### Network monitor: RBN SDR tile back on the Red Pitaya (`.241`)
 
 Operator repointed the `RBN SDR` **ping** node `192.168.1.235` →

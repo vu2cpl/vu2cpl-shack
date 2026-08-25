@@ -28,5 +28,14 @@ nr_cty_maps.json
 !/uibuilder/shack/src/
 !/uibuilder/shack/src/**
 
+# Runtime grid-voltage log (append-only, one row per minute from
+# solar_inverter_mqtt.py). Lives in ~/ on the Pi, not here — this entry
+# just stops a stray copy being committed. It is evidence data, not source.
+grid_voltage.csv
+
+# Python bytecode from running the repo's scripts / py_compile
+__pycache__/
+*.pyc
+
 # Node-RED credentials — encrypted, but kept out of this PUBLIC repo entirely
 flows_cred.json

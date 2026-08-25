@@ -82,7 +82,7 @@ Node-RED shack automation running on Raspberry Pi 4B. Controls and monitors:
 | Node-RED editor | `http://192.168.1.169:1880` |
 | MQTT broker | Mosquitto @ `192.168.1.169:1883` (LAN only). **Auth required as of 2026-08-21** — anonymous disabled; accounts `iot`/`svc`/`nodered`/`ha` with per-account ACL. See [`MQTT_AUTH.md`](MQTT_AUTH.md). Node-RED uses `nodered`; the Pi publishers (`monitor.sh`, chrony) use `svc`. |
 | UberSDR metrics | External UberSDR receiver publishing to the shack broker: `ubersdr/metrics/sessions` (session list) + `ubersdr/metrics/voice_activity/<band>` (12 bands). **Read-only** — the `UberSDR` flow tab aggregates + displays, publishes nothing back. |
-| Solar inverter | Deye SG0*LP3 LV 3-phase hybrid @ `192.168.30.193:8899` (IoT VLAN; Solarman V5 logger, serial `2924751994`, MAC `40:2A:8F:84:C1:E4`). Read **directly** (not via Home Assistant — operator's explicit choice) by `solar_inverter_mqtt.py` on the Pi, 1-min cron → retained JSON on `shack/solar/inverter`. Logger tolerates few concurrent TCP clients and HA polls it too, so the script is quick connect→read→disconnect with a silent-fail retry. Registers: 586-591 battery (temp/V/SOC/power/current; negative power = charging), 598-600 grid **input** phase voltages L1/L2/L3 (×0.1 V; load-side outputs are 644-646, not read). `grid_on` = any phase > 80 V. |
+| Solar inverter | Deye SG0*LP3 LV 3-phase hybrid @ `192.168.30.193:8899` (IoT VLAN; Solarman V5 logger, serial `2924751994`, MAC `40:2A:8F:84:C1:E4`). Read **directly** (not via Home Assistant — operator's explicit choice) by `solar_inverter_mqtt.py` on the Pi, 1-min cron → retained JSON on `shack/solar/inverter`. **Also appends every reading to `~/grid_voltage.csv`** (added 2026-08-25) — the shack's only time series of grid voltage, since MQTT retain keeps last-value only. Analyse with [`grid_voltage_report.py`](grid_voltage_report.py). **Measurement caveat:** the inverter's grid input is *downstream* of the servo stabiliser, so the log shows true incoming mains only while the stabiliser is in bypass. Logger tolerates few concurrent TCP clients and HA polls it too, so the script is quick connect→read→disconnect with a silent-fail retry. Registers: 586-591 battery (temp/V/SOC/power/current; negative power = charging), 598-600 grid **input** phase voltages L1/L2/L3 (×0.1 V; load-side outputs are 644-646, not read). `grid_on` = any phase > 80 V. |
 | MQTT broker node ID | `f4785be9863eab08` |
 | FlexRadio | `192.168.1.148:4992` (TCP API + UDP discovery) |
 | SPE WS gateway | `spe-remote.service` on Pi @ `ws://192.168.1.169:8888/ws` (single FTDI-serial owner, multi-client fan-out). Repo [`vu2cpl/spe-remote`](https://github.com/vu2cpl/spe-remote). Also handles SPE power-on via DTR/RTS on the open port. No `/healthz` — liveness = `curl http://…:8888/` |
@@ -1011,6 +1011,7 @@ historical context lives in `SHACK_CHANGELOG.md`, indexed by date.
 
 | # | Item | Status |
 |---|------|--------|
+| 39 | **Retrospective grid voltage (pre-2026-08-25) — Solarman cloud export.** Forward logging is live (`~/grid_voltage.csv`); the earlier fortnight the utility asked about was never recorded anywhere in the shack. Operator exporting from Solarman; `grid_voltage_report.py` to gain a parser for it. See HANDOVER #39. | Pending (operator) |
 | 36 | **FT8 spots on the RBN Skimmer tab** — waiting on `~/projects/meridian` completion. The VU2CPL feed reached via `vu2cpl.ddns.net:7550` was UberSDR's Aggregator, CW/RTTY-only by design; meridian's dxcluster server speaks the same wire contract and is expected to serve FT8 too. Both `tcp in` nodes follow the DDNS name, so switching servers = repointing the **router's `:7550` port-forward** (operator started that flip to meridian on 2026-07-31 evening) — no Node-RED change needed, login handlers already cover both prompt styles. Remaining: verify spots (incl. FT8) once meridian's decoder pipeline is complete. See HANDOVER #36. | Pending (external) |
 | 1 | ~~**Move AS3935 antenna outdoors**~~ | **Done 2026-07-31** — enclosure sealed, 18650+TP4056+solar power chain live, shade-mounted, TUN_CAP retuned post-install. Back to its rated ~40 km detection range instead of the indoor few-km limit. See HANDOVER #1. |
 | 6 | ~~**Mac SwiftUI app (`~/projects/vu2cpl-shack-app/`)**~~ | **Shelved 2026-07-31** — operator decision, not proceeding for now. Never scaffolded. Spec (5 tabs, build order) kept in "MAC APP" section above in case revisited later. See HANDOVER #6. |
@@ -1066,6 +1067,7 @@ Critical files:
 - `nr_dxcc_seed.json` — worked data + per-entity CW/Ph/Data mode data (`dxccModeWorked` key); auto-refreshed daily, also written after QSOs
 - `nr_dxcc_blacklist.json` — blocked callsigns
 - `~/.node-red/settings.js`
+- `~/grid_voltage.csv` — grid voltage evidence log (append-only, never regenerable — it is the only record)
 
 Pi-side scripts already in this repo (canonical paths shown):
 
@@ -1077,7 +1079,8 @@ Pi-side scripts already in this repo (canonical paths shown):
 | `rpi_agent.py` | `/home/vu2cpl/rpi_agent.py` | HTTP reboot/shutdown — `rpi-agent.service` |
 | `rpi-agent.service` | `/etc/systemd/system/rpi-agent.service` | systemd unit for rpi_agent |
 | `monitor.sh` | `/home/vu2cpl/monitor.sh` | MQTT telemetry cron (every minute) |
-| `solar_inverter_mqtt.py` | `/home/vu2cpl/solar_inverter_mqtt.py` | Deye inverter → retained `shack/solar/inverter` (every minute, user crontab; needs `pip3 install --user pysolarmanv5`; `svc` creds from the same env files as monitor.sh) |
+| `solar_inverter_mqtt.py` | `/home/vu2cpl/solar_inverter_mqtt.py` | Deye inverter → retained `shack/solar/inverter` (every minute, user crontab; needs `pip3 install --user pysolarmanv5`; `svc` creds from the same env files as monitor.sh). Also appends `~/grid_voltage.csv` |
+| `grid_voltage_report.py` | run in-place (Mac or Pi) | Turns `grid_voltage.csv` into a utility-facing Markdown report + SVG chart: daily per-phase min/mean/max, night-window section, over-voltage episodes, supply interruptions. Pure stdlib |
 | `monitor_redpitaya.sh` | `/root/monitor_redpitaya.sh` on the Red Pitaya (`rp-f02054.local` / `.241`) | Fleet telemetry for the Alpine/BusyBox Red Pitaya (Zynq XADC temp) — remember `lbu commit -d` after any change there |
 | `power_spe_on.py` | `/home/vu2cpl/power_spe_on.py` | SPE Expert 1.5 KFA power-on via FTDI DTR/RTS toggle |
 | `enable_file_context.sh` | `/home/vu2cpl/enable_file_context.sh` | One-time idempotent settings.js patcher to enable Node-RED `localfilesystem` context store |

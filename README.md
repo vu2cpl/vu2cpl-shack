@@ -188,13 +188,43 @@ tiles — **Grid** (ON/OFF plus the three input phase voltages) and
 **Battery** (state of charge, with charge state and power on one line)
 — read directly from the Deye hybrid inverter's Solarman logger by
 `solar_inverter_mqtt.py` (1-min cron → retained
-`shack/solar/inverter`) — and a **house-loads row** showing the four
+`shack/solar/inverter`, and since 2026-08-25 an append-only
+`~/grid_voltage.csv` — see *Grid voltage log* below) — and a **house-loads row** showing the four
 house Tasmota circuits (FF Load, GF Load, Dryer Kit, Utility): relay
 ON/OFF, live watts, and today's kWh. Each house tile is also the
 switch — click, confirm, and it toggles the relay via
 `POST /power/house-toggle`. The relays belong to Home Assistant's
 battery-SOC load-shedding automations, which may override a manual
 toggle on their next threshold rule.
+
+#### Grid voltage log
+
+`solar_inverter_mqtt.py` also appends every reading to
+`~/grid_voltage.csv` (`ts_iso, ts_epoch, status, l1_v, l2_v, l3_v,
+grid_on, batt_soc, batt_p_w`). Nothing else in the shack stores a
+voltage time series — the MQTT message is retained, i.e. last value
+only — so this file is the sole record, and it is not regenerable.
+Added 2026-08-25 to evidence nightly over-voltage to the supply
+utility. Failed reads are logged as `status=read_fail` rather than
+left as a bare gap, so "the logger was busy" stays distinguishable
+from "the site lost power".
+
+[`grid_voltage_report.py`](grid_voltage_report.py) renders it into a
+Markdown report plus an SVG chart — daily per-phase min/mean/max, a
+night-window section, over-voltage episodes, and supply interruptions.
+Pure stdlib, runs on the Mac or the Pi:
+
+```bash
+python3 grid_voltage_report.py --csv ~/grid_voltage.csv --out report.md --svg chart.svg
+```
+
+Two caveats the report states on its own front page, because both
+change what the numbers prove: the inverter's grid input is
+**downstream of the servo stabiliser** (so readings are true incoming
+mains only while the stabiliser is in bypass), and a hybrid inverter
+exporting PV lifts the voltage at its own terminals (so daytime
+figures are arguable, while the night window has neither PV nor
+export).
 
 ### Solar Conditions
 
@@ -279,6 +309,8 @@ from `sm7iun.se/rbnskew.csv` every 6 h.
 ├── rpi_agent.py                     HTTP reboot/shutdown agent (→ rpi-agent.service)
 ├── rpi-agent.service                systemd unit for rpi_agent
 ├── monitor.sh                       MQTT telemetry cron (every minute)
+├── solar_inverter_mqtt.py           Deye inverter → retained shack/solar/inverter + ~/grid_voltage.csv (1-min cron)
+├── grid_voltage_report.py           grid_voltage.csv → Markdown + SVG evidence report (pure stdlib)
 ├── monitor_redpitaya.sh             Fleet telemetry variant for the Red Pitaya (Alpine/BusyBox, Zynq XADC temp)
 ├── flows_guard.py                   Stale-tab wipe tripwire (git pre-commit hook + 1-min cron w/ Telegram alert)
 ├── flows_guard_middleware.js        Server-side deploy rejection (httpAdminMiddleware in settings.js)
