@@ -50,6 +50,16 @@ served at `/dashboard`) was retired on 2026-05-26 in favour of
 uibuilder + Vue. See SHACK_CHANGELOG `2026-05-26` for the retirement
 rationale.
 
+Since 2026-08-25 there is also a **Home Assistant satellite view**:
+the HA "Radio" dashboard (on the household HA instance) mirrors the
+data-ready half of the Vue card set — Power, Solar, House Loads,
+Lightning, RPi Fleet, GPS NTP, Network, UberSDR — with stock HA
+cards. It consumes the same shack MQTT topics through retained
+MQTT-discovery configs published by `ha_discovery_publish.py`; no
+Node-RED changes were needed. The gateway-backed cards (FlexRadio,
+SPE, LP-700, Rotator, DXCC, RBN) are not mirrored yet — they would
+need a Node-RED → MQTT state bridge first.
+
 ---
 
 ## Hardware

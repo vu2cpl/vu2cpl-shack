@@ -10,6 +10,65 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-08-25
 
+### HA Radio dashboard — Vue-dashboard equivalent, phase 1
+
+Operator asked for "an equivalent of the Vue dashboard in Home
+Assistant". Scoped up front (extend the existing **Radio** satellite
+dashboard · phase-1 data-ready cards · full controls · stock HA
+cards), then built entirely API-side — no broker ACL edit, no
+flows.json change, no file touched on any Pi.
+
+**What's live at `/193-radio`:** 8 sections / 108 entities mirroring
+the 7 data-ready Vue cards — Shack Power (the existing 7 switch
+buttons + Flex Radio/PTT + the PS2/PS3/spare-relay outlets + the 16A
+energy row), Solar·Grid·Battery (the Utopia-2.0-approved needle
+gauges with the utility-case voltage thresholds, battery SOC graph +
+state/power/temp/volts glance, PV/Load/Grid W, today import/export),
+House Loads (4 toggle tiles + watts/today glances), Lightning
+(AS3935 state, last event/distance/when, battery/RSSI/counters, plus
+display-only Antenna/Radio tiles until rest_command lands), RPi
+Fleet (7 hosts × cpu/temp/mem/disk), GPS NTP (stratum/ref/fix/
+offsets/sats), Network (6 ping tiles + RTT glance), UberSDR
+(listeners/decoders/sessions).
+
+**The data plumbing trick:** HA's MQTT integration is connected to
+the *shack* broker (proved by watching `rpi/+` arrive over HA's WS
+`mqtt/subscribe`, which also captured every payload shape), and the
+`ha` broker account can write `#`. So the 61 missing entities
+(AS3935, chrony, RPi fleet, UberSDR) were created by publishing
+retained MQTT-discovery configs to `homeassistant/sensor/#` **via
+HA's own `mqtt.publish` REST service** — HA creates its own
+entities. Publisher checked in as **`ha_discovery_publish.py`**
+(repo root; idempotent, re-run to adjust). The network tiles use
+HA's native ping integration — 6 entries created over the REST
+config-flow API (its only field is `host`; passing `count` 400s),
+then the entity registry labelled them and enabled only the
+RTT-average sensors. All 108 referenced entities were verified
+against `/api/states` before `lovelace/config/save`; the prior
+config is backed up as `dashboard-193-radio-pre-shack.json` and the
+new one as `dashboard-193-radio-shack-v1.json` (both in
+`~/Documents/vu2cpl-ha-backups/`, outside this public repo).
+
+**Gotchas for the next session:** discovery `object_id` is ignored
+on HA 2026.8 — entity_ids come out device-name-prefixed
+(`sensor.as3935_lightning_*`, `sensor.gps_ntp_gpsntp_*`,
+`sensor.rpi_<host>_*`); the RPi fleet sensors carry
+`expire_after: 180` so a dead publisher shows *unavailable* rather
+than a stale number; and `switch.tasmota`/`_2`/`_3` are the house
+loads GF/FF/Utility (Tasmota autodiscovery's default naming), not
+shack strips.
+
+**Deferred (HANDOVER #41):** lightning ANT/BYPASS buttons need
+`rest_command` YAML — SSH to HassPi is closed and reading the Samba
+add-on's password via the supervisor API was blocked (correctly), so
+the operator mounts `smb://192.168.1.36/config` once and the YAML +
+tile tap-actions land in a follow-up. Flex/SPE/LP-700/Rotator and
+DXCC/RBN cards need a Node-RED→MQTT state bridge (rule #1 proposal)
+before HA can see them. Also found: `/lightning/bypass` existed in
+flows.json but was missing from CLAUDE.md's endpoint table (fixed),
+and web-888 is fully offline — its fleet tiles honestly read
+unavailable.
+
 ### HA: geyser countdown timers + backups to the Synology NAS
 
 **Geyser countdowns.** Operator asked for a countdown on the geyser
