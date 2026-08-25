@@ -10,6 +10,36 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-08-25
 
+### HA: geyser countdown timers + backups to the Synology NAS
+
+**Geyser countdowns.** Operator asked for a countdown on the geyser
+switches. Five `timer.geyser_*` helpers (30:00) created over WS
+(`timer/create`); two automations start/cancel them on switch on/off,
+deriving the timer from the switch via one template
+(`timer.geyser_{{ trigger.entity_id.split('.')[1].split('_geyser')[0] }}`).
+The dashboard's geyser row became timer **tiles** (live countdown when
+heating, tap toggles the switch via `perform-action`). Deliberately
+display-only: the existing "Geyser timer" automations still do the
+actual switching, so a timer failure can't leave a geyser on. Buttons
+also renamed to first names at card level (the Tuya sockets all call
+their relay "Socket 1", which dominated the labels).
+
+**Backup chain to the NAS.** A fresh full backup (806 MB) was generated
+over WS, downloaded via `/api/backup/download/<id>?agent_id=hassio.local`,
+checksummed, and copied to the Synology share alongside a `RESTORE.md`
+runbook, the emergency-kit key files, and a `granular/` folder holding
+every automation/dashboard snapshot plus the `ha_backup.py`/`ha_ws.py`
+scripts. Then made permanent: operator added the share as HA network
+storage (credentials theirs alone), the new `hassio.nas_backups` agent
+was added to the nightly automatic (daily 05:15, retention 3, local +
+NAS), and a live test backup confirmed an 807 MB tar landing on the
+DiskStation.
+
+**Worth remembering:** HA encrypts copies sent to off-box agents even
+when the local copy is unencrypted — the NAS tars need the emergency-kit
+key, the local ones don't. The kits sit beside the tars on the NAS; a
+copy belongs off-NAS too (printed, or in the password manager).
+
 ### HA dashboards reorganised: one console + four satellites, original hidden
 
 Continuation of the "193, Utopia 2.0" work, driven card-by-card by the
