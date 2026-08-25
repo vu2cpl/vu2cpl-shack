@@ -35,7 +35,11 @@ Follow-on operator asks, same pass: the Sensor tile + Batt/RSSI/
 Strikes/Disturbers glance merged into one **state-coloured** markdown
 line (sensor dot green/red; battery 🟢 ≥3.9 V / 🟡 ≥3.5 / 🔴 below;
 RSSI 🟢 ≥-67 dBm / 🟡 ≥-75 / 🔴 below; strikes red only when >0) and
-the **16A Master button got a confirmation dialog** (v17).
+the **16A Master button got a confirmation dialog** (v17). The Solar
+section's battery glance followed (v18): SOC dot banded to the
+load-shed ladder (🟢 ≥90 / 🟡 ≥50 / 🔴 below), charge state as
+⚡ CHG green / ▼ DIS amber / dim otherwise (Vue convention), temp
+banded 40/50 °C, volts plain.
 
 ### HA Radio dashboard — rotator compass (third pass, the real one)
 
