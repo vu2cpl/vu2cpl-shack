@@ -1,6 +1,6 @@
 # CLAUDE.md — VU2CPL Shack Automation
 **Operator:** Manoj (VU2CPL) | MK83TE | Bengaluru, India
-**Repo:** github.com/vu2cpl/vu2cpl-shack (private)
+**Repo:** github.com/vu2cpl/vu2cpl-shack (**public** — verified 2026-08-25 via `gh repo view`; this line previously said "private", which was wrong. Treat every file here as world-readable: no household names, schedules, tokens, or HA dumps)
 **Last updated:** August 2026
 
 ---
@@ -211,7 +211,7 @@ persists across reboots. Verify with empty-payload read:
 | `noderedpi4` | `vu2cpl` | Agent running |
 | `openwebrxplus` | `vu2cpl` | Agent running |
 | (2 more Pis) | — | Pending |
-| Home Assistant Pi | — | Pending — HA REST API Bearer token |
+| Home Assistant Pi (`HassPi`, `192.168.1.36:8123`, HA 2026.8.3) | — | **Telemetry live** (HA's own `Publish RPi stats to MQTT (HassPi)` automation → `rpi/HassPi/*`). **REST API access added 2026-08-25** — long-lived token in `~/.config/vu2cpl-shack.env` as `HA_TOKEN` (Mac-side, mode 600, never committed). Full automation CRUD via `/api/config/automation/config/<id>`; no SSH to the box (22/22222 closed). No control agent needed |
 | Red Pitaya `rp-f02054` (`rp-f02054.local` — `192.168.1.241` via DHCP as of 2026-08-22; **the `RBN_SDR` network-monitor tile's target** again since 2026-08-25) | `root` | Telemetry live via `monitor_redpitaya.sh` (Alpine/BusyBox, Zynq XADC temp; no control agent) — see DEPLOY_PI.md special cases |
 | Web-888 receiver `web-888` (`192.168.1.235`) | `root` | Telemetry live via the same `monitor_redpitaya.sh` (also Zynq/Alpine — script runs unchanged; no control agent). Added 2026-08-22. Held the `RBN_SDR` ping tile 08-21 → 08-25; still fleet-monitored via `rpi/web-888/*`, but no longer has a network-monitor tile |
 

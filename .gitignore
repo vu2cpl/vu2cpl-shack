@@ -28,6 +28,14 @@ nr_cty_maps.json
 !/uibuilder/shack/src/
 !/uibuilder/shack/src/**
 
+# Home Assistant automation dumps. Kept OUT of this repo deliberately —
+# it is PUBLIC, and the dumps carry household member names, per-person
+# geyser schedules and notification targets. Durable copies live in
+# ~/Documents/vu2cpl-ha-backups/ (see HANDOVER). This rule exists so a
+# stray copy in the working tree can never be committed by accident.
+ha_automations*.json
+automations-*.json
+
 # Runtime grid-voltage log (append-only, one row per minute from
 # solar_inverter_mqtt.py). Lives in ~/ on the Pi, not here — this entry
 # just stops a stray copy being committed. It is evidence data, not source.

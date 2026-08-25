@@ -10,6 +10,70 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-08-25
 
+### Home Assistant under management via REST — and a load-shed threshold fixed
+
+Operator asked whether HA automations could be handled from Claude Code
+and whether an MCP was needed.
+
+**No MCP.** HA's own MCP Server integration isn't installed here (404 on
+`/mcp_server/sse`), and it would not have helped: it exposes Assist
+*intents* — device control and state queries — not automation authoring.
+The REST API was already live and does all of it (`/api/` returned 401,
+i.e. enabled and token-gated). The operator created a long-lived token
+into `~/.config/vu2cpl-shack.env` (`HA_URL` / `HA_TOKEN`, mode 600,
+Mac-side, never committed), closing the "HA REST API Bearer token"
+item that had been pending since the fleet work.
+
+Worth recording for next time: the opaque 32-hex `entity_id` values in
+HA **device triggers** are entity-registry ids, and the registry is only
+listable over the WebSocket API. They can be resolved without WebSocket
+by POSTing Jinja to **`/api/template`** and using `device_attr()` /
+`device_entities()` — which is how the load-shed switches were mapped to
+`switch.tasmota` (GF_LOAD), `switch.tasmota_2` (FF_LOAD),
+`switch.tasmota_3` (Utility) and `switch.dryer_kitchen` (Dryer_Kitchen).
+Note `switch.utility_area` is a *camera*, not the Utility circuit.
+
+**The fix.** `load shedding 90` triggered on `below: 96`, not 90, while
+its own alert text said "<90%". Combined with `Load restore 95` firing
+only on an *upward* crossing of 95, that produced a trap: a shallow dip
+to ~95.5% shed all four house circuits, and they could not come back
+until SOC first fell below 95 and then recovered — so after a small
+discharge and a recharge to full, the loads stayed off indefinitely.
+Changed to `below: 90`, giving a closed 90/95 hysteresis band: any shed
+now necessarily takes SOC under 90, so the recovery crossing through 95
+always happens on the way back up.
+
+The 80 and 70 tiers are **deliberate redundancy**, not a staged ladder —
+they re-fire the same all-four-circuit shed in case HA misses the 90
+crossing (restart, offline). Operator-confirmed; left as they are.
+
+**A correction made mid-task.** The first inventory reported the tiers
+switching only 2 of the 4 house circuits. That was wrong — the summariser
+used to render the configs dropped `target.device_id` from service-call
+actions, so half of each action list went unseen. All four tiers have
+always covered all four circuits. The lesson is narrow and worth keeping:
+when summarising HA configs, device actions carry `device_id` at the top
+level while service calls carry it under `target`, and a reader that
+checks only one shape silently under-reports.
+
+**Backups deliberately outside this repo.** Automation dumps carry
+household member names, per-person geyser schedules and notification
+targets, and **this repo is public** (`gh repo view` — the CLAUDE.md
+header claiming "private" was wrong and has been corrected). Snapshots
+therefore live in `~/Documents/vu2cpl-ha-backups/` alongside
+`ha_backup.py` (`dump` / `show` / `restore`, pure stdlib, credentials
+from the same env file), with pre-change and post-change copies of all 14
+automations. `.gitignore` gained `ha_automations*.json` and
+`automations-*.json` so a stray copy in the working tree cannot be
+committed by accident.
+
+**Left open (follow-up #40):** HA's `binary_sensor.inverter_grid` fired
+Disconnected at 16:51:10 and Restored at 16:58:41 during the feed
+transfer, while the per-minute inverter log has grid absent 16:05–16:37
+and normal voltage throughout HA's window. Both poll the same
+few-client-tolerant Solarman logger. This decides which source defines
+the outage windows in the utility evidence, so it needs resolving.
+
 ### Solarman cloud export → 32 days of supply-interruption evidence
 
 The operator exported the month from the Deye/Solarman cloud — 33 daily
