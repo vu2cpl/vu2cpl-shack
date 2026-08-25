@@ -8,6 +8,85 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-08-25
+
+### Power card: solar inverter + house-load rows (both dashboards)
+
+Operator request: grid on/off + battery % under the 16A master's
+voltage/current/power/today line, on D1 and Vue. Scope grew mid-build
+(operator steers): battery power + charge state, the grid **input**
+voltages L1/L2/L3, and status for the four house-load Tasmota circuits.
+
+**Solar data path — direct, not via Home Assistant** (operator's
+explicit choice; HA does read the same inverter but is not in this
+loop). The Deye SG0*LP3 LV 3-phase hybrid's Solarman V5 WiFi logger
+(serial `2924751994`, MAC `40:2A:8F:84:C1:E4`) was located at
+`192.168.30.193:8899` on the IoT VLAN — the discovery broadcast
+(`WIFIKIT-214028-READ`) went unanswered and the `.1` subnet had no
+trace of the MAC; the operator supplied the VLAN-30 address. New
+**`solar_inverter_mqtt.py`** (repo root → `/home/vu2cpl/`, 1-min user
+cron like `monitor.sh`) does a quick connect→read→disconnect of two
+register blocks via `pysolarmanv5` and publishes one retained JSON to
+**`shack/solar/inverter`** (`svc` account; creds parsed from the same
+`/etc/default/vu2cpl-shack` / `~/.config/vu2cpl-shack.env` files
+monitor.sh sources). Quickness matters: these loggers tolerate only a
+couple of concurrent TCP clients and HA polls it too — on a collision
+the script retries once then exits silently; the retained message
+stands and both dashboards dim the row when `ts` goes >5 min stale.
+
+Register semantics verified live against the operator's HA screenshot
+(SOC, battery power −1986 W vs HA's −1968 W moments earlier, current,
+temp all matched): `586`-`591` = battery temp (offset 1000, ×0.1 °C) /
+voltage (×0.01 V) / SOC % / power (signed W, **negative = charging**) /
+current (signed ×0.01 A); `598`-`600` = **grid-input** phase voltages
+L1/L2/L3 (×0.1 V) — confirmed input-side by contrast-reading the
+load-side outputs at `644`-`646`, and cross-checked against the house
+Tasmota meters' per-phase voltage readings taken at the same moment.
+`grid_on` = any phase > 80 V.
+
+**House loads.** The four remaining `iot`-account Tasmotas from
+MQTT_AUTH.md's "9 devices" turned out to be exactly the requested
+circuits: `FF_LOAD`, `GF_LOAD`, `GF_Dryer_Kit`, `GF_UTILITY` — found
+via a retained-LWT grep of `mosquitto.db` plus a 6-minute passive
+tcpdump of broker traffic (their web UIs are password-protected, and
+none of our readable accounts may subscribe to `tele/#`). They are
+**HA's battery-SOC load-shedding relays** (the "load shedding 70/80/90"
+/ "Load restore 95" automations) with full per-circuit `ENERGY` blocks
+at TelePeriod 60 s. Node-RED shows them **read-only** — deliberately no
+toggle path; HA owns those relays.
+
+**Flows** (7 new nodes on All Power Strips, `flows_guard` clean,
+node count 546→553): `solar_inv_mqtt_in` → `solar_inv_parse_fn`, and
+wildcard `tele/+/STATE` / `tele/+/SENSOR` / `tele/+/LWT` +
+`stat/+/POWER` (a filter that matches only single-relay devices —
+exactly the house set) → `house_parse_fn`; both feed the existing
+**Energy Aggregator**, which gains `energy/solar` (stored whole) and
+`energy/house` (per-device merge) branches. `vue_pwr_builder_01`
+passes `energy.solar`/`energy.house` on its existing 3-s tick.
+
+**Displays.** D1's card retitled "Energy — 16A Master · Solar · House
+Loads" (height 2→6): solar row = Grid ON/OFF with `L1 231 · L2 232 ·
+L3 233 V` beneath, Battery % (green ≥50 / amber ≥20 / red), Batt Power
+W, Batt State (`⚡ CHG` / `▼ DIS` / `IDLE`); house row = per-circuit
+relay ON/OFF with `W · kWh today` beneath, "offline" + dimmed on LWT
+Offline or >5 min silence. Vue PowerCard mirrors both rows
+(`energy-tile__sub` CSS added; build `v24`, then `v25` when the
+operator asked for explicit L1/L2/L3 labels — register identity
+re-verified before labelling).
+
+**Verified:** publisher end-to-end (retained payload read back from the
+broker), cron installed (3rd line alongside monitor.sh + flows_guard),
+Node-RED restarted clean (no errors from the new nodes), and the whole
+parse chain unit-simulated with the captured live payloads (house
+filtering, relay merge, solar passthrough, Vue payload shape). Visual
+check on the auth-protected dashboards left to the operator
+(HANDOVER #38). Side finding for the operator: the 4 house Tasmotas
+have no `Timezone 5:30` set — their `Today` rolls at 05:30 IST
+(HANDOVER #37). `rebuild_pi.sh` Stage 9 + REBUILD_PI.md now deploy the
+publisher + pysolarmanv5 + cron on a rebuild.
+
+---
+
 ## 2026-08-24
 
 ### VE7CC cluster diagnosed down (server-side) + `your call:` prompt fragment added

@@ -434,13 +434,19 @@ sudo cp as3935_tune.py    /home/vu2cpl/as3935_tune.py
 sudo cp rpi_agent.py      /home/vu2cpl/rpi_agent.py
 sudo cp monitor.sh        /home/vu2cpl/monitor.sh
 sudo cp power_spe_on.py   /home/vu2cpl/power_spe_on.py
+sudo cp solar_inverter_mqtt.py /home/vu2cpl/solar_inverter_mqtt.py
 # The 2026-05-07 quirk: sudo cp leaves files root-owned; reset:
 sudo chown vu2cpl:vu2cpl  /home/vu2cpl/as3935_mqtt.py \
                           /home/vu2cpl/as3935_tune.py \
                           /home/vu2cpl/rpi_agent.py \
                           /home/vu2cpl/monitor.sh \
-                          /home/vu2cpl/power_spe_on.py
-sudo chmod +x /home/vu2cpl/monitor.sh /home/vu2cpl/as3935_tune.py
+                          /home/vu2cpl/power_spe_on.py \
+                          /home/vu2cpl/solar_inverter_mqtt.py
+sudo chmod +x /home/vu2cpl/monitor.sh /home/vu2cpl/as3935_tune.py \
+              /home/vu2cpl/solar_inverter_mqtt.py
+
+# solar_inverter_mqtt.py dependency (Solarman V5 protocol library):
+pip3 install --user --break-system-packages pysolarmanv5
 
 # Systemd units
 sudo cp as3935.service    /etc/systemd/system/as3935.service
@@ -457,6 +463,11 @@ sudo visudo -c                            # must print "parsed OK"
 (crontab -l 2>/dev/null | grep -v 'monitor.sh' ; \
  echo '* * * * *  /home/vu2cpl/monitor.sh') | crontab -
 crontab -l | grep monitor.sh              # one line expected
+
+# Solar inverter telemetry cron (every minute; reads the Deye hybrid via
+# its Solarman logger 192.168.30.193:8899 → retained shack/solar/inverter)
+(crontab -l 2>/dev/null | grep -v 'solar_inverter_mqtt' ; \
+ echo '* * * * *  /usr/bin/python3 /home/vu2cpl/solar_inverter_mqtt.py') | crontab -
 
 # flows_guard — stale-tab wipe protection (added 2026-08-21).
 # (a) cron tripwire: validates the live flows.json every minute, Telegram-
@@ -740,6 +751,7 @@ If 15 fails but other cards are fine: not a noderedpi4 problem — it's gpsntp.l
 | `rpi_agent.py` | `/home/vu2cpl/rpi_agent.py` |
 | `rpi-agent.service` | `/etc/systemd/system/rpi-agent.service` |
 | `monitor.sh` | `/home/vu2cpl/monitor.sh` (+ user crontab `* * * * *`) |
+| `solar_inverter_mqtt.py` | `/home/vu2cpl/solar_inverter_mqtt.py` (+ user crontab `* * * * *`; needs `pip3 install --user pysolarmanv5`) |
 | `flows_guard.py` | run in-place from the repo (user crontab `* * * * *` `--cron` + `.git/hooks/pre-commit`) |
 | `flows_guard_middleware.js` | required in-place from the repo by `httpAdminMiddleware` in `~/.node-red/settings.js` (Stage 5) |
 | `power_spe_on.py` | `/home/vu2cpl/power_spe_on.py` |

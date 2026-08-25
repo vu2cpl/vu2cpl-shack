@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v24 · 2026-08-25 Power card: solar/grid + house-load rows';
+window.__shackBuild = 'v25 · 2026-08-25 Power card: solar/grid (L1/L2/L3) + house-load rows';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -2267,8 +2267,10 @@ const PowerCard = {
       !solar.value?.ts || (Date.now() / 1000 - solar.value.ts) > 300);
     function solarColor(c) { return solarStale.value ? 'var(--text-dim)' : c; }
     const gridVText = computed(() => {
-      const v = solar.value?.grid_v;
-      return Array.isArray(v) ? v.map(x => Math.round(x)).join(' · ') + ' V' : '';
+      const v = solar.value?.grid_v;   // inverter grid-input phase voltages (regs 598-600)
+      return Array.isArray(v)
+        ? v.map((x, i) => 'L' + (i + 1) + ' ' + Math.round(x)).join(' · ') + ' V'
+        : '';
     });
     const socColor = computed(() => {
       const s = solar.value?.batt_soc;

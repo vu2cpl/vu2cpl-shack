@@ -1037,12 +1037,19 @@ stage_09_pi_scripts() {
     cd "$REPO_DIR"
 
     # User-space scripts
-    for f in as3935_mqtt.py as3935_tune.py rpi_agent.py monitor.sh power_spe_on.py; do
+    for f in as3935_mqtt.py as3935_tune.py rpi_agent.py monitor.sh power_spe_on.py solar_inverter_mqtt.py; do
         step "Deploy $f"
         sudo cp "$f" "/home/$ACTUAL_USER/$f"
         sudo chown "$ACTUAL_USER":"$ACTUAL_USER" "/home/$ACTUAL_USER/$f"
     done
-    sudo chmod +x "/home/$ACTUAL_USER/monitor.sh" "/home/$ACTUAL_USER/as3935_tune.py"
+    sudo chmod +x "/home/$ACTUAL_USER/monitor.sh" "/home/$ACTUAL_USER/as3935_tune.py" \
+                  "/home/$ACTUAL_USER/solar_inverter_mqtt.py"
+    # solar_inverter_mqtt.py needs the Solarman V5 library (fork note: edit the
+    # INVERTER_IP / LOGGER_SERIAL constants in the script for your own inverter,
+    # or skip the cron line below if you have no Deye/Solarman inverter).
+    step "Install pysolarmanv5 (solar inverter telemetry dep)"
+    sudo -u "$ACTUAL_USER" pip3 install --user --break-system-packages pysolarmanv5 \
+        || warn "pysolarmanv5 install failed — solar_inverter_mqtt.py won't run until it's installed"
 
     # Shack env file — the broker IP for the Pi-side scripts that aren't Node-RED.
     # as3935.service reads it via EnvironmentFile; monitor.sh sources it (cron
@@ -1112,13 +1119,15 @@ stage_09_pi_scripts() {
     # `crontab -l` exits 1 when no crontab exists; under set -e + pipefail
     # this kills the script silently. Capture the current crontab (or
     # empty), filter out any prior monitor.sh entry, append ours, install.
-    step "Schedule monitor.sh + flows_guard in user crontab"
+    step "Schedule monitor.sh + flows_guard + solar_inverter_mqtt in user crontab"
     local existing_cron
     existing_cron=$(crontab -l 2>/dev/null || true)
     {
-        echo "$existing_cron" | grep -v 'monitor.sh' | grep -v 'flows_guard' || true
+        echo "$existing_cron" | grep -v 'monitor.sh' | grep -v 'flows_guard' \
+            | grep -v 'solar_inverter_mqtt' || true
         echo "* * * * *  /home/$ACTUAL_USER/monitor.sh"
         echo "* * * * *  python3 $REPO_DIR/flows_guard.py --cron"
+        echo "* * * * *  /usr/bin/python3 /home/$ACTUAL_USER/solar_inverter_mqtt.py"
     } | crontab -
 
     # Enable + start rpi-agent only.

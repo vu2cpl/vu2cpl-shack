@@ -82,6 +82,7 @@ Node-RED shack automation running on Raspberry Pi 4B. Controls and monitors:
 | Node-RED editor | `http://192.168.1.169:1880` |
 | MQTT broker | Mosquitto @ `192.168.1.169:1883` (LAN only). **Auth required as of 2026-08-21** — anonymous disabled; accounts `iot`/`svc`/`nodered`/`ha` with per-account ACL. See [`MQTT_AUTH.md`](MQTT_AUTH.md). Node-RED uses `nodered`; the Pi publishers (`monitor.sh`, chrony) use `svc`. |
 | UberSDR metrics | External UberSDR receiver publishing to the shack broker: `ubersdr/metrics/sessions` (session list) + `ubersdr/metrics/voice_activity/<band>` (12 bands). **Read-only** — the `UberSDR` flow tab aggregates + displays, publishes nothing back. |
+| Solar inverter | Deye SG0*LP3 LV 3-phase hybrid @ `192.168.30.193:8899` (IoT VLAN; Solarman V5 logger, serial `2924751994`, MAC `40:2A:8F:84:C1:E4`). Read **directly** (not via Home Assistant — operator's explicit choice) by `solar_inverter_mqtt.py` on the Pi, 1-min cron → retained JSON on `shack/solar/inverter`. Logger tolerates few concurrent TCP clients and HA polls it too, so the script is quick connect→read→disconnect with a silent-fail retry. Registers: 586-591 battery (temp/V/SOC/power/current; negative power = charging), 598-600 grid **input** phase voltages L1/L2/L3 (×0.1 V; load-side outputs are 644-646, not read). `grid_on` = any phase > 80 V. |
 | MQTT broker node ID | `f4785be9863eab08` |
 | FlexRadio | `192.168.1.148:4992` (TCP API + UDP discovery) |
 | SPE WS gateway | `spe-remote.service` on Pi @ `ws://192.168.1.169:8888/ws` (single FTDI-serial owner, multi-client fan-out). Repo [`vu2cpl/spe-remote`](https://github.com/vu2cpl/spe-remote). Also handles SPE power-on via DTR/RTS on the open port. No `/healthz` — liveness = `curl http://…:8888/` |
@@ -117,7 +118,7 @@ git push
 | RPi Fleet Monitor | `d5fec2fea3dd37f4` | 30 | `f8d1f7eb7403a442` |
 | Internet and network monitor | `b05f8c028b368ae9` | 30 | `f10110e00bae2689` |
 | Lightning Antenna Protector | `75e2cac8ab96f556` | 92 | `8b723cd03854ac2c` |
-| All Power Strips | `b76a5310767803b4` | 48 | `vu2cpl_grp_power` |
+| All Power Strips | `b76a5310767803b4` | 55 | `vu2cpl_grp_power` |
 | DXCC Tracker | `d110d176c0aad308` | 77 | `grp_dxcc_stats` |
 | UberSDR | `ubersdr_tab` | 9 | `ubersdr_grp` (on Shack Monitoring tools) |
 | AetherSDR Display | `aetherdisp_tab_01` | 9 | — (no UI — humanizes shack MQTT topics onto `aether/*` for the external AetherSDR panadapter display; see `nodered/aether-display/README.md`) |
@@ -159,7 +160,22 @@ their old IDs (`dd11372f9c492be8`, `tab_ui_dxcc`) no longer exist.
 | | POWER3-4 | Spare relays |
 | `16Amasterswitch` | POWER1 | 16A mains (energy monitoring, TelePeriod=30s) |
 
-All 5 devices: `Timezone +05:30` (IST), set 2026-05-14. Required so
+**House-load Tasmota circuits** (same broker, `iot` account, IoT VLAN
+`192.168.30.x` — the other 4 of the 9 `iot` devices in MQTT_AUTH.md).
+These are **Home Assistant's battery-SOC load-shedding relays** with
+per-circuit energy monitoring (TelePeriod 60 s, `tele/<dev>/SENSOR`
+carries a full `ENERGY` block + `ANALOG.Temperature1`). Node-RED
+displays them **read-only** on the Power card since 2026-08-25 — no
+toggle path on purpose; HA owns the relays:
+
+| Device topic | Displayed as | Notes |
+|--------------|--------------|-------|
+| `FF_LOAD` | FF Load | first-floor load circuit |
+| `GF_LOAD` | GF Load | ground-floor load circuit |
+| `GF_Dryer_Kit` | Dryer Kit | dryer + kitchen circuit |
+| `GF_UTILITY` | Utility | utility circuit |
+
+All 5 shack devices: `Timezone +05:30` (IST), set 2026-05-14. Required so
 `ENERGY.Today` on `16Amasterswitch` rolls over at local midnight (not
 00:00 UTC = 05:30 IST). Set per device via web Console
 (`Timezone 5:30`) or MQTT
@@ -270,7 +286,11 @@ Agent endpoints: `POST /reboot`, `POST /shutdown`
 | `05f0ddeb566a90fc` | Rotator Auto-Off Timer | Auto-off on powerstrip1/POWER2 |
 | `f04c617be19bb21d` | stat/powerstrip1/POWER2 (Rotator) | mqtt in for rotator |
 | `a1fbb636a745e687` | Power TOGGLE Router | Routes toggle commands |
-| `e72813d4b7791246` | Energy Aggregator | 16A energy data |
+| `e72813d4b7791246` | Energy Aggregator | 16A energy data + `ctx.solar` (from `energy/solar`) + `ctx.house` (per-device merge from `energy/house`) since 2026-08-25 |
+| `solar_inv_mqtt_in` | shack/solar/inverter | mqtt in — retained Deye JSON from `solar_inverter_mqtt.py` cron |
+| `solar_inv_parse_fn` | Parse Solar Inverter | validates payload → `energy/solar` → Energy Aggregator |
+| `house_state_mqtt_in` / `house_sensor_mqtt_in` / `house_lwt_mqtt_in` / `house_stat_mqtt_in` | tele/+/STATE · tele/+/SENSOR · tele/+/LWT · stat/+/POWER | wildcard mqtt ins feeding Parse House Loads (`stat/+/POWER` only matches single-relay devices = exactly the house set) |
+| `house_parse_fn` | Parse House Loads | filters to the 4 house devices, emits `energy/house` per-device updates (relay/p/today/v/online/ts) |
 
 ### FlexRadio (`a0a882f85c89cffc`)
 
@@ -562,6 +582,36 @@ Sliding strike history lives in `flow.recent_as3935 = [{ts, km}, …]`. Pushed o
 - Rotator timer node (`05f0ddeb566a90fc`): set to `5 * 60 * 1000` (5 min) for production — done 2026-05-10 (`971f4b4`)
 - Timer does NOT survive Node-RED restart — acceptable for rotator use
 - Rotator **power** (this outlet) is the only rotator concern still in Node-RED; **heading control moved to `rotator-remote.service`** 2026-06-06 (see the Rotator section above).
+
+### All Power Strips (Solar inverter + house loads, 2026-08-25)
+
+Two extra rows under the 16A voltage/current/power/today tiles on
+**both** dashboards (D1 card retitled "Energy — 16A Master · Solar ·
+House Loads", `height` 2→6; Vue PowerCard build `v25`):
+
+- **Solar row** — Grid ON/OFF with the inverter's grid-**input** phase
+  voltages labelled `L1 · L2 · L3` (verified against regs 598-600;
+  load-side outputs are 644-646 and not read), Battery % (green ≥50,
+  amber ≥20, red below), Battery power W (signed, negative = charging),
+  Batt State (`⚡ CHG` green / `▼ DIS` amber / `IDLE` dim). Source:
+  retained `shack/solar/inverter` published by `solar_inverter_mqtt.py`
+  (1-min cron on the Pi — see the Solar inverter row in INFRASTRUCTURE).
+  The whole row dims when the payload `ts` is >5 min stale (publisher
+  dead or logger unreachable); the retained message means the last
+  reading survives Node-RED restarts.
+- **House-loads row** — FF Load / GF Load / Dryer Kit / Utility: relay
+  ON (green) / OFF (red) with `W · kWh today` beneath, "offline" +
+  dimmed on LWT Offline or >5 min without a SENSOR (TelePeriod is 60 s).
+  **Display-only by design** — these relays belong to HA's battery-SOC
+  load-shedding automations (see HARDWARE MAP); Node-RED must not grow
+  a toggle path for them without an explicit operator decision.
+- Plumbing: `solar_inv_mqtt_in`→`solar_inv_parse_fn` and the 4 wildcard
+  mqtt-ins→`house_parse_fn` all feed the existing **Energy Aggregator**
+  (`ctx.solar` set whole; `ctx.house[dev]` merged per key). The Vue side
+  rides the existing `vue_pwr_builder_01` 3-s tick (`energy.solar` /
+  `energy.house`); D1 renders in the same `16A Energy Monitor` template.
+  Wildcard subs overlap the per-device 16A/powerstrip subs harmlessly
+  (broker fans out; `house_parse_fn` filters to the 4 house topics).
 
 ### FlexRadio
 - All slice state in `flexState` flow context
@@ -980,6 +1030,7 @@ Pi-side scripts already in this repo (canonical paths shown):
 | `rpi_agent.py` | `/home/vu2cpl/rpi_agent.py` | HTTP reboot/shutdown — `rpi-agent.service` |
 | `rpi-agent.service` | `/etc/systemd/system/rpi-agent.service` | systemd unit for rpi_agent |
 | `monitor.sh` | `/home/vu2cpl/monitor.sh` | MQTT telemetry cron (every minute) |
+| `solar_inverter_mqtt.py` | `/home/vu2cpl/solar_inverter_mqtt.py` | Deye inverter → retained `shack/solar/inverter` (every minute, user crontab; needs `pip3 install --user pysolarmanv5`; `svc` creds from the same env files as monitor.sh) |
 | `monitor_redpitaya.sh` | `/root/monitor_redpitaya.sh` on the Red Pitaya (`rp-f02054.local` / `.241`) | Fleet telemetry for the Alpine/BusyBox Red Pitaya (Zynq XADC temp) — remember `lbu commit -d` after any change there |
 | `power_spe_on.py` | `/home/vu2cpl/power_spe_on.py` | SPE Expert 1.5 KFA power-on via FTDI DTR/RTS toggle |
 | `enable_file_context.sh` | `/home/vu2cpl/enable_file_context.sh` | One-time idempotent settings.js patcher to enable Node-RED `localfilesystem` context store |

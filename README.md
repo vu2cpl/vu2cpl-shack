@@ -59,7 +59,8 @@ rationale.
 | Radio | FlexRadio FLEX-6600, RGO One, Icom IC-705 |
 | Amplifier | SPE Expert 1.5 KFA |
 | Antennas | Hex beam, 160 m inverted-L, 6 m LFA Yagi, Beverage / N6RK / K9AY receive |
-| Power | 21 Tasmota-controlled outlets across 5 devices |
+| Power | 21 Tasmota-controlled outlets across 5 shack devices, plus 4 house-load Tasmota circuits (FF/GF load, dryer-kitchen, utility — HA's load-shedding relays, displayed read-only) |
+| Solar | Deye SG0*LP3 LV 3-phase hybrid inverter, read locally via its Solarman WiFi logger (no cloud, no Home Assistant in the path) |
 | Power meter | Telepost LP-700 (USB HID, owned by `lp700-server` on the Pi) |
 | Rotator | Idiom Press Rotor-EZ |
 | Lightning | AS3935 sensor on ESP-WROOM-32 bridge → WiFi → MQTT (see [`vu2cpl-as3935-bridge`](https://github.com/vu2cpl/vu2cpl-as3935-bridge)) + Open-Meteo CAPE polling. Indoor Pi-side daemon retained as standby fallback |
@@ -180,6 +181,17 @@ device so the dashboard never lies for more than ~30 s.
 The 16 A master switch publishes energy data every 30 s for shack-wide
 consumption monitoring. The rotator outlet has a 5 min auto-off timer
 with idempotent retrigger guard + 10 s cooldown to prevent reset loops.
+
+Below the 16 A voltage/current/power/today line, both dashboards carry
+two further rows (added 2026-08-25): a **solar row** — grid ON/OFF with
+per-phase input voltages L1/L2/L3, battery %, battery power, and
+charge state, read directly from the Deye hybrid inverter's Solarman
+logger by `solar_inverter_mqtt.py` (1-min cron → retained
+`shack/solar/inverter`) — and a **house-loads row** showing the four
+house Tasmota circuits (FF Load, GF Load, Dryer Kit, Utility): relay
+ON/OFF, live watts, and today's kWh. The house relays belong to Home
+Assistant's battery-SOC load-shedding automations; Node-RED displays
+them read-only and deliberately has no toggle path for them.
 
 ### Solar Conditions
 
