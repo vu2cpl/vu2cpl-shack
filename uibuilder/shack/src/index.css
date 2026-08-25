@@ -1097,6 +1097,8 @@ html, body {
 }
 .energy-tile__val .unit { font-size: var(--fs-xs); color: var(--text-dim); margin-left: 2px; font-weight: 400; font-family: var(--font-sans); }
 .energy-tile__sub { font-size: var(--fs-xs); color: var(--text-dim); margin-top: 1px; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.energy-tile--btn { cursor: pointer; transition: opacity 0.15s; }
+.energy-tile--btn:hover { opacity: 0.8; }
 
 /* === RPi Fleet host cards === */
 .rpi-grid {

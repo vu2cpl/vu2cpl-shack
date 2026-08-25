@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v25 · 2026-08-25 Power card: solar/grid (L1/L2/L3) + house-load rows';
+window.__shackBuild = 'v26 · 2026-08-25 Power card: house tiles toggle; plain grid volts';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -2189,9 +2189,10 @@ const PowerCard = {
           </div>
         </div>
 
-        <!-- House load circuits (Tasmota energy monitors, tele/+/SENSOR) -->
+        <!-- House load circuits (Tasmota switches + energy monitors) — tile = switch -->
         <div v-if="state.energy?.house" class="energy-row">
-          <div v-for="h in houseTiles" :key="h.key" class="energy-tile">
+          <div v-for="h in houseTiles" :key="h.key" class="energy-tile energy-tile--btn"
+               title="Click to toggle" @click="toggleHouse(h)">
             <div class="energy-tile__lbl">{{ h.label }}</div>
             <div class="energy-tile__val" :style="{color: h.color}">{{ h.value }}</div>
             <div class="energy-tile__sub">{{ h.sub }}</div>
@@ -2268,9 +2269,7 @@ const PowerCard = {
     function solarColor(c) { return solarStale.value ? 'var(--text-dim)' : c; }
     const gridVText = computed(() => {
       const v = solar.value?.grid_v;   // inverter grid-input phase voltages (regs 598-600)
-      return Array.isArray(v)
-        ? v.map((x, i) => 'L' + (i + 1) + ' ' + Math.round(x)).join(' · ') + ' V'
-        : '';
+      return Array.isArray(v) ? v.map(x => Math.round(x)).join(' · ') + ' V' : '';
     });
     const socColor = computed(() => {
       const s = solar.value?.batt_soc;
@@ -2313,6 +2312,19 @@ const PowerCard = {
         };
       });
     });
+    function toggleHouse(h) {
+      const q = h.value === 'ON' ? `Turn ${h.label} OFF?`
+              : h.value === 'OFF' ? `Turn ${h.label} ON?`
+              : `Toggle ${h.label}?`;
+      if (!confirm(q)) return;
+      fetch('/power/house-toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dev: h.key })
+      });
+      // No optimistic flip — the stat/<dev>/POWER echo lands within ~1 s
+      // and rides the normal 3 s builder tick back into the tile.
+    }
 
     // Rotator auto-off countdown (driven by flow.rotatorTimerEnd from Node-RED)
     const rotatorRemain = ref(null);
@@ -2340,7 +2352,7 @@ const PowerCard = {
     });
 
     return { expanded, state, plugs, plugRows, plugClass, plugIsOn, toggle, onCount, rotatorRemain,
-             solar, solarColor, gridVText, socColor, battStateText, battStateColor, houseTiles };
+             solar, solarColor, gridVText, socColor, battStateText, battStateColor, houseTiles, toggleHouse };
   }
 };
 
