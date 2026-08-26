@@ -177,12 +177,15 @@ def end_label(start, end):
 # SVG chart
 # --------------------------------------------------------------------------
 
-def svg_chart(rows, nominal, upper, trip, night, width=1100, height=420,
-              bucket_min=5):
+def svg_chart(rows, nominal, upper, trip, night, outages=(), width=1100,
+              height=420, bucket_min=5):
     """Per-phase line chart, downsampled to the max in each bucket.
 
     Max rather than mean: this is an over-voltage case, and averaging
-    would bury exactly the peaks that matter.
+    would bury exactly the peaks that matter. Fixed 200-300 V scale
+    (values outside are clamped to the plot edge); grid-absent
+    stretches break the traces and render as red "BESCOM off" bands
+    instead of plotting the inverter's 0 V.
     """
     if not rows:
         return "<svg xmlns='http://www.w3.org/2000/svg'/>"
@@ -193,16 +196,16 @@ def svg_chart(rows, nominal, upper, trip, night, width=1100, height=420,
 
     buckets = {}
     for r in rows:
+        if not r["grid_on"]:
+            continue
         k = int((r["ts"] - t0).total_seconds() // (bucket_min * 60))
         b = buckets.setdefault(k, {"ts": r["ts"]})
         for p in PHASES:
             b[p] = max(b.get(p, 0), r[p])
-    pts = [buckets[k] for k in sorted(buckets)]
 
-    lo = min(180.0, min(r["vmin"] for r in rows) - 5)
-    hi = max(trip + 10, max(r["vmax"] for r in rows) + 5)
+    lo, hi = 200.0, 300.0
     x = lambda ts: ml + pw * (ts - t0).total_seconds() / span
-    y = lambda v: mt + ph * (hi - v) / (hi - lo)
+    y = lambda v: mt + ph * (hi - min(max(v, lo), hi)) / (hi - lo)
 
     o = ["<svg xmlns='http://www.w3.org/2000/svg' width='%d' height='%d' "
          "viewBox='0 0 %d %d' font-family='system-ui,sans-serif'>"
@@ -220,6 +223,19 @@ def svg_chart(rows, nominal, upper, trip, night, width=1100, height=420,
                          % (max(ml, x(cur)), mt,
                             max(0.6, x(nxt) - max(ml, x(cur))), ph))
         cur += timedelta(minutes=1)
+
+    # supply interruptions — red band, traces are broken across these
+    for e in outages:
+        x0 = max(ml, x(e["start"]))
+        x1 = min(width - mr, x(e["end"] + timedelta(minutes=1)))
+        x1 = max(x1, x0 + 3)  # keep short outages visible on a long span
+        o.append("<rect x='%.1f' y='%d' width='%.1f' height='%d' "
+                 "fill='#fbe3e4' stroke='#c1121f' stroke-width='0.6'/>"
+                 % (x0, mt, x1 - x0, ph))
+        cx, cy = (x0 + x1) / 2, mt + ph / 2
+        o.append("<text x='%.1f' y='%.1f' font-size='10' fill='#c1121f' "
+                 "text-anchor='middle' transform='rotate(-90 %.1f %.1f)'>"
+                 "BESCOM off</text>" % (cx, cy + 3, cx, cy))
 
     # reference lines
     for val, colour, label in ((nominal, "#8a8a8a", "%g V nominal" % nominal),
@@ -243,14 +259,19 @@ def svg_chart(rows, nominal, upper, trip, night, width=1100, height=420,
                      "text-anchor='end'>%d</text>" % (ml - 8, y(v) + 4, v))
         v += step
 
-    # phase traces
+    # phase traces — new "M" wherever a bucket is missing (grid absent)
+    keys = sorted(buckets)
     for p, label, colour in zip(PHASES, PHASE_LABELS,
                                 ("#1f6feb", "#2da44e", "#8250df")):
-        d = " ".join("%s%.1f %.1f" % ("M" if i == 0 else "L",
-                                      x(b["ts"]), y(b[p]))
-                     for i, b in enumerate(pts))
-        o.append("<path d='%s' fill='none' stroke='%s' stroke-width='1.4'/>"
-                 % (d, colour))
+        segs, prev_k = [], None
+        for k in keys:
+            b = buckets[k]
+            cmd = "M" if prev_k is None or k - prev_k > 1 else "L"
+            segs.append("%s%.1f %.1f" % (cmd, x(b["ts"]), y(b[p])))
+            prev_k = k
+        if segs:
+            o.append("<path d='%s' fill='none' stroke='%s' "
+                     "stroke-width='1.4'/>" % (" ".join(segs), colour))
         o.append("<text x='%d' y='%d' font-size='12' fill='%s'>%s</text>"
                  % (ml + 70 * PHASE_LABELS.index(label), height - 10,
                     colour, label))
@@ -266,7 +287,8 @@ def svg_chart(rows, nominal, upper, trip, night, width=1100, height=420,
                      % (x(day), mt + ph + 16, day.strftime("%d %b")))
         day += timedelta(days=1)
     o.append("<text x='%d' y='%d' font-size='11' fill='#666'>shaded = night "
-             "window (no PV export)</text>" % (ml + 230, height - 10))
+             "window (no PV export) · red band = BESCOM supply off</text>"
+             % (ml + 230, height - 10))
     o.append("</svg>")
     return "\n".join(o)
 
@@ -469,8 +491,11 @@ def main():
     else:
         print(md)
     if args.svg:
+        oeps = [e for e in outage_episodes(rows, gaps, args.merge_gap)
+                if dur(e["start"], e["end"]) >= args.min_outage]
         with open(args.svg, "w") as f:
-            f.write(svg_chart(rows, args.nominal, upper, args.trip, night))
+            f.write(svg_chart(rows, args.nominal, upper, args.trip, night,
+                              oeps))
         print("wrote %s" % args.svg)
 
 

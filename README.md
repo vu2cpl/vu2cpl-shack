@@ -222,7 +222,10 @@ from "the site lost power".
 [`grid_voltage_report.py`](grid_voltage_report.py) renders it into a
 Markdown report plus an SVG chart — daily per-phase min/mean/max, a
 night-window section, over-voltage episodes, and supply interruptions.
-Pure stdlib, runs on the Mac or the Pi:
+The chart uses a fixed 200–300 V scale with the night window shaded
+and supply interruptions drawn as red "BESCOM off" bands (the phase
+traces break across them rather than plunging to the inverter's 0 V
+reading). Pure stdlib, runs on the Mac or the Pi:
 
 ```bash
 python3 grid_voltage_report.py --csv ~/grid_voltage.csv --out report.md --svg chart.svg

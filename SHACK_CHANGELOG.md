@@ -8,9 +8,35 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
-## 2026-08-25
+## 2026-08-26
 
-### HA Radio dashboard — lightning-card polish + compass degree fix
+### Grid voltage — first bypass-night report; chart gets 200–300 V scale + BESCOM-off bands
+
+Operator confirmed the servo stabiliser is in **bypass, and has been
+since logging began** (2026-08-25 13:11 IST) — so every row of
+`grid_voltage.csv` is true incoming mains, and the report's
+`--bypass` note now says so. First full night on record
+(25 Aug 22:00 → 26 Aug 06:00, 480/480 samples): **no supply
+interruption at all** (off-pattern against the Solarman export's
+89%-overnight finding), battery held 100% throughout — but **at
+least one phase sat above the 253 V (+10%) limit for 320 of the
+480 minutes**, peaking 255.9 V (L1, 01:39) and 255.5 V (L3, 02:20).
+Nothing approached the 270 V stabiliser trip point, which is worth
+watching: if the nightly outages return with no preceding 270 V
+excursion, the trips-on-over-voltage hypothesis weakens and the
+outage cause points at BESCOM's side. One daytime interruption
+25 Aug 16:05–16:37 (32 min).
+
+On operator ask, `grid_voltage_report.py`'s SVG chart was reworked:
+**fixed 200–300 V y-scale** (was ~180–280 auto-ranged, which wasted
+half the plot below any real reading), and supply interruptions are
+now drawn as red **"BESCOM off" bands** — grid-absent samples are
+excluded from the phase traces entirely (a new `M` segment resumes
+after each gap), so an outage no longer plots as a misleading plunge
+toward 0 V. `svg_chart()` grew an `outages` parameter fed from the
+same `outage_episodes()` (≥ `--min-outage`) the Markdown table uses;
+out-of-range values clamp to the plot edge. Legend footer notes the
+band meaning.
 
 Operator screenshots drove three fixes. **(1)** The compass hub read
 `353°°` — a `state-label` renders the sensor state *with its unit*,
