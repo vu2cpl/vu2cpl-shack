@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v29 · 2026-08-25 Power card: Grid + Battery half-row tiles, house 4-across';
+window.__shackBuild = 'v30 · 2026-08-27 DXCC card: VE7CC -> KIEL (db0sue.de) cluster swap';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -828,7 +828,7 @@ const DXCCCard = {
 
     // FORK: your DX cluster names — must match the cluster_status names emitted
     // by the DXCC tab's login-parse-dedup function in Node-RED. Edit both.
-    const clusterNames = ['VU2CPL', 'VU2OY', 'VE7CC', 'N2WQ'];
+    const clusterNames = ['VU2CPL', 'VU2OY', 'KIEL', 'N2WQ'];
 
     const allClustersOk = computed(() =>
       clusterNames.every(c => (state.clusterStatus?.[c]?.connected) && !state.muted?.[c])

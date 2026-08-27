@@ -291,7 +291,7 @@ rotor without serial contention. Power stays on Tasmota/MQTT.
 
 DX cluster spot monitoring with real-time alerts for new entities,
 bands, and modes against Club Log worked/confirmed data. Subscribes
-to four cluster sources (VU2CPL, VU2OY, VE7CC, N2WQ); resolves prefix
+to four cluster sources (VU2CPL, VU2OY, KIEL, N2WQ); resolves prefix
 via cty.xml; classifies against `bands[mk] === 2` confirmed criterion;
 fires alerts to dashboard, MQTT, FlexRadio, and Telegram.
 
