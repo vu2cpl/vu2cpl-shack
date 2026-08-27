@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v30 · 2026-08-27 DXCC card: VE7CC -> KIEL (db0sue.de) cluster swap';
+window.__shackBuild = 'v31 · 2026-08-27 DXCC card hidden (CARDS.dxcc=false, flow tab disabled)';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -35,7 +35,7 @@ const CARDS = {
   lightning: true,
   power:     true,
   solar:     true,
-  dxcc:      true,
+  dxcc:      false,  // disabled 2026-08-27 with the DXCC Tracker flow tab
   rbn:       true,
   rpi:       true,
   network:   true,

@@ -120,7 +120,7 @@
         "id": "d110d176c0aad308",
         "type": "tab",
         "label": "DXCC Tracker",
-        "disabled": false,
+        "disabled": true,
         "info": "VU2CPL Club Log DXCC Tracker with DX Cluster alerting"
     },
     {

@@ -289,6 +289,10 @@ rotor without serial contention. Power stays on Tasmota/MQTT.
 
 ### DXCC Tracker
 
+> **Disabled since 2026-08-27** (operator choice): the flow tab is
+> `disabled` in flows.json and the Vue card hidden via `CARDS.dxcc`.
+> Nothing is deleted — flip both flags back to re-enable.
+
 DX cluster spot monitoring with real-time alerts for new entities,
 bands, and modes against Club Log worked/confirmed data. Subscribes
 to four cluster sources (VU2CPL, VU2OY, KIEL, N2WQ); resolves prefix
