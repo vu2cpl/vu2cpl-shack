@@ -56,10 +56,52 @@ across an 180–270 V input, and the measured supply stayed inside that
 range throughout — so a trip, if one occurs, would be happening below
 the rated limit.
 
-No code changed. `grid_voltage_report.py` was run with `--bypass`
-carrying the closed window; the sealed report and chart live outside
-the repo (session scratchpad) since the CSV they derive from is
-Pi-side and append-only.
+`grid_voltage_report.py` was run with `--bypass` carrying the closed
+window; the sealed report and chart live outside the repo (session
+scratchpad) since the CSV they derive from is Pi-side and append-only.
+
+### New: `stabiliser_watch.py` — overnight trip alerting
+
+Operator asked to be alerted if the stabiliser trips overnight. That
+rules out a chat-side watcher: the answer comes due while he is
+asleep and the session may not outlive the evening, so it goes on the
+Pi as a 1-min cron pushing to the same Telegram bot as the lightning
+and UberSDR alerts.
+
+Three conditions are separated because they implicate different
+things — 🔴 **outage** (grid absent 2+ samples: the nightly-cut
+pattern under test), 🟠 **dropout** (stabiliser no longer in circuit),
+⚪ **stale** (CSV stopped growing, so the watchdog is blind and
+silence would otherwise read as calm) — plus a ✅ recovery.
+`~/.stabiliser_watch.state` makes each transition alert once instead
+of every minute.
+
+**Phase spread is not the discriminator, though it looks like it
+should be.** Across the bypass window spreads ran 0.6–22 V and
+overlapped the regulated range entirely — 10:08 on 29 Aug was bypassed
+with a 2.6 V spread, while a regulated sample five minutes later had
+5.1 V. Absolute voltage separates them cleanly (regulated 230–236 V vs
+raw mains 250–264 V), so `RAW_MAINS_V = 245` keys on vmax, confirmed
+over 3 samples so one spike cannot trip it. Revisit that constant if
+the stabiliser is ever set to regulate higher.
+
+Verified before trusting it: the classifier was replayed over all 5580
+historical rows, and it reads the entire bypass window as `dropout`,
+flips to `regulating` at exactly the 10:10 sample, and recovers both
+real outages with the correct start times (26 Aug 10:23, 28 Aug
+20:33). The alert path was then exercised end-to-end against a
+synthetic grid-absent CSV — real `compose()`, real send, message
+delivered.
+
+**Known gap, deliberately not closed here.** Telegram credentials come
+from the running Node-RED process (`/proc/<pid>/environ`, the same
+trick `flows_guard.py` uses) so no token sits on disk — which means
+**alerts are skipped whenever Node-RED is down**. Verified working
+under a bare `env -i` environment, since cron supplies almost nothing;
+Node-RED runs as `vu2cpl`, so the same-user read succeeds. Closing the
+gap means putting the token in `~/.config/vu2cpl-shack.env` (mode 600,
+where the MQTT creds already live) — a secret-storage judgement call
+left to the operator rather than made unilaterally.
 
 ---
 

@@ -239,6 +239,45 @@ exporting PV lifts the voltage at its own terminals (so daytime
 figures are arguable, while the night window has neither PV nor
 export).
 
+#### Stabiliser watchdog
+
+[`stabiliser_watch.py`](stabiliser_watch.py) tails the same CSV once a
+minute from cron and pushes a Telegram alert when the supply state
+changes. It exists because the question the log is answering — do the
+nightly outages resume now the stabiliser is back in circuit? — comes
+due while the operator is asleep. Three conditions are separated,
+because they implicate different things:
+
+| State | Meaning | Signature |
+|-------|---------|-----------|
+| 🔴 `outage` | Grid absent — the nightly-cut pattern under test | `grid_on=0` or logger unreachable, 2+ samples |
+| 🟠 `dropout` | Stabiliser no longer in circuit (tripped to bypass or switched out) | vmax above 245 V for 3+ samples |
+| ⚪ `stale` | CSV stopped growing — the watchdog is blind | no new row for 6 min |
+
+A ✅ recovery alert follows when it returns to regulating. State lives
+in `~/.stabiliser_watch.state` so each transition alerts once rather
+than every minute.
+
+**Why voltage and not phase spread.** Spread looks like the obvious
+discriminator and is not: across the bypass window it ranged 0.6–22 V
+and overlapped the regulated range completely. Absolute voltage
+separates them cleanly — regulated output has sat at 230–236 V while
+raw mains ran 250–264 V — so the threshold keys on vmax. If the
+stabiliser is ever reconfigured to regulate higher, revisit
+`RAW_MAINS_V`.
+
+**Known gap:** Telegram credentials are read from the running Node-RED
+process (same trick as `flows_guard.py`, so no token is stored on
+disk). If Node-RED is down, alerts are skipped. Putting
+`TELEGRAM_TOKEN`/`TELEGRAM_CHAT_ID` into `~/.config/vu2cpl-shack.env`
+(mode 600, alongside the MQTT creds already there) would remove that
+dependency at the cost of a token on disk.
+
+```bash
+python3 stabiliser_watch.py --status   # current state, no alert
+python3 stabiliser_watch.py --test     # verify the Telegram path
+```
+
 **The bypass window is closed.** The stabiliser was in bypass from
 **2026-08-25 13:11 IST** (when logging began) to **2026-08-29 10:09
 IST**, when the operator brought it back online. Only that slice of
@@ -362,6 +401,7 @@ from `sm7iun.se/rbnskew.csv` every 6 h.
 ├── monitor.sh                       MQTT telemetry cron (every minute)
 ├── solar_inverter_mqtt.py           Deye inverter → retained shack/solar/inverter + ~/grid_voltage.csv (1-min cron)
 ├── grid_voltage_report.py           grid_voltage.csv → Markdown + SVG evidence report (pure stdlib)
+├── stabiliser_watch.py              Stabiliser trip / outage / dropout → Telegram (1-min cron, pure stdlib)
 ├── deye_history_report.py           Solarman xlsx cloud exports → supply-interruption report + timeline (pure stdlib)
 ├── monitor_redpitaya.sh             Fleet telemetry variant for the Red Pitaya (Alpine/BusyBox, Zynq XADC temp)
 ├── flows_guard.py                   Stale-tab wipe tripwire (git pre-commit hook + 1-min cron w/ Telegram alert)

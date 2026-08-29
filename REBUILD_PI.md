@@ -435,15 +435,18 @@ sudo cp rpi_agent.py      /home/vu2cpl/rpi_agent.py
 sudo cp monitor.sh        /home/vu2cpl/monitor.sh
 sudo cp power_spe_on.py   /home/vu2cpl/power_spe_on.py
 sudo cp solar_inverter_mqtt.py /home/vu2cpl/solar_inverter_mqtt.py
+sudo cp stabiliser_watch.py /home/vu2cpl/stabiliser_watch.py
 # The 2026-05-07 quirk: sudo cp leaves files root-owned; reset:
 sudo chown vu2cpl:vu2cpl  /home/vu2cpl/as3935_mqtt.py \
                           /home/vu2cpl/as3935_tune.py \
                           /home/vu2cpl/rpi_agent.py \
                           /home/vu2cpl/monitor.sh \
                           /home/vu2cpl/power_spe_on.py \
-                          /home/vu2cpl/solar_inverter_mqtt.py
+                          /home/vu2cpl/solar_inverter_mqtt.py \
+                          /home/vu2cpl/stabiliser_watch.py
 sudo chmod +x /home/vu2cpl/monitor.sh /home/vu2cpl/as3935_tune.py \
-              /home/vu2cpl/solar_inverter_mqtt.py
+              /home/vu2cpl/solar_inverter_mqtt.py \
+              /home/vu2cpl/stabiliser_watch.py
 
 # solar_inverter_mqtt.py dependency (Solarman V5 protocol library):
 pip3 install --user --break-system-packages pysolarmanv5
@@ -468,6 +471,17 @@ crontab -l | grep monitor.sh              # one line expected
 # its Solarman logger 192.168.30.193:8899 → retained shack/solar/inverter)
 (crontab -l 2>/dev/null | grep -v 'solar_inverter_mqtt' ; \
  echo '* * * * *  /usr/bin/python3 /home/vu2cpl/solar_inverter_mqtt.py') | crontab -
+
+# Stabiliser watchdog cron (every minute; Telegram-alerts a supply outage,
+# a stabiliser dropout, or the voltage log stalling — added 2026-08-29).
+# Depends on the solar cron above for its input, so install it after.
+(crontab -l 2>/dev/null | grep -v 'stabiliser_watch' ; \
+ echo '* * * * *  /usr/bin/python3 /home/vu2cpl/stabiliser_watch.py --cron') | crontab -
+python3 /home/vu2cpl/stabiliser_watch.py --status   # expect: regulating: NNN / NNN / NNN V
+python3 /home/vu2cpl/stabiliser_watch.py --test     # expect a 🧪 Telegram
+# Note: it reads the Telegram token from the running Node-RED process, so
+# start Node-RED before the first --test, and expect alerts to be skipped
+# during any window where Node-RED is down.
 
 # flows_guard — stale-tab wipe protection (added 2026-08-21).
 # (a) cron tripwire: validates the live flows.json every minute, Telegram-
@@ -752,6 +766,7 @@ If 15 fails but other cards are fine: not a noderedpi4 problem — it's gpsntp.l
 | `rpi-agent.service` | `/etc/systemd/system/rpi-agent.service` |
 | `monitor.sh` | `/home/vu2cpl/monitor.sh` (+ user crontab `* * * * *`) |
 | `solar_inverter_mqtt.py` | `/home/vu2cpl/solar_inverter_mqtt.py` (+ user crontab `* * * * *`; needs `pip3 install --user pysolarmanv5`). Appends `~/grid_voltage.csv` — back that file up before wiping, it is the only copy |
+| `stabiliser_watch.py` | `/home/vu2cpl/stabiliser_watch.py` (+ user crontab `* * * * *` `--cron`). Telegram alert on supply outage / stabiliser dropout / stalled log. Needs Node-RED running for its credential lookup |
 | `grid_voltage_report.py` | run in-place from the repo (no install) |
 | `deye_history_report.py` | run in-place from the repo (no install; Mac-side analysis of Solarman cloud exports) |
 | `flows_guard.py` | run in-place from the repo (user crontab `* * * * *` `--cron` + `.git/hooks/pre-commit`) |
