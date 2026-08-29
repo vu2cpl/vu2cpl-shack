@@ -25,10 +25,14 @@ culprits:
 
 Detection notes. Phase *spread* is not a usable discriminator: during
 the bypass window spreads ranged 0.6-22 V and overlapped the regulated
-range entirely. Absolute voltage separates them cleanly — regulated
-output has sat at 230-236 V, while raw mains ran 250-264 V — so
-RAW_MAINS_V keys on vmax, confirmed over several samples so a single
-spike cannot trip it.
+range entirely. Absolute voltage separates them better — regulated
+output sits near 230 V, raw mains ran 250-264 V — so RAW_MAINS_V keys
+on vmax, confirmed over CONFIRM_DROPOUT consecutive samples so a spike
+cannot trip it. The two ranges are closer than they first appeared:
+regulated output reached 242.2 V within an hour of the stabiliser
+coming online, which is why the confirmation count, not the threshold,
+carries most of the false-alarm defence. See the CONFIRM_DROPOUT
+comment for the measured tradeoff.
 
 Pure stdlib. Telegram credentials resolve in three steps: our own
 environment, then the shack env files (`/etc/default/vu2cpl-shack`,
@@ -65,7 +69,16 @@ STATE_FILE = os.path.expanduser("~/.stabiliser_watch.state")
 # stabiliser is not in circuit. Regulated output has never reached it.
 RAW_MAINS_V = 245.0
 
-CONFIRM_DROPOUT = 3      # samples of raw mains before calling a dropout
+# 5, not 3. The first hour of regulated output peaked at 242.2 V — only
+# 3.9 V under the threshold across a 3-sample run, which is not enough
+# margin to bet a 3 a.m. alert on. Requiring 5 consecutive samples lifts
+# the worst sustained regulated reading to 238.0 V (+7.0 V margin) and
+# costs almost nothing in detection: night coverage over the bypass
+# window falls only 96.7% -> 95.5%, because real dropouts lasted many
+# minutes. Raising RAW_MAINS_V instead would have been far more
+# expensive — 250 V drops night coverage to 75.9%. Re-measure both if
+# the stabiliser is reconfigured.
+CONFIRM_DROPOUT = 5      # samples of raw mains before calling a dropout
 CONFIRM_OUTAGE = 2       # samples of grid-absent before calling an outage
 STALE_MIN = 6            # minutes without a new row = watchdog blind
 TAIL_BYTES = 65536

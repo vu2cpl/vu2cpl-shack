@@ -140,6 +140,44 @@ recovery path, both fall outside it. Rewritten accordingly.
 it** — a rebuilt Pi has no token until it is written by hand.
 REBUILD_PI.md now carries that step.
 
+### Dropout threshold retuned — the confirm count, not the voltage
+
+The 11:17 hourly check caught the calibration concern raised the same
+morning turning real. Regulated output had peaked at **242.2 V** within
+its first hour — 2.8 V under `RAW_MAINS_V`, and only 3.9 V of margin
+across a 3-sample run. Not enough to stake a 3 a.m. alert on, and a
+false 🟠 would have cost more than the feature is worth.
+
+Both levers were measured against the actual bypassed-vs-regulated
+data rather than guessed:
+
+| Setting | Worst sustained regulated | Margin | Night coverage |
+|---|---|---|---|
+| 245 V, k=3 *(shipped)* | 241.1 V | +3.9 V | 96.7% |
+| **245 V, k=5** *(now)* | **238.0 V** | **+7.0 V** | **95.5%** |
+| 250 V, k=3 | 241.1 V | +8.9 V | 75.9% |
+| 252 V, k=5 | 238.0 V | +14.0 V | 46.8% |
+
+So `CONFIRM_DROPOUT` went 3 → 5 and the threshold stayed: it nearly
+doubles the margin for a 1.2-point coverage loss, because genuine
+dropouts lasted many minutes while regulated excursions are brief.
+Raising the threshold buys the same margin at four times the cost.
+
+The tradeoff is 5 minutes' slower dropout detection, which is
+acceptable — the *urgent* case is a trip that cuts supply, and that
+fires on the outage branch at 2 samples, untouched.
+
+Still not fully settled: all 68 regulated samples are **daytime with PV
+exporting**. A night's readings should confirm the ceiling, and both
+constants need re-measuring if the stabiliser is ever set to regulate
+higher.
+
+Otherwise quiet: supply uninterrupted 10:17–11:17 (61 samples, no
+failed reads, no grid-absent), 222.4–242.2 V, mean 234.1 V. Worst phase
+spread 9.0 V at 11:05 — further confirmation that spread is not a
+usable discriminator, since that is squarely inside the range raw mains
+also produces.
+
 ---
 
 ## 2026-08-26

@@ -251,7 +251,7 @@ because they implicate different things:
 | State | Meaning | Signature |
 |-------|---------|-----------|
 | 🔴 `outage` | Grid absent — the nightly-cut pattern under test | `grid_on=0` or logger unreachable, 2+ samples |
-| 🟠 `dropout` | Stabiliser no longer in circuit (tripped to bypass or switched out) | vmax above 245 V for 3+ samples |
+| 🟠 `dropout` | Stabiliser no longer in circuit (tripped to bypass or switched out) | vmax above 245 V for 5+ consecutive samples |
 | ⚪ `stale` | CSV stopped growing — the watchdog is blind | no new row for 6 min |
 
 A ✅ recovery alert follows when it returns to regulating. State lives
@@ -261,10 +261,20 @@ than every minute.
 **Why voltage and not phase spread.** Spread looks like the obvious
 discriminator and is not: across the bypass window it ranged 0.6–22 V
 and overlapped the regulated range completely. Absolute voltage
-separates them cleanly — regulated output has sat at 230–236 V while
-raw mains ran 250–264 V — so the threshold keys on vmax. If the
-stabiliser is ever reconfigured to regulate higher, revisit
-`RAW_MAINS_V`.
+separates them better — regulated output sits near 230 V while raw
+mains ran 250–264 V — so the threshold keys on vmax.
+
+**Why the confirmation count does the real work.** The first hour of
+regulated output peaked at **242.2 V**, leaving only 3.9 V of margin
+under the 245 V threshold across a 3-sample run — too thin to stake a
+3 a.m. alert on. Measured against the real data, requiring **5**
+consecutive samples lifts the worst sustained regulated reading to
+238.0 V (+7.0 V margin) while costing almost no detection: night
+coverage over the bypass window falls 96.7% → 95.5%, because genuine
+dropouts lasted many minutes. Raising the *threshold* instead would
+have been far more expensive — 250 V drops night coverage to 75.9%.
+Re-measure both if the stabiliser is ever reconfigured to regulate
+higher.
 
 **Credentials.** Token and chat-id resolve in three steps: the process
 environment, then the shack env files (`/etc/default/vu2cpl-shack`,
