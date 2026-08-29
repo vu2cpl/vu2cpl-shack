@@ -8,6 +8,61 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-08-29
+
+### Grid voltage — stabiliser back online, bypass window closed and sealed
+
+Operator brought the servo stabiliser back online at **10:09 IST**,
+which closes the only period in which the inverter's grid input reads
+true incoming mains. The transition is unmistakable in the log: the
+10:09 sample was **253.2 / 251.0 / 256.7 V** (6 V spread between
+phases), the 10:10 sample **232.3 / 232.7 / 232.0 V** — a ~20 V drop
+with all three phases converging to within 0.7 V. That tight
+convergence is the signature to look for, because `grid_voltage.csv`
+carries **no stabiliser-state column**; the boundary is recoverable
+only from the timestamp recorded here and in README / CLAUDE.md.
+
+**Bypass window, final: 2026-08-25 13:11 → 2026-08-29 10:09 IST**
+(5553 valid samples, 99.6% coverage, 3 d 21 h). Everything from 10:10
+on 29 Aug is the stabiliser's regulated ~232 V output and is **not**
+supply evidence. Sealed-window findings:
+
+- **1334 of 5445 grid-present samples (24.5%) above the 253 V (+10%)
+  limit**, peak **264.2 V on L3** (25 Aug 15:38).
+- **Zero samples above the 270 V stabiliser trip point** — across four
+  nights, the closest approach left ~6 V of headroom.
+- **Eight supply interruptions, none of them overnight**: 25 Aug
+  16:05–16:37 (32 min), 26 Aug 10:23–10:51 (29 min), 26 Aug
+  12:51–12:57, 26 Aug 13:07–13:09, 27 Aug 19:32–19:41, 28 Aug
+  17:34–17:38, 28 Aug 20:33–20:50 (17 min), 29 Aug 09:28–09:32.
+
+**The finding that matters for the dispute.** The Solarman cloud export
+(`deye_history_report.py`, follow-up #39) put **89% of 49 interruptions
+in the 22:00–06:00 window** over the preceding 32 days. Across four
+consecutive nights with the stabiliser bypassed, that pattern did not
+recur even once — while the chronic over-voltage did continue, never
+coming near 270 V. Two readings are consistent with this, and the data
+so far cannot separate them: either the nightly cuts were the
+stabiliser tripping (removed from the circuit, they stop), or BESCOM's
+behaviour changed independently over the same days. Four nights is a
+small sample and the confound is real, so neither is claimed as
+established here.
+
+Now that the stabiliser is back in circuit, the **next few nights are
+the natural experiment**: if the nightly outages resume, that points at
+the stabiliser rather than the supply, and the sealed window above is
+the control period. Worth noting the stabiliser is rated to hold 220 V
+across an 180–270 V input, and the measured supply stayed inside that
+range throughout — so a trip, if one occurs, would be happening below
+the rated limit.
+
+No code changed. `grid_voltage_report.py` was run with `--bypass`
+carrying the closed window; the sealed report and chart live outside
+the repo (session scratchpad) since the CSV they derive from is
+Pi-side and append-only.
+
+---
+
 ## 2026-08-26
 
 ### Grid voltage — first bypass-night report; chart gets 200–300 V scale + BESCOM-off bands

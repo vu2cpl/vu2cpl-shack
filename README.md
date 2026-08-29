@@ -239,6 +239,17 @@ exporting PV lifts the voltage at its own terminals (so daytime
 figures are arguable, while the night window has neither PV nor
 export).
 
+**The bypass window is closed.** The stabiliser was in bypass from
+**2026-08-25 13:11 IST** (when logging began) to **2026-08-29 10:09
+IST**, when the operator brought it back online. Only that slice of
+`grid_voltage.csv` is true incoming mains; every row from 10:10 on
+2026-08-29 onward is the stabiliser's regulated output (~232 V,
+all three phases within ~1 V of each other — the tight convergence is
+how you spot the boundary in the raw file, which carries no
+stabiliser-state column). Pass `--bypass` to label the window in the
+report, and filter the CSV to it before quoting any over-voltage
+figure to the utility.
+
 #### Historic supply interruptions
 
 For the period *before* local logging began, the only record is what the
