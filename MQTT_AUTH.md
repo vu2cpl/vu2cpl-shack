@@ -71,6 +71,30 @@ A full `restart` is only needed for listener/`conf.d` changes.
 | **ubersdr** | `svc` | ubersdr's own web UI |
 | **AetherSDR** | `display` | MQTT applet settings (host/user/pass + `aether/*` topics). Reads the humanized status tree only. See [`nodered/aether-display/`](nodered/aether-display/). |
 
+### Non-MQTT secrets in the same env files
+
+`~/.config/vu2cpl-shack.env` is not only an MQTT file. Since
+2026-08-29 it also carries **`TELEGRAM_TOKEN` / `TELEGRAM_CHAT_ID`**
+for the shack bot, read by `stabiliser_watch.py` and `flows_guard.py`
+so their alerts survive Node-RED being down (both previously read the
+token out of the running Node-RED process, and so went silent exactly
+when the shack was least healthy).
+
+Consequences worth keeping in mind:
+
+- The file is **mode 600, user-owned**, in a `700` home. Create it
+  `0600` from the outset — do not `chmod` after writing, or the token
+  is briefly world-readable.
+- It is **not in the repo and not written by `rebuild_pi.sh`**. A
+  rebuilt Pi has no token until the file is hand-written; see
+  REBUILD_PI.md.
+- **This repo is public.** Never paste the token into a commit, an
+  issue, or an assistant session — write it Pi-side with a heredoc
+  under `umask 077` so it misses shell history too. A token that has
+  been echoed anywhere should be rotated via BotFather.
+- The Mac-side file of the same name additionally holds `HA_URL` /
+  `HA_TOKEN` for the Home Assistant REST API. Same rules.
+
 ### Node-RED credential encryption
 
 `flows_cred.json` is now **encrypted** (project `credentialSecret` in

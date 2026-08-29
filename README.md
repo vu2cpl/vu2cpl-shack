@@ -266,12 +266,19 @@ raw mains ran 250–264 V — so the threshold keys on vmax. If the
 stabiliser is ever reconfigured to regulate higher, revisit
 `RAW_MAINS_V`.
 
-**Known gap:** Telegram credentials are read from the running Node-RED
-process (same trick as `flows_guard.py`, so no token is stored on
-disk). If Node-RED is down, alerts are skipped. Putting
-`TELEGRAM_TOKEN`/`TELEGRAM_CHAT_ID` into `~/.config/vu2cpl-shack.env`
-(mode 600, alongside the MQTT creds already there) would remove that
-dependency at the cost of a token on disk.
+**Credentials.** Token and chat-id resolve in three steps: the process
+environment, then the shack env files (`/etc/default/vu2cpl-shack`,
+then `~/.config/vu2cpl-shack.env`, which wins — the same precedence
+`monitor.sh` uses), then the running Node-RED process as a fallback.
+The env-file step was added 2026-08-29 on the operator's instruction:
+before it, alerting depended on Node-RED being alive, so the watchdog
+went silent exactly when the shack was least healthy. `flows_guard.py`
+got the same treatment in the same pass.
+
+The cost is a bot token at rest in a mode-600 file inside a 700 home
+directory. **Neither env file is in the repo, and this repo is public
+— keep it that way.** The env file is created by hand on a rebuild;
+see REBUILD_PI.md.
 
 ```bash
 python3 stabiliser_watch.py --status   # current state, no alert

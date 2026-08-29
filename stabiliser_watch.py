@@ -30,9 +30,18 @@ output has sat at 230-236 V, while raw mains ran 250-264 V — so
 RAW_MAINS_V keys on vmax, confirmed over several samples so a single
 spike cannot trip it.
 
-Pure stdlib. Mirrors flows_guard.py's Telegram plumbing (env first,
-then the running Node-RED process environment) so no secret is stored
-on disk.
+Pure stdlib. Telegram credentials resolve in three steps: our own
+environment, then the shack env files (`/etc/default/vu2cpl-shack`,
+then `~/.config/vu2cpl-shack.env`, which wins — the same precedence
+monitor.sh uses), then the running Node-RED process environment as a
+legacy fallback.
+
+The env-file step exists because the Node-RED trick alone makes the
+watchdog silent whenever Node-RED is down, which is precisely when the
+shack is least healthy. The cost is a bot token at rest in a mode-600
+file under a 700 home directory; that tradeoff was the operator's call
+(2026-08-29). Neither file is in the repo, and the repo is public —
+keep it that way.
 
 Usage:
   stabiliser_watch.py --cron      # one pass, alert on transition
@@ -42,6 +51,7 @@ Usage:
 
 import csv
 import os
+import shlex
 import subprocess
 import sys
 import urllib.parse
@@ -161,11 +171,61 @@ def in_night(ts):
     return t >= NIGHT_START or t < NIGHT_END
 
 
+ENV_FILES = ("/etc/default/vu2cpl-shack",
+             os.path.expanduser("~/.config/vu2cpl-shack.env"))
+
+
+def read_env_files():
+    """Parse the shack env files the shell scripts source.
+
+    Same precedence monitor.sh uses: the /etc file first, the per-user
+    one second so it wins. Cron gives us almost no environment, so this
+    is how a credential reaches us without Node-RED being alive.
+    """
+    out = {}
+    for path in ENV_FILES:
+        try:
+            with open(path) as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith("#"):
+                        continue
+                    if line.startswith("export "):
+                        line = line[7:].lstrip()
+                    if "=" not in line:
+                        continue
+                    k, v = line.split("=", 1)
+                    k = k.strip()
+                    if not k.replace("_", "").isalnum():
+                        continue
+                    try:                       # strip shell quoting
+                        parts = shlex.split(v)
+                        v = parts[0] if parts else ""
+                    except ValueError:
+                        v = v.strip().strip("'\"")
+                    out[k] = v
+        except OSError:
+            continue                            # absent or unreadable: fine
+    return out
+
+
 def telegram_creds():
-    """Token/chat-id from our env, else from the running Node-RED process."""
+    """Token/chat-id: our env, then the shack env files, then Node-RED.
+
+    The env-file step is what keeps alerting alive while Node-RED is
+    down — the /proc fallback below cannot, and a watchdog that goes
+    silent exactly when the shack is unhealthy is worth little.
+    """
     tok, chat = os.environ.get("TELEGRAM_TOKEN"), os.environ.get("TELEGRAM_CHAT_ID")
     if tok and chat:
         return tok, chat
+
+    env_file = read_env_files()
+    tok = tok or env_file.get("TELEGRAM_TOKEN")
+    chat = chat or env_file.get("TELEGRAM_CHAT_ID")
+    if tok and chat:
+        return tok, chat
+
     try:
         pid = subprocess.run(
             ["systemctl", "show", "-p", "MainPID", "--value", "nodered"],

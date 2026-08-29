@@ -47,3 +47,11 @@ __pycache__/
 
 # Node-RED credentials — encrypted, but kept out of this PUBLIC repo entirely
 flows_cred.json
+
+# Shack env files. They live in /etc/default and ~/.config, never here, but
+# since 2026-08-29 they carry the Telegram bot token as well as the MQTT
+# creds (see MQTT_AUTH.md) — so block a stray working-tree copy outright.
+# Same reasoning as flows_cred.json: this repo is PUBLIC.
+*.env
+.env
+vu2cpl-shack.env

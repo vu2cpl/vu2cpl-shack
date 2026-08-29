@@ -39,11 +39,16 @@ Used two ways:
   * cron tripwire on the Pi, every minute:
         flows_guard.py --cron
     → Telegram alert on healthy→broken transition (and ✅ on recovery),
-      via the shack bot. Token/chat-id are read from the running
-      Node-RED process environment (/proc/<pid>/environ) so no secret
-      is copied to disk; if Node-RED is down the alert is skipped
-      (logged only) — the failure mode this guards is a bad DEPLOY,
-      during which Node-RED is by definition running.
+      via the shack bot. Token/chat-id resolve from our own environment,
+      then the shack env files (/etc/default/vu2cpl-shack, then
+      ~/.config/vu2cpl-shack.env which wins — monitor.sh's precedence),
+      then the running Node-RED process environment as a fallback.
+      The env-file step was added 2026-08-29 alongside stabiliser_watch.py;
+      before it, a Node-RED outage silently disabled alerting. That was
+      justified on the grounds that this guards a bad DEPLOY, during
+      which Node-RED is by definition running — true of the main case,
+      but not of a wipe arriving by git operation or manual edit while
+      Node-RED is stopped, nor of the restart in the recovery path.
 
 If a deliberate refactor legitimately changes these invariants
 (e.g. retiring the Vue dashboard), update the constants below FIRST,
@@ -52,6 +57,7 @@ in the same commit as the refactor.
 
 import json
 import os
+import shlex
 import subprocess
 import sys
 import urllib.parse
@@ -116,11 +122,58 @@ def check(flows):
     return fails
 
 
+ENV_FILES = ("/etc/default/vu2cpl-shack",
+             os.path.expanduser("~/.config/vu2cpl-shack.env"))
+
+
+def read_env_files():
+    """Parse the shack env files the shell scripts source.
+
+    monitor.sh's precedence: the /etc file first, the per-user one
+    second so it wins. Deliberately duplicated from stabiliser_watch.py
+    rather than shared — this script also runs as a git pre-commit hook
+    from an arbitrary cwd in two different clones, so it must stay
+    import-free and standalone.
+    """
+    out = {}
+    for path in ENV_FILES:
+        try:
+            with open(path) as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith("#"):
+                        continue
+                    if line.startswith("export "):
+                        line = line[7:].lstrip()
+                    if "=" not in line:
+                        continue
+                    k, v = line.split("=", 1)
+                    k = k.strip()
+                    if not k.replace("_", "").isalnum():
+                        continue
+                    try:                       # strip shell quoting
+                        parts = shlex.split(v)
+                        v = parts[0] if parts else ""
+                    except ValueError:
+                        v = v.strip().strip("'\"")
+                    out[k] = v
+        except OSError:
+            continue                            # absent or unreadable: fine
+    return out
+
+
 def telegram_creds():
-    """Token/chat-id from our env, else from the running Node-RED process."""
+    """Token/chat-id: our env, then the shack env files, then Node-RED."""
     tok, chat = os.environ.get("TELEGRAM_TOKEN"), os.environ.get("TELEGRAM_CHAT_ID")
     if tok and chat:
         return tok, chat
+
+    env_file = read_env_files()
+    tok = tok or env_file.get("TELEGRAM_TOKEN")
+    chat = chat or env_file.get("TELEGRAM_CHAT_ID")
+    if tok and chat:
+        return tok, chat
+
     try:
         pid = subprocess.run(
             ["systemctl", "show", "-p", "MainPID", "--value", "nodered"],

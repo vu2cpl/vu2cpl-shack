@@ -93,15 +93,52 @@ real outages with the correct start times (26 Aug 10:23, 28 Aug
 synthetic grid-absent CSV — real `compose()`, real send, message
 delivered.
 
-**Known gap, deliberately not closed here.** Telegram credentials come
-from the running Node-RED process (`/proc/<pid>/environ`, the same
-trick `flows_guard.py` uses) so no token sits on disk — which means
-**alerts are skipped whenever Node-RED is down**. Verified working
-under a bare `env -i` environment, since cron supplies almost nothing;
-Node-RED runs as `vu2cpl`, so the same-user read succeeds. Closing the
-gap means putting the token in `~/.config/vu2cpl-shack.env` (mode 600,
-where the MQTT creds already live) — a secret-storage judgement call
-left to the operator rather than made unilaterally.
+**Credential gap, raised and then closed the same day.** As first
+written, Telegram credentials came only from the running Node-RED
+process (`/proc/<pid>/environ`, the same trick `flows_guard.py` used)
+so no token sat on disk — which meant **alerts were skipped whenever
+Node-RED was down**, i.e. precisely when the shack is least healthy.
+That was surfaced as a judgement call rather than decided unilaterally,
+and the operator's answer was "put the token in the env file".
+
+### Telegram creds moved to the env file (both watchdogs)
+
+`~/.config/vu2cpl-shack.env` did not exist on the Pi — the MQTT creds
+live in `/etc/default/vu2cpl-shack` (`root:vu2cpl 640`). The new file
+was created in the already-`700` home directory, opened `0600` via
+`os.open` from the outset rather than `chmod`-ed afterwards, so there
+is no window in which it is world-readable.
+
+**The copy was done entirely Pi-side and the value was never printed** —
+a short Python heredoc read Node-RED's environ and wrote the file,
+emitting only string lengths (46 / 9). That matters because **this repo
+is public** and session transcripts can leak; a token echoed once is a
+token to rotate. Anyone repeating this should keep the same discipline.
+
+Both `stabiliser_watch.py` and `flows_guard.py` now resolve credentials
+env → `/etc/default/vu2cpl-shack` → `~/.config/vu2cpl-shack.env`
+(wins — `monitor.sh`'s precedence) → Node-RED `/proc` fallback, via a
+small quote-aware parser. It is duplicated in both scripts rather than
+shared: `flows_guard.py` also runs as a git pre-commit hook from an
+arbitrary cwd in two clones, so it has to stay import-free.
+
+Verified by sabotaging the `/proc` lookup and sending a real Telegram,
+which arrived — not merely by checking that the lookup returned
+something. `flows_guard.py` was re-run in both normal and `--stdin`
+(pre-commit) modes afterwards, both OK, since a broken guard would
+have made the repo uncommittable.
+
+`flows_guard.py`'s docstring had justified the old behaviour twice
+over — "so no secret is copied to disk" and "the failure mode this
+guards is a bad DEPLOY, during which Node-RED is by definition
+running". The first half is now simply false, and the second holds
+only for the main case: a wipe arriving by git operation or manual
+edit while Node-RED is stopped, and the restart in the documented
+recovery path, both fall outside it. Rewritten accordingly.
+
+**The env file is not in the repo and `rebuild_pi.sh` does not create
+it** — a rebuilt Pi has no token until it is written by hand.
+REBUILD_PI.md now carries that step.
 
 ---
 

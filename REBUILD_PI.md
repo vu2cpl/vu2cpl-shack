@@ -478,10 +478,24 @@ crontab -l | grep monitor.sh              # one line expected
 (crontab -l 2>/dev/null | grep -v 'stabiliser_watch' ; \
  echo '* * * * *  /usr/bin/python3 /home/vu2cpl/stabiliser_watch.py --cron') | crontab -
 python3 /home/vu2cpl/stabiliser_watch.py --status   # expect: regulating: NNN / NNN / NNN V
+
+# Telegram credentials for stabiliser_watch.py AND flows_guard.py.
+# NOT created by rebuild_pi.sh and NOT in the repo (this repo is public) —
+# a rebuilt Pi has no token until you write this file by hand. Without it
+# both watchdogs fall back to reading the token out of the running Node-RED
+# process, which means they go silent whenever Node-RED is down.
+#
+# Write it with a heredoc, not an inline echo, so the token does not land in
+# your shell history:
+umask 077
+cat > ~/.config/vu2cpl-shack.env <<'ENVEOF'
+TELEGRAM_TOKEN=<bot token from the shack password manager>
+TELEGRAM_CHAT_ID=<chat id>
+ENVEOF
+chmod 600 ~/.config/vu2cpl-shack.env
+ls -la ~/.config/vu2cpl-shack.env          # expect -rw------- vu2cpl vu2cpl
+
 python3 /home/vu2cpl/stabiliser_watch.py --test     # expect a 🧪 Telegram
-# Note: it reads the Telegram token from the running Node-RED process, so
-# start Node-RED before the first --test, and expect alerts to be skipped
-# during any window where Node-RED is down.
 
 # flows_guard — stale-tab wipe protection (added 2026-08-21).
 # (a) cron tripwire: validates the live flows.json every minute, Telegram-
@@ -766,7 +780,7 @@ If 15 fails but other cards are fine: not a noderedpi4 problem — it's gpsntp.l
 | `rpi-agent.service` | `/etc/systemd/system/rpi-agent.service` |
 | `monitor.sh` | `/home/vu2cpl/monitor.sh` (+ user crontab `* * * * *`) |
 | `solar_inverter_mqtt.py` | `/home/vu2cpl/solar_inverter_mqtt.py` (+ user crontab `* * * * *`; needs `pip3 install --user pysolarmanv5`). Appends `~/grid_voltage.csv` — back that file up before wiping, it is the only copy |
-| `stabiliser_watch.py` | `/home/vu2cpl/stabiliser_watch.py` (+ user crontab `* * * * *` `--cron`). Telegram alert on supply outage / stabiliser dropout / stalled log. Needs Node-RED running for its credential lookup |
+| `stabiliser_watch.py` | `/home/vu2cpl/stabiliser_watch.py` (+ user crontab `* * * * *` `--cron`). Telegram alert on supply outage / stabiliser dropout / stalled log. Needs `~/.config/vu2cpl-shack.env` (hand-written, mode 600 — **not in the repo, not created by `rebuild_pi.sh`**) or a running Node-RED for its credential lookup |
 | `grid_voltage_report.py` | run in-place from the repo (no install) |
 | `deye_history_report.py` | run in-place from the repo (no install; Mac-side analysis of Solarman cloud exports) |
 | `flows_guard.py` | run in-place from the repo (user crontab `* * * * *` `--cron` + `.git/hooks/pre-commit`) |
