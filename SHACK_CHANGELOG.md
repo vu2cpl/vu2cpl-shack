@@ -8,6 +8,86 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-08-30
+
+### The overnight experiment answered — and the answer is negative
+
+Night 29→30 Aug was the test the whole exercise was built for: the
+first full night with the stabiliser back in circuit. **480 of 480
+samples, zero interruptions.** The nightly outage pattern did not
+return.
+
+| Night | Samples | Interrupted | Stabiliser |
+|---|---|---|---|
+| 25→26 Aug | 480 | 1 | bypassed |
+| 26→27 Aug | 480 | 2 | bypassed |
+| 27→28 Aug | 480 | 0 | bypassed |
+| 28→29 Aug | 480 | 2 | bypassed |
+| **29→30 Aug** | **480** | **0** | **in circuit** |
+
+(The 1–2 "interrupted" counts are isolated single-sample blips, not
+outages — no episode reached the 2-sample floor.)
+
+**This substantially weakens the stabiliser-trip hypothesis.** The
+reasoning that motivated it was: nightly cuts stopped when the
+stabiliser was bypassed, so the stabiliser was probably what tripped.
+The test of that is to put it back and see if they resume. They did
+not. Restoring the suspected cause did not restore the effect, which
+is the outcome that most cleanly disconfirms it.
+
+What survives is the alternative already flagged on 08-29: the pattern
+stopped around 25 Aug for reasons outside the shack, and the four-night
+bypass run was confounded with that same calendar period. One
+in-circuit night is a small sample and does not *prove* the stabiliser
+innocent — but the hypothesis no longer has evidence behind it, and it
+should stop being the headline of the BESCOM case.
+
+**What the evidence does still support**, and should be the case
+instead: chronic over-voltage on true mains (24.5% of the sealed
+window's samples above 253 V, peak 264.2 V) and **interruptions that
+continue by day** — six across 29–30 Aug alone (3, 6, 8, 9, 12 and
+15 min). The supply is demonstrably unreliable; it is the *nightly*
+framing that the data has stopped supporting.
+
+Two sags were logged, both explicable: 30 Aug 08:45 with L1 alone down
+to 167.6 V (isolated), and 09:55 with all three phases collapsing to
+103 / 98 / 142 V in the minute immediately before the 09:56–10:07 cut —
+a transition artefact of the grid falling over, not a separate event.
+
+**No updated voltage report was generated, deliberately.** Every row
+since 29 Aug 10:09 is the stabiliser's regulated output, so a combined
+report would mix regulated output with true mains in the same daily
+min/mean/max lines and misrepresent the evidence. The sealed
+bypass-window report stands as the voltage record; the interruption
+findings above are the only part of the post-switchover data that
+means anything to the dispute.
+
+### Stabiliser watchdog retired (and validated on the way out)
+
+Operator: "stop monitoring". The cron entry was removed;
+`stabiliser_watch.py`, its state file and the env-file credentials were
+all left in place, so re-enabling is a single crontab line.
+`flows_guard.py` and `solar_inverter_mqtt.py` crons were deliberately
+**not** touched — the latter is the evidence log itself, the former is
+a critical-rule safety guard.
+
+It performed correctly across ~34 hours: **7 outage alerts + 7
+recoveries, all corresponding to real interruptions**, with the
+one-minute `read_fail` blips correctly suppressed by
+`CONFIRM_OUTAGE = 2`. Fourteen messages in a day and a half is also a
+fair guess at why "stop monitoring" was asked for — daytime supply is
+bad enough that an outage alerter is noisy when the operator is awake
+to see it anyway.
+
+Follow-up #42(b) closes with real numbers. Across the full regulated
+era (1966 live samples, including a night with no PV export) vmax
+peaked at **242.7 V** and **no sample crossed 245 V** — so no false 🟠
+fired, and none would have fired at the old `k=3` either. The 08-29
+retune was precautionary rather than necessary, but the ceiling is now
+measured rather than guessed: **regulated output tops out ≈243 V**.
+
+---
+
 ## 2026-08-29
 
 ### Grid voltage — stabiliser back online, bypass window closed and sealed

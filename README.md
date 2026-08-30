@@ -241,6 +241,15 @@ export).
 
 #### Stabiliser watchdog
 
+> **Currently disabled** (2026-08-30, operator request). The cron entry
+> was removed once the overnight experiment concluded; the script,
+> its state file and the env-file credentials are all still in place.
+> Re-enable with one line:
+> `* * * * * /usr/bin/python3 /home/vu2cpl/stabiliser_watch.py --cron`
+>
+> It ran correctly for its ~34 hours: 7 outage alerts + 7 recoveries,
+> all real, no false positives.
+
 [`stabiliser_watch.py`](stabiliser_watch.py) tails the same CSV once a
 minute from cron and pushes a Telegram alert when the supply state
 changes. It exists because the question the log is answering — do the
@@ -273,8 +282,14 @@ consecutive samples lifts the worst sustained regulated reading to
 coverage over the bypass window falls 96.7% → 95.5%, because genuine
 dropouts lasted many minutes. Raising the *threshold* instead would
 have been far more expensive — 250 V drops night coverage to 75.9%.
-Re-measure both if the stabiliser is ever reconfigured to regulate
-higher.
+
+**Settled 2026-08-30.** Across the full regulated era (1966 live
+samples, including a night with no PV export) vmax peaked at **242.7 V**
+and nothing crossed 245 V, so no false 🟠 fired — and none would have
+at the old 3-sample setting either. The retune was precautionary
+rather than necessary, but the ceiling is now measured rather than
+guessed: **regulated output tops out around 243 V**. Re-measure both
+constants only if the stabiliser is reconfigured to regulate higher.
 
 **Credentials.** Token and chat-id resolve in three steps: the process
 environment, then the shack env files (`/etc/default/vu2cpl-shack`,
@@ -305,6 +320,21 @@ how you spot the boundary in the raw file, which carries no
 stabiliser-state column). Pass `--bypass` to label the window in the
 report, and filter the CSV to it before quoting any over-voltage
 figure to the utility.
+
+**What the sealed window showed, and what the follow-up experiment
+did.** Across 25–29 Aug on true mains: 24.5% of samples above 253 V,
+peak 264.2 V, nothing near the 270 V stabiliser trip, and eight
+interruptions **none of which fell overnight** — against a Solarman
+cloud export that put 89% of 49 interruptions between 22:00 and 06:00
+in the preceding month. That made the stabiliser look like the thing
+tripping. Putting it back in circuit on 29 Aug was the test, and the
+night of 29→30 Aug ran **480/480 samples with zero interruptions** —
+the pattern did not resume. Restoring the suspected cause did not
+restore the effect, so **the nightly-trip hypothesis is substantially
+weakened**; the cuts appear to have stopped around 25 Aug for reasons
+outside the shack. The claims that still hold are chronic over-voltage
+and frequent interruptions *by day* (six across 29–30 Aug), and those
+are what a utility case should rest on.
 
 #### Historic supply interruptions
 
