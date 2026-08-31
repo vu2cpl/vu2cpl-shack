@@ -1,7 +1,7 @@
 # CLAUDE.md — VU2CPL Shack Automation
 **Operator:** Manoj (VU2CPL) | MK83TE | Bengaluru, India
 **Repo:** github.com/vu2cpl/vu2cpl-shack (**public** — verified 2026-08-25 via `gh repo view`; this line previously said "private", which was wrong. Treat every file here as world-readable: no household names, schedules, tokens, or HA dumps)
-**Last updated:** August 2026
+**Last updated:** September 2026
 
 ---
 
@@ -211,7 +211,7 @@ persists across reboots. Verify with empty-payload read:
 | `noderedpi4` | `vu2cpl` | Agent running |
 | `openwebrxplus` | `vu2cpl` | Agent running |
 | (2 more Pis) | — | Pending |
-| Home Assistant Pi (`HassPi`, `192.168.1.36:8123`, HA 2026.8.3) | — | **Telemetry live** (HA's own `Publish RPi stats to MQTT (HassPi)` automation → `rpi/HassPi/*`). **REST API access added 2026-08-25** — long-lived token in `~/.config/vu2cpl-shack.env` as `HA_TOKEN` (Mac-side, mode 600, never committed). Full automation CRUD via `/api/config/automation/config/<id>`; no SSH to the box (22/22222 closed). No control agent needed. **HA's Radio dashboard (`/193-radio`) is the Vue-dashboard equivalent (phase 1) since 2026-08-25** — shack entities created by `ha_discovery_publish.py` (see the scripts table); HA's MQTT integration is on the shack broker, which is what makes the whole thing possible |
+| Home Assistant Pi (`HassPi`, `192.168.1.36:8123`, HA 2026.8.3) | — | **Telemetry live** (HA's own `Publish RPi stats to MQTT (HassPi)` automation → `rpi/HassPi/*`). **REST API access added 2026-08-25** — long-lived token in `~/.config/vu2cpl-shack.env` as `HA_TOKEN` (Mac-side, mode 600, never committed). Full automation CRUD via `/api/config/automation/config/<id>`; no SSH to the box (22/22222 closed). No control agent needed. **HA's Radio dashboard (`/193-radio`) is the Vue-dashboard equivalent (phase 1) since 2026-08-25** — shack entities created by `ha_discovery_publish.py` (see the scripts table); HA's MQTT integration is on the shack broker, which is what makes the whole thing possible. **Custom components on this box are patched in place and invisible to git** — see the Smarteefi note under "Household HA integrations" below |
 | Red Pitaya `rp-f02054` (`rp-f02054.local` — `192.168.1.241` via DHCP as of 2026-08-22; **the `RBN_SDR` network-monitor tile's target** again since 2026-08-25) | `root` | Telemetry live via `monitor_redpitaya.sh` (Alpine/BusyBox, Zynq XADC temp; no control agent) — see DEPLOY_PI.md special cases |
 | Web-888 receiver `web-888` (`192.168.1.235`) | `root` | Telemetry live via the same `monitor_redpitaya.sh` (also Zynq/Alpine — script runs unchanged; no control agent). Added 2026-08-22. Held the `RBN_SDR` ping tile 08-21 → 08-25; still fleet-monitored via `rpi/web-888/*`, but no longer has a network-monitor tile |
 
@@ -889,6 +889,58 @@ were considered and deferred; add later if wanted.
 
 ---
 
+## HOUSEHOLD HA INTEGRATIONS (patched in place — invisible to git)
+
+`HassPi` (`192.168.1.36`) runs household integrations that are **not**
+part of this repo but are edited from this Mac, because the operator
+mounts the Samba `config` share (`smb://192.168.1.36/config` →
+`/Volumes/config`) and `/config` then behaves like a local path. SSH to
+that box is closed (22/22222), so Samba + the REST API
+(`HA_TOKEN` in `~/.config/vu2cpl-shack.env`) are the only two ways in.
+**Anything changed there is untracked** — record it here or it is lost.
+
+Reading the box without the share: HA's REST API has no `/api/error_log`
+on 2026.8.x, but the **WebSocket** command `system_log/list` works and is
+the fastest way to see what an integration is actually complaining about.
+`GET /api/config/config_entries/entry` lists entries (and their
+`state` / `reason`); `config/entity_registry/list` over WS maps entities
+to their owning platform. Config-entry **data** (tokens, discovered
+device lists) is never exposed over either API — that needs
+`/config/.storage/core.config_entries` via the share.
+
+### Smarteefi (custom component, patched 2026-09-01)
+
+`custom_components/smarteefi`, installed via HACS from
+[`coreembedded/smarteefi-homeassistant`](https://github.com/coreembedded/smarteefi-homeassistant)
+at commit `3a8ae3f` — which is also upstream HEAD, last pushed June 2025.
+It is unmaintained, and three of its bugs are fatal or noisy on HA
+2026.8.3. All three are now **patched directly on the share**, with the
+originals kept beside them:
+
+| Bug | Symptom | Fix |
+|---|---|---|
+| `SmarteefiOptionsFlowHandler.__init__` assigns `self.config_entry` | Clicking **Configure** 500s — `AttributeError: property 'config_entry' … has no setter`. `OptionsFlow.config_entry` is a read-only property since HA 2024.11; the setter went in 2025.12 | Delete the `__init__`; `async_get_options_flow` returns `SmarteefiOptionsFlowHandler()` and HA populates the entry itself |
+| `async_forward_entry_unload(entry, [4 platforms])` (×2) | **Reload** throws — that API takes a single domain, not a list | `async_unload_platforms(entry, [...])` |
+| UDP listener: bare protocol class, and `SO_REUSEADDR`/`SO_REUSEPORT` set inside `connection_made` | Close raises `AttributeError: … has no attribute 'connection_lost'`; re-bind fails `[Errno 98] Address in use`, so after **any** reload the push listener is dead until a full HA restart. The flags are set *after* asyncio has already bound | Subclass `asyncio.DatagramProtocol` (adds `connection_lost` / `error_received`); build the socket by hand, set the flags **before** `bind()`, hand it over as `sock=`; null the transport and `await asyncio.sleep(0)` on unload |
+
+Backups on the share, oldest first:
+`config_flow.py.bak-3a8ae3f`, `__init__.py.bak-3a8ae3f`,
+`__init__.py.bak-pre-udpfix`. To revert, copy a `.bak-3a8ae3f` back and
+restart HA.
+
+**Applying any change here needs a full HA restart** —
+`POST /api/services/homeassistant/restart`. A config-entry reload will
+*not* pick it up: custom-component Python is cached in `sys.modules`.
+
+**HACS will silently revert all of this** if the integration is ever
+reinstalled or "repaired". Upstream is dead so no update will arrive on
+its own, but re-check the three fixes after any HACS action on it.
+
+The switches still do not work — that is a network problem, not a code
+one. See TODO #43.
+
+---
+
 ## EXTERNAL APIs
 
 | Service | URL | Rate / Key |
@@ -1040,6 +1092,7 @@ historical context lives in `SHACK_CHANGELOG.md`, indexed by date.
 
 | # | Item | Status |
 |---|------|--------|
+| 43 | **Smarteefi switches unreachable — devices on the IoT VLAN, integration is broadcast-only** — the bundled `smarteefi-ha-cli` sends a UDP request to port **10201** at `inet_addr(ip) | ~inet_addr(netmask)`, i.e. the subnet broadcast of HA's own default-route interface (`192.168.1.255`). The 5 devices are on `192.168.30.x`, and broadcast does not cross VLANs, so every 5-minute poll times out (`Device Offline`) and all 17 entities sit at `off`. Verified the router drops directed broadcast too — `ping 192.168.30.255` silent while `ping 192.168.10.255` answers — so pointing the integration at the IoT broadcast address will not work either. Three ways out: **(a)** re-onboard the 5 devices onto `192.168.1.x`; **(b)** a UDP broadcast relay on the router for **10201** into VLAN 30 and **8890** back (OPNsense/pfSense/OpenWrt have `udp-broadcast-relay-redux`; UniFi does not expose it); **(c)** a tagged VLAN-30 interface on HassPi plus a patch to `_get_active_interface_ip_and_netmask`, which always picks the default-route interface. **Caution meanwhile:** `async_turn_on/off` only checks the CLI's exit code, which is `0` even when it prints `Device Offline` — so toggling a Smarteefi entity flips the HA state while nothing physically happens. See HANDOVER #43 | **Pending (network)** |
 | 42 | **Stabiliser watchdog loose ends** — (a) ~~Telegram alerting dies with Node-RED~~ **Closed 2026-08-29 same day** on operator instruction: token+chat-id copied Pi-side into `~/.config/vu2cpl-shack.env` (mode 600, never printed to a transcript), and both `stabiliser_watch.py` and `flows_guard.py` now read env → env files → Node-RED. Verified by sending a real Telegram with the `/proc` lookup sabotaged. (b) ~~`RAW_MAINS_V` calibration~~ **Closed 2026-08-30** — over 1966 live regulated samples (incl. a full no-PV night) vmax peaked **242.7 V** and **nothing crossed 245 V**; zero false 🟠, and none would have fired at the old `k=3` either. Ceiling now measured, not guessed: **regulated output tops out ≈243 V**. The 08-29 retune (`CONFIRM_DROPOUT` 3→5) was precautionary; it stands. See HANDOVER #42 | **Closed** |
 | 41 | ~~**HA Radio dashboard = full Vue-dashboard equivalent**~~ | **Done 2026-08-25** — all phases landed in one day. Phase 1: 7 data-ready cards via 61 MQTT-discovery entities + ping entries. Lightning controls: `rest_command.shack_*` + state-lit ANT/BYPASS toggle scripts. Phase 2: **HA state bridges** for Flex/SPE/LP-700/Rotator/DXCC/RBN (see the "HA state bridges" flow-notes section — 17 nodes, 6 tabs, retained `shack/<subsystem>/state`) + 23 more discovery entities (90 total) + 6 consolidated cards. Rotator card reworked same night on operator feedback ("useless in its current state"): gauge+dead-target replaced by compass markdown (heading° + 16-wind cardinal + live target) **with control** — `input_number.shack_rotator_target` slider + GO/STOP + N/E/S/W preset buttons → scripts `shack_rotator_go`/`shack_rotator_stop` → `rest_command.shack_rotator_go` (`{"hdg": N}` — the endpoint's key is `hdg`, and its handler auto-powers the rotator) / `shack_rotator_stop`. Dashboard = 2 tabs: Radio (operating) / Fleet (monitoring). See HANDOVER #41. |
 | 40 | **HA ↔ inverter grid-state disagreement** — HA's `binary_sensor.inverter_grid` and the per-minute voltage log disagreed on a 08-25 outage window; both poll the same client-limited Solarman logger, one likely got a stale/failed read. Decides which source defines outage windows in the utility evidence. See HANDOVER #40 | Pending |
