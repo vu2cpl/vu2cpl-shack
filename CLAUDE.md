@@ -588,6 +588,7 @@ Sliding strike history lives in `flow.recent_as3935 = [{ts, km}, …]`. Pushed o
 - **Unchanged:** `Build Rotator String`, `Click → Heading`, the compass `ui_svg`, all 4 HTTP endpoints (`/rotator/go|lpsp|stop|power-toggle`), and the Vue builder. They were not touched — only the transport under heading control changed.
 - **Deploy ordering when rebuilding:** the ws-client flow must deploy (Node-RED restart, no serial nodes) **before** `rotator-remote` starts, or the gateway can't open the port. `rebuild_pi.sh` Stage 13b installs the gateway after the flow is in place; the manual order is git pull → restart nodered → `sudo ./install-service.sh` in `~/rotator-remote`.
 - Protocol bytes (`AI1;` query, `AP1NNN\r` set with **CR**, `;` stop, `;`-framed replies) live in `rotator-remote/rotator/protocol.py`, extracted verbatim from the pre-refactor flow. The set/query terminator asymmetry is real DCU-1 — don't "normalise" it.
+- **Power state + LP/SP auto-power (2026-09-01):** `rotator_pwr_state_fn` (fed by the tab's own `stat/powerstrip1/POWER2` mqtt-in) now also does `global.set('rotator_power', isOn)` — the single source of truth both the Vue builder and the HA bridge read. A startup inject (`rotator_pwr_boot_inj`, once +3 s) sends an **empty** payload to `cmnd/powerstrip1/POWER2` (empty = query, not toggle) so the true state is known ~3 s after every Node-RED restart — before this, D1's SVG dim and the Vue pill were both blind until the next real toggle, and the Vue pill's fallback (`heading != null`, never cleared) had it stuck ON forever. Unknown now renders as OFF. `rotator_lpsp_fn` mirrors GO's pattern (output 2 → `ON` via `rotator_go_pwr_mqtt`, `toggle_180` after 200 ms) — LP/SP used to write serial into an unpowered rotator. Vue v32 dims compass/manual/presets to 0.25 when off (header pill + aside power button stay bright); the auto-off timer arms off the stat echo, so every power-on path gets it for free.
 
 ### All Power Strips (Rotator)
 - Rotator timer node (`05f0ddeb566a90fc`): set to `5 * 60 * 1000` (5 min) for production — done 2026-05-10 (`971f4b4`)
@@ -858,7 +859,7 @@ configs in `ha_discovery_publish.py` (90 configs total).
 | `shack/flex/state` | `flex_state_{tick,fn,mqtt}_01` | FlexRadio | `flow.flexState` (trimmed: model/txstate/slices/PA) | 5 s |
 | `shack/spe/state` | `spe_state_{pub,mqtt}_01` | SPE (WS) | `ws_format_state` output (whole flat panel payload) | ≥5 s |
 | `shack/lp700/state` | `lp700_state_{tick,fn,mqtt}_01` | LP-700-HID ws | `global.lpState` (avg/peak/swr/range) | 5 s |
-| `shack/rotator/state` | `rot_state_{tick,fn,mqtt}_01` | Rotator | `flow.rotator_heading` + `flow.target_hdg` | 5 s |
+| `shack/rotator/state` | `rot_state_{tick,fn,mqtt}_01` | Rotator | `flow.rotator_heading` + `flow.target_hdg` + `global.rotator_power` (since 2026-09-01; `null` until first known) | 5 s |
 | `shack/dxcc/state` | `dxcc_state_{tick,fn,mqtt}_01` | DXCC Tracker | `workedStats` + last-5 `alertList` + `clusterStatus` | 30 s |
 | `shack/rbn/state` | `rbn_state_{tick,fn,mqtt}_01` | RBN Skimmer | `flow.rbn_dash` (**file scope**, arrays trimmed to 5) | 10 s |
 

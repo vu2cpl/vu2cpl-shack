@@ -10,6 +10,44 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-09-01
 
+### Rotator: LP/SP now powers on; the power indication stops lying
+
+Operator report: LP/SP doesn't power the rotator, and the Vue card
+gives no power indication — "in NR dashboard, we had the whole display
+dimming for power off". All three complaints traced to real defects:
+
+- **LP/SP had no power path.** `rotator_lpsp_fn` was literally
+  `return {payload:'toggle_180'}` → serial. GO has had the
+  ON-then-200 ms pattern since the auto-power feature landed; LP/SP
+  was simply never given it, so with the outlet off it wrote serial
+  into a dead rotator. Now mirrors GO exactly, through the same
+  mqtt-out. The auto-off timer needs nothing — it arms off the
+  `stat/` echo, so every power-on path gets it for free.
+- **The Vue power pill was stuck ON since the card was built.** It
+  read `global.rotator_power` — written by *nothing*, anywhere. The
+  fallback was `heading != null` against a heading cache that is
+  never cleared, which is permanently true after the first poll. The
+  fix is one line in the D1 dim function (which already receives
+  `stat/powerstrip1/POWER2`): cache the state into the global.
+- **Both dashboards were blind after a Node-RED restart** — `stat/`
+  isn't retained, so until someone toggled the outlet, D1 rendered
+  undimmed and the global stayed unset. A new startup inject sends an
+  **empty** payload to `cmnd/powerstrip1/POWER2` (empty = query, not
+  toggle); Tasmota's stat reply seeds everything ~3 s after boot.
+  Unknown now renders as OFF rather than a false ON.
+
+Vue `v32`: compass, manual-heading row and DXCC presets dim to 0.25
+when power is off — same value as the D1 SVG dim — while the header
+pill and the aside's power button stay full-brightness, so switching
+back on stays reachable. And `shack/rotator/state` now carries
+`power` (`null` until first known this NR run) so the HA rotator card
+can show it too.
+
+Verified on the Pi post-restart: the bridge published `power:false`
+within seconds (the bootstrap query answered — the outlet really was
+off), v32 served, flows_guard green through the pre-commit hook.
+
+
 ### Smarteefi HA integration — three HA-2026 breakages patched on HassPi
 
 Reported as "smarteefi integration fails to load". The config *entry*
