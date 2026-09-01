@@ -8,6 +8,113 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-09-01
+
+### Smarteefi HA integration — three HA-2026 breakages patched on HassPi
+
+Reported as "smarteefi integration fails to load". The config *entry*
+was not the problem — it read `state: loaded` with all 17 `switch.*`
+entities registered. What failed was the **Configure** dialog:
+
+```
+File "/config/custom_components/smarteefi/config_flow.py", line 114, in __init__
+    self.config_entry = config_entry
+AttributeError: property 'config_entry' of 'SmarteefiOptionsFlowHandler'
+object has no setter
+```
+
+The familiar HA break: `OptionsFlow.config_entry` became a read-only
+property in 2024.11 and the setter was removed in 2025.12. HassPi runs
+**2026.8.3**. It had fired twice, from two of the operator's own
+browsers.
+
+**Finding it needed a detour worth recording.** `GET /api/error_log`
+**404s on 2026.8.x** — the log is no longer served over REST. The
+WebSocket command `system_log/list` still works and is now the fastest
+way to read an HA box's errors from a script; a ~60-line stdlib
+WebSocket client (handshake, masked client frames, `auth` → `auth_ok`)
+is enough, no `websockets` package required. `config/entity_registry/list`
+over the same socket is what mapped those 17 unremarkable entity ids
+(`switch.porch`, `switch.gate1`, …) back to the `smarteefi` platform.
+Config-entry **data** is exposed by neither API — that needs
+`.storage/core.config_entries` over the share.
+
+The component is HACS-installed from
+[`coreembedded/smarteefi-homeassistant`](https://github.com/coreembedded/smarteefi-homeassistant)
+at `3a8ae3f`, which **is** upstream HEAD — last pushed June 2025, three
+stars, unmaintained. Nothing to pull, so it was patched in place over
+the mounted Samba share, originals kept beside it.
+
+Verifying the first fix surfaced two more:
+
+| Bug | Symptom | Fix |
+|---|---|---|
+| `SmarteefiOptionsFlowHandler.__init__` assigns `self.config_entry` | Configure 500s | drop the `__init__`, return `SmarteefiOptionsFlowHandler()` |
+| `async_forward_entry_unload(entry, [4 platforms])`, twice | **Reload** throws — that API takes one domain, not a list | `async_unload_platforms(entry, [...])` |
+| UDP listener is a bare class, and sets `SO_REUSEADDR`/`SO_REUSEPORT` inside `connection_made` | close raises `AttributeError: … no attribute 'connection_lost'`; re-bind fails `[Errno 98] Address in use`, leaving the push listener dead until a **full restart** | subclass `asyncio.DatagramProtocol`; build the socket by hand, set the flags **before** `bind()`, pass it as `sock=`; null the transport and `await asyncio.sleep(0)` on unload |
+
+That third one is the instructive one: the flags were being set in
+`connection_made`, which asyncio calls *after* it has already created
+and bound the socket. They could never affect the bind they existed
+for.
+
+Verified end-to-end: the options flow now returns `type: form` instead
+of a 500 (opened over the API and aborted), and two consecutive entry
+reloads produce no `Address in use`, no `connection_lost`
+`AttributeError`, and no "UDP server failed to start".
+
+**Custom-component edits need a restart, not a reload** —
+`POST /api/services/homeassistant/restart`. A config-entry reload
+re-runs setup but does not re-import the module; Python has it cached
+in `sys.modules`.
+
+### …and why the switches still don't work (it isn't the code)
+
+All 765 status polls since install had failed with `Device Offline` —
+five devices, every five minutes, 100%. Reading the bundled
+`smarteefi-ha-cli` ARM binary settles what that string means: the CLI
+is **pure LAN UDP broadcast**, no cloud path anywhere. It does
+`socket(AF_INET, SOCK_DGRAM)` → `setsockopt(SO_BROADCAST)` +
+`SO_RCVTIMEO` → `sendto`, and `recvfrom() <= 0` is literally the branch
+that prints `Device Offline`. It is a receive timeout, nothing more.
+
+The destination comes out of `get_baddr()`, which stores
+`0xd9270002` into the global `sockaddr_in`: family `0x0002` = AF_INET,
+port `0x27d9` big-endian = **10201**, address
+`inet_addr(ip) | ~inet_addr(netmask)` — the subnet broadcast of
+whatever interface the integration auto-detected. That detection
+follows the default route, so HA broadcasts to `192.168.1.255`.
+
+The Smarteefi devices are on `192.168.30.x`. Broadcast does not cross
+VLANs, so the request never arrives.
+
+The tempting shortcut — lie about the subnet so it aims at
+`192.168.30.255` — was tested and ruled out:
+
+```
+ping 192.168.30.255   → 3 sent, 0 received      (from 192.168.10.226)
+ping 192.168.10.255   → replies + duplicates    (control: method works)
+```
+
+The router drops directed broadcasts between VLANs, so that would only
+move the timeout. Three real options, all needing a network decision,
+are carried as HANDOVER follow-up #43: move the devices onto
+`192.168.1.x`; a router-side UDP broadcast relay (10201 in, 8890 back);
+or a tagged VLAN-30 interface on HassPi plus a patch to
+`_get_active_interface_ip_and_netmask`.
+
+**Until then, do not trust those 17 entities.** `async_turn_on/off`
+decides success from the CLI's **exit code**, which is `0` even when it
+printed `Device Offline` — so toggling a Smarteefi switch in HA flips
+the UI state while nothing physically happens.
+
+Since none of this is in git, CLAUDE.md gained a
+**"Household HA integrations (patched in place — invisible to git)"**
+section naming the patched files, the backups, and the fact that HACS
+will silently revert them if the integration is ever reinstalled.
+
+---
+
 ## 2026-08-30
 
 ### The overnight experiment answered — and the answer is negative

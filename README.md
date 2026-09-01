@@ -52,13 +52,20 @@ rationale.
 
 Since 2026-08-25 there is also a **Home Assistant satellite view**:
 the HA "Radio" dashboard (on the household HA instance) mirrors the
-data-ready half of the Vue card set — Power, Solar, House Loads,
-Lightning, RPi Fleet, GPS NTP, Network, UberSDR — with stock HA
-cards. It consumes the same shack MQTT topics through retained
-MQTT-discovery configs published by `ha_discovery_publish.py`; no
-Node-RED changes were needed. The gateway-backed cards (FlexRadio,
-SPE, LP-700, Rotator, DXCC, RBN) are not mirrored yet — they would
-need a Node-RED → MQTT state bridge first.
+whole Vue card set with stock HA cards, across two tabs — Radio
+(operating) and Fleet (monitoring). The MQTT-native subsystems —
+Power, Solar, House Loads, Lightning, RPi Fleet, GPS NTP, Network,
+UberSDR — ride the shack's existing topics through retained
+MQTT-discovery configs published by `ha_discovery_publish.py`, needing
+no Node-RED changes at all. The gateway-backed ones (FlexRadio, SPE,
+LP-700, Rotator, DXCC, RBN) followed the same day over **read-only
+Node-RED → MQTT state bridges**: per tab, an inject tick → a function
+reading that tab's existing context → a retained
+`shack/<subsystem>/state`, touching no flow behaviour. Lightning and
+the rotator also carry controls, via HA `rest_command`s onto the same
+HTTP endpoints the dashboards use. One caveat: the DXCC card goes
+blank while the DXCC Tracker flow tab is disabled — it has been since
+2026-08-27 — because that tab's bridge stops with it.
 
 ---
 
