@@ -113,6 +113,59 @@ Since none of this is in git, CLAUDE.md gained a
 section naming the patched files, the backups, and the fact that HACS
 will silently revert them if the integration is ever reinstalled.
 
+### Same day, part two: fixed without moving anything — the devices answer unicast
+
+The operator's first call was "move the smarteefi devices to
+192.168.1.x", followed twenty minutes later by the better question:
+*"this is against our principle?"* It is — the IoT VLAN exists so that
+a compromised closed-firmware cloud device can't sit on L2 with the
+broker, HA and the radios. And with UniFi ruling out a router-side
+broadcast relay, the remaining "clean" option was a VLAN-trunked relay
+host: a real project.
+
+The cheap idea won instead. The CLI computes its destination as
+`ip | ~netmask` — hand it a device's **own IP** with netmask
+`255.255.255.255` and that arithmetic collapses to plain routed
+unicast, which crosses VLANs like any other traffic (it is exactly how
+HA polls the Deye). Nobody knew whether the devices would *answer* a
+unicast request, so that was the test: the arm64 CLI ran natively on
+the Pi against every live VLAN-30 host. `192.168.30.112` answered
+`get-status` with `31`. Four more probes mapped the rest —
+`ns2110001071` needed a full-subnet sweep because it answers its own
+port but not ICMP:
+
+| Serial | IP | First unicast answer |
+|---|---|---|
+| `se5110002011` | 192.168.30.112 | 31 (all 5 relays on) |
+| `ns4110003532` | 192.168.30.120 | 15 (all 4 on) |
+| `ns2110001047` | 192.168.30.149 | 0 |
+| `ns2110001071` | 192.168.30.206 | 0 |
+| `ns4110003068` | 192.168.30.249 | 0 |
+
+The patch (on top of the morning's fixes): `__init__.py` gains a
+`cli_target()` helper and loads `/config/smarteefi_hosts.json` — a
+serial → IP map kept **outside** the component so a HACS reinstall
+doesn't delete it. A mapped serial gets the CLI invoked with its IP +
+`/32`; unmapped serials keep the stock broadcast, so the patch is
+inert for anyone else. `switch.py` applies the same target to
+`set-status`. (`fan`/`light`/`cover` untouched — no such devices.)
+
+First poll after restart: **all 17 entities snapped to true relay
+state, bit-for-bit against the probes**, the smarteefi error count
+stayed at zero, and the morning's false `switch.pooja` ON — a UI
+toggle that had "succeeded" against a dead socket at 06:58, the
+optimistic-state bug demonstrating itself live — self-corrected.
+
+Loose ends, carried in HANDOVER #43: the five IPs are DHCP leases
+until UniFi static reservations are pinned (`.206` is ICMP-silent —
+find it by MAC); `set-status` awaits one deliberate flip of a harmless
+relay; and device push updates (UDP :8890 broadcast) still can't cross
+the VLAN, so state freshness is bounded by the 5-minute poll.
+
+VLAN isolation: fully intact. Nothing moved, nothing bridged, no new
+L2 adjacency — the principle held and the switches work anyway.
+
+
 ---
 
 ## 2026-08-30

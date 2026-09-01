@@ -922,10 +922,12 @@ originals kept beside them:
 | `SmarteefiOptionsFlowHandler.__init__` assigns `self.config_entry` | Clicking **Configure** 500s — `AttributeError: property 'config_entry' … has no setter`. `OptionsFlow.config_entry` is a read-only property since HA 2024.11; the setter went in 2025.12 | Delete the `__init__`; `async_get_options_flow` returns `SmarteefiOptionsFlowHandler()` and HA populates the entry itself |
 | `async_forward_entry_unload(entry, [4 platforms])` (×2) | **Reload** throws — that API takes a single domain, not a list | `async_unload_platforms(entry, [...])` |
 | UDP listener: bare protocol class, and `SO_REUSEADDR`/`SO_REUSEPORT` set inside `connection_made` | Close raises `AttributeError: … has no attribute 'connection_lost'`; re-bind fails `[Errno 98] Address in use`, so after **any** reload the push listener is dead until a full HA restart. The flags are set *after* asyncio has already bound | Subclass `asyncio.DatagramProtocol` (adds `connection_lost` / `error_received`); build the socket by hand, set the flags **before** `bind()`, hand it over as `sock=`; null the transport and `await asyncio.sleep(0)` on unload |
+| Broadcast-only addressing — the CLI is aimed at `ip \| ~netmask` of HA's own interface, which cannot cross the VLAN to the devices on `192.168.30.x` | Every poll times out (`Device Offline` ×765), all 17 entities frozen; `turn_on/off` still "succeeds" (exit code 0) | **Unicast host map** (patched 2026-09-01): `/config/smarteefi_hosts.json` maps serial → device IP; a mapped serial gets the CLI called with that IP + netmask `255.255.255.255`, making `ip \| ~netmask` collapse to plain routed unicast (verified: the devices answer it). Unmapped serials keep broadcast. Map file lives **outside** the component so a HACS reinstall keeps it |
 
 Backups on the share, oldest first:
 `config_flow.py.bak-3a8ae3f`, `__init__.py.bak-3a8ae3f`,
-`__init__.py.bak-pre-udpfix`. To revert, copy a `.bak-3a8ae3f` back and
+`__init__.py.bak-pre-udpfix`, `__init__.py.bak-pre-unicast`,
+`switch.py.bak-pre-unicast`. To revert, copy a `.bak-3a8ae3f` back and
 restart HA.
 
 **Applying any change here needs a full HA restart** —
@@ -936,8 +938,15 @@ restart HA.
 reinstalled or "repaired". Upstream is dead so no update will arrive on
 its own, but re-check the three fixes after any HACS action on it.
 
-The switches still do not work — that is a network problem, not a code
-one. See TODO #43.
+**Working since 2026-09-01** via the unicast map — states verified
+against live probes on all 5 devices; the IoT-VLAN isolation is
+untouched (routed unicast, the same path HA uses to poll the Deye).
+The device IPs are **DHCP leases** — see TODO #43's loose ends for the
+pending UniFi static reservations. Only `switch.py` got the unicast
+treatment on the command path (`fan`/`light`/`cover` platforms have no
+devices here and still broadcast). Device push updates (UDP :8890
+broadcast) still cannot cross the VLAN — state freshness is the 5-min
+poll, which is also how it behaves for everyone else.
 
 ---
 
@@ -1092,7 +1101,7 @@ historical context lives in `SHACK_CHANGELOG.md`, indexed by date.
 
 | # | Item | Status |
 |---|------|--------|
-| 43 | **Smarteefi switches unreachable — devices on the IoT VLAN, integration is broadcast-only** — the bundled `smarteefi-ha-cli` sends a UDP request to port **10201** at `inet_addr(ip) | ~inet_addr(netmask)`, i.e. the subnet broadcast of HA's own default-route interface (`192.168.1.255`). The 5 devices are on `192.168.30.x`, and broadcast does not cross VLANs, so every 5-minute poll times out (`Device Offline`) and all 17 entities sit at `off`. Verified the router drops directed broadcast too — `ping 192.168.30.255` silent while `ping 192.168.10.255` answers — so pointing the integration at the IoT broadcast address will not work either. Three ways out: **(a)** re-onboard the 5 devices onto `192.168.1.x`; **(b)** a UDP broadcast relay on the router for **10201** into VLAN 30 and **8890** back (OPNsense/pfSense/OpenWrt have `udp-broadcast-relay-redux`; UniFi does not expose it); **(c)** a tagged VLAN-30 interface on HassPi plus a patch to `_get_active_interface_ip_and_netmask`, which always picks the default-route interface. **Caution meanwhile:** `async_turn_on/off` only checks the CLI's exit code, which is `0` even when it prints `Device Offline` — so toggling a Smarteefi entity flips the HA state while nothing physically happens. See HANDOVER #43 | **Pending (network)** |
+| 43 | ~~**Smarteefi switches unreachable — devices on the IoT VLAN, integration is broadcast-only**~~ — the bundled `smarteefi-ha-cli` broadcasts a UDP :10201 request to `inet_addr(ip) | ~inet_addr(netmask)` on HA's own subnet (`192.168.1.255`); the 5 devices are on `192.168.30.x`, broadcast does not cross VLANs, and the router drops directed broadcast too (tested). **Closed 2026-09-01 — no move, no relay: the devices answer routed *unicast* on the same port** (found by running the CLI on the Pi against every VLAN-30 host with netmask `255.255.255.255`, which collapses `ip | ~netmask` to the IP itself). Patched the integration with a serial→IP map (`/config/smarteefi_hosts.json`); all 17 entities immediately showed true relay state, matching the probes bit-for-bit, and the false `switch.pooja` ON (a UI toggle that had "succeeded" against a dead socket) self-corrected. IoT-VLAN isolation intact. **Loose ends:** (a) the 5 mapped IPs are DHCP leases — pin static reservations in UniFi (`.112`/`.120`/`.149`/`.206`/`.249`; note `.206` = `ns2110001071` does not answer ICMP, find it by MAC in the client list); (b) actuation (`set-status`) is untested — flip one harmless relay from HA and confirm; (c) push updates (UDP :8890 broadcast) still cannot cross the VLAN, so state lag is up to the 5-min poll. See HANDOVER #43 | **Closed (loose ends pending)** |
 | 42 | **Stabiliser watchdog loose ends** — (a) ~~Telegram alerting dies with Node-RED~~ **Closed 2026-08-29 same day** on operator instruction: token+chat-id copied Pi-side into `~/.config/vu2cpl-shack.env` (mode 600, never printed to a transcript), and both `stabiliser_watch.py` and `flows_guard.py` now read env → env files → Node-RED. Verified by sending a real Telegram with the `/proc` lookup sabotaged. (b) ~~`RAW_MAINS_V` calibration~~ **Closed 2026-08-30** — over 1966 live regulated samples (incl. a full no-PV night) vmax peaked **242.7 V** and **nothing crossed 245 V**; zero false 🟠, and none would have fired at the old `k=3` either. Ceiling now measured, not guessed: **regulated output tops out ≈243 V**. The 08-29 retune (`CONFIRM_DROPOUT` 3→5) was precautionary; it stands. See HANDOVER #42 | **Closed** |
 | 41 | ~~**HA Radio dashboard = full Vue-dashboard equivalent**~~ | **Done 2026-08-25** — all phases landed in one day. Phase 1: 7 data-ready cards via 61 MQTT-discovery entities + ping entries. Lightning controls: `rest_command.shack_*` + state-lit ANT/BYPASS toggle scripts. Phase 2: **HA state bridges** for Flex/SPE/LP-700/Rotator/DXCC/RBN (see the "HA state bridges" flow-notes section — 17 nodes, 6 tabs, retained `shack/<subsystem>/state`) + 23 more discovery entities (90 total) + 6 consolidated cards. Rotator card reworked same night on operator feedback ("useless in its current state"): gauge+dead-target replaced by compass markdown (heading° + 16-wind cardinal + live target) **with control** — `input_number.shack_rotator_target` slider + GO/STOP + N/E/S/W preset buttons → scripts `shack_rotator_go`/`shack_rotator_stop` → `rest_command.shack_rotator_go` (`{"hdg": N}` — the endpoint's key is `hdg`, and its handler auto-powers the rotator) / `shack_rotator_stop`. Dashboard = 2 tabs: Radio (operating) / Fleet (monitoring). See HANDOVER #41. |
 | 40 | **HA ↔ inverter grid-state disagreement** — HA's `binary_sensor.inverter_grid` and the per-minute voltage log disagreed on a 08-25 outage window; both poll the same client-limited Solarman logger, one likely got a stale/failed read. Decides which source defines outage windows in the utility evidence. See HANDOVER #40 | Pending |
