@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v31 · 2026-08-27 DXCC card hidden (CARDS.dxcc=false, flow tab disabled)';
+window.__shackBuild = 'v32 · 2026-09-01 rotator: truthful power pill + card dim; LP/SP auto-powers';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -1115,7 +1115,7 @@ const RotatorCard = {
         <!-- Big interactive compass — click anywhere on the face to set heading -->
         <div class="rotator-stage">
           <svg viewBox="0 0 220 220" class="rotator-compass"
-               :style="{cursor: 'crosshair'}"
+               :style="{cursor: 'crosshair', opacity: state.power ? 1 : 0.25, transition: 'opacity .3s'}"
                @mousemove="onHover($event)"
                @mouseleave="hover.deg = null"
                @click="onClick($event)">
@@ -1179,15 +1179,15 @@ const RotatorCard = {
           </div>
         </div>
 
-        <!-- Manual heading entry -->
-        <div class="rotator-manual">
+        <!-- Manual heading entry (dimmed with the compass when power is off) -->
+        <div class="rotator-manual" :style="{opacity: state.power ? 1 : 0.25, transition: 'opacity .3s'}">
           <input v-model.number="manualHdg" type="number" min="0" max="359" placeholder="0-359"
                  @keydown.enter="doGo()" />
           <button class="btn btn--green" @click="doGo()" :disabled="manualHdg == null">GO</button>
         </div>
 
-        <!-- DXCC presets — collapsible (default closed) -->
-        <div class="section">
+        <!-- DXCC presets — collapsible (default closed; dimmed with the compass when power is off) -->
+        <div class="section" :style="{opacity: state.power ? 1 : 0.25, transition: 'opacity .3s'}">
           <div class="section__header" @click="showPresets = !showPresets">
             <span class="chev">{{ showPresets ? '▼' : '▶' }}</span>
             <span>DXCC Presets</span>
