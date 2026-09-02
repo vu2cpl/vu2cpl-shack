@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v33 · 2026-09-02 SPE sweep: auto-STBY/band-check copy (server does both now)';
+window.__shackBuild = 'v34 · 2026-09-02 SPE sweep: band picker follows the radio (radio rules)';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -1578,7 +1578,7 @@ const SPECard = {
             <button class="btn btn--red"   :disabled="!sweep.running" @click="stopSweep()">Stop</button>
           </div>
           <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:5px;line-height:1.3;">
-            Antenna for band selected before starting. STBY/OPERATE is automatic; band is checked against the radio.
+            Antenna for band selected before starting. Band follows the radio; STBY/OPERATE and mode (CW) are automatic.
           </div>
         </div>
 
@@ -1896,9 +1896,9 @@ const SPECard = {
     function startSweep() {
       if (sweep.running) return;
       if (!confirm("Start ATU sweep on " + sweep.selectedBand +
-                   "? Select the antenna for " + sweep.selectedBand +
-                   " on the amp first. The band is verified against the " +
-                   "radio and STBY/OPERATE is handled automatically.")) return;
+                   "? Select the antenna on the amp first. The radio's " +
+                   "current band rules the sweep, and STBY/OPERATE is " +
+                   "handled automatically.")) return;
       sweep.running = true;
       sweep.phase = "STARTED";
       sweep.message = sweep.selectedBand + " requested";
@@ -1937,10 +1937,23 @@ const SPECard = {
       }
     }
 
+    // The band picker follows the radio: the amp's band tracks the
+    // radio's freq via CAT, so every state update pre-selects that
+    // band. A manual click still works (the server only trusts it
+    // when the radio's band can't be read — radio rules otherwise),
+    // but the next band change re-follows.
+    function autoSelectBand(band) {
+      const key = String(band || "").toLowerCase();
+      if (!sweep.running && sweepBands.includes(key)) {
+        sweep.selectedBand = key;
+      }
+    }
+
     onMounted(() => {
       uibuilder.onTopic('spe', (msg) => {
         if (msg && msg.payload && typeof msg.payload === 'object') {
           Object.assign(state, msg.payload);
+          autoSelectBand(state.band);
         }
       });
       // Pi-side ws_parse_node fans tune_event messages out on the

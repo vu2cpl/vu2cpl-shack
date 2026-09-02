@@ -10,6 +10,39 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-09-02
 
+### Sweep #44 refined on operator feedback: radio rules, UI follows, tune in CW
+
+Three same-evening amendments after the operator test-drove the sweep
+(all landed in `spe-remote` `ddfc449` + `25f6c3e`; dashboards
+`v34` + D1 copy in this repo):
+
+- **The radio rules the band** — the first cut's mismatch-FAIL lasted
+  about an hour. Operator: "whatever is on radio rules". The
+  orchestrator now sweeps the band derived from the radio's slice
+  freq whenever it's readable, overriding a stale menu pick with a
+  note in `BAND_CHECKED` instead of refusing; the explicit pick is
+  only trusted when the radio's band can't be read. Also the safest
+  interpretation — the antenna follows the radio.
+- **The band picker follows the radio** — both dashboards (Vue `v34`,
+  D1 `SPE Panel (WS)`, and spe-remote's bundled web UI) now
+  auto-select the sweep band from the amp's `band` field, which
+  tracks the radio via CAT, on every state update. Manual clicks
+  still work but the next band change re-follows; the pick only
+  matters server-side in the radio-unreadable fallback anyway.
+- **Tune runs in CW** — operator-observed: in DIGU/DIGL the tune
+  carrier keys at the mode's TX-offset freq, and near a band edge
+  that lands out of band, where the Flex refuses to key and the
+  cycle fails. Their workaround ("switch to CW and tune") is now
+  automated: the slice switches to CW before tuning (new `MODE_SET`
+  phase) and the existing VFO snapshot/restore puts the original
+  mode back.
+
+Fake harness grown to 46 checks; radio-rules verified live by the
+operator from the Vue dashboard (correct band tunes; the earlier
+mismatch-refusal behaviour is gone). Both dashboards' sweep hint/
+confirm updated again ("Band follows the radio; STBY/OPERATE and
+mode (CW) are automatic").
+
 ### SPE sweep tuning: auto-STBY, band verification, OPERATE restore (#44)
 
 TODO #44, closed the same day it was scoped. All three gaps landed in
