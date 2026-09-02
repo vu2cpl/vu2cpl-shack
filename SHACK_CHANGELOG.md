@@ -41,10 +41,20 @@ Vue build `v33`, cache-buster `?v=33`). Verified with a 41-check
 fake-serial/fake-flex harness (toggle + restore, already-STBY,
 mismatch refusal, auto band, STBY-switch failure, stop-mid-sweep
 restore, tune_single wrap); deployed — the Pi pulled `ed3e0c5` and
-`spe-remote.service` restarted clean while the amp sat idle in
-OPERATE on 40m, exactly the state the sweep now handles instead of
-refusing. **Awaiting the first on-air sweep** to confirm the STBY
-drop lands before TUNE and OPERATE comes back at the end.
+`spe-remote.service` restarted clean.
+
+**Verified on-air the same evening.** First, the band check proved
+itself unprompted: the radio had been QSY'd to 17m (18.130 MHz, an
+AetherSDR client) in the meantime, so `tune_band:40m` was refused
+with the mismatch FAIL and nothing keyed, amp untouched. After an
+operator-approved QSY to 7.100, the full 40m sweep ran 12/12
+sub-bands in 47 s: STBY confirmed via op_status 0.5 s after the
+toggle and before any TUNE keycode; every cycle LED_ON → CARRIER_ON
+10 W → LED_OFF with the ATU taking 1.4–2.1 s per sub-band; VFO
+restored (7.100 LSB); OPERATE back 0.5 s after SWEEP_DONE. End
+state: amp OPERATE / RECEIVE / no warnings, TUNE LED off, and the
+slice returned to 18.130 where the Flex's own band memory restored
+USB. #44 fully closed — nothing left open.
 
 ### Smarteefi #43 fully closed — actuation confirmed, all 5 IPs reserved
 
