@@ -8,6 +8,31 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-09-02
+
+### Smarteefi #43 fully closed — actuation confirmed, all 5 IPs reserved
+
+Operator toggled a relay from HA and the device switched: `set-status`
+works over the same routed-unicast path as `get-status`, through the
+patched `switch.py` → `cli_target()` chain. Before closing it, the
+session re-verified the patch set on the Samba share — all three fixes
+(`config_flow.py` options-flow, `__init__.py` UDP/unload, the unicast
+map) still live, `smarteefi_hosts.json` intact, all five backups
+untouched, so no HACS revert has happened: the switches work *because
+of* the patches, not despite them.
+
+Loose end (a) closed the same day: the operator pinned all 5 devices
+as UniFi static reservations at their mapped addresses
+(`.112`/`.120`/`.149`/`.206`/`.249`), so a lease drift can no longer
+invalidate `smarteefi_hosts.json`. If a device is ever deliberately
+re-addressed, edit the map to match and fully restart HA.
+
+That closes every actionable item on #43. The one permanent caveat:
+device push (UDP :8890 broadcast) still can't cross the VLAN, so state
+freshness stays bounded by the 5-minute poll.
+
+---
+
 ## 2026-09-01
 
 ### Rotator: LP/SP now powers on; the power indication stops lying
