@@ -10,6 +10,42 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-09-02
 
+### SPE sweep tuning: auto-STBY, band verification, OPERATE restore (#44)
+
+TODO #44, closed the same day it was scoped. All three gaps landed in
+`spe-remote` (`a1c1252`, docs `ed3e0c5`), not this repo:
+
+- **Auto-STBY.** The sweep (and `tune_single`) no longer FAILs unless
+  the amp is pre-STBY'd — `TuneOrchestrator` drops it to STBY itself.
+  CMD_OPERATE is a *toggle*, so the switch is verified against the CSV
+  `op_status` (4 s timeout) rather than assumed, and the prior mode is
+  remembered. The old "SPE must be in STBY to tune" preflight stays as
+  a safety net against mid-sweep front-panel flips.
+- **Band verification.** The requested band is checked against the
+  radio before anything moves: the Flex slice freq (waiting up to 2 s
+  for the post-connect slice-state events) is mapped to its ham band
+  via the new `spe_band_table.band_for_freq()`; a mismatch FAILs the
+  sweep — wrong-antenna protection. `tune_band:auto` (also `current`
+  / empty) sweeps whatever band the radio is on; an underivable radio
+  band trusts an explicit request with a note.
+- **OPERATE restore.** OPERATE returns at the end iff it was on at the
+  start, on every exit path (success / FAIL / ABORT) — the restore
+  runs after carrier-off + VFO restore and ignores the stop flag, so
+  an aborted sweep still hands the amp back.
+
+New `tune_event` phases `BAND_CHECKED` / `STBY_SET` / `OPER_RESTORED`
+render generically on all four sweep UIs, so this repo's change is
+copy-only: both dashboards' sweep hint + confirm dialog no longer
+instruct "Amp must be in STBY" (D1 `SPE Panel (WS)` template strings;
+Vue build `v33`, cache-buster `?v=33`). Verified with a 41-check
+fake-serial/fake-flex harness (toggle + restore, already-STBY,
+mismatch refusal, auto band, STBY-switch failure, stop-mid-sweep
+restore, tune_single wrap); deployed — the Pi pulled `ed3e0c5` and
+`spe-remote.service` restarted clean while the amp sat idle in
+OPERATE on 40m, exactly the state the sweep now handles instead of
+refusing. **Awaiting the first on-air sweep** to confirm the STBY
+drop lands before TUNE and OPERATE comes back at the end.
+
 ### Smarteefi #43 fully closed — actuation confirmed, all 5 IPs reserved
 
 Operator toggled a relay from HA and the device switched: `set-status`

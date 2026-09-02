@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v32 · 2026-09-01 rotator: truthful power pill + card dim; LP/SP auto-powers';
+window.__shackBuild = 'v33 · 2026-09-02 SPE sweep: auto-STBY/band-check copy (server does both now)';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -1578,7 +1578,7 @@ const SPECard = {
             <button class="btn btn--red"   :disabled="!sweep.running" @click="stopSweep()">Stop</button>
           </div>
           <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:5px;line-height:1.3;">
-            Amp in <strong>STBY</strong>, antenna for band selected, before starting.
+            Antenna for band selected before starting. STBY/OPERATE is automatic; band is checked against the radio.
           </div>
         </div>
 
@@ -1896,8 +1896,9 @@ const SPECard = {
     function startSweep() {
       if (sweep.running) return;
       if (!confirm("Start ATU sweep on " + sweep.selectedBand +
-                   "? Amp must be in STBY and the antenna for " +
-                   sweep.selectedBand + " selected.")) return;
+                   "? Select the antenna for " + sweep.selectedBand +
+                   " on the amp first. The band is verified against the " +
+                   "radio and STBY/OPERATE is handled automatically.")) return;
       sweep.running = true;
       sweep.phase = "STARTED";
       sweep.message = sweep.selectedBand + " requested";
