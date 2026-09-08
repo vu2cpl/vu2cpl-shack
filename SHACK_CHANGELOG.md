@@ -48,10 +48,12 @@ always-visible `● OVERLAP` LED in the aside column (dim when off, amber
 scope call ("both dashboards now, HA later" → follow-up #45), as is the
 `:8090` standalone compass page.
 
-Deployed both halves (gateway restarted clean, `/healthz` shows
-`"overlap": false`; Node-RED restarted after pull). The live LED lights
-the first time the rotor actually crosses South into the overlap zone —
-worth a deliberate swing to confirm end-to-end.
+Deployed both halves (gateway restarted clean; Node-RED restarted after
+pull). **Verified on-air the same day**: the operator swung the rotor
+across South into the overlap zone — LED lit on both dashboards (after a
+page reload to pick up the new SVG/JS) and **matched the controller's
+front-panel OVERLAP LED**, with `shack/rotator/state` reading
+`heading:189, overlap:true`. The derived flag agrees with the hardware.
 
 ## 2026-09-02
 
