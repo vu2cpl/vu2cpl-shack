@@ -245,6 +245,12 @@ sensor('rotator_sector', 'Sector', DEV_ROT, RT,
             "{{ ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW',"
             "'W','WNW','NW','NNW'][((h / 22.5) + 0.5) | int % 16] }}{% endif %}"),
        icon='mdi:compass-rose', expire=30)
+# Overlap: gateway-derived flag (rotor past 360° of travel; DCU-1 has no
+# overlap bit — rotator-remote tracks the heading crossing the South stop).
+# null (pre-first-WS-frame) renders OFF. Added 2026-09-08, TODO #45.
+binary2('rotator_overlap', 'Overlap', DEV_ROT, RT,
+        tpl="{{ 'ON' if value_json.overlap else 'OFF' }}",
+        icon='mdi:rotate-360', expire=30)
 
 DEV_DXCC = {'identifiers': ['shack_dxcc'], 'name': 'DXCC Tracker',
             'manufacturer': 'VU2CPL shack', 'model': 'Club Log / cluster alerts'}

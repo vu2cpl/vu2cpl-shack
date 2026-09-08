@@ -55,6 +55,24 @@ page reload to pick up the new SVG/JS) and **matched the controller's
 front-panel OVERLAP LED**, with `shack/rotator/state` reading
 `heading:189, overlap:true`. The derived flag agrees with the hardware.
 
+### …and the HA overlap entity, same evening (#45, HA half)
+
+Operator: "add the HA overlap entity too". `ha_discovery_publish.py`
+grew `binary_sensor.rotator_overlap` on the Rotator device (92 retained
+discovery configs now; template maps the bridge's `overlap` — including
+its pre-first-frame `null` — to ON/OFF, `expire_after` 30 s like the
+other rotator sensors), republished idempotently through HA's own
+`mqtt.publish` service and verified live (`state: off`, matching the
+rotor having been swung back out of overlap after the earlier test).
+The Radio dashboard's compass card got a conditional amber
+`mdi:rotate-360` icon at the rose's top-left (mirroring the D1/Vue LED
+position), rendered only while the sensor is `on` — saved over the WS
+API after confirming with the operator that no dashboard editor was
+open (the edit-mode-clobbers gotcha), with the pre-change config backed
+up to `~/Documents/vu2cpl-ha-backups/dashboard-193-radio-pre-overlap-20260908.json`
+and the element verified present on re-fetch. Follow-up #45 now holds
+only the `:8090` standalone compass page.
+
 ## 2026-09-02
 
 ### Sweep #44 refined on operator feedback: radio rules, UI follows, tune in CW
