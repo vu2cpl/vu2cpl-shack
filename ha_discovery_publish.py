@@ -166,8 +166,13 @@ sensor('lprot_bypass_remaining', 'Bypass remaining', DEV_LPROT, LS,
 DEV_UBER = {'identifiers': ['shack_ubersdr'], 'name': 'UberSDR',
             'manufacturer': 'VU2CPL shack', 'model': 'WebSDR receiver'}
 UT = 'ubersdr/metrics/sessions'
+# non_bypassed_users = external humans. count - internal_sessions was wrong:
+# it also counted UberSDR's own docker-network service clients (cwskimmer,
+# hfdl, lightning, … ~24 of them), reading "26 listeners" when 1-2 were real.
+# Caveat: an ip_bypass LAN listener (the operator) isn't counted here; the
+# Node-RED dashboards' who-table (2026-09-09) does include LAN humans.
 sensor('ubersdr_listeners', 'Listeners', DEV_UBER, UT,
-       tpl='{{ value_json.count - value_json.internal_sessions }}',
+       tpl='{{ value_json.non_bypassed_users }}',
        state_class='measurement', icon='mdi:account-multiple', expire=300)
 sensor('ubersdr_decoders', 'Internal decoders', DEV_UBER, UT,
        tpl='{{ value_json.internal_sessions }}', state_class='measurement',

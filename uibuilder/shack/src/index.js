@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v35 · 2026-09-08 Rotator: OVERLAP LED (gateway-derived, past-360° travel)';
+window.__shackBuild = 'v36 · 2026-09-09 UberSDR: who-is-listening table, LISTENERS = humans only';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -2943,7 +2943,7 @@ const UberSdrCard = {
         <span>UberSDR</span>
         <span v-if="!expanded" class="summary">
           <span :style="{color: state.online ? 'var(--green)' : 'var(--muted)', fontWeight:600}">
-            {{ state.online ? '● ' + state.viewers + ' listening' : '○ offline' }}
+            {{ state.online ? '● ' + state.listeners + ' listening' : '○ offline' }}
           </span>
           <span v-if="state.online">·</span>
           <span v-if="state.online" :style="{color:'var(--accent)', fontWeight:600}">{{ egressLabel }}</span>
@@ -2954,7 +2954,7 @@ const UberSdrCard = {
 
       <div class="card__body" :class="{ 'is-collapsed': !expanded }">
         <div class="tiles">
-          <div class="tile"><div class="tile__lbl">Listeners <span style="opacity:.6">(waterfall)</span></div><div class="tile__val" :style="{color:'var(--green)', fontSize:'28px'}">{{ state.viewers }}</div><div style="font-size:var(--fs-xs);color:var(--muted);margin-top:2px">{{ state.listeners - state.viewers }} IQ · {{ state.total }} sess</div></div>
+          <div class="tile"><div class="tile__lbl">Listeners <span style="opacity:.6">(humans)</span></div><div class="tile__val" :style="{color:'var(--green)', fontSize:'28px'}">{{ state.listeners }}</div><div style="font-size:var(--fs-xs);color:var(--muted);margin-top:2px">{{ state.viewers }} wf · {{ state.services }} svc</div></div>
           <div class="tile"><div class="tile__lbl">Sessions</div><div class="tile__val">{{ state.total }}</div></div>
           <div class="tile"><div class="tile__lbl">Egress</div><div class="tile__val" :style="{color:'var(--accent)'}">{{ egressLabel }}</div></div>
         </div>
@@ -2964,7 +2964,24 @@ const UberSdrCard = {
           <div class="tile"><div class="tile__lbl">Monitors</div><div class="tile__val">{{ state.monitors }}</div></div>
         </div>
 
-        <div class="solar-sec-label">Listeners by band <span style="opacity:.6;font-weight:400">(waterfall)</span></div>
+        <div class="solar-sec-label">Who's listening</div>
+        <div v-if="!state.who.length" class="empty-row">No human listeners</div>
+        <table v-else class="slice-tbl">
+          <thead><tr><th>Where</th><th>IP</th><th>Freq</th><th>Time</th></tr></thead>
+          <tbody>
+            <tr v-for="(u, i) in state.who.slice(0, 12)" :key="u.ip + '-' + i">
+              <td>{{ flag(u.cc) }} {{ u.city ? u.city + ', ' + (u.cc || u.country) : (u.country || 'Unknown') }}</td>
+              <td style="color:var(--muted)" :title="u.rdns || ''">{{ u.ip }}</td>
+              <td>{{ fmtFreq(u.freq) }} <span style="color:var(--muted)">{{ (u.mode || '').toUpperCase() }}{{ u.wf && u.mode !== 'wf' ? ' +wf' : '' }}</span></td>
+              <td style="color:var(--muted)">{{ dur(u.since) }}</td>
+            </tr>
+            <tr v-if="state.who.length > 12">
+              <td colspan="4" style="color:var(--muted)">+{{ state.who.length - 12 }} more</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="solar-sec-label">Listeners by band</div>
         <div v-if="!state.listenersByBand.length" class="empty-row">No listeners</div>
         <div v-for="b in state.listenersByBand.slice(0,8)" :key="b.band" class="band-row" style="grid-template-columns:auto 1fr auto;">
           <span class="band-row__name" style="width:44px">{{ b.band }}</span>
@@ -2998,8 +3015,8 @@ const UberSdrCard = {
   setup() {
     const expanded = ref(false);
     const state = reactive({
-      online:false, total:0, listeners:0, viewers:0, decoders:0, monitors:0, other:0,
-      cpuPct:0, egressMbps:0, bandsCount:0, listenersByBand:[], countries:[], decodersByMode:[], bands:[]
+      online:false, total:0, listeners:0, viewers:0, services:0, decoders:0, monitors:0, other:0,
+      cpuPct:0, egressMbps:0, bandsCount:0, listenersByBand:[], countries:[], decodersByMode:[], bands:[], who:[]
     });
     const egressLabel = computed(() => state.egressMbps >= 1 ? state.egressMbps + ' Mb/s' : Math.round(state.egressMbps * 1000) + ' kb/s');
     const cpuColor = computed(() => state.cpuPct > 85 ? 'var(--red)' : state.cpuPct > 60 ? 'var(--amber)' : 'var(--green)');
@@ -3007,12 +3024,15 @@ const UberSdrCard = {
     const maxBand = computed(() => state.listenersByBand.length ? state.listenersByBand[0].n : 1);
     function pct(n) { return Math.round(n / (maxBand.value || 1) * 100); }
     function noiseColor(n) { if (n == null || n === 0) return 'var(--muted)'; if (n > -90) return 'var(--red)'; if (n > -100) return 'var(--amber)'; return 'var(--green)'; }
+    function flag(cc) { cc = String(cc || '').toUpperCase(); if (!/^[A-Z]{2}$/.test(cc)) return ''; return String.fromCodePoint(127397 + cc.charCodeAt(0), 127397 + cc.charCodeAt(1)); }
+    function fmtFreq(hz) { if (hz == null) return '—'; return hz >= 30000000 ? (hz / 1000000).toFixed(3) + ' MHz' : (hz / 1000).toFixed(1) + ' kHz'; }
+    function dur(ms) { if (!ms) return '—'; const s = Math.max(0, Math.round((Date.now() - ms) / 1000)); const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60); return h > 0 ? h + 'h ' + ('0' + m).slice(-2) + 'm' : (m > 0 ? m + 'm' : s + 's'); }
     onMounted(() => {
       uibuilder.onTopic('ubersdr', (msg) => {
         if (msg && msg.payload && typeof msg.payload === 'object') Object.assign(state, msg.payload);
       });
     });
-    return { expanded, state, egressLabel, cpuColor, decoderModeStr, pct, noiseColor };
+    return { expanded, state, egressLabel, cpuColor, decoderModeStr, pct, noiseColor, flag, fmtFreq, dur };
   }
 };
 

@@ -8,6 +8,65 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-09-09
+
+### UberSDR: who-is-listening table; LISTENERS now counts humans only
+
+Operator: "in ubersdr dashboard can we add listener statistics? like
+which user is tuned to what?" The data was already on the wire —
+every `ubersdr/metrics/sessions` publish carries per-session
+`client_ip`, `reverse_dns`, geo (`country`/`country_code`/`city`/
+`region`), `frequency`, `mode`, `user_agent`, `created_at`,
+`daily_time_used_secs`, and a `user_session_id` that pairs a user's
+audio session with their waterfall session. `ubersdr_agg` was
+flattening all of it into counts.
+
+**Found on the way (and fixed per operator's "only humans" call):**
+the LISTENERS tile was counting ~26 when 1–2 were real. UberSDR's own
+docker-network service clients (`cwskimmer`, `hfdl`, `lightning`, …)
+report `is_internal: false`, so the aggregator's human/internal split
+put ~24 of them in the listeners bucket. They live on the 172.16/12
+docker range, which is now the discriminator: a new `isDocker()`
+check routes them into a separate `services` count. LAN humans
+(192.168.x, also `ip_bypass`) still count as listeners — deliberate,
+so the operator sees his own sessions.
+
+**`ubersdr_agg` changes** (function only — no node/wire changes,
+flows_guard green):
+
+- Non-internal, non-docker sessions are merged per `user_session_id`
+  into a `who` array: `{ip, rdns, cc, country, city, region, freq,
+  mode, wf, since, daily}` — freq/mode from the audio session
+  (waterfall-only users show `wf`), `since` = earliest `created_at`,
+  sorted by frequency.
+- `listeners` = unique human users (was: raw non-internal session
+  count); `viewers` = humans with a waterfall open; `countries` and
+  `listenersByBand` now count per user and cover all humans (byBand
+  was previously waterfall sessions only — labels dropped the
+  "(waterfall)" qualifier accordingly). New `services` count in the
+  payload; `who` rides it too. Offline default carries empty
+  equivalents.
+- Verified by executing the new function body against a live captured
+  payload: 72 sessions → 1 human (Wakayama JP, 7324.0 kHz LSB + wf),
+  24 services, 33 decoders, 13 monitors — and the human count matched
+  the payload's own `non_bypassed_users`.
+
+**Both dashboards** get a "Who's listening" table (Where — flag emoji
++ city/country · IP with rDNS as hover title · Freq + mode, `+wf`
+when the waterfall is open · Time connected), capped at 12 rows with
+a "+N more" line. D1: new full-width pane in `UberSDR Panel` +
+`flag`/`fmtF`/`dur` helpers; header chip and Listeners tile switch to
+the human count, tile subs now read `N wf · M svc`. Vue: same table
+in `UberSdrCard`, build `v35`→`v36` + `index.js?v=36`.
+
+**Ripples:** the UberSDR Telegram back-online alert now reports the
+human count (`p.listeners`, was `p.viewers`). HA's
+`sensor.ubersdr_listeners` had the same inflation baked into its
+value_template (`count - internal_sessions` = 26) —
+`ha_discovery_publish.py` now uses the payload's `non_bypassed_users`
+(external humans; a LAN listener won't show there, unlike the
+dashboards' table — noted in the script).
+
 ## 2026-09-08
 
 ### Rotator: OVERLAP LED on both dashboards (gateway-derived)

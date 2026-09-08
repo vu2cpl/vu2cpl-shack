@@ -870,6 +870,26 @@ stopped Node-RED) reads *unavailable* in HA rather than stale.
 
 ### UberSDR
 
+**Who-is-listening table + humans-only LISTENERS (2026-09-09).** The
+`ubersdr/metrics/sessions` payload carries per-session `client_ip`,
+`reverse_dns`, geo, `frequency`, `mode`, `created_at` and a
+`user_session_id` pairing a user's audio + waterfall sessions.
+`ubersdr_agg` merges non-internal sessions per user into a `who` array
+(`{ip, rdns, cc, country, city, region, freq, mode, wf, since, daily}`,
+sorted by freq) rendered as a "Who's listening" table on both
+dashboards (D1 pane in `UberSDR Panel`; Vue `UberSdrCard`, build v36).
+**`listeners` counts human users only**: UberSDR's own docker-network
+service clients (cwskimmer, hfdl, lightning, … on 172.16/12, ~24 of
+them) report `is_internal:false` and used to inflate the tile to ~26
+when 1–2 were real — they're now a separate `services` count via an
+IP-range `isDocker()` check. LAN humans (192.168.x, `ip_bypass`) still
+count as listeners, deliberately. `countries`/`listenersByBand` count
+per user across all humans (byBand was waterfall-sessions-only
+before). The Telegram back-online alert and HA's
+`sensor.ubersdr_listeners` (`ha_discovery_publish.py`, now
+`non_bypassed_users`) follow the human count — the HA field excludes
+LAN listeners, the dashboards include them.
+
 **Telegram offline/back alert (2026-07-31).** `ubersdr_agg` already
 computed an `online` flag (`now - sess.ts < 60000`, re-evaluated every
 10s via `ubersdr_replay`) for the dashboard cards — 3 new nodes on
