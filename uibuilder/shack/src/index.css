@@ -721,6 +721,41 @@ html, body {
 .rotator-pwr-pill--on    { color: var(--green); background: var(--green-bg); border: 1px solid var(--green-bd); }
 .rotator-pwr-pill--off   { color: var(--red);   background: var(--red-bg);   border: 1px solid var(--red-bd); }
 
+/* OVERLAP indicator — lit amber while the rotor is past 360° of travel */
+.rotator-ovl-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  font-family: var(--font-sans);
+  color: var(--amber);
+  background: var(--amber-bg);
+  border: 1px solid var(--amber-bd);
+}
+.rotator-ovl {
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 4px;
+  color: var(--text-dim);
+  opacity: 0.55;
+  cursor: default;
+  transition: opacity 0.2s;
+}
+.rotator-ovl--on {
+  color: var(--amber);
+  background: var(--amber-bg);
+  border-color: var(--amber-bd);
+  opacity: 1;
+  text-shadow: 0 0 8px var(--amber);
+}
+
 /* === Rotator: click-anywhere compass === */
 .rotator-compass {
   width: 100%;

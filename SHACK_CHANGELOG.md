@@ -8,6 +8,51 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-09-08
+
+### Rotator: OVERLAP LED on both dashboards (gateway-derived)
+
+Operator asked for an overlap LED on the rotator. Clarified up front (it
+changed the design): the rotor behind the Rotor-EZ interface is a **Yaesu
+that physically rotates past 360° of travel into an overlap zone** (end
+stop at South) — but the DCU-1 wire protocol only ever reports azimuth
+mod 360, so there is nothing to read; the flag has to be **derived**.
+
+**rotator-remote `b24bc32`** (the data source): new `OverlapTracker`
+(`rotator/protocol.py`) keeps an unwrapped-travel accumulator fed by the
+1 Hz poll — each sample moves it by the signed shortest-path delta, and
+travel past either end of the `[180, 540]` normal zone flips `overlap`
+(2° hysteresis so parking exactly on the boundary doesn't flicker; "both
+ways" per the operator, so the CCW side is handled symmetrically). The
+flag rides every WS state broadcast and `/healthz`. A throttled snapshot
+file (`~/.rotator-remote.state.json`, atomic tmp+rename, `tracker:`
+config section) restores it across service restarts iff the heading
+hasn't moved >15° while down — only front-panel-knob use can do that,
+since every remote path runs through the gateway. Also new: rate-limited
+INFO log for digit frames parsing >360, in case this Rotor-EZ variant
+ever reports overlap directly (none observed; that would let the flag be
+read instead of derived). Unit tests in `tests/test_overlap_tracker.py`
+(CW/CCW entry+exit, north-crossing non-event, boundary jitter, snapshot
+restore) — green on Mac and Pi.
+
+**This repo** (5 function/SVG edits, no node/wire changes — flows_guard
+clean): `rotator_ws_parse` caches `flow.rotator_overlap` and rides
+`msg.overlap` downstream; `Rotator fmt + SVG update` drives a new amber
+`rot-ovl-led` + `OVL` label on the D1 HUD compass (top-left, mirroring
+the PWR LED top-right; unlit = dark ring, lit = `#e3b341`); Vue **v35**
+RotatorCard adds an `⟳ OVL` header chip (only when lit) and an
+always-visible `● OVERLAP` LED in the aside column (dim when off, amber
++ glow when on), matching a front panel's always-there lamp.
+`vue_rotator_builder_01` and the HA bridge `rot_state_fn_01` both carry
+`overlap` now — the HA discovery entity itself is deferred on operator
+scope call ("both dashboards now, HA later" → follow-up #45), as is the
+`:8090` standalone compass page.
+
+Deployed both halves (gateway restarted clean, `/healthz` shows
+`"overlap": false`; Node-RED restarted after pull). The live LED lights
+the first time the rotor actually crosses South into the overlap zone —
+worth a deliberate swing to confirm end-to-end.
+
 ## 2026-09-02
 
 ### Sweep #44 refined on operator feedback: radio rules, UI follows, tune in CW

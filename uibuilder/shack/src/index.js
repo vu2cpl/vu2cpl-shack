@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v34 · 2026-09-02 SPE sweep: band picker follows the radio (radio rules)';
+window.__shackBuild = 'v35 · 2026-09-08 Rotator: OVERLAP LED (gateway-derived, past-360° travel)';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -1100,6 +1100,8 @@ const RotatorCard = {
           <span :style="{color:'var(--accent)', fontWeight:600}">{{ headingFmt(state.heading) }} {{ cardinal(state.heading) }}</span>
           <span v-if="state.target != null && state.target !== state.heading">·</span>
           <span v-if="state.target != null && state.target !== state.heading" :style="{color:'var(--amber)', fontWeight:600}">→ {{ headingFmt(state.target) }}</span>
+          <span v-if="state.overlap" class="rotator-ovl-chip"
+                title="Rotor is in the overlap zone — past 360° of travel">⟳ OVL</span>
           <!-- Clickable power pill — does NOT bubble up to toggle collapse -->
           <button class="rotator-pwr-pill"
                   :class="state.power ? 'rotator-pwr-pill--on' : 'rotator-pwr-pill--off'"
@@ -1176,6 +1178,11 @@ const RotatorCard = {
             <div v-if="rotatorRemain" class="rotator-timer">⏱ {{ rotatorRemain }}</div>
             <button class="btn btn--red"   @click="doStop()">■ STOP</button>
             <button class="btn btn--amber" @click="doLpSp()">{{ onLongPath ? 'SP' : 'LP' }}</button>
+            <!-- OVERLAP LED — always visible (dim when off), like the front panel's -->
+            <div class="rotator-ovl" :class="{'rotator-ovl--on': state.overlap}"
+                 title="Lights while the rotor is past 360° of travel (overlap zone). Derived by the gateway from the heading crossing the South end stop.">
+              ● OVERLAP
+            </div>
           </div>
         </div>
 
@@ -1212,7 +1219,7 @@ const RotatorCard = {
     const expanded = ref(false);
     const showPresets = ref(false);
     const hover = reactive({ deg: null });
-    const state = reactive({ heading: null, target: null, power: false, timerEnd: null });
+    const state = reactive({ heading: null, target: null, power: false, overlap: false, timerEnd: null });
 
     const presets = [
       { lbl: 'N',  deg:   0 },

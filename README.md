@@ -79,7 +79,7 @@ blank while the DXCC Tracker flow tab is disabled — it has been since
 | Power | 21 Tasmota-controlled outlets across 5 shack devices, plus 4 house-load Tasmota circuits (FF/GF load, dryer-kitchen, utility — HA's load-shedding relays, toggleable from the Power card) |
 | Solar | Deye SG0*LP3 LV 3-phase hybrid inverter, read locally via its Solarman WiFi logger (no cloud, no Home Assistant in the path) |
 | Power meter | Telepost LP-700 (USB HID, owned by `lp700-server` on the Pi) |
-| Rotator | Idiom Press Rotor-EZ |
+| Rotator | Yaesu (rotates past 360° into an overlap zone) behind an Idiom Press Rotor-EZ / DCU-1 serial interface |
 | Lightning | AS3935 sensor on ESP-WROOM-32 bridge → WiFi → MQTT (see [`vu2cpl-as3935-bridge`](https://github.com/vu2cpl/vu2cpl-as3935-bridge)) + Open-Meteo CAPE polling. Indoor Pi-side daemon retained as standby fallback |
 | Awards | 9× BDXCC |
 | DXpeditions | VU7T, VU7MS (Lakshadweep), AT5P (Rameshwaram) |
@@ -384,12 +384,18 @@ emit JSON command verbs (`channel_step`, `range_step`, etc.).
 
 ### Rotator
 
-Idiom Press Rotor-EZ on FTDI serial at 4800-8N1. Heading display +
-preset compass-rose buttons. Since 2026-06-06 the serial port is owned by
-the [`rotator-remote`](https://github.com/vu2cpl/rotator-remote) gateway
+Yaesu rotator behind an Idiom Press Rotor-EZ (DCU-1) interface on FTDI
+serial at 4800-8N1. Heading display + preset compass-rose buttons. Since
+2026-06-06 the serial port is owned by the
+[`rotator-remote`](https://github.com/vu2cpl/rotator-remote) gateway
 (`rotator-remote.service`, `:8090`) — the Node-RED tab is a thin WebSocket
 client, so the browser, a future Mac app, and any other client share the
-rotor without serial contention. Power stays on Tasmota/MQTT.
+rotor without serial contention. Power stays on Tasmota/MQTT. Since
+2026-09-08 both dashboards show an **OVERLAP LED**: the rotor turns past
+360° of travel, but DCU-1 only reports azimuth mod 360, so the gateway
+derives the flag by watching the heading cross the South end stop with
+direction (persisted across restarts) and broadcasts it with every state
+frame.
 
 ### DXCC Tracker
 
