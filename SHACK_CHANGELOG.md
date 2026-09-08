@@ -70,7 +70,13 @@ position), rendered only while the sensor is `on` — saved over the WS
 API after confirming with the operator that no dashboard editor was
 open (the edit-mode-clobbers gotcha), with the pre-change config backed
 up to `~/Documents/vu2cpl-ha-backups/dashboard-193-radio-pre-overlap-20260908.json`
-and the element verified present on re-fetch.
+and the element verified present on re-fetch. Post-landing fix the same
+evening (operator hit "no entity provided for more info dialog" clicking
+the compass): HA's default tap on entity-less picture-elements is
+more-info, so the 16 transparent full-card needle overlays — error-prone
+since 2026-08-25 — got `tap_action: none`, and the overlap icon got its
+entity + explicit more-info (tapping it now opens the sensor history).
+Backup `dashboard-193-radio-pre-tapfix-20260908.json`.
 
 ### …and the `:8090` chip, closing #45 — plus a persistence bug it flushed out
 
