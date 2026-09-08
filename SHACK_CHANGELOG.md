@@ -70,8 +70,33 @@ position), rendered only while the sensor is `on` — saved over the WS
 API after confirming with the operator that no dashboard editor was
 open (the edit-mode-clobbers gotcha), with the pre-change config backed
 up to `~/Documents/vu2cpl-ha-backups/dashboard-193-radio-pre-overlap-20260908.json`
-and the element verified present on re-fetch. Follow-up #45 now holds
-only the `:8090` standalone compass page.
+and the element verified present on re-fetch.
+
+### …and the `:8090` chip, closing #45 — plus a persistence bug it flushed out
+
+Operator: "add the :8090 page too". rotator-remote `468d12b`: the
+standalone compass page now renders the flag it was already receiving —
+an **⟳ OVERLAP chip** next to SLEWING, reusing the page's `.chip` pattern
+(invisible off, amber on); deploy is just `git pull` on the Pi thanks to
+the no-cache static handler. Verified in the browser with the operator
+live-slewing: chip lit while the rotor sat past South, healthz agreeing
+(`heading 189, overlap true`). All four surfaces (D1, Vue, HA, :8090)
+now show the flag — **#45 closed**.
+
+The live session also flushed out a real bug: the overlap **snapshot had
+never once been written**. The unit's `ProtectHome=read-only` hardening
+makes the service's `~` unwritable, so every persist failed
+(`[Errno 30]`) and retried at the poll rate, spamming the journal.
+Fixed in rotator-remote `f313f19`: `StateDirectory=rotator-remote` in
+the unit (systemd creates `/var/lib/rotator-remote` for the service
+user), `tracker.state_file` default `auto` (resolves to
+`$STATE_DIRECTORY/state.json` under systemd, the home path for bare
+`./run.sh`), failed persists throttled to one attempt per 5 s and one
+WARNING per minute. Redeployed via `sudo ./install-service.sh`; the
+state dir was verified created and the journal is quiet. The first real
+snapshot write lands on the next heading sample (the controller was
+powered off at deploy time), so restart-survival of a live overlap flag
+remains covered by the unit tests until the rotator's next outing.
 
 ## 2026-09-02
 
