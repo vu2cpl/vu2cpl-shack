@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v36 · 2026-09-09 UberSDR: who-is-listening table, LISTENERS = humans only';
+window.__shackBuild = 'v37 · 2026-09-09 UberSDR host tiles + RBN FT8/FT4 decode stream (MQTT)';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -2579,6 +2579,26 @@ const RBNCard = {
           </div>
         </div>
 
+        <div class="solar-sec-label" style="cursor:pointer;user-select:none;" @click="ft8Open = !ft8Open">
+          {{ ft8Open ? '▼' : '▶' }} FT8/FT4 decodes — UberSDR
+          <span style="color:var(--accent);font-weight:600;margin-left:4px;">{{ ft8Rate }}/h</span>
+        </div>
+        <div v-if="ft8Open">
+          <div v-if="!ft8Decodes.length" class="empty-row">No decodes yet</div>
+          <table v-else class="slice-tbl">
+            <thead><tr><th>UTC</th><th>Band</th><th>Mode</th><th>Call</th><th>SNR</th></tr></thead>
+            <tbody>
+              <tr v-for="(x, i) in ft8Decodes" :key="x.ts + '-' + i" :title="x.msg + (x.country ? ' · ' + x.country : '')">
+                <td style="color:var(--muted)">{{ utc(x.ts) }}</td>
+                <td>{{ x.band }}</td>
+                <td style="color:var(--amber)">{{ x.mode }}</td>
+                <td style="font-weight:600">{{ x.call }}</td>
+                <td :style="{color: x.snr > 0 ? 'var(--green)' : 'var(--muted)'}">{{ x.snr != null ? x.snr : '' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
         <div v-if="state.calFetched" class="statusline" style="margin-top:var(--sp-2);">
           <span>Calibration updated</span>
           <strong>{{ state.calFetched }}</strong>
@@ -2588,7 +2608,8 @@ const RBNCard = {
   `,
   setup() {
     const expanded = ref(false);
-    const state = reactive({ skimmers: {}, calFetched: null, sk1: null, sk2: null });
+    const ft8Open = ref(false);
+    const state = reactive({ skimmers: {}, calFetched: null, sk1: null, sk2: null, ft8: null });
 
     const skimmerNames = computed(() => Object.keys(state.skimmers || {}));
     function skim(name) { return state.skimmers?.[name] || {}; }
@@ -2609,6 +2630,14 @@ const RBNCard = {
       return 'var(--green)';
     }
 
+    const ft8Decodes = computed(() => (state.ft8 && state.ft8.decodes) || []);
+    const ft8Rate = computed(() => state.ft8 ? (state.ft8.h1capped ? state.ft8.h1 + '+' : state.ft8.h1) : 0);
+    function utc(ts) {
+      const t = new Date(ts);
+      const p = (n) => ('0' + n).slice(-2);
+      return p(t.getUTCHours()) + ':' + p(t.getUTCMinutes()) + ':' + p(t.getUTCSeconds());
+    }
+
     onMounted(() => {
       uibuilder.onTopic('rbn', (msg) => {
         if (msg && msg.payload && typeof msg.payload === 'object') {
@@ -2618,8 +2647,8 @@ const RBNCard = {
     });
 
     return {
-      expanded, state, skimmerNames, skim, isOnline,
-      onlineCount, totalH1, fmtSkew, skewColor
+      expanded, ft8Open, state, skimmerNames, skim, isOnline,
+      onlineCount, totalH1, fmtSkew, skewColor, ft8Decodes, ft8Rate, utc
     };
   }
 };
@@ -2962,6 +2991,7 @@ const UberSdrCard = {
           <div class="tile"><div class="tile__lbl">SDR CPU</div><div class="tile__val" :style="{color: cpuColor}">{{ Math.round(state.cpuPct) }}<span class="tile__sub-unit">%</span></div></div>
           <div class="tile"><div class="tile__lbl">Decoders</div><div class="tile__val">{{ state.decoders }}</div></div>
           <div class="tile"><div class="tile__lbl">Monitors</div><div class="tile__val">{{ state.monitors }}</div></div>
+          <div class="tile"><div class="tile__lbl">Host</div><div class="tile__val" :style="{color: hostTempColor}">{{ state.host && state.host.tempC != null ? state.host.tempC + '°C' : '—' }}</div><div style="font-size:var(--fs-xs);color:var(--muted);margin-top:2px">{{ state.host ? 'load ' + (state.host.load1 != null ? state.host.load1.toFixed(1) : '—') + ' · ' + (state.host.cores || '?') + 'c' : '' }}</div></div>
         </div>
 
         <div class="solar-sec-label">Who's listening</div>
@@ -3016,7 +3046,12 @@ const UberSdrCard = {
     const expanded = ref(false);
     const state = reactive({
       online:false, total:0, listeners:0, viewers:0, services:0, decoders:0, monitors:0, other:0,
-      cpuPct:0, egressMbps:0, bandsCount:0, listenersByBand:[], countries:[], decodersByMode:[], bands:[], who:[]
+      cpuPct:0, egressMbps:0, bandsCount:0, listenersByBand:[], countries:[], decodersByMode:[], bands:[], who:[], host:null
+    });
+    const hostTempColor = computed(() => {
+      const t = state.host && state.host.tempC;
+      if (t == null) return 'var(--muted)';
+      return t >= 75 ? 'var(--red)' : t >= 65 ? 'var(--amber)' : 'var(--green)';
     });
     const egressLabel = computed(() => state.egressMbps >= 1 ? state.egressMbps + ' Mb/s' : Math.round(state.egressMbps * 1000) + ' kb/s');
     const cpuColor = computed(() => state.cpuPct > 85 ? 'var(--red)' : state.cpuPct > 60 ? 'var(--amber)' : 'var(--green)');
@@ -3032,7 +3067,7 @@ const UberSdrCard = {
         if (msg && msg.payload && typeof msg.payload === 'object') Object.assign(state, msg.payload);
       });
     });
-    return { expanded, state, egressLabel, cpuColor, decoderModeStr, pct, noiseColor, flag, fmtFreq, dur };
+    return { expanded, state, egressLabel, cpuColor, hostTempColor, decoderModeStr, pct, noiseColor, flag, fmtFreq, dur };
   }
 };
 
