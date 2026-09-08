@@ -10,12 +10,21 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-09-09
 
-### UberSDR host tiles + FT8/FT4 decode stream on the RBN tab
+### UberSDR host tiles + FT8/FT4 decode stream on the UberSDR card
 
 Follow-on from the topic inventory done after the who-table landed
 (the flow used 2 of ~30 `ubersdr/#` topic families): operator picked
 two additions — "add the system load cpu load and temp and a
-collapsible ft8 decode stream to the rbn tab".
+collapsible ft8 decode stream". First cut put the decode stream on the
+**RBN tab**; the operator corrected the placement ("this should be in
+ubersdr") — it's UberSDR's own decoder output, so it belongs on the
+UberSDR card. Moved the two decode nodes onto `ubersdr_tab`, hung the
+`ft8` payload off `ubersdr_agg`, rendered the collapsible in the
+UberSDR panel/card, and reverted the RBN panel + `RBN State
+Aggregator` + `vue_rbn_builder_01` to stock. (RBN skimmer data was
+never actually affected — VU2CPL was online with 16 FT8 spots/h
+throughout; the brief "no RBN data on /ui" was the mid-flight RBN
+panel edit, undone by the revert.)
 
 **Host tile (UberSDR card, both dashboards).** New mqtt-in
 `ubersdr_mqtt_sysload` (`ubersdr/metrics/system_load`, ~25 s cadence)
@@ -30,38 +39,35 @@ colour ramp as the CPU bar), `load N.N · 16 cores` sub. Vue: 4th tile
 on the second row (`.tiles` is auto-fit, no CSS change), same
 colouring.
 
-**FT8/FT4 decode stream (RBN tab, both dashboards).** The RBN feed on
-`:7550` is CW/RTTY-only by design (TODO #36), but UberSDR's own FT8/
-FT4 decoders publish every decode on
+**FT8/FT4 decode stream (UberSDR card, both dashboards).** The RBN
+telnet feed on `:7550` is CW/RTTY-only by design (TODO #36), but
+UberSDR's own FT8/FT4 decoders publish every decode on
 `ubersdr/metrics/digital_modes/<mode>/<band>` — callsign, country,
-exact freq, SNR, raw message. New on the RBN tab: mqtt-in
-`rbn_ft8_mqtt_in` (`digital_modes/#`, so FT4/WSPR ride along) →
-`rbn_ft8_parse_fn` keeps a 300-entry ring in memory flow context
-(`flow.ft8_decodes`) and pokes `RBN State Aggregator` so decodes
-paint promptly instead of waiting for the 10 s refresh. The
-aggregator and `vue_rbn_builder_01` attach `ft8: {decodes: last 30,
-h1, h1capped}` to their outgoing payloads only — deliberately NOT
-into file-scoped `rbn_dash`, so the `shack/rbn/state` HA bridge
-payload stays small and no file-context churn. D1 panel: native
-`<details>` collapsible (closed by default; only the tbody is
+exact freq, SNR, raw message. New on the UberSDR tab: mqtt-in
+`ubersdr_ft8_mqtt_in` (`digital_modes/#`, so FT4/WSPR ride along) →
+`ubersdr_ft8_parse_fn` keeps a 300-entry ring in memory flow context
+(`flow.ft8_decodes`) and pokes `Aggregate UberSDR` so decodes paint
+promptly instead of waiting for the next tick. `ubersdr_agg` attaches
+`ft8: {decodes: last 30, h1, h1capped}` to its flat payload. D1 panel:
+native `<details>` collapsible (closed by default; only the tbody is
 rewritten on repaint, so the open/closed state survives) with
 UTC/Band/Mode/Call/Country/SNR/Message columns and a decodes-per-hour
 counter in the summary line (`N+` when the ring can't see the full
-hour). Vue RBNCard: chevron-toggled section, columns trimmed to
+hour). Vue UberSdrCard: chevron-toggled section, columns trimmed to
 UTC/Band/Mode/Call/SNR for the ~330 px card — message + country ride
-the row tooltip. Build `v36`→`v37`, `index.js?v=37`.
+the row tooltip. Build `v37`→`v38`, `index.js?v=38`.
 
 Verified by simulation before deploy: system_load + sessions payloads
-through the new `ubersdr_agg` (host object correct), synthetic
-FT8+FT4 decodes through parse→aggregator (ring, h1 count, and
-`rbn_dash` confirmed ft8-free). flows_guard green (+3 nodes, both
-tabs; all wires same-tab). Node counts: UberSDR tab 9→10, RBN tab
-21→23.
+through `ubersdr_agg` (host object correct), synthetic FT8+FT4 decodes
+through parse→aggregator (ring + h1 count correct), and live on the
+broker at deploy (CQs from San Marino/Lithuania/Italy several per
+15 s FT8 cycle). flows_guard green (+3 nodes on `ubersdr_tab`, all
+wires same-tab).
 
-**TODO #36 note:** this puts live FT8 spots on the RBN tab *now*, via
-MQTT, from the same UberSDR decoders the telnet Aggregator never
-carried — the meridian half of #36 remains about the telnet/cluster
-path specifically.
+**TODO #36 note:** this puts live FT8 decodes on the UberSDR card
+*now*, via MQTT, from the same UberSDR decoders the telnet Aggregator
+never carried — #36 remains about getting FT8 onto the RBN/cluster
+telnet path specifically.
 
 ### UberSDR: who-is-listening table; LISTENERS now counts humans only
 
