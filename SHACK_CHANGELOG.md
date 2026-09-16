@@ -30,6 +30,11 @@ gained `msi_result` / `msi_detail` alongside the RSP2's `result` / `detail`
 
 No new nodes or wires (587 nodes, guard unchanged) — two existing nodes edited.
 
+Follow-up (build `v41`): the Vue OpenWebRX card now **starts collapsed**, like
+the other 13. It was created expanded by mistake, contradicting README's "all
+collapsed by default". The collapsed header still shows the listener count,
+profile and the `⚠ receiver` marker. README's card count corrected 13 → 14.
+
 ### OpenWebRX+ VHF listeners on both dashboards
 
 The VHF receiver (OpenWebRX+ on the RSP2, `192.168.1.109:8873`) now

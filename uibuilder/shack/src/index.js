@@ -3123,7 +3123,7 @@ const OpenWebRxCard = {
     </div>
   `,
   setup() {
-    const expanded = ref(true);
+    const expanded = ref(false);
     const state = reactive({ users: 0, listeners: [], profile: null, health: null, detail: null, msiHealth: null, msiDetail: null, time: null, stale: false });
     // SKIP (container down) is muted: the RSP2's own result already reports that outage
     const healthColor = (r) => r === 'OK' ? 'var(--green)' : ((!r || r === 'SKIP') ? 'var(--muted)' : 'var(--red)');

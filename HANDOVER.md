@@ -1,6 +1,6 @@
 # Session Handover — VU2CPL Shack
 
-**Period:** 2026-05-01 → 2026-09-09
+**Period:** 2026-05-01 → 2026-09-16
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
 **Last commit at handover:** **OpenWebRX card shows the health of both receivers.** The OpenWebRX box now runs two SDRs (RSP2 for VHF/UHF, a Mirics MSi2500 for FM) and `shack/openwebrx/status` carries `msi_result`/`msi_detail` beside the RSP2's `result`/`detail`. `Aggregate OpenWebRX` keeps them; the D1 panel's "Receiver" tile is now **"Receivers"** (`RSP2 OK` / `MSi2500 OK`, colour-coded, detail of the unhealthy one), and the Vue card matches plus a `⚠ receiver` marker in its collapsed header. `SKIP` (container down) shows muted, since the RSP2 line already reports that outage. Two existing nodes edited, no new nodes or wires; Vue build `v40`. Full story: SHACK_CHANGELOG 2026-09-16.
 
