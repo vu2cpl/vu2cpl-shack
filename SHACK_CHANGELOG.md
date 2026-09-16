@@ -8,6 +8,35 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-09-16
+
+### OpenWebRX+ VHF listeners on both dashboards
+
+The VHF receiver (OpenWebRX+ on the RSP2, `192.168.1.109:8873`) now
+reports who is listening, and both dashboards show it. The publisher
+side lives in the `ubersdr-box` repo: `openwebrx-watch.sh` samples the
+receiver every 2 min and publishes retained JSON as the `svc` account to
+`shack/openwebrx/listeners` (count, shared SDR profile, and per listener
+IP, city, country, MHz, mode, connect time) and `shack/openwebrx/status`
+(that run's health verdict). The daily/weekly/monthly Telegram summaries
+also publish their stats to `shack/openwebrx/summary/{daily,weekly,monthly}`.
+Cities come from an offline DB-IP Lite database on that box, so listener
+IPs never leave the shack for a geo lookup.
+
+Seven nodes added, all on `ubersdr_tab` (the existing UberSDR flow tab):
+two `mqtt in` on the live topics → `Aggregate OpenWebRX` (merges the two
+payloads into one flow-context state, marks it `stale` when the publisher
+has been quiet for 6 min) → the D1 `ui_template` **OpenWebRX Listeners
+Panel** in a new `ui_group` "OpenWebRX VHF" (Shack Monitoring tools tab,
+order 31, next to UberSDR) **and** `Build OpenWebRX state for Vue` →
+`link out → Shack Vue`. The Vue side gets an `OpenWebRxCard` on topic
+`openwebrx` with the same tiles and table, `CARDS.openwebrx` flag.
+
+Per CLAUDE.md rule #7 the Vue hop is a **link pair**, not a cross-tab
+wire. The guard constants needed no change — `MIN_UIB_FEEDERS` (10) and
+`MIN_NODE_COUNT` (300) are floors, and this change moves the live numbers
+up, 580 → 587 nodes and one more feeder; `flows_guard.py` passes.
+
 ## 2026-09-09
 
 ### UberSDR host tiles + FT8/FT4 decode stream on the UberSDR card

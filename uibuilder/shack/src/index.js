@@ -41,6 +41,7 @@ const CARDS = {
   network:   true,
   gpsntp:    true,
   ubersdr:   true,
+  openwebrx: true,
 };
 
 // =====================================================================
@@ -3070,9 +3071,80 @@ const UberSdrCard = {
   }
 };
 
+// === OpenWebRX+ VHF card (listeners on the RSP2 — data via uibuilder topic 'openwebrx') ===
+const OpenWebRxCard = {
+  template: `
+    <div class="card">
+      <div class="card__header" @click="expanded = !expanded">
+        <span class="chev">{{ expanded ? '▼' : '▶' }}</span>
+        <span>OpenWebRX VHF</span>
+        <span v-if="!expanded" class="summary">
+          <span :style="{color: statusColor, fontWeight:600}">{{ statusLabel }}</span>
+          <span v-if="state.profile">·</span>
+          <span v-if="state.profile" :style="{color:'var(--accent)', fontWeight:600}">{{ state.profile }}</span>
+        </span>
+      </div>
+
+      <div class="card__body" :class="{ 'is-collapsed': !expanded }">
+        <div class="tiles">
+          <div class="tile"><div class="tile__lbl">Listening now</div><div class="tile__val" :style="{color:'var(--green)', fontSize:'28px'}">{{ state.users }}</div><div style="font-size:var(--fs-xs);color:var(--muted);margin-top:2px">{{ countryLine }}</div></div>
+          <div class="tile"><div class="tile__lbl">Profile</div><div class="tile__val" style="font-size:15px">{{ state.profile || '—' }}</div></div>
+          <div class="tile"><div class="tile__lbl">Receiver</div><div class="tile__val" style="font-size:15px" :style="{color: state.health === 'OK' ? 'var(--green)' : 'var(--red)'}">{{ state.health || '—' }}</div></div>
+        </div>
+
+        <div class="solar-sec-label">Who's listening</div>
+        <div v-if="!listeners.length" class="empty-row">Nobody listening</div>
+        <table v-else class="slice-tbl">
+          <thead><tr><th>Where</th><th>IP</th><th>Freq</th><th>Mode</th><th>Time</th></tr></thead>
+          <tbody>
+            <tr v-for="(u, i) in listeners.slice(0, 15)" :key="u.ip + '-' + i">
+              <td>{{ where(u) }}</td>
+              <td style="color:var(--muted)">{{ u.ip }}</td>
+              <td>{{ u.mhz != null ? u.mhz.toFixed(4) : '—' }}</td>
+              <td style="color:var(--muted)">{{ (u.mod || '').toUpperCase() }}</td>
+              <td style="color:var(--muted)">{{ dur(u.since) }}</td>
+            </tr>
+            <tr v-if="listeners.length > 15">
+              <td colspan="5" style="color:var(--muted)">+{{ listeners.length - 15 }} more</td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:8px;text-align:right">
+          updated {{ state.time ? String(state.time).slice(11) : '—' }} · geolocation by DB-IP
+        </div>
+      </div>
+    </div>
+  `,
+  setup() {
+    const expanded = ref(true);
+    const state = reactive({ users: 0, listeners: [], profile: null, health: null, detail: null, time: null, stale: false });
+    const listeners = computed(() => state.listeners || []);
+    const statusLabel = computed(() => state.stale ? '○ stale' : (state.users > 0 ? '● ' + state.users + ' listening' : '○ idle'));
+    const statusColor = computed(() => state.stale ? 'var(--red)' : (state.users > 0 ? 'var(--green)' : 'var(--muted)'));
+    const countryLine = computed(() => {
+      const c = {};
+      listeners.value.forEach(u => { const k = u.country || '—'; c[k] = (c[k] || 0) + 1; });
+      return Object.keys(c).sort((a, b) => c[b] - c[a]).slice(0, 3).map(k => k + ' ' + c[k]).join(' · ');
+    });
+    function flag(cc) { cc = String(cc || '').toUpperCase(); if (!/^[A-Z]{2}$/.test(cc)) return ''; return String.fromCodePoint(127397 + cc.charCodeAt(0), 127397 + cc.charCodeAt(1)); }
+    function where(u) {
+      if (u.city) return (flag(u.cc) + ' ' + u.city + ', ' + (u.cc || u.country || '')).trim();
+      if (u.country) return (flag(u.cc) + ' ' + u.country).trim();
+      return String(u.ip || '').startsWith('192.168.') ? '🏠 LAN' : '—';
+    }
+    function dur(sec) { if (!sec) return '—'; const s = Math.max(0, Math.round(Date.now() / 1000 - sec)); const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60); return h > 0 ? h + 'h ' + ('0' + m).slice(-2) + 'm' : (m > 0 ? m + 'm' : s + 's'); }
+    onMounted(() => {
+      uibuilder.onTopic('openwebrx', (msg) => {
+        if (msg && msg.payload && typeof msg.payload === 'object') Object.assign(state, msg.payload);
+      });
+    });
+    return { expanded, state, listeners, statusLabel, statusColor, countryLine, where, dur };
+  }
+};
+
 // === Root app ===
 const App = {
-  components: { TopBar, LightningCard, DXCCCard, NetworkCard, RPiCard, PowerCard, SolarCard, FlexCard, SPECard, LP700Card, RotatorCard, GpsNtpCard, RBNCard, UberSdrCard },
+  components: { TopBar, LightningCard, DXCCCard, NetworkCard, RPiCard, PowerCard, SolarCard, FlexCard, SPECard, LP700Card, RotatorCard, GpsNtpCard, RBNCard, UberSdrCard, OpenWebRxCard },
   template: `
     <TopBar />
     <div class="dash-grid">
@@ -3086,6 +3158,7 @@ const App = {
       <DXCCCard      v-if="CARDS.dxcc" />
       <RBNCard       v-if="CARDS.rbn" />
       <UberSdrCard   v-if="CARDS.ubersdr" />
+      <OpenWebRxCard v-if="CARDS.openwebrx" />
       <RPiCard       v-if="CARDS.rpi" />
       <NetworkCard   v-if="CARDS.network" />
       <GpsNtpCard    v-if="CARDS.gpsntp" />
