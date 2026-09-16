@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v38 · 2026-09-09 UberSDR host tiles + FT8/FT4 decode stream (moved from RBN)';
+window.__shackBuild = 'v42 · 2026-09-16 UberSDR band noise & voice collapsible (stamp was stuck at v38 through v40/v41)';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -2991,8 +2991,11 @@ const UberSdrCard = {
           <span style="width:22px;text-align:right;color:var(--muted);font-weight:600">{{ b.n }}</span>
         </div>
 
-        <div class="solar-sec-label">Band noise &amp; voice</div>
-        <table class="slice-tbl">
+        <div class="solar-sec-label" style="cursor:pointer;user-select:none;" @click="bandsOpen = !bandsOpen">
+          {{ bandsOpen ? '▼' : '▶' }} Band noise &amp; voice
+          <span :style="{color: voiceActive > 0 ? 'var(--green)' : 'var(--muted)', fontWeight:600, marginLeft:'4px'}">{{ voiceActive }} active</span>
+        </div>
+        <table v-if="bandsOpen" class="slice-tbl">
           <thead><tr><th>Band</th><th>Noise</th><th>Voice</th><th>Dec/Mon</th></tr></thead>
           <tbody>
             <tr v-for="b in state.bands" :key="b.band">
@@ -3053,6 +3056,8 @@ const UberSdrCard = {
       return t >= 75 ? 'var(--red)' : t >= 65 ? 'var(--amber)' : 'var(--green)';
     });
     const ft8Open = ref(false);
+    const bandsOpen = ref(false);
+    const voiceActive = computed(() => (state.bands || []).filter(b => b.voice > 0).length);
     const egressLabel = computed(() => state.egressMbps >= 1 ? state.egressMbps + ' Mb/s' : Math.round(state.egressMbps * 1000) + ' kb/s');
     const cpuColor = computed(() => state.cpuPct > 85 ? 'var(--red)' : state.cpuPct > 60 ? 'var(--amber)' : 'var(--green)');
     const decoderModeStr = computed(() => (state.decodersByMode || []).map(m => m.mode + ' ' + m.n).join(' · '));
@@ -3067,7 +3072,7 @@ const UberSdrCard = {
         if (msg && msg.payload && typeof msg.payload === 'object') Object.assign(state, msg.payload);
       });
     });
-    return { expanded, ft8Open, state, egressLabel, cpuColor, hostTempColor, decoderModeStr, pct, noiseColor, flag, fmtFreq, dur, ft8Decodes, ft8Rate, utc };
+    return { expanded, ft8Open, bandsOpen, voiceActive, state, egressLabel, cpuColor, hostTempColor, decoderModeStr, pct, noiseColor, flag, fmtFreq, dur, ft8Decodes, ft8Rate, utc };
   }
 };
 

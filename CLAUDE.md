@@ -924,6 +924,17 @@ trimmed to UTC/Band/Mode/Call/SNR (message+country in the row tooltip).
 decoder output, unrelated to the CW/RTTY telnet skimmer feed. Nothing
 is written into `rbn_dash`, so no HA-bridge impact.
 
+**Band noise & voice collapsible (2026-09-16, operator request).** The
+per-band Noise/Voice/D-M table got the FT8-decodes treatment on both
+dashboards, closed by default: D1 a native `<details>` whose summary
+shows "`N` active" (bands with `voice > 0`, green when any — only the
+tbody + summary span repaint, so the open state survives), Vue a
+chevron toggle (`bandsOpen` ref) with the same `voiceActive` hint. Vue
+build `v42` — which also resynced the on-screen build stamp: it had
+been stuck at `v38` while the `index.html` cache-buster moved to
+`?v=41` across the OpenWebRX sessions (the stamp and buster must move
+together, per the Vue-card conventions above).
+
 **Telegram offline/back alert (2026-07-31).** `ubersdr_agg` already
 computed an `online` flag (`now - sess.ts < 60000`, re-evaluated every
 10s via `ubersdr_replay`) for the dashboard cards — 3 new nodes on

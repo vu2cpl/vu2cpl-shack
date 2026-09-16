@@ -10,6 +10,28 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-09-16
 
+### UberSDR card: band noise & voice collapsible on both dashboards
+
+Operator: "band noise and voice can be a click to open type just like
+the ft8 decodes". The per-band Noise/Voice/Dec-Mon table on the UberSDR
+card now starts collapsed on both dashboards, using the exact
+FT8-decodes pattern:
+
+- **D1** (`ubersdr_panel`): the pane became a native `<details>`
+  (closed by default). The summary line shows "Band noise & voice ·
+  `N` active" — N = bands with `voice > 0`, green when any. Only the
+  tbody and the summary span repaint on each state message, so the
+  open/closed state survives repaints (same trick as the FT8 pane).
+- **Vue** (`UberSdrCard`): chevron-toggled section (`bandsOpen` ref,
+  default closed) with the same green "`N` active" hint in the label.
+  Build `v42`, cache-buster `?v=42`.
+
+Housekeeping found on the way: `window.__shackBuild` had been stuck at
+`v38` while the `index.html` cache-buster advanced to `?v=41` across
+the two OpenWebRX sessions — the on-screen stamp under-reported the
+running build. Resynced at `v42` (the pair must move together, per
+CLAUDE.md's Vue-card conventions).
+
 ### Network monitor: "Display results" startup TypeError guarded
 
 `Display results` (Internet and network monitor tab) threw
