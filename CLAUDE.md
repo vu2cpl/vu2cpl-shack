@@ -18,12 +18,22 @@ Claude Code runs on **Mac Mini M4 Pro** with a local clone of the repo.
 | Website source | `~/projects/vu2cpl-website/` (vu2cpl.com staging) |
 | GitHub Pages site | `~/projects/vu2cpl.github.io/` |
 
-**Claude Code cannot directly access the Pi.** Any changes to `flows.json` must be:
-1. Edited locally
-2. `git push` from Mac
-3. On Pi: `git pull` then `sudo systemctl restart nodered`
+**Claude Code on the Mac can reach the Pi over SSH** (`ssh vu2cpl@192.168.1.169`, key-based, passwordless
+`sudo`) — corrected 2026-09-16, when the OpenWebRX listener cards were deployed that way. This line used to
+say it couldn't. The repo is still the source of truth, so a `flows.json` change goes:
+1. Edited locally on the Mac
+2. `git push` from the Mac
+3. On the Pi: `git pull` then `sudo systemctl restart nodered`
+
+Do **not** edit `flows.json` directly on the Pi outside the repo checkout, and never skip the push — the Pi's
+copy is a git checkout of this repo, so an unpushed local edit diverges the two.
 
 For quick Node-RED flow edits, prefer the browser editor + `nrsave` on Pi directly.
+
+**Live flows file:** `~/.node-red/projects/vu2cpl-shack/flows.json` (Node-RED runs in **projects** mode,
+`activeProject: vu2cpl-shack`). A pre-projects `~/.node-red/flows.json` sat there unused until 2026-09-16,
+when it was renamed `flows.json.pre-projects-bak-20260407` (with `flows_cred.json.pre-projects-bak-20260320`)
+because reading it by mistake gives a stale April picture of the flows.
 Use Claude Code on Mac for:
 - SwiftUI app development (`~/projects/vu2cpl-shack-app/`)
 - Generating function node code to paste into Node-RED
