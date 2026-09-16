@@ -10,6 +10,44 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-09-16
 
+### RBN 1H/12H/24H counters: real windows via per-skimmer hourly buckets
+
+Operator spotted that the three spot-count windows on the RBN skimmer
+cards always read identical (1480/1480/1480 for VU2CPL). Root cause:
+`Parse DX Spot` capped `spots_all` at **2000 entries** — a memory guard
+from the flow's first commit, sized for CW-only rates — and the FT8
+flood on the `:7550` feed (~1480 spots/h from VU2CPL alone, ~2000/h
+combined) meant the ring only ever held **~1 hour** of history. The
+window math in `Update Spot Counters` was correct all along; the 12H
+and 24H filters just ran over the same ≤1 h dataset as 1H. (The
+screenshot's 1480 + 520 = exactly 2000 was the giveaway.) Even at old
+CW rates the cap never truly covered 24 h, so the 24H tile was likely
+never honest — the FT8 rate just collapsed all three into one.
+
+Fix, two function-only edits (no nodes/wires, guard green):
+
+- **`Parse DX Spot`**: `spots_all` cap 2000 → **10000**. Needed for the
+  1H tile alone — at current rates the old cap sat exactly on the 1-hour
+  clip edge, so 1H was about to silently undercount too. ~3–4 MB of
+  flow context worst case; the Format CW/FT8 Spot Row consumers
+  filter-then-slice(30), so a longer ring only costs them scan time.
+- **`Update Spot Counters`**: 12H/24H no longer filter the ring (which
+  can never affordably hold 24 h at ~2000 spots/h ≈ 48k entries).
+  `hourly_buckets` — previously written but **never read** — is now
+  per-skimmer (`{"YYYY-MM-DDTHH":{CALL:{total,cw,ft8}}}`), **file-scoped**
+  so 12H/24H survive Node-RED restarts (the memory-scoped ring wiped
+  every window on restart before), and summed for the two long windows
+  (hour granularity; buckets whose UTC hour-start falls inside the
+  window). 1H stays exact from the ring. Old-format global bucket
+  entries (`{cw,ft8}` numbers at top level) are dropped on sight, so a
+  context-preserving redeploy can't mix schemas. Retention unchanged at
+  240 hourly keys (10 days).
+
+Expected settling behaviour after deploy: buckets start empty (the old
+ones were memory-scoped and global-format), so all three tiles read
+equal again at first and diverge as hours accrue — 12H honest after
+12 h, 24H after 24 h. From then on, restarts only reset the 1H tile.
+
 ### OpenWebRX card: health of both receivers
 
 The OpenWebRX box now runs two SDRs — the RSP2 (VHF/UHF) and a Mirics MSi2500
