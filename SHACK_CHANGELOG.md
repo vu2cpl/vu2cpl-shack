@@ -10,6 +10,26 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-09-16
 
+### OpenWebRX card: health of both receivers
+
+The OpenWebRX box now runs two SDRs — the RSP2 (VHF/UHF) and a Mirics MSi2500
+dedicated to FM broadcast, so an FM listener no longer retunes the RSP2 for
+everyone — and its watcher checks each separately. `shack/openwebrx/status`
+gained `msi_result` / `msi_detail` alongside the RSP2's `result` / `detail`
+(`OK`, `BAD`, or `SKIP` when the container itself is down).
+
+- `Aggregate OpenWebRX` keeps the two new fields (`msiHealth`, `msiDetail`).
+- **D1 panel:** the single "Receiver" tile became **"Receivers"** — one
+  colour-coded line each, `RSP2 OK` / `MSi2500 OK`; the sub-line shows the
+  detail of whichever receiver isn't healthy.
+- **Vue card:** the same two-line tile, plus a red `⚠ receiver` in the
+  collapsed header when either is unhealthy (a collapsed card hides its
+  tiles). Build `v40`.
+- `SKIP` renders as a muted `—`, not red: a container outage is already
+  reported by the RSP2 line, so one outage shows one red receiver.
+
+No new nodes or wires (587 nodes, guard unchanged) — two existing nodes edited.
+
 ### OpenWebRX+ VHF listeners on both dashboards
 
 The VHF receiver (OpenWebRX+ on the RSP2, `192.168.1.109:8873`) now

@@ -3082,6 +3082,7 @@ const OpenWebRxCard = {
           <span :style="{color: statusColor, fontWeight:600}">{{ statusLabel }}</span>
           <span v-if="state.profile">·</span>
           <span v-if="state.profile" :style="{color:'var(--accent)', fontWeight:600}">{{ state.profile }}</span>
+          <span v-if="anyUnhealthy" :style="{color:'var(--red)', fontWeight:600}">· ⚠ receiver</span>
         </span>
       </div>
 
@@ -3089,7 +3090,13 @@ const OpenWebRxCard = {
         <div class="tiles">
           <div class="tile"><div class="tile__lbl">Listening now</div><div class="tile__val" :style="{color:'var(--green)', fontSize:'28px'}">{{ state.users }}</div><div style="font-size:var(--fs-xs);color:var(--muted);margin-top:2px">{{ countryLine }}</div></div>
           <div class="tile"><div class="tile__lbl">Profile</div><div class="tile__val" style="font-size:15px">{{ state.profile || '—' }}</div></div>
-          <div class="tile"><div class="tile__lbl">Receiver</div><div class="tile__val" style="font-size:15px" :style="{color: state.health === 'OK' ? 'var(--green)' : 'var(--red)'}">{{ state.health || '—' }}</div></div>
+          <div class="tile"><div class="tile__lbl">Receivers</div>
+            <div style="font-size:14px;font-weight:600;line-height:1.4">
+              <div :style="{color: healthColor(state.health)}">RSP2 {{ healthLabel(state.health) }}</div>
+              <div :style="{color: healthColor(state.msiHealth)}">MSi2500 {{ healthLabel(state.msiHealth) }}</div>
+            </div>
+            <div v-if="problemDetail" style="font-size:var(--fs-xs);color:var(--muted);margin-top:2px">{{ problemDetail }}</div>
+          </div>
         </div>
 
         <div class="solar-sec-label">Who's listening</div>
@@ -3117,7 +3124,14 @@ const OpenWebRxCard = {
   `,
   setup() {
     const expanded = ref(true);
-    const state = reactive({ users: 0, listeners: [], profile: null, health: null, detail: null, time: null, stale: false });
+    const state = reactive({ users: 0, listeners: [], profile: null, health: null, detail: null, msiHealth: null, msiDetail: null, time: null, stale: false });
+    // SKIP (container down) is muted: the RSP2's own result already reports that outage
+    const healthColor = (r) => r === 'OK' ? 'var(--green)' : ((!r || r === 'SKIP') ? 'var(--muted)' : 'var(--red)');
+    const healthLabel = (r) => (!r || r === 'SKIP') ? '—' : r;
+    const rspBad = computed(() => !!state.health && state.health !== 'OK');
+    const msiBad = computed(() => !!state.msiHealth && state.msiHealth !== 'OK' && state.msiHealth !== 'SKIP');
+    const anyUnhealthy = computed(() => rspBad.value || msiBad.value);
+    const problemDetail = computed(() => rspBad.value ? state.detail : (msiBad.value ? state.msiDetail : ''));
     const listeners = computed(() => state.listeners || []);
     const statusLabel = computed(() => state.stale ? '○ stale' : (state.users > 0 ? '● ' + state.users + ' listening' : '○ idle'));
     const statusColor = computed(() => state.stale ? 'var(--red)' : (state.users > 0 ? 'var(--green)' : 'var(--muted)'));
@@ -3138,7 +3152,7 @@ const OpenWebRxCard = {
         if (msg && msg.payload && typeof msg.payload === 'object') Object.assign(state, msg.payload);
       });
     });
-    return { expanded, state, listeners, statusLabel, statusColor, countryLine, where, dur };
+    return { expanded, state, listeners, statusLabel, statusColor, countryLine, where, dur, healthColor, healthLabel, anyUnhealthy, problemDetail };
   }
 };
 
