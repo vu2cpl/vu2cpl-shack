@@ -10,6 +10,19 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-09-16
 
+### Network monitor: "Display results" startup TypeError guarded
+
+`Display results` (Internet and network monitor tab) threw
+`TypeError: Cannot read properties of undefined (reading 'status')`
+once on every Node-RED restart, weeks back in the journal. Its trigger
+inject fires every 2 s from flow start, and the first tick lands before
+the first ping cycle seeds `flow.flow_data` — every sibling function on
+the tab guards with `flow.get('flow_data')||{}`; this one didn't. Fixed
+with an early `if(!flow_data)return null;` rather than the `||{}`
+idiom, so the dashboard skips the empty tick instead of painting a
+false "down" for 2 s. Spotted in the journal while verifying the RBN
+counter deploy (same day, below).
+
 ### RBN 1H/12H/24H counters: real windows via per-skimmer hourly buckets
 
 Operator spotted that the three spot-count windows on the RBN skimmer
