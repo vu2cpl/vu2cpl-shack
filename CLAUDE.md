@@ -31,9 +31,10 @@ copy is a git checkout of this repo, so an unpushed local edit diverges the two.
 For quick Node-RED flow edits, prefer the browser editor + `nrsave` on Pi directly.
 
 **Live flows file:** `~/.node-red/projects/vu2cpl-shack/flows.json` (Node-RED runs in **projects** mode,
-`activeProject: vu2cpl-shack`). A pre-projects `~/.node-red/flows.json` sat there unused until 2026-09-16,
-when it was renamed `flows.json.pre-projects-bak-20260407` (with `flows_cred.json.pre-projects-bak-20260320`)
-because reading it by mistake gives a stale April picture of the flows.
+`activeProject: vu2cpl-shack`). A pre-projects `~/.node-red/flows.json` (plus a 30-byte `flows_cred.json`)
+sat there unused until 2026-09-16, when it was renamed out of the way — reading it by mistake gives a stale
+April picture of the flows — and Manoj then deleted both backups the same day. There is no top-level flows file
+any more; don't recreate one.
 Use Claude Code on Mac for:
 - SwiftUI app development (`~/projects/vu2cpl-shack-app/`)
 - Generating function node code to paste into Node-RED
