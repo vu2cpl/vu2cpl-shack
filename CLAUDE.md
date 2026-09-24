@@ -223,8 +223,8 @@ persists across reboots. Verify with empty-payload read:
 | `openwebrxplus` | `vu2cpl` | Agent running |
 | (2 more Pis) | — | Pending |
 | Home Assistant Pi (`HassPi`, `192.168.1.36:8123`, HA 2026.8.3) | — | **Telemetry live** (HA's own `Publish RPi stats to MQTT (HassPi)` automation → `rpi/HassPi/*`). **REST API access added 2026-08-25** — long-lived token in `~/.config/vu2cpl-shack.env` as `HA_TOKEN` (Mac-side, mode 600, never committed). Full automation CRUD via `/api/config/automation/config/<id>`; no SSH to the box (22/22222 closed). No control agent needed. **HA's Radio dashboard (`/193-radio`) is the Vue-dashboard equivalent (phase 1) since 2026-08-25** — shack entities created by `ha_discovery_publish.py` (see the scripts table); HA's MQTT integration is on the shack broker, which is what makes the whole thing possible. **Custom components on this box are patched in place and invisible to git** — see the Smarteefi note under "Household HA integrations" below |
-| Red Pitaya `rp-f02054` (`rp-f02054.local` — **address by mDNS name, NOT by IP, since 2026-09-24**; was `192.168.1.241` via DHCP from 2026-08-22, which drifted to `.100`; **the `RBN_SDR` network-monitor tile's target** again since 2026-08-25) | `root` | Telemetry live via `monitor_redpitaya.sh` (Alpine/BusyBox, Zynq XADC temp; no control agent) — see DEPLOY_PI.md special cases. MAC `00:26:32:f0:20:54` |
-| Web-888 receiver `web-888` (`web-888.local` — was `192.168.1.235`, **also drifted to `.100` on 2026-09-24**) | `root` | Telemetry live via the same `monitor_redpitaya.sh` (also Zynq/Alpine — script runs unchanged; no control agent). Added 2026-08-22. Held the `RBN_SDR` ping tile 08-21 → 08-25; still fleet-monitored via `rpi/web-888/*`, but no longer has a network-monitor tile. **Presents the bogus hardwired MAC `64:69:73:74:72:6f` (ASCII "distro") — see the IP-conflict note under the `RBN_SDR` tile** |
+| Red Pitaya `rp-f02054` (`rp-f02054.local` — **address by mDNS name, NOT by IP, since 2026-09-24**; DHCP `192.168.1.241`, sat on the shared fallback `.100` 2026-09-24, back on `.241` after the 2026-09-25 reboot; **the `RBN_SDR` network-monitor tile's target** again since 2026-08-25) | `root` | Telemetry live via `monitor_redpitaya.sh` (Alpine/BusyBox, Zynq XADC temp; no control agent) — see DEPLOY_PI.md special cases. MAC `00:26:32:f0:20:54` |
+| Web-888 receiver `web-888` (`192.168.1.235` — was on `.100` 2026-09-24, back on `.235` after the 2026-09-25 reboot; **`web-888.local` is unreliable: avahi fails at every boot, see the `RBN_SDR` note**) | `root` | Telemetry live via the same `monitor_redpitaya.sh` (also Zynq/Alpine — script runs unchanged; no control agent). Added 2026-08-22. Held the `RBN_SDR` ping tile 08-21 → 08-25; still fleet-monitored via `rpi/web-888/*`, but no longer has a network-monitor tile. **Presents the bogus hardwired MAC `64:69:73:74:72:6f` (ASCII "distro") — see the IP-conflict note under the `RBN_SDR` tile** |
 
 Agent endpoints: `POST /reboot`, `POST /shutdown`
 
@@ -861,29 +861,102 @@ address. Verified the Node-RED Pi can resolve it: `getent hosts
 rp-f02054.local` → `192.168.1.100` (avahi-daemon active; note
 `avahi-resolve` is NOT installed on `noderedpi4`, use `getent`).
 
-**Root cause of the drift — an IP conflict between the two Zynq boards,
-still open as of 2026-09-24.** The UDM Pro Max logged *"Multiple devices
-are using the same 192.168.1.100 IP address"* (12:59:59 UTC = 18:30 IST).
-Both Alpine/Zynq boards had left their documented addresses and were
-claiming `.100`; `.241` and `.235` were both answering nothing, not even
-ARP. Confirmed by flushing the ARP cache and re-probing `.100` six times
-— the replying MAC **alternates** between `00:26:32:f0:20:54` (the Red
-Pitaya, real Red Pitaya OUI) and `64:69:73:74:72:6f` (the Web-888), both
-serving `<title>Red Pitaya Apps`. `tcpdump` also shows the UDM
-(`1c:6a:1b:17:42:e2`) re-ARPing `.100` repeatedly without settling.
-`64:69:73:74:72:6f` decodes as ASCII **"distro"** — a hardwired
-placeholder, i.e. the Web-888 is not reading a real MAC from EEPROM.
-`.100` is the Red Pitaya image's documented fallback when DHCP doesn't
-answer, so a simultaneous boot with no DHCP reply lands both boards on
-it. This also explains the older `.241` → `.235` → `.241` "moves" of
-2026-08-21/25: the two boards were trading one lease all along.
-**Still to do (needs the UniFi console and the board itself, so not done
-here):** (1) UniFi fixed reservations — `00:26:32:f0:20:54` → `.241`,
-`64:69:73:74:72:6f` → `.235`; (2) give the Web-888 a real MAC, because
-while it presents "distro" any second board from the same image collides
-with it and a reservation keyed on a placeholder MAC is fragile. Until
-then the tile will flap, because the name resolves to the contested
-`.100` — but it is at least correct rather than permanently dead.
+**Root cause — both Zynq boards share one dhcpcd fallback address
+(confirmed on the boards, RESOLVED by reboot 2026-09-25 ~00:45 IST).**
+The UDM Pro Max logged *"Multiple devices are using the same
+192.168.1.100 IP address"* (12:59:59 UTC = 18:30 IST on 2026-09-24).
+`.241` and `.235` were both answering nothing, not even ARP; flushing the
+ARP cache and re-probing `.100` six times showed the replying MAC
+**alternating** between `00:26:32:f0:20:54` (Red Pitaya) and
+`64:69:73:74:72:6f` (Web-888), and `tcpdump` showed the UDM
+(`1c:6a:1b:17:42:e2`) re-ARPing `.100` without settling.
+
+Logged into both, `/etc/dhcpcd.conf` is **byte-identical** and contains:
+
+```
+noarp
+profile static_eth0
+static ip_address=192.168.1.100/24
+static routers=192.168.1.1
+interface eth0
+fallback static_eth0
+```
+
+So whenever DHCP doesn't answer at boot, **both** boards fall back to
+`192.168.1.100`, and `noarp` switches off dhcpcd's ARP probe/defend, so
+neither ever notices the other and backs off. Both `/var/lib/dhcpcd/`
+dirs were empty — neither held a lease — and `ip addr` showed
+`192.168.1.100/24` on each. The trigger was almost certainly the
+2026-09-24 18:12 IST mains loss: the boards booted before the network
+answered DHCP. `/etc/network/interfaces` is empty on both; dhcpcd owns eth0.
+
+**Fix applied:** rebooted each board once, Red Pitaya first, with DHCP
+now answering. Each came back with a real lease (`scope global dynamic`,
+a fresh `eth0.lease`): Red Pitaya → `.241`, Web-888 → `.235`, i.e. the UDM
+still held their old leases. Verified afterwards: `.100` answers nothing,
+and 4 flushed-ARP probes of each address return one MAC every time. The
+RBN_SDR target went from 50% loss (the conflict) to 0%.
+
+The `"distro"` MAC (`64:69:73:74:72:6f` is ASCII "distro") is a hardwired
+placeholder — the Web-888 reads no MAC from EEPROM — but it was **not** the
+cause: the two MACs differ, so the boards got separate leases the moment
+DHCP answered. It is hygiene only. (An earlier version of this note
+claimed the 2026-08-21/25 `.241` → `.235` → `.241` tile moves were the two
+boards "trading one lease"; that was wrong, and is retracted — those were
+deliberate retargets of the tile between two different boards, as the
+note above records.)
+
+**Recurrence risk stays open until the fallback is fixed.** The next
+power cut that beats DHCP will do this again. Durable fix, in order —
+each needs `lbu commit -d` afterwards (both boards run Alpine diskless;
+an uncommitted change vanishes at the next reboot):
+1. **Give each board its own fallback** — in `static_eth0`, set
+   `192.168.1.241/24` on the Red Pitaya and `192.168.1.235/24` on the
+   Web-888. The fallback then equals the normal address, so a DHCP-less
+   boot is harmless. Keeping `noarp` is fine once the fallbacks differ.
+2. **UniFi fixed reservations** — `00:26:32:f0:20:54` → `.241`,
+   `64:69:73:74:72:6f` → `.235` — so DHCP can never hand those addresses
+   to anything else and collide with a board sitting on its fallback.
+3. (Hygiene) a real / locally-administered MAC for the Web-888.
+
+**`web-888.local` does NOT survive a Web-888 reboot (open, found
+2026-09-25).** avahi fails on every boot because of a readiness race with D-Bus, and
+the dependency itself is declared correctly. `/etc/init.d/avahi-daemon` declares
+`need dbus`, and OpenRC does start dbus first (dbus-daemon PID 1396 <
+avahi 1453). But the Web-888's `/etc/init.d/dbus` runs `dbus-daemon
+--nofork` with `command_background="yes"`, so OpenRC marks dbus "started"
+before the daemon has bound `/var/run/dbus/system_bus_socket`. avahi
+starts in the same second, gets `Failed to connect to socket …: No such
+file or directory`, exits, and is never retried. `rc-service avahi-daemon
+start` by hand works, which is why the name resolved before the 2026-09-25
+reboot and not after it. It was restarted by hand after that reboot, so it resolves now, until the next reboot.
+Proposed fix, awaiting Manoj's OK: `enable-dbus=no` in
+`/etc/avahi/avahi-daemon.conf` (currently the commented default), then
+`lbu commit -d`. avahi doesn't need D-Bus to publish its own name. The Red
+Pitaya (dbus 1.12 under `supervise-daemon`, OpenRC 0.42) isn't
+readiness-aware either, and just happens to win the race. Its avahi is
+fine today but not guaranteed.
+Web-888 log timestamps before chrony's first step read `Apr 8 2024` (no
+RTC; the clock is stepped ~18 s into boot), so don't read those as an
+old boot.
+
+**Reaching the boards when IPv4 is broken** — this is how the reboot was
+done. The Mac's `id_ed25519` is accepted as `root` on both. The Mac is on
+VLAN 10, so it can't use link-local; jump via `noderedpi4`, which shares
+the L2 segment, and address each board by its **MAC-derived IPv6
+link-local**, which stays unique even while both share an IPv4:
+
+```bash
+# Red Pitaya fe80::226:32ff:fef0:2054   Web-888 fe80::6669:73ff:fe74:726f
+A=fe80::226:32ff:fef0:2054
+ssh -o ProxyCommand="ssh vu2cpl@192.168.1.169 nc -w 8 ${A}%%eth0 22" root@$A
+```
+
+Two gotchas: `-J`/ProxyJump **drops the `%eth0` zone** ("channel 0: open
+failed"), so use ProxyCommand; and inside ProxyCommand the zone must be
+written **`%%eth0`** — a bare `%e` is an ssh percent-token and fails with
+`unknown key %e`. `.109` can't do this at all: IPv6 is disabled there
+(`net.ipv6.conf.eno1.disable_ipv6=1`).
 `UBERSDR` is a new tile added the same day, for
 the ubersdr box also running `meridian` (`192.168.1.109`).
 

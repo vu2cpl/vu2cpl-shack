@@ -56,10 +56,6 @@ README.md's fleet host list was three hosts and long stale — now lists
 all seven (HassPi, gpsntp, meridianpi5, noderedpi4, openwebrxplus,
 rp-f02054, web-888).
 
----
-
-## 2026-09-25
-
 ### Zynq-board IP conflict: root cause confirmed on the boards, cleared by reboot
 
 Follow-up to the 2026-09-24 entry. Yesterday's diagnosis was inferred

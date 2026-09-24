@@ -253,17 +253,21 @@ is historical — the Red Pitaya was onboarded first):
 - **Red Pitaya skimmer** `rp-f02054` (`rp-f02054.local`; Zynq-7010,
   2020-era Alpine, OpenSSH 8.3; `mosquitto_pub` already on the image).
   MAC `00:26:32:f0:20:54`
-- **Web-888 receiver** `web-888` (`web-888.local`; recent Alpine,
+- **Web-888 receiver** `web-888` (`192.168.1.235`; recent Alpine,
   OpenSSH 9.7; needed `apk add mosquitto-clients`). Presents the bogus
   hardwired MAC `64:69:73:74:72:6f` (ASCII "distro")
 
-**Always address these two by `.local` name, never by IP.** Both are on
-DHCP with no reservation, and on 2026-09-24 both drifted off their old
-addresses (`.241` and `.235`) and collided on `192.168.1.100` — the Red
-Pitaya image's fallback when DHCP doesn't answer — which the UDM logged
-as an IP-address conflict. Full diagnosis, and the two open fixes (UniFi
-reservations + giving the Web-888 a real MAC), are in the `RBN_SDR` tile
-section of `CLAUDE.md`.
+**Addressing.** Use `rp-f02054.local` for the Red Pitaya. For the Web-888
+use `192.168.1.235` for now: `web-888.local` stops resolving after every
+Web-888 reboot, because avahi loses a boot-time race with D-Bus (open
+fix: `enable-dbus=no`). Neither board has a DHCP reservation, and both
+share an identical dhcpcd fallback of `192.168.1.100/24` with `noarp`.
+So a boot that beats DHCP, like the 2026-09-24 power cut, puts both on
+`.100`, and the UDM logs an IP conflict. Rebooting each board once DHCP
+answers clears it. Full diagnosis, the durable fix (distinct fallbacks + UniFi
+reservations, then `lbu commit -d`), and how to SSH to each board over
+IPv6 link-local while IPv4 is broken are in the `RBN_SDR` tile section of
+`CLAUDE.md`.
 
 Both needed `crond` enabled (`rc-update add crond default`) and both
 persist via `lbu commit -d`. The script replaces `monitor.sh` on this
