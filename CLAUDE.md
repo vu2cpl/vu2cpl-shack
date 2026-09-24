@@ -61,7 +61,7 @@ sudo systemctl restart nodered
    python3 -c 'import json; d=json.load(open("flows.json")); v=[n for n in d if n.get("z")=="d110d176c0aad308" or n.get("id")=="d110d176c0aad308"]; json.dump(v,open("/tmp/dxcc_tab.json","w"),indent=2)'
    ```
 5. **Never put file upload instructions inside index.html** (vu2cpl.com website). Give them as chat instructions only.
-6. **When updating `SHACK_CHANGELOG.md`**, always regenerate `SHACK_CHANGELOG.pdf` (`npx --yes md-to-pdf SHACK_CHANGELOG.md`, ~3s, no rename needed — matches the DXCC.md/PDF stem convention) and commit both together. Mirrors rule #3 for the DXCC doc. **Added 2026-07-01** after the PDF was found 12 commits stale (last regenerated 2026-06-12) with no rule enforcing the pairing — regenerated once for a clean baseline, then formalized so it can't silently drift again.
+6. **When updating `SHACK_CHANGELOG.md`**, always regenerate `SHACK_CHANGELOG.pdf` (`npx --yes md-to-pdf SHACK_CHANGELOG.md`, ~3s, no rename needed — matches the DXCC.md/PDF stem convention) and commit both together. **Gotcha (2026-09-24): that bare command now fails on the Mac** with `Could not find Chrome (ver. 147.x) … cache path /Users/manoj/.cache/puppeteer` — the puppeteer cache is empty and md-to-pdf ships no browser. It also **exits 0 on failure**, so the stale PDF is silently left in place; check the PDF's mtime, don't trust the exit code. Don't download a second Chrome — point puppeteer at the installed one: <br>`PUPPETEER_EXECUTABLE_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" npx --yes md-to-pdf SHACK_CHANGELOG.md` (~8 s). Mirrors rule #3 for the DXCC doc. **Added 2026-07-01** after the PDF was found 12 commits stale (last regenerated 2026-06-12) with no rule enforcing the pairing — regenerated once for a clean baseline, then formalized so it can't silently drift again.
 7. **Never hand-add cross-tab wires (or non-schema fields) to flows.json — the editor silently strips them on every Deploy.** This was the true root cause of all five 2026 "wipes" (2026-07-13, 2026-07-31, 2026-08-21 ×3): the May Vue migration hand-wrote wires whose endpoints sit on *different flow tabs* (14 builders → `uib_shack_01`, the Vue cmd fan-out, the AS3935 Tuning ↔ Lightning bridge — 30 wires total) plus an editor-unknown `css` field on `ui_base` (not in dashboard 3.6.6's node schema). The **runtime** executes such constructs; the **editor** cannot even represent them, so ANY Deploy from ANY editor — fresh or stale tab, any device — wrote the flows back without them. Wipe dates were simply editor-deploy dates; stale tabs only added field reverts on top in the early incidents, which misdirected diagnosis for weeks (the wiring was also invisible in the editor, so "no wires into Shack Vue" looked normal). **Fixed 2026-08-21 (`9ad16f7`): every cross-tab hop now uses `link in` / `link out` pairs** (the editor-legal mechanism — 28 new link nodes), and the dark-scrollbar CSS moved into a site-`<head>` `ui_template` ("D1 global CSS", on the GPS NTP (card) tab). Editor deploys are round-trip-safe since. **To connect nodes on different tabs, always use link pairs** — a direct cross-tab wire will be caught by the guards. **Three enforcement layers** (`flows_guard.py` + `flows_guard_middleware.js`; invariants: ≥10 Vue feeders counted through link pairs, zero cross-tab/dead wires, sane node count — a deliberate structural change must update the constants in **both** files in the same commit, then restart Node-RED before deploying): **(a)** git pre-commit hook (Pi + Mac clones; `rebuild_pi.sh` Stage 7) — a broken flows.json is uncommittable; **(b)** 1-min Pi cron (`flows_guard.py --cron`) — Telegram ⚠️ within 60 s if the live file breaks; recovery is `git checkout -- flows.json && sudo systemctl restart nodered`; **(c)** server-side deploy rejection — `flows_guard_middleware.js` as `httpAdminMiddleware` in `~/.node-red/settings.js` (backup `settings.js.bak-flowsguard`; `rebuild_pi.sh` Stage 5) 400-rejects a failing `POST /flows` before anything is written, shown in the editor as an error toast.
 
 ---
@@ -223,8 +223,8 @@ persists across reboots. Verify with empty-payload read:
 | `openwebrxplus` | `vu2cpl` | Agent running |
 | (2 more Pis) | — | Pending |
 | Home Assistant Pi (`HassPi`, `192.168.1.36:8123`, HA 2026.8.3) | — | **Telemetry live** (HA's own `Publish RPi stats to MQTT (HassPi)` automation → `rpi/HassPi/*`). **REST API access added 2026-08-25** — long-lived token in `~/.config/vu2cpl-shack.env` as `HA_TOKEN` (Mac-side, mode 600, never committed). Full automation CRUD via `/api/config/automation/config/<id>`; no SSH to the box (22/22222 closed). No control agent needed. **HA's Radio dashboard (`/193-radio`) is the Vue-dashboard equivalent (phase 1) since 2026-08-25** — shack entities created by `ha_discovery_publish.py` (see the scripts table); HA's MQTT integration is on the shack broker, which is what makes the whole thing possible. **Custom components on this box are patched in place and invisible to git** — see the Smarteefi note under "Household HA integrations" below |
-| Red Pitaya `rp-f02054` (`rp-f02054.local` — `192.168.1.241` via DHCP as of 2026-08-22; **the `RBN_SDR` network-monitor tile's target** again since 2026-08-25) | `root` | Telemetry live via `monitor_redpitaya.sh` (Alpine/BusyBox, Zynq XADC temp; no control agent) — see DEPLOY_PI.md special cases |
-| Web-888 receiver `web-888` (`192.168.1.235`) | `root` | Telemetry live via the same `monitor_redpitaya.sh` (also Zynq/Alpine — script runs unchanged; no control agent). Added 2026-08-22. Held the `RBN_SDR` ping tile 08-21 → 08-25; still fleet-monitored via `rpi/web-888/*`, but no longer has a network-monitor tile |
+| Red Pitaya `rp-f02054` (`rp-f02054.local` — **address by mDNS name, NOT by IP, since 2026-09-24**; was `192.168.1.241` via DHCP from 2026-08-22, which drifted to `.100`; **the `RBN_SDR` network-monitor tile's target** again since 2026-08-25) | `root` | Telemetry live via `monitor_redpitaya.sh` (Alpine/BusyBox, Zynq XADC temp; no control agent) — see DEPLOY_PI.md special cases. MAC `00:26:32:f0:20:54` |
+| Web-888 receiver `web-888` (`web-888.local` — was `192.168.1.235`, **also drifted to `.100` on 2026-09-24**) | `root` | Telemetry live via the same `monitor_redpitaya.sh` (also Zynq/Alpine — script runs unchanged; no control agent). Added 2026-08-22. Held the `RBN_SDR` ping tile 08-21 → 08-25; still fleet-monitored via `rpi/web-888/*`, but no longer has a network-monitor tile. **Presents the bogus hardwired MAC `64:69:73:74:72:6f` (ASCII "distro") — see the IP-conflict note under the `RBN_SDR` tile** |
 
 Agent endpoints: `POST /reboot`, `POST /shutdown`
 
@@ -833,7 +833,7 @@ a new device — see the "Please Read!!" comment node on this tab.
 | `Flex`      | FlexRadio  | 192.168.1.148  | 5 |
 | `OpenwebRX` | OpenwebRX+ | 192.168.1.158  | 5 |
 | `RBN_PC`    | RBN PC/PI  | 192.168.1.164  | 5 |
-| `RBN_SDR`   | RBN SDR    | 192.168.1.241  | 5 |
+| `RBN_SDR`   | RBN SDR    | rp-f02054.local | 5 |
 | `UBERSDR`   | Ubersdr    | 192.168.1.109  | 5 |
 
 `RBN_PC` was "Mac RBN", pinging a Mac (`192.168.1.245`) that's no
@@ -852,6 +852,38 @@ happened on 08-25 until the stamp caught up. **Caveat: `.241` is a DHCP
 lease** — if it drifts, the tile reds out and the shown addr goes
 stale. A static reservation (or pointing the ping node at
 `rp-f02054.local`) would be sturdier.
+
+**2026-09-24 — the predicted drift happened, and the tile now uses the
+mDNS name.** Both the ping node's `host` and the `stamp RBN_SDR`
+function's `addr` are `rp-f02054.local` instead of `192.168.1.241`, so a
+future lease change can't red the tile out or stale the displayed
+address. Verified the Node-RED Pi can resolve it: `getent hosts
+rp-f02054.local` → `192.168.1.100` (avahi-daemon active; note
+`avahi-resolve` is NOT installed on `noderedpi4`, use `getent`).
+
+**Root cause of the drift — an IP conflict between the two Zynq boards,
+still open as of 2026-09-24.** The UDM Pro Max logged *"Multiple devices
+are using the same 192.168.1.100 IP address"* (12:59:59 UTC = 18:30 IST).
+Both Alpine/Zynq boards had left their documented addresses and were
+claiming `.100`; `.241` and `.235` were both answering nothing, not even
+ARP. Confirmed by flushing the ARP cache and re-probing `.100` six times
+— the replying MAC **alternates** between `00:26:32:f0:20:54` (the Red
+Pitaya, real Red Pitaya OUI) and `64:69:73:74:72:6f` (the Web-888), both
+serving `<title>Red Pitaya Apps`. `tcpdump` also shows the UDM
+(`1c:6a:1b:17:42:e2`) re-ARPing `.100` repeatedly without settling.
+`64:69:73:74:72:6f` decodes as ASCII **"distro"** — a hardwired
+placeholder, i.e. the Web-888 is not reading a real MAC from EEPROM.
+`.100` is the Red Pitaya image's documented fallback when DHCP doesn't
+answer, so a simultaneous boot with no DHCP reply lands both boards on
+it. This also explains the older `.241` → `.235` → `.241` "moves" of
+2026-08-21/25: the two boards were trading one lease all along.
+**Still to do (needs the UniFi console and the board itself, so not done
+here):** (1) UniFi fixed reservations — `00:26:32:f0:20:54` → `.241`,
+`64:69:73:74:72:6f` → `.235`; (2) give the Web-888 a real MAC, because
+while it presents "distro" any second board from the same image collides
+with it and a reservation keyed on a placeholder MAC is fragile. Until
+then the tile will flap, because the name resolves to the contested
+`.100` — but it is at least correct rather than permanently dead.
 `UBERSDR` is a new tile added the same day, for
 the ubersdr box also running `meridian` (`192.168.1.109`).
 
@@ -1253,7 +1285,7 @@ Pi-side scripts already in this repo (canonical paths shown):
 | `ha_compass_svgs.py` | run in-place (Mac, Samba `config` share mounted) | Regenerates the HA rotator-compass artwork — `rose.svg` + 16 pre-rotated `needle_*.svg` — into HassPi's `config/www/rotator/` (served at `/local/rotator/`). GitHub-dark palette. The compass card's conditional overlays (keyed on `sensor.rotator_sector`) reference these files |
 | `ha_discovery_publish.py` | run in-place (Mac) | Publishes the 61 retained MQTT-discovery configs (`homeassistant/sensor/#`) that create HA's shack entities — AS3935, gpsntp chrony, RPi fleet ×7, UberSDR — **via HA's own `mqtt.publish` REST service** (no broker creds needed; HA's `ha` account writes `#`). Needs `HA_URL`/`HA_TOKEN` in `~/.config/vu2cpl-shack.env`. Idempotent — re-run to recreate or adjust entities. Feeds the HA Radio dashboard (`/193-radio`), the Vue-equivalent phase 1 since 2026-08-25 |
 | `ha_ws_client.py` | run in-place (Mac) | Minimal stdlib HA **WebSocket** client — takes a JSON list of WS commands on argv, runs them authenticated, prints results. The tool behind Radio-dashboard saves (`lovelace/config` / `lovelace/config/save`), `system_log/list`, entity-registry reads. Needs `HA_URL`/`HA_TOKEN` exported (e.g. from `~/.config/vu2cpl-shack.env`); token never printed. Written 2026-08-25, committed 2026-09-08 |
-| `monitor_redpitaya.sh` | `/root/monitor_redpitaya.sh` on the Red Pitaya (`rp-f02054.local` / `.241`) | Fleet telemetry for the Alpine/BusyBox Red Pitaya (Zynq XADC temp) — remember `lbu commit -d` after any change there |
+| `monitor_redpitaya.sh` | `/root/monitor_redpitaya.sh` on the Red Pitaya (`rp-f02054.local` — by name only, the IP drifts) | Fleet telemetry for the Alpine/BusyBox Red Pitaya (Zynq XADC temp) — remember `lbu commit -d` after any change there |
 | `power_spe_on.py` | `/home/vu2cpl/power_spe_on.py` | SPE Expert 1.5 KFA power-on via FTDI DTR/RTS toggle |
 | `enable_file_context.sh` | `/home/vu2cpl/enable_file_context.sh` | One-time idempotent settings.js patcher to enable Node-RED `localfilesystem` context store |
 | `flows_guard.py` | run in-place from the repo (user crontab `--cron` every minute + `.git/hooks/pre-commit` on Pi and Mac clones) | Stale-tab wipe tripwire (critical rule #7) — blocks committing a structurally wiped flows.json; Telegram-alerts within 60 s of a live wipe |

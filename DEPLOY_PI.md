@@ -250,11 +250,20 @@ Two SDR appliances share this recipe, both Zynq-based Alpine/BusyBox
 boxes running **the same `monitor_redpitaya.sh` unchanged** (the name
 is historical — the Red Pitaya was onboarded first):
 
-- **Red Pitaya skimmer** `rp-f02054` (`rp-f02054.local` —
-  `192.168.1.241` via DHCP as of 2026-08-22; Zynq-7010, 2020-era
-  Alpine, OpenSSH 8.3; `mosquitto_pub` already on the image)
-- **Web-888 receiver** `web-888` (`192.168.1.235`; recent Alpine,
-  OpenSSH 9.7; needed `apk add mosquitto-clients`)
+- **Red Pitaya skimmer** `rp-f02054` (`rp-f02054.local`; Zynq-7010,
+  2020-era Alpine, OpenSSH 8.3; `mosquitto_pub` already on the image).
+  MAC `00:26:32:f0:20:54`
+- **Web-888 receiver** `web-888` (`web-888.local`; recent Alpine,
+  OpenSSH 9.7; needed `apk add mosquitto-clients`). Presents the bogus
+  hardwired MAC `64:69:73:74:72:6f` (ASCII "distro")
+
+**Always address these two by `.local` name, never by IP.** Both are on
+DHCP with no reservation, and on 2026-09-24 both drifted off their old
+addresses (`.241` and `.235`) and collided on `192.168.1.100` — the Red
+Pitaya image's fallback when DHCP doesn't answer — which the UDM logged
+as an IP-address conflict. Full diagnosis, and the two open fixes (UniFi
+reservations + giving the Web-888 a real MAC), are in the `RBN_SDR` tile
+section of `CLAUDE.md`.
 
 Both needed `crond` enabled (`rc-update add crond default`) and both
 persist via `lbu commit -d`. The script replaces `monitor.sh` on this

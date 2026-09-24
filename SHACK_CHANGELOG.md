@@ -8,6 +8,70 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-09-24
+
+### RBN_SDR tile: ping the Red Pitaya by mDNS name, not by a drifting IP
+
+The `RBN_SDR` network-monitor tile had gone red. Root cause was not the
+tile: the Red Pitaya skimmer `rp-f02054` had lost `192.168.1.241`
+altogether — the address answered nothing, not even ARP.
+
+The 2026-08-25 entry for this tile already carried the warning that
+`.241` was a DHCP lease and that a reservation, or pointing the ping node
+at `rp-f02054.local`, "would be sturdier". That prediction came true, so
+the tile now uses the name:
+
+- **ping node `RBN SDR`** — `host` `192.168.1.241` → `rp-f02054.local`
+- **`stamp RBN_SDR` function** — `addr` `'192.168.1.241'` →
+  `'rp-f02054.local'`
+
+Both edits are required, as that entry warns: the stamp owns the
+*displayed* address, so changing only the ping node leaves both
+dashboards showing a stale IP while silently pinging the new target.
+`flows_guard.py` passes (field-value change only, no structural change,
+so the guard constants are untouched). Verified `noderedpi4` can resolve
+the name: `getent hosts rp-f02054.local` → `192.168.1.100`
+(avahi-daemon active; `avahi-resolve` is not installed there, use
+`getent`).
+
+### Why the lease drifted: the two Zynq boards are fighting over .100
+
+The UDM Pro Max logged *"Multiple devices are using the same
+192.168.1.100 IP address"* at 12:59:59 UTC (18:30 IST). Both Alpine/Zynq
+SDR appliances had left their documented addresses — `.241` (Red Pitaya)
+and `.235` (Web-888) were both dead — and both were claiming `.100`.
+
+Confirmed by flushing the ARP cache and re-probing `.100` six times: the
+replying MAC **alternates** between `00:26:32:f0:20:54` (the Red Pitaya,
+genuine Red Pitaya OUI) and `64:69:73:74:72:6f` (the Web-888), both
+serving `<title>Red Pitaya Apps`. `tcpdump` shows the UDM
+(`1c:6a:1b:17:42:e2`) re-ARPing `.100` repeatedly without settling.
+
+`64:69:73:74:72:6f` decodes as ASCII **"distro"** — a hardwired
+placeholder, so the Web-888 is not reading a real MAC from EEPROM.
+`.100` is the Red Pitaya image's fallback when DHCP doesn't answer, so a
+simultaneous boot with no DHCP reply puts both boards on it. This also
+retro-explains the `.241` → `.235` → `.241` "moves" of 2026-08-21/25:
+the two boards were trading a single lease the whole time.
+
+Docs updated for name-based addressing: the host inventory, the tile
+table and narrative in `CLAUDE.md`, the Zynq/Alpine recipe in
+`DEPLOY_PI.md`, and the header comment of `monitor_redpitaya.sh`.
+
+**Still open** (both need the UniFi console or the board itself, so they
+were not done in this change):
+
+1. UniFi fixed reservations — `00:26:32:f0:20:54` → `.241`,
+   `64:69:73:74:72:6f` → `.235`.
+2. Give the Web-888 a real MAC. While it presents "distro", any second
+   board from that image collides with it, and a reservation keyed on a
+   placeholder MAC is fragile.
+
+Until those land the tile will still flap, because the name resolves to
+the contested `.100` — but it is correct rather than permanently dead.
+
+---
+
 ## 2026-09-16
 
 ### UberSDR card: band noise & voice collapsible on both dashboards
