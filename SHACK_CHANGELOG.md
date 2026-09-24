@@ -56,6 +56,36 @@ README.md's fleet host list was three hosts and long stale — now lists
 all seven (HassPi, gpsntp, meridianpi5, noderedpi4, openwebrxplus,
 rp-f02054, web-888).
 
+### Zynq boards: the `.100` collision can no longer recur
+
+This closes the recurrence risk left open below. Line 41 of
+`/etc/dhcpcd.conf` (`profile static_eth0`) was changed on each board from
+the shared `static ip_address=192.168.1.100/24` to that board's own address:
+`192.168.1.241/24` on the Red Pitaya and `192.168.1.235/24` on the
+Web-888 (backups `dhcpcd.conf.bak-20260925`). Both were saved with
+`lbu commit -d`; `lbu status` was clean afterwards, and each board's saved
+overlay on `mmcblk0p1` contains the new line. No dhcpcd restart was
+needed: the config is read at start, which is exactly when the fallback
+applies. The operator had already added the UniFi reservations for both
+MACs. Together, a boot that beats DHCP now leaves each board on its normal
+address, which is also its reserved address. Caveats: the fallback path
+itself hasn't been exercised live (that needs DHCP blocked during a
+boot), and re-imaging either board restores the stock `.100`. Line 51, a
+`192.168.1.101/24` fallback for `mvl0`, is also shared but was left alone:
+neither board has that interface.
+
+**Web-888 MAC ("distro"), findings for the remaining hygiene item.** The
+kernel's `64:69:73:74:72:6f` is not in the device tree (no
+`*mac-address*` property), and it isn't the EEPROM's either. The 24c64 at
+I²C `0-0050` holds a u-boot env (`fw_printenv` works) with
+`ethaddr=02:00:11:22:33:44`, itself a placeholder, plus
+`hw_rev=Web-888.1`, `serial=26030080`. The Web-888 boots from `boot.bin`
+alone, with no `uEnv.txt` or `devicetree.dtb` to edit. On the Red Pitaya,
+by contrast, the EEPROM's `ethaddr=00:26:32:F0:20:54` is exactly what the
+kernel uses. The practical fix is a Linux-side override in
+`/etc/dhcpcd.enter-hook` on `reason=PREINIT`, which dhcpcd 10.0.6's
+run-hooks supports. Not done yet.
+
 ### Web-888 mDNS fixed: `web-888.local` now survives reboots
 
 Operator approved the fix proposed in the entry below. On the Web-888, line

@@ -261,13 +261,14 @@ is historical — the Red Pitaya was onboarded first):
 not the IPs. The Web-888's name used to vanish at every reboot, because
 avahi lost a boot-time race with D-Bus. That was fixed 2026-09-25 with
 `enable-dbus=no` in `/etc/avahi/avahi-daemon.conf` + `lbu commit -d`, and
-reboot-verified. Neither board has a DHCP reservation, and both
-share an identical dhcpcd fallback of `192.168.1.100/24` with `noarp`.
-So a boot that beats DHCP, like the 2026-09-24 power cut, puts both on
-`.100`, and the UDM logs an IP conflict. Rebooting each board once DHCP
-answers clears it. Full diagnosis, the durable fix (distinct fallbacks + UniFi
-reservations, then `lbu commit -d`), and how to SSH to each board over
-IPv6 link-local while IPv4 is broken are in the `RBN_SDR` tile section of
+reboot-verified. Both boards have UniFi DHCP reservations (`.241` / `.235`),
+and since 2026-09-25 each board's dhcpcd fallback (`profile static_eth0`
+in `/etc/dhcpcd.conf`) is its own reserved address. Before that, both
+fell back to a shared `192.168.1.100/24` with `noarp`, which caused the
+2026-09-24 IP conflict. **If you ever re-image either board, the stock
+`dhcpcd.conf` brings `.100` back: re-apply the fallback edit and run
+`lbu commit -d`.** Full diagnosis, and how to SSH to each board over IPv6
+link-local while IPv4 is broken, are in the `RBN_SDR` tile section of
 `CLAUDE.md`.
 
 Both needed `crond` enabled (`rc-update add crond default`) and both

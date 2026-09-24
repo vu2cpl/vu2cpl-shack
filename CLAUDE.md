@@ -906,18 +906,41 @@ boards "trading one lease"; that was wrong, and is retracted — those were
 deliberate retargets of the tile between two different boards, as the
 note above records.)
 
-**Recurrence risk stays open until the fallback is fixed.** The next
-power cut that beats DHCP will do this again. Durable fix, in order —
-each needs `lbu commit -d` afterwards (both boards run Alpine diskless;
-an uncommitted change vanishes at the next reboot):
-1. **Give each board its own fallback** — in `static_eth0`, set
+**Recurrence fixed 2026-09-25: each board now falls back to its own
+address, and both are reserved in UniFi.**
+1. **Distinct fallbacks — DONE 2026-09-25.** Line 41 of `/etc/dhcpcd.conf`
+   (`profile static_eth0`) changed from `192.168.1.100/24` to
    `192.168.1.241/24` on the Red Pitaya and `192.168.1.235/24` on the
-   Web-888. The fallback then equals the normal address, so a DHCP-less
-   boot is harmless. Keeping `noarp` is fine once the fallbacks differ.
-2. **UniFi fixed reservations** — `00:26:32:f0:20:54` → `.241`,
-   `64:69:73:74:72:6f` → `.235` — so DHCP can never hand those addresses
-   to anything else and collide with a board sitting on its fallback.
-3. (Hygiene) a real / locally-administered MAC for the Web-888.
+   Web-888, backups `dhcpcd.conf.bak-20260925`. Both were saved with
+   `lbu commit -d` (both boards run Alpine diskless, so an uncommitted
+   change vanishes at the next reboot), and the new line was confirmed inside each
+   board's saved overlay on `mmcblk0p1`. dhcpcd reads this only at start,
+   which is exactly when the fallback applies, so no restart was needed. A
+   boot with no DHCP now leaves each board on its normal address. `noarp`
+   is kept, which is safe once the fallbacks differ. The fallback path itself
+   has **not** been exercised live, since that needs DHCP blocked during a boot.
+   Line 51 is a second shared fallback, `192.168.1.101/24` for `mvl0`,
+   left alone: that interface doesn't exist on either board.
+2. **UniFi fixed reservations — DONE** by Manoj (confirmed 2026-09-25):
+   `00:26:32:f0:20:54` → `.241`, `64:69:73:74:72:6f` → `.235`. DHCP can't
+   hand those addresses to anything else, so a board sitting on its fallback
+   can't collide.
+3. (Hygiene, open) a real MAC for the Web-888. Findings: the
+   kernel's `64:69:73:74:72:6f` ("distro") comes neither from the device
+   tree (no `*mac-address*` property) nor from the EEPROM. The 24c64 at
+   I²C `0-0050` holds a u-boot env at `0x1800` (`fw_printenv` works,
+   `/etc/fw_env.config`) whose `ethaddr=02:00:11:22:33:44` is itself a
+   placeholder, alongside `hw_rev=Web-888.1`, `serial=26030080`. macb just
+   uses whatever the boot loader programmed (`addr_assign_type` 0). The
+   Web-888 boots from `boot.bin` alone, with no `uEnv.txt` or `devicetree.dtb`
+   on the partition, so there's no editable boot config. Compare the Red
+   Pitaya: its EEPROM `ethaddr=00:26:32:F0:20:54` *is* what the kernel uses.
+   So editing the Web-888's EEPROM env would likely change nothing. The
+   practical route is a Linux-side override in `/etc/dhcpcd.enter-hook`
+   (dhcpcd 10.0.6's run-hooks sources it; none exists yet) on
+   `reason=PREINIT`: link down, set a locally-administered MAC, link up.
+   Changing the MAC changes the Web-888's IPv6 link-local (the access recipe
+   below) and needs the UniFi reservation moved to the new MAC.
 
 **`web-888.local` now survives reboots — FIXED 2026-09-25 with
 `enable-dbus=no`, reboot-verified.** Until then avahi failed on every boot because of a readiness race with D-Bus, and
