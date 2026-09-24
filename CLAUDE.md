@@ -925,7 +925,7 @@ address, and both are reserved in UniFi.**
    `00:26:32:f0:20:54` → `.241`, `64:69:73:74:72:6f` → `.235`. DHCP can't
    hand those addresses to anything else, so a board sitting on its fallback
    can't collide.
-3. (Hygiene, open) a real MAC for the Web-888. Findings: the
+3. (Hygiene) a real MAC for the Web-888: **deferred by Manoj 2026-09-25.** It's harmless with one Web-888 on the LAN. Revisit if a second board with the same image joins, since it would present the same MAC. Findings: the
    kernel's `64:69:73:74:72:6f` ("distro") comes neither from the device
    tree (no `*mac-address*` property) nor from the EEPROM. The 24c64 at
    I²C `0-0050` holds a u-boot env at `0x1800` (`fw_printenv` works,
