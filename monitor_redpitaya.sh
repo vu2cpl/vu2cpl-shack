@@ -2,8 +2,7 @@
 # monitor_redpitaya.sh — RPi Fleet Monitor telemetry from a Zynq/Alpine
 # SDR appliance. Deployed unchanged on BOTH such boxes in this shack:
 #   - Red Pitaya skimmer  rp-f02054.local (Zynq-7010, 2020-era Alpine)
-#   - Web-888 receiver    192.168.1.235 (Zynq, recent Alpine; its
-#     web-888.local mDNS name dies at every reboot, see CLAUDE.md)
+#   - Web-888 receiver    web-888.local (Zynq, recent Alpine)
 # Both boards share a dhcpcd fallback of 192.168.1.100 and collided on it
 # on 2026-09-24; see the RBN_SDR note in CLAUDE.md.
 # The name is historical — the Red Pitaya was first.

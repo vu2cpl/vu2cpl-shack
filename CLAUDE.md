@@ -224,7 +224,7 @@ persists across reboots. Verify with empty-payload read:
 | (2 more Pis) | — | Pending |
 | Home Assistant Pi (`HassPi`, `192.168.1.36:8123`, HA 2026.8.3) | — | **Telemetry live** (HA's own `Publish RPi stats to MQTT (HassPi)` automation → `rpi/HassPi/*`). **REST API access added 2026-08-25** — long-lived token in `~/.config/vu2cpl-shack.env` as `HA_TOKEN` (Mac-side, mode 600, never committed). Full automation CRUD via `/api/config/automation/config/<id>`; no SSH to the box (22/22222 closed). No control agent needed. **HA's Radio dashboard (`/193-radio`) is the Vue-dashboard equivalent (phase 1) since 2026-08-25** — shack entities created by `ha_discovery_publish.py` (see the scripts table); HA's MQTT integration is on the shack broker, which is what makes the whole thing possible. **Custom components on this box are patched in place and invisible to git** — see the Smarteefi note under "Household HA integrations" below |
 | Red Pitaya `rp-f02054` (`rp-f02054.local` — **address by mDNS name, NOT by IP, since 2026-09-24**; DHCP `192.168.1.241`, sat on the shared fallback `.100` 2026-09-24, back on `.241` after the 2026-09-25 reboot; **the `RBN_SDR` network-monitor tile's target** again since 2026-08-25) | `root` | Telemetry live via `monitor_redpitaya.sh` (Alpine/BusyBox, Zynq XADC temp; no control agent) — see DEPLOY_PI.md special cases. MAC `00:26:32:f0:20:54` |
-| Web-888 receiver `web-888` (`192.168.1.235` — was on `.100` 2026-09-24, back on `.235` after the 2026-09-25 reboot; **`web-888.local` is unreliable: avahi fails at every boot, see the `RBN_SDR` note**) | `root` | Telemetry live via the same `monitor_redpitaya.sh` (also Zynq/Alpine — script runs unchanged; no control agent). Added 2026-08-22. Held the `RBN_SDR` ping tile 08-21 → 08-25; still fleet-monitored via `rpi/web-888/*`, but no longer has a network-monitor tile. **Presents the bogus hardwired MAC `64:69:73:74:72:6f` (ASCII "distro") — see the IP-conflict note under the `RBN_SDR` tile** |
+| Web-888 receiver `web-888` (`192.168.1.235` — was on `.100` 2026-09-24, back on `.235` after the 2026-09-25 reboot; `web-888.local` resolves and survives reboots since the 2026-09-25 avahi fix, see the `RBN_SDR` note) | `root` | Telemetry live via the same `monitor_redpitaya.sh` (also Zynq/Alpine — script runs unchanged; no control agent). Added 2026-08-22. Held the `RBN_SDR` ping tile 08-21 → 08-25; still fleet-monitored via `rpi/web-888/*`, but no longer has a network-monitor tile. **Presents the bogus hardwired MAC `64:69:73:74:72:6f` (ASCII "distro") — see the IP-conflict note under the `RBN_SDR` tile** |
 
 Agent endpoints: `POST /reboot`, `POST /shutdown`
 
@@ -919,8 +919,8 @@ an uncommitted change vanishes at the next reboot):
    to anything else and collide with a board sitting on its fallback.
 3. (Hygiene) a real / locally-administered MAC for the Web-888.
 
-**`web-888.local` does NOT survive a Web-888 reboot (open, found
-2026-09-25).** avahi fails on every boot because of a readiness race with D-Bus, and
+**`web-888.local` now survives reboots — FIXED 2026-09-25 with
+`enable-dbus=no`, reboot-verified.** Until then avahi failed on every boot because of a readiness race with D-Bus, and
 the dependency itself is declared correctly. `/etc/init.d/avahi-daemon` declares
 `need dbus`, and OpenRC does start dbus first (dbus-daemon PID 1396 <
 avahi 1453). But the Web-888's `/etc/init.d/dbus` runs `dbus-daemon
@@ -929,13 +929,27 @@ before the daemon has bound `/var/run/dbus/system_bus_socket`. avahi
 starts in the same second, gets `Failed to connect to socket …: No such
 file or directory`, exits, and is never retried. `rc-service avahi-daemon
 start` by hand works, which is why the name resolved before the 2026-09-25
-reboot and not after it. It was restarted by hand after that reboot, so it resolves now, until the next reboot.
-Proposed fix, awaiting Manoj's OK: `enable-dbus=no` in
-`/etc/avahi/avahi-daemon.conf` (currently the commented default), then
-`lbu commit -d`. avahi doesn't need D-Bus to publish its own name. The Red
-Pitaya (dbus 1.12 under `supervise-daemon`, OpenRC 0.42) isn't
-readiness-aware either, and just happens to win the race. Its avahi is
-fine today but not guaranteed.
+reboot and not after it.
+**Fix (operator-approved, applied 2026-09-25):** line 31 of
+`/etc/avahi/avahi-daemon.conf` changed from the commented default
+`#enable-dbus=yes` to `enable-dbus=no` (backup
+`avahi-daemon.conf.bak-20260925` alongside), then `lbu commit -d`. Confirmed
+the saved overlay `/media/mmcblk0p1/web-888.apkovl.tar.gz` contains the new
+line. avahi doesn't need D-Bus to publish its own name. D-Bus only serves
+on-board clients such as `avahi-browse`, and nothing here uses them.
+**Reboot-verified:** after a cold reboot with no manual touch, avahi reached
+`Server startup complete. Host name is web-888.local` in the same second
+it used to die. All 3 services (SSH, SFTP-SSH, HTTP) were published, and
+`noderedpi4` resolves `web-888.local` → `192.168.1.235`. That boot also logs
+one `chroot.c: open() failed: No such file or directory` from avahi's
+chroot helper. It is **boot-only and not caused by this change**: manual
+restarts with both the old and the new config are clean. The likely cause
+is a file avahi reads (probably `/etc/resolv.conf`, which dhcpcd rewrites
+on lease) not existing yet that early. It's harmless, since the name and
+services publish. The Red Pitaya (dbus 1.12 under `supervise-daemon`,
+OpenRC 0.42) isn't readiness-aware either, and just happens to win the
+race. Its avahi is fine today but not guaranteed; the same one-line fix
+applies if it ever fails.
 Web-888 log timestamps before chrony's first step read `Apr 8 2024` (no
 RTC; the clock is stepped ~18 s into boot), so don't read those as an
 old boot.

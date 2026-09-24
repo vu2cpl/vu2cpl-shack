@@ -257,10 +257,11 @@ is historical — the Red Pitaya was onboarded first):
   OpenSSH 9.7; needed `apk add mosquitto-clients`). Presents the bogus
   hardwired MAC `64:69:73:74:72:6f` (ASCII "distro")
 
-**Addressing.** Use `rp-f02054.local` for the Red Pitaya. For the Web-888
-use `192.168.1.235` for now: `web-888.local` stops resolving after every
-Web-888 reboot, because avahi loses a boot-time race with D-Bus (open
-fix: `enable-dbus=no`). Neither board has a DHCP reservation, and both
+**Addressing.** Use the mDNS names, `rp-f02054.local` and `web-888.local`,
+not the IPs. The Web-888's name used to vanish at every reboot, because
+avahi lost a boot-time race with D-Bus. That was fixed 2026-09-25 with
+`enable-dbus=no` in `/etc/avahi/avahi-daemon.conf` + `lbu commit -d`, and
+reboot-verified. Neither board has a DHCP reservation, and both
 share an identical dhcpcd fallback of `192.168.1.100/24` with `noarp`.
 So a boot that beats DHCP, like the 2026-09-24 power cut, puts both on
 `.100`, and the UDM logs an IP conflict. Rebooting each board once DHCP

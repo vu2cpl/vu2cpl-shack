@@ -56,6 +56,38 @@ README.md's fleet host list was three hosts and long stale — now lists
 all seven (HassPi, gpsntp, meridianpi5, noderedpi4, openwebrxplus,
 rp-f02054, web-888).
 
+### Web-888 mDNS fixed: `web-888.local` now survives reboots
+
+Operator approved the fix proposed in the entry below. On the Web-888, line
+31 of `/etc/avahi/avahi-daemon.conf` went from the commented default
+`#enable-dbus=yes` to `enable-dbus=no` (backup
+`avahi-daemon.conf.bak-20260925`), then `lbu commit -d`. `lbu status` was
+clean afterwards, and the saved overlay
+`/media/mmcblk0p1/web-888.apkovl.tar.gz` contains the new line.
+
+Why it works: avahi only needs D-Bus to serve on-board clients such as
+`avahi-browse`, and nothing here uses them. Publishing its own name
+doesn't touch D-Bus, so the boot race described below can't happen.
+
+**Reboot-verified.** After a cold reboot with no manual touch, avahi logged
+`Server startup complete. Host name is web-888.local` at `06:08:22`
+(pre-chrony clock), the same second it used to fail in. All three
+services (SSH, SFTP-SSH, HTTP) were published, and `noderedpi4` resolves
+`web-888.local` → `192.168.1.235`.
+
+That boot also logged one `chroot.c: open() failed: No such file or
+directory` from avahi's chroot helper. To rule out the change, avahi was
+restarted by hand on the original config and then on the new one. Both
+started clean with no such line, so it is boot-only and independent of
+the change. The likely cause is a file avahi reads (probably
+`/etc/resolv.conf`, which dhcpcd rewrites on lease) not existing yet that
+early. Harmless, since the name and all services publish.
+
+Docs now say to address both boards by `.local` name (`DEPLOY_PI.md`,
+`monitor_redpitaya.sh` header, `CLAUDE.md`). HANDOVER follow-up #46 (c)
+is closed. (a) distinct dhcpcd fallbacks, (b) UniFi reservations and
+(d) Web-888 MAC hygiene remain open.
+
 ### Zynq-board IP conflict: root cause confirmed on the boards, cleared by reboot
 
 Follow-up to the 2026-09-24 entry. Yesterday's diagnosis was inferred
@@ -84,7 +116,8 @@ Red Pitaya → `.241`, Web-888 → `.235`. Verified: `.100` answers nothing,
 - "Address both boards by `.local` name" was wrong for the Web-888, as
   below.
 
-**New finding: `web-888.local` dies at every Web-888 reboot.** It's a
+**New finding: `web-888.local` dies at every Web-888 reboot** (fixed
+later the same day, see "Web-888 mDNS fixed" below). It's a
 readiness race with D-Bus; the dependency itself is declared. avahi's init script
 has `need dbus`, and OpenRC starts dbus first, but the Web-888's dbus
 script runs `dbus-daemon --nofork` with `command_background="yes"`. So
