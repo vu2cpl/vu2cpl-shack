@@ -8,6 +8,113 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-09-25
+
+### RPi Fleet: IPs showed as "192.168", uptimes as "0m" — parseFloat mangling in Store Uptime/IP
+
+Operator: "ip adresses are incomplete" — screenshot showed every fleet
+card reading `IP 192.168`, and every monitor.sh host `Up 0m` while
+HassPi alone showed a real uptime.
+
+The publishers were innocent — `monitor.sh` sends the full IP and
+`uptime -p`'s human string ("6 hours, 34 minutes"); `monitor_redpitaya.sh`
+sends the full IP and its own compact "3d 2h" style. The mangling was
+flow-side, in two steps on the RPi Fleet Monitor tab:
+
+- **`Parse Topic → Device/Metric`** coerces every payload with
+  `msg.value = parseFloat(value) || value`. `parseFloat("192.168.1.169")`
+  parses up to the *second* dot and returns the number `192.168` —
+  truthy, so the `|| value` fallback never engages. Same for uptime:
+  `parseFloat("6 hours, 34 minutes")` → `6`.
+- **`Store Uptime/IP`** then wrote `String(msg.value)` into the
+  `devices` flow context, overwriting the correct raw string the parser
+  itself had stored one line earlier.
+
+HassPi was the tell: HA's automation publishes uptime as plain seconds,
+which survives `parseFloat` intact — so its card alone formatted
+correctly (`6h 34m`), while every monitor.sh host's string arrived as
+`"6"`, was read as 6 *seconds* by the Vue card's `fmtUptime`, and
+rendered `0m`.
+
+Fixes (one line + two formatters):
+
+- **`Store Uptime/IP`** now stores `String(msg.payload).trim()` — the
+  raw MQTT payload. Full IPs on both dashboards from the next telemetry
+  minute.
+- **Vue `fmtUptime`** (build `v43`, cache-buster `?v=43`) treats the
+  value as seconds only when it is all digits (HassPi); anything else is
+  compacted as a human string — "6 hours, 34 minutes" → `6h 34m`,
+  "1 week, 2 days" → `1w 2d`, the Zynq boards' already-compact "3d 2h"
+  passes through unchanged.
+- **D1 `RPi Fleet Panel`** got the same helper (`fmtUp`) so its meta
+  line reads `Up: 6h 34m` instead of the raw sentence.
+
+Function/template text edits only — no nodes or wires, guard green.
+The formatter was verified against all three publisher formats (human
+string, compact string, plain seconds) before deploy. Same pass:
+README.md's fleet host list was three hosts and long stale — now lists
+all seven (HassPi, gpsntp, meridianpi5, noderedpi4, openwebrxplus,
+rp-f02054, web-888).
+
+---
+
+## 2026-09-25
+
+### Zynq-board IP conflict: root cause confirmed on the boards, cleared by reboot
+
+Follow-up to the 2026-09-24 entry. Yesterday's diagnosis was inferred
+from the network side. Today I logged into both boards as `root` (the Mac's
+key is accepted) and confirmed it from the inside.
+
+**Root cause.** `/etc/dhcpcd.conf` is byte-identical on the Red Pitaya
+and the Web-888, and both contain `fallback static_eth0` →
+`static ip_address=192.168.1.100/24` plus `noarp`. When DHCP doesn't
+answer at boot, both fall back to `.100`. `noarp` disables dhcpcd's
+probe/defend, so neither backs off. Both `/var/lib/dhcpcd/` were empty (no
+lease) and `ip addr` showed `192.168.1.100/24` on each. The trigger was
+almost certainly the 18:12 IST mains loss on 2026-09-24.
+
+**Fix applied.** Rebooted each board once, Red Pitaya first, with DHCP
+up. Each got a real lease (`scope global dynamic`, fresh `eth0.lease`):
+Red Pitaya → `.241`, Web-888 → `.235`. Verified: `.100` answers nothing,
+4 flushed-ARP probes of each address return one MAC every time, and the
+`RBN_SDR` target (`rp-f02054.local` → `.241`) went from 50% loss to 0%.
+
+**Corrections to the 2026-09-24 entry.**
+- The "distro" MAC was *not* the cause. The MACs differ, so the boards
+  got separate leases the moment DHCP answered. It is hygiene only.
+- The "trading one lease" explanation of the August `.241`/`.235` moves
+  is retracted. Those were deliberate tile retargets.
+- "Address both boards by `.local` name" was wrong for the Web-888, as
+  below.
+
+**New finding: `web-888.local` dies at every Web-888 reboot.** It's a
+readiness race with D-Bus; the dependency itself is declared. avahi's init script
+has `need dbus`, and OpenRC starts dbus first, but the Web-888's dbus
+script runs `dbus-daemon --nofork` with `command_background="yes"`. So
+dbus is marked "started" before its socket exists. avahi starts in the
+same second, fails with `Failed to connect to socket
+/var/run/dbus/system_bus_socket`, and is never retried. I started it by hand
+after the reboot, so the name resolves now, until the next reboot. Proposed
+fix, awaiting the operator's OK: `enable-dbus=no` in
+`/etc/avahi/avahi-daemon.conf` + `lbu commit -d`. The Red Pitaya's dbus
+isn't readiness-aware either. It just wins the race.
+
+**Access technique recorded** (in `CLAUDE.md`): while both boards share
+one IPv4, reach each one by its MAC-derived IPv6 link-local through
+`noderedpi4`, using `ProxyCommand` with the zone written `%%eth0`.
+ProxyJump drops the zone, and a bare `%e` is an ssh percent-token.
+
+**Still open:** distinct dhcpcd fallbacks per board (`.241` / `.235`) +
+UniFi reservations, each followed by `lbu commit -d`. Until then, the next
+power cut that beats DHCP will cause the same conflict. Also the
+Web-888 avahi fix above, and (hygiene) a real MAC for the Web-888.
+
+Docs corrected: `CLAUDE.md` (host inventory + `RBN_SDR` note),
+`DEPLOY_PI.md`, `monitor_redpitaya.sh` header.
+
+---
+
 ## 2026-09-24
 
 ### RBN_SDR tile: ping the Red Pitaya by mDNS name, not by a drifting IP
@@ -50,9 +157,12 @@ serving `<title>Red Pitaya Apps`. `tcpdump` shows the UDM
 `64:69:73:74:72:6f` decodes as ASCII **"distro"** — a hardwired
 placeholder, so the Web-888 is not reading a real MAC from EEPROM.
 `.100` is the Red Pitaya image's fallback when DHCP doesn't answer, so a
-simultaneous boot with no DHCP reply puts both boards on it. This also
+simultaneous boot with no DHCP reply puts both boards on it. ~~This also
 retro-explains the `.241` → `.235` → `.241` "moves" of 2026-08-21/25:
-the two boards were trading a single lease the whole time.
+the two boards were trading a single lease the whole time.~~
+**Retracted 2026-09-25** — the boards have different MACs and got
+separate leases as soon as DHCP answered, and those moves were deliberate
+tile retargets. See the 2026-09-25 entry.
 
 Docs updated for name-based addressing: the host inventory, the tile
 table and narrative in `CLAUDE.md`, the Zynq/Alpine recipe in

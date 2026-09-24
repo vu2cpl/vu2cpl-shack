@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v42 · 2026-09-16 UberSDR band noise & voice collapsible (stamp was stuck at v38 through v40/v41)';
+window.__shackBuild = 'v43 · 2026-09-25 RPi fleet: full IPs + real uptime (parseFloat mangling fix)';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -2495,8 +2495,14 @@ const RPiCard = {
     }
     function fmtUptime(u) {
       if (!u) return '—';
-      const s = parseInt(u, 10);
-      if (isNaN(s)) return String(u);
+      const str = String(u).trim();
+      if (!/^\d+$/.test(str)) {
+        // human string: monitor.sh's "6 hours, 34 minutes" → "6h 34m";
+        // monitor_redpitaya.sh's "3d 2h" is already compact
+        return str.replace(/\s*weeks?,?/g, 'w').replace(/\s*days?,?/g, 'd')
+                  .replace(/\s*hours?,?/g, 'h').replace(/\s*minutes?,?/g, 'm');
+      }
+      const s = parseInt(str, 10);  // plain seconds (HassPi)
       const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
       return (d ? d + 'd ' : '') + (h || d ? h + 'h ' : '') + m + 'm';
     }

@@ -421,8 +421,10 @@ alerts on CPU >90 %, Temp >75 °C, Mem >90 %, Disk >90 %. Reboot /
 Shutdown buttons send `POST /reboot` or `/shutdown` to each host's
 `rpi-agent.service` listening on `:7799`.
 
-Currently monitoring `noderedpi4`, `openwebrxplus`, `gpsntp`. Two more
-Pis + the Home Assistant Pi pending onboarding.
+Currently monitoring 7 hosts: `noderedpi4`, `openwebrxplus`, `gpsntp`,
+`meridianpi5`, `HassPi` (via HA's own MQTT automation), and the two
+Zynq boards `rp-f02054` (Red Pitaya) + `web-888` (via
+`monitor_redpitaya.sh` — telemetry only, no control agent).
 
 A separate **Chrony / GPS Time Server** card on the *Shack Monitoring
 tools* dashboard tab (Network Monitor group) shows live status of
