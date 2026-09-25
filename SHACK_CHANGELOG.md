@@ -10,6 +10,36 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-09-25
 
+### MQTT: VUKEYER status silently dropped since the rename — broker ACL fixed
+
+Found by the new shack health check: the only retained keyer state on the
+broker was a stale `shack/esp32-winkeyer/status` `{"event":"offline"}`,
+while `vukeyer.local` answered ping. The keyer was renamed from "ESP32
+WinKeyer" on 2026-09-17 and publishes `shack/vukeyer/status` as `iot`, but
+`/etc/mosquitto/aclfile` still granted `iot` only
+`topic write shack/esp32-winkeyer/#`. Mosquitto accepts the login and
+drops every publish the ACL doesn't cover without an error, so the
+keyer's status had never reached the broker under its new name. (The
+keyer repo's docs made it worse by naming `shack/esp32-vukeyer/#`, the
+MQTT *client id*, not the topic.)
+
+Fix, with the operator's go:
+- `aclfile` on noderedpi4: `topic write shack/esp32-winkeyer/#` →
+  `topic write shack/vukeyer/#` under `user iot` (backup
+  `aclfile.bak-20260925-vukeyer`), applied with `systemctl kill -s HUP
+  mosquitto` — config reload, no client disconnects.
+- Stale `shack/esp32-winkeyer/status` retained message deleted (empty
+  retained publish as `svc`).
+- Verified: a live heartbeat read back as `svc` —
+  `{"event":"heartbeat",...,"wpm":25,"busy":false,"backend":"flex",...}`.
+- `MQTT_AUTH.md` now lists the keyer under `iot`; the `vukeyer` repo's
+  README/HANDOVER were corrected (`3fcc3f8`).
+
+Nothing in `flows.json` subscribed to either keyer topic, so no flow
+change. Seen during the reload, pre-existing and not touched: mosquitto
+warns `/etc/mosquitto/passwd owner is not mosquitto` (future versions
+will refuse to load it).
+
 ### RPi Fleet: IPs showed as "192.168", uptimes as "0m" — parseFloat mangling in Store Uptime/IP
 
 Operator: "ip adresses are incomplete" — screenshot showed every fleet

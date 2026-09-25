@@ -17,7 +17,7 @@ and an ACL scopes each account to the topics it needs.
 
 | Account | Used by | ACL scope |
 |---|---|---|
-| `iot` | 9 Tasmota power devices + the as3935 lightning bridge | read `cmnd/#`; write `tele/#`, `stat/#`; read+write `tasmota/#`, `lightning/#`. **Cannot** read services topics (`rpi/`, `shack/`, `ubersdr/`) or `$SYS`. |
+| `iot` | 9 Tasmota power devices + the as3935 lightning bridge + the VUKEYER CW keyer | read `cmnd/#`; write `tele/#`, `stat/#`; read+write `tasmota/#`, `lightning/#`; **write-only** `shack/vukeyer/#` (the keyer's status — one topic tree, no read). **Cannot** read services topics (`rpi/`, `shack/`, `ubersdr/`) or `$SYS`. |
 | `svc` | Pi telemetry publishers: `monitor.sh` (rpi metrics), `gpsntp-mqtt-publish.sh` (chrony), `solar_inverter_mqtt.py` (Deye inverter), ubersdr | read+write `rpi/#`, `shack/#`, `ubersdr/#` only |
 | `nodered` | Node-RED (the dashboard + automation controller) | read+write `#` (everything except `$SYS`) |
 | `ha` | Home Assistant | read+write `#` (everything except `$SYS`) |
@@ -63,6 +63,7 @@ A full `restart` is only needed for listener/`conf.d` changes.
 |---|---|---|
 | **Tasmota** ×9 | `iot` | Console/web `MqttUser` + `MqttPassword`, or over MQTT: `cmnd/<device>/Backlog MqttUser iot; MqttPassword <pw>` |
 | **as3935 bridge** | `iot` | WiFiManager captive-portal fields (firmware ≥ v0.4.0), persisted in NVS. See the `vu2cpl-as3935-bridge` repo. |
+| **VUKEYER** (ESP32 CW keyer, `vukeyer.local`; was "ESP32 WinKeyer" until 2026-09-17) | `iot` | `MQTT_USER`/`MQTT_PASS`/`MQTT_HOST` in the firmware's local `secrets.h` (never committed — public repo). Publishes retained `shack/vukeyer/status` + LWT `{"event":"offline"}`. The ACL line must name the **topic** `shack/vukeyer/#`, not the client id `esp32-vukeyer` — the broker accepts the login and silently drops publishes it has no grant for. See the `vukeyer` repo. |
 | **Home Assistant** | `ha` | HA → Settings → Devices → MQTT integration → reconfigure |
 | **Node-RED** | `nodered` | The `mqtt-broker` config node's *Security* tab. Stored in the project's `flows_cred.json` (**encrypted** — see below). |
 | **`monitor.sh`** (rpi metrics) | `svc` | `MQTT_USER`/`MQTT_PASS` in `/etc/default/vu2cpl-shack` **or** the per-user `~/.config/vu2cpl-shack.env` (no-sudo fallback, `chmod 600`). `rebuild_pi.sh` writes the `/etc/default` one. |
