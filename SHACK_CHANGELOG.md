@@ -10,6 +10,30 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-09-25
 
+### MQTT: passwd owner warning fixed; `svc` can read `lightning/#`
+
+Two broker changes on noderedpi4, both with the operator's go and both
+applied with a SIGHUP reload (no client disconnects):
+
+- **`/etc/mosquitto/passwd` → `mosquitto:mosquitto 600`** (was
+  `root:mosquitto 640`, backup `passwd.bak-20260925-owner`). Every reload
+  logged `owner is not mosquitto. Future versions will refuse to load
+  this file.` — mosquitto 2.0 checks the owner against the user it runs
+  as, so the 2026-08-21 note in `MQTT_AUTH.md` that root ownership
+  "satisfies the ownership check" was wrong. `aclfile` was already
+  `mosquitto:mosquitto 600` and never warned. After the reload the log
+  was clean and a **fresh** `svc` login succeeded (the failure mode to
+  fear is new logins breaking while existing sessions carry on).
+  `MQTT_AUTH.md` corrected, and its password-rotation recipe now re-applies
+  the owner, because `mosquitto_passwd` rewrites the file.
+- **`user svc` gained `topic read lightning/#`** (backup
+  `aclfile.bak-20260925-svclightning`). The Mac's shack health check
+  authenticates as `svc` and could not see the AS3935's own retained
+  `lightning/as3935/{status,hb}` — it had to go through HA's mirror. Read
+  only: `svc` still can't publish to the sensor or its `cmd` topic.
+  Verified: `status` `{"event":"ready",...,"fw":"v0.4.0","ip":"192.168.30.215"}`
+  and `hb` `{"alive":true,...,"vbat_mv":4200}` read back as `svc`.
+
 ### MQTT: VUKEYER status silently dropped since the rename — broker ACL fixed
 
 Found by the new shack health check: the only retained keyer state on the

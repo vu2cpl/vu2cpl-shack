@@ -18,7 +18,7 @@ and an ACL scopes each account to the topics it needs.
 | Account | Used by | ACL scope |
 |---|---|---|
 | `iot` | 9 Tasmota power devices + the as3935 lightning bridge + the VUKEYER CW keyer | read `cmnd/#`; write `tele/#`, `stat/#`; read+write `tasmota/#`, `lightning/#`; **write-only** `shack/vukeyer/#` (the keyer's status — one topic tree, no read). **Cannot** read services topics (`rpi/`, `shack/`, `ubersdr/`) or `$SYS`. |
-| `svc` | Pi telemetry publishers: `monitor.sh` (rpi metrics), `gpsntp-mqtt-publish.sh` (chrony), `solar_inverter_mqtt.py` (Deye inverter), ubersdr | read+write `rpi/#`, `shack/#`, `ubersdr/#` only |
+| `svc` | Pi telemetry publishers: `monitor.sh` (rpi metrics), `gpsntp-mqtt-publish.sh` (chrony), `solar_inverter_mqtt.py` (Deye inverter), ubersdr; also the Mac's shack health check | read+write `rpi/#`, `shack/#`, `ubersdr/#`; **read-only** `lightning/#` (added 2026-09-25 so health checks see the AS3935's own `status`/`hb` — `svc` still cannot publish or command there) |
 | `nodered` | Node-RED (the dashboard + automation controller) | read+write `#` (everything except `$SYS`) |
 | `ha` | Home Assistant | read+write `#` (everything except `$SYS`) |
 | `display` | AetherSDR panadapter status overlay | **read `aether/#` only** — the humanized status tree Node-RED publishes. Nothing else. |
@@ -41,13 +41,17 @@ All under `/etc/mosquitto/` — **not** version-controlled, so back it up
 - `conf.d/00-auth.conf` — `password_file /etc/mosquitto/passwd` +
   `acl_file /etc/mosquitto/aclfile` (loads before the listener files).
 - `passwd` — the accounts, `mosquitto_passwd`-hashed (`$7$` sha512-pbkdf2).
-  Owned `root:mosquitto`, `chmod 640` (root-owned satisfies the ownership
-  check newer mosquitto enforces; the `mosquitto` group makes it readable
-  by the broker process, which runs as user `mosquitto`). **Do not** make
-  it `root:root 600` — the broker can't read it and *all new auth fails*
-  (existing persistent connections survive, so it looks fine until a
-  device reconnects). Learned 2026-08-21.
-- `aclfile` — the per-account `topic` rules above. Same ownership/mode.
+  Owned **`mosquitto:mosquitto`, `chmod 600`** — the same as `aclfile`.
+  Mosquitto 2.0 compares the owner with the user the broker *runs as*
+  (`mosquitto`), not root: the earlier `root:mosquitto 640` worked but
+  logged `File /etc/mosquitto/passwd owner is not mosquitto. Future
+  versions will refuse to load this file.` on every reload (fixed
+  2026-09-25). **Do not** make it `root:root 600` — the broker can't read
+  it and *all new auth fails* (existing persistent connections survive,
+  so it looks fine until a device reconnects). Learned 2026-08-21.
+  `mosquitto_passwd` rewrites the file, so re-apply the owner after every
+  password change (see *Rotating a password*).
+- `aclfile` — the per-account `topic` rules above. `mosquitto:mosquitto 600`.
 - `conf.d/{lan,tls,websockets}.conf` — the three listeners, each
   `allow_anonymous false`.
 
@@ -122,6 +126,7 @@ that `credentialSecret`** — losing it makes the stored creds undecryptable.
 ```bash
 # on 192.168.1.169
 sudo mosquitto_passwd -b /etc/mosquitto/passwd <account> '<new-password>'
+sudo chown mosquitto:mosquitto /etc/mosquitto/passwd && sudo chmod 600 /etc/mosquitto/passwd
 sudo systemctl restart mosquitto
 ```
 Then update every client on that account (and the password manager). For
