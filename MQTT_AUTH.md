@@ -18,7 +18,7 @@ and an ACL scopes each account to the topics it needs.
 | Account | Used by | ACL scope |
 |---|---|---|
 | `iot` | 9 Tasmota power devices + the as3935 lightning bridge + the VUKEYER CW keyer | read `cmnd/#`; write `tele/#`, `stat/#`; read+write `tasmota/#`, `lightning/#`; **write-only** `shack/vukeyer/#` (the keyer's status — one topic tree, no read). **Cannot** read services topics (`rpi/`, `shack/`, `ubersdr/`) or `$SYS`. |
-| `svc` | Pi telemetry publishers: `monitor.sh` (rpi metrics), `gpsntp-mqtt-publish.sh` (chrony), `solar_inverter_mqtt.py` (Deye inverter), ubersdr; also the Mac's shack health check | read+write `rpi/#`, `shack/#`, `ubersdr/#`; **read-only** `lightning/#` (added 2026-09-25 so health checks see the AS3935's own `status`/`hb` — `svc` still cannot publish or command there) |
+| `svc` | Pi telemetry publishers: `monitor.sh` (rpi metrics), `gpsntp-mqtt-publish.sh` (chrony), `solar_inverter_mqtt.py` (Deye inverter), ubersdr; the shack health check (on the Mac on demand, and daily on this Pi, which publishes retained `shack/health/summary`) | read+write `rpi/#`, `shack/#`, `ubersdr/#`; **read-only** `lightning/#` (added 2026-09-25 so health checks see the AS3935's own `status`/`hb` — `svc` still cannot publish or command there) |
 | `nodered` | Node-RED (the dashboard + automation controller) | read+write `#` (everything except `$SYS`) |
 | `ha` | Home Assistant | read+write `#` (everything except `$SYS`) |
 | `display` | AetherSDR panadapter status overlay | **read `aether/#` only** — the humanized status tree Node-RED publishes. Nothing else. |

@@ -10,6 +10,29 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-09-25
 
+### Daily shack health check now runs on this Pi (07:15), with a 07:30 dead-man on .109
+
+A read-only check of every shack system, about 95 checks in 8 s, now runs
+daily at 07:15 IST on noderedpi4 as `shack-health.timer`. Coverage:
+internet/DDNS, LAN, this broker's retained state, the Pis, UberSDR + RX888,
+OpenWebRX+, Meridian/RBN, NTP, the AS3935, Node-RED, HA, macmini-server.
+
+It sends a short Telegram summary with the Pi's existing creds, and
+publishes a retained `shack/health/summary`
+`{ts, overall, fail, warn, checks, telegram, report}` as `svc` (inside the
+`shack/#` grant, so no ACL change). The ubersdr box checks that topic at
+07:30 and Telegrams on its own if today's run is missing or unsent. That
+covers the one failure this Pi can't report: itself or the broker being
+down. It first ran on the Mac and moved here the same day: the Mac sleeps
+and travels; this Pi is always on and already holds the Telegram creds.
+
+Supporting changes: this Pi's SSH key was added on .109/.164/.142/.158/.213
+(recorded in vlan-setup), and `HA_URL`/`HA_TOKEN` were added to
+`~/.config/vu2cpl-shack.env` (mode 600). The code lives in the private
+`vu2cpl/shack-health` repo and is deployed from the Mac. First runs:
+all green, plus one real catch, a 2.5-minute Wi-Fi drop of the South
+boundary camera.
+
 ### MQTT: passwd owner warning fixed; `svc` can read `lightning/#`
 
 Two broker changes on noderedpi4, both with the operator's go and both
