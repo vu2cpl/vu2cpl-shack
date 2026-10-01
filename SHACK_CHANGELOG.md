@@ -8,6 +8,32 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-10-01
+
+### RBN Skimmer tab: the VU2CPL skimmer is now VU2CPL-88 (the .109 meridian container)
+
+Manoj moved the shack to container-only meridian: the Pi 5's meridian is
+stopped and disabled, .170's is disabled, and the Web-888 is retired
+temporarily. The only VU2CPL skimmer left is the .109 container, which
+uploads to RBN as `VU2CPL-88`.
+
+- **Flows (5 lines, no nodes or wires):** `Login Handler VU2CPL` tags spots
+  `skimmer: 'VU2CPL-88'` (status text too), and the `sk1_call` default in
+  Parse Calibration CSV, Watchdog Check, RBN State Aggregator and Update Spot
+  Counters is `'VU2CPL-88'`. The panels read `sk1` dynamically, so no
+  template changed. The 12 h / 24 h counters are keyed by call, so
+  VU2CPL-88 starts from zero.
+- **HA:** `sensor.rbn_vu2cpl_h1` keeps its entity id but is now named
+  "VU2CPL-88 spots (1h)" and reads `skimmers['VU2CPL-88']`
+  (`ha_discovery_publish.py`, republished).
+- **Feed:** the tab still dials `vu2cpl.ddns.net:7550`. That went silent at
+  09:41Z, when .170 went dark — the router's `:7550` forward still pointed
+  at it. Manoj repoints the UDM forward to `192.168.1.109:7550`; until then
+  the skimmer shows offline. The DXCC tab's VU2CPL cluster uses the same
+  address and recovers with the same change.
+
+---
+
 ## 2026-09-25
 
 ### Daily shack health check now runs on this Pi (07:15), with a 07:30 dead-man on .109

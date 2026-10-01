@@ -278,8 +278,10 @@ sensor('rbn_state', 'State', DEV_RBN, BT,
        tpl=("{{ (value_json.skimmers.values() | selectattr('status', 'eq', 'online') "
             "| list | length) }} online"),
        icon='mdi:radio-tower', expire=60, attrs_topic=BT)
-sensor('rbn_vu2cpl_h1', 'VU2CPL spots (1h)', DEV_RBN, BT,
-       tpl="{{ value_json.skimmers['VU2CPL'].h1_total }}",
+# Entity id kept as rbn_vu2cpl_h1 so dashboards keep working; since 2026-10-01 it
+# tracks the .109 meridian container (VU2CPL-88), not .170's bare VU2CPL.
+sensor('rbn_vu2cpl_h1', 'VU2CPL-88 spots (1h)', DEV_RBN, BT,
+       tpl="{{ value_json.skimmers['VU2CPL-88'].h1_total }}",
        state_class='measurement', icon='mdi:counter', expire=60)
 sensor('rbn_vu2oy_h1', 'VU2OY spots (1h)', DEV_RBN, BT,
        tpl="{{ value_json.skimmers['VU2OY'].h1_total }}",
