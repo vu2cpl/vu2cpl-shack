@@ -23,14 +23,16 @@ uploads to RBN as `VU2CPL-88`.
   Counters is `'VU2CPL-88'`. The panels read `sk1` dynamically, so no
   template changed. The 12 h / 24 h counters are keyed by call, so
   VU2CPL-88 starts from zero.
-- **HA:** `sensor.rbn_vu2cpl_h1` keeps its entity id but is now named
+- **HA:** the sensor (discovery id `rbn_vu2cpl_h1`, entity
+  `sensor.rbn_skimmers_vu2cpl_spots_1h`) keeps its entity id but is now named
   "VU2CPL-88 spots (1h)" and reads `skimmers['VU2CPL-88']`
   (`ha_discovery_publish.py`, republished).
-- **Feed:** the tab still dials `vu2cpl.ddns.net:7550`. That went silent at
-  09:41Z, when .170 went dark — the router's `:7550` forward still pointed
-  at it. Manoj repoints the UDM forward to `192.168.1.109:7550`; until then
-  the skimmer shows offline. The DXCC tab's VU2CPL cluster uses the same
-  address and recovers with the same change.
+- **Feed:** unchanged — the tab still dials `vu2cpl.ddns.net:7550`, and the
+  router's `:7550` forward already points at the container (`192.168.1.109:7550`):
+  Node-RED logs in through hairpin NAT from `192.168.1.1`, and remote users
+  (VU2OY, VU24DX, VU2WJ, VU2PTT) were connected over the WAN. Verified
+  `shack/rbn/state` → `VU2CPL-88` online, and HA's
+  `sensor.rbn_skimmers_vu2cpl_spots_1h` ("VU2CPL-88 spots (1h)") reading it.
 
 ---
 
