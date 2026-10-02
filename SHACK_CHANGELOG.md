@@ -20,7 +20,14 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
   after a dry run showed nothing else on the box needed them. The
   `openwebrx` user went too. Archives are in `~vu2cpl` on the box. RAM in use
   went 425 → 176 MiB. Left: the fleet agent on :7799, `monitor.sh`, and
-  the unused hand-installed SoapySDR / rtl-sdr / sdrplay API files.
+  nothing else. A last pass removed the remaining SDR stack: 43 packages (two
+  `sdrplay3` Soapy modules had to be unheld; OpenWebRX's installer held them) and
+  ~1,800 hand-built files in `/usr/local` + `/opt/sdrplay_api`, found by diffing
+  against every package's file list (archive `sdr-local-removed-20261003.tar.gz`).
+  The empty-dir sweep also took standard `/usr/local/share/{man,ca-certificates,…}`,
+  which were recreated so `/usr/local/man` resolves again.
+- **TODOs:** #48 and #40 dropped and #39 closed (operator); #36 closed on evidence
+  (VU2CPL-88 delivers ~860 FT8 spots/h on the telnet path).
 - **`.164` Pi 5:** bootloader 2025-05-08 → **2026-09-25** (`rpi-eeprom-update
   -a`, flashed and verified, then a reboot). The same headless "No displays"
   issue as `.169` under X11 was fixed the same way: `video=HDMI-A-1:1920x1080@60D`
