@@ -99,6 +99,7 @@ Node-RED shack automation running on Raspberry Pi 4B. Controls and monitors:
 | SPE WS gateway | `spe-remote.service` on Pi @ `ws://192.168.1.169:8888/ws` (single FTDI-serial owner, multi-client fan-out). Repo [`vu2cpl/spe-remote`](https://github.com/vu2cpl/spe-remote). Also handles SPE power-on via DTR/RTS on the open port. No `/healthz` — liveness = `curl http://…:8888/` |
 | LP-700 WS gateway | `lp700-server.service` on Pi @ `ws://192.168.1.169:8089/ws` (single HID owner, multi-client fan-out) |
 | Rotator WS gateway | `rotator-remote.service` on Pi @ `ws://192.168.1.169:8090/ws` (single FTDI-serial owner, multi-client fan-out). Repo [`vu2cpl/rotator-remote`](https://github.com/vu2cpl/rotator-remote). Azimuth/serial only — rotator power stays on Tasmota/MQTT. Also serves a standalone compass web UI at `http://192.168.1.169:8090/` (independent of Node-RED, like spe-remote's `:8888/`) |
+| RustDesk server | Self-hosted `hbbs` + `hbbr` (`rustdesk/rustdesk-server:1.1.16`) on `.109`, added 2026-10-02. Compose stack `~/rustdesk-server/` on the box, tracked in the private `ubersdr-box` repo. Ports 21115–21117/tcp + 21116/udp; key-enforced (`-k _`), so clients need the public key (`~/rustdesk-server/data/id_ed25519.pub` on `.109`; never commit it here, since this repo is public). Public as `vu2cpl.ddns.net` via the UniFi forward "Rustdesk" (21115–21117 TCP/UDP → `.109`; LAN clients reach it by hairpin NAT). Client setup: ID server `vu2cpl.ddns.net`, Relay + API blank, Key = that pubkey. Clients on it: `.164` (`meridianpi5`, RustDesk 1.5.0, X11 desktop) since 2026-10-02. A client still on the public RustDesk server can't see peers registered here, so the phone/Mac need the same setting |
 | Shack health check | `shack-health.timer` (system unit, runs as `vu2cpl`) at **07:15 IST daily** → `~/shack-health/scripts/shack_check.py --telegram --publish`: ~95 read-only checks across the whole shack, Telegram summary, retained `shack/health/summary`, reports in `~/shack-reports/`. Code lives in the private `vu2cpl/shack-health` repo and is deployed from the Mac (`deploy/deploy.sh`). A 07:30 dead-man on .109 alerts if the run is missing. |
 | Git function | `nrsave "message"` (bash function in `~/.bashrc` on Pi) → `git add flows.json` → commit. No push (run `git push` after). The DXCC-extract step was retired 2026-07-01 (rule #4) |
 | Dashboard theme | Dark, base #097479, bg #111111 |
@@ -838,14 +839,18 @@ a new device — see the "Please Read!!" comment node on this tab.
 | `UBERSDR`   | Ubersdr    | 192.168.1.109  | 5 |
 
 `OpenwebRX` pinged `192.168.1.158` until 2026-10-02, but that address
-is `gpsntp`. The OpenWebRX+ box (`openwebrxplus`) is `192.168.1.142`, so
-the tile had been showing gpsntp's health under the OpenWebRX+ label.
-Both the ping node's `host` and the `stamp OpenwebRX` `addr` were
-repointed to `.142`. On the same day the `openwebrx` service on `.142`
-was found **disabled**: the box has run `meridian.service`
+is `gpsntp`, so the tile had been showing gpsntp's health under the
+OpenWebRX+ label. It was repointed (ping `host` + `stamp OpenwebRX`
+`addr`) to `192.168.1.142`, the host still named `openwebrxplus`.
+**That host no longer runs OpenWebRX+, though**: its `openwebrx`
+service is disabled, and it has run `meridian.service`
 (`~/meridian/meridian-server`) since 2026-09-25, with nginx on 80/443.
-So the tile now really answers "is the .142 box up", not "is
-OpenWebRX+ serving".
+**OpenWebRX+ itself runs on `.109`** as the `openwebrx` container
+(`slechev/openwebrxplus-softmbe`, compose in the `ubersdr-box` repo),
+the VHF receiver the OpenWebRX cards report on. So the tile shows
+whether the old `openwebrxplus` Pi is up. Whether it should instead
+watch `.109` (which the `UBERSDR` tile already pings) or be relabelled
+is an open operator decision.
 
 `RBN_PC` was "Mac RBN", pinging a Mac (`192.168.1.245`) that's no
 longer active — repointed 2026-07-31 to the Pi running `meridian`

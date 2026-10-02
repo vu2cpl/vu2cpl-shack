@@ -10,27 +10,59 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-10-02
 
+### Self-hosted RustDesk server on .109; `.164` on it
+
+RustDesk clients in the shack used the public `rs-ny.rustdesk.com`
+server (~185 ms). There is now a self-hosted one.
+
+- **Server:** `hbbs` (ID) + `hbbr` (relay) from
+  `rustdesk/rustdesk-server:1.1.16`, host-networked, as a compose stack in
+  `~/rustdesk-server` on `.109`. The compose file is tracked in the private
+  `ubersdr-box` repo. Both run with `-k _`, so only clients holding the
+  generated public key can use the server. The key is kept out of this
+  repo because it's public.
+- **Router:** UniFi forward "Rustdesk", 21115–21117 TCP/UDP → `.109`, so
+  the server is `vu2cpl.ddns.net` from anywhere (LAN clients go via
+  hairpin NAT). It was first entered as `2115-2117`. The symptom was a
+  dead hairpin test while `:7550` passed, with nothing at all reaching
+  `.109`'s `eno1`.
+- **`.164` (`meridianpi5`):** RustDesk upgraded 1.4.5 → 1.5.0 (official
+  arm64 deb, SHA-256 checked). It connected but showed no screen: under
+  labwc Wayland the portal granted the screencast, but the pipewire
+  pipeline stalled at `Paused`. It was the same on 1.4.5. The desktop was
+  switched to X11 (`raspi-config nonint do_wayland W1`, backup
+  `lightdm.conf.bak-pre-x11-20261002`), and `libayatana-appindicator3-1`
+  was added for the tray icon. It was then pointed at
+  `vu2cpl.ddns.net` with the server key (config backups
+  `RustDesk2.toml.bak-pre-selfhost-20261002`), and the server logged
+  `update_pk 1252487319`.
+- **Still to do by hand:** the phone and Mac clients need the same ID
+  server + key. A client on the public server can't see peers
+  registered here.
+
 ### Network monitor: OpenwebRX+ tile pointed at the wrong box
 
 The "OpenwebRX+" tile on the Internet and network monitor tab pinged
-`192.168.1.158`. That address is `gpsntp` (SSH `hostname` → `gpsntp`).
-The OpenWebRX+ box, `openwebrxplus`, is `192.168.1.142`
-(`openwebrxplus.local` resolves there). So the tile had been showing
-gpsntp's reachability under the OpenWebRX+ name. The other tile
-addresses checked out: `.148` FlexRadio, `.164` `meridianpi5`, `.109`
-`ubersdr`.
+`192.168.1.158`. That address is `gpsntp` (SSH `hostname` → `gpsntp`),
+so the tile had been showing gpsntp's reachability under the OpenWebRX+
+name. The other tile addresses checked out: `.148` FlexRadio, `.164`
+`meridianpi5`, `.109` `ubersdr`.
 
 - **Change:** the `OpenwebRX+` ping node's `host` and the
-  `stamp OpenwebRX` function's `addr` were both changed `.158` → `.142`.
-  The stamp owns the address both dashboards display, so it needs the
-  same edit as the ping node. Two field edits, no nodes or wires
-  touched, `flows_guard` OK.
-- **Found along the way:** the `openwebrx` service on `.142` is
-  **disabled**. OpenWebRX+ 1.2.123 is still installed (the newest in its
-  apt repo). The box has run `meridian.service`
+  `stamp OpenwebRX` function's `addr` were both changed `.158` → `.142`,
+  the host named `openwebrxplus` (`openwebrxplus.local` resolves
+  there). The stamp owns the address both dashboards display, so it
+  needs the same edit as the ping node. Two field edits, no nodes or
+  wires touched, `flows_guard` OK.
+- **Correction, later the same evening:** `.142` is the *old*
+  OpenWebRX+ Pi. Its `openwebrx` service is disabled (1.2.123 still
+  installed), and it has run `meridian.service`
   (`~/meridian/meridian-server`) since 2026-09-25, with nginx on 80/443.
-  The tile therefore tracks whether the box is up, not whether
-  OpenWebRX+ is serving.
+  **OpenWebRX+ runs on `.109`** as the `openwebrx` container
+  (`slechev/openwebrxplus-softmbe:1.2.125`, compose in the `ubersdr-box`
+  repo). So the tile now shows whether the old Pi is up, not whether
+  OpenWebRX+ is serving. Pointing it at `.109` would duplicate the
+  `UBERSDR` tile, so the right target or label is left to the operator.
 
 ### Home Assistant's own Mosquitto add-on stopped (unused)
 
