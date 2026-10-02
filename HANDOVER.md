@@ -1,6 +1,6 @@
 # Session Handover — VU2CPL Shack
 
-**Period:** 2026-05-01 → 2026-10-02
+**Period:** 2026-05-01 → 2026-10-03
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
 **Last commit at handover:** **TODO triage + `.142` fully de-SDR'd.** #48 and #40 dropped and #39 and #42 closed by the operator; #36 closed because VU2CPL-88 carries FT8 on the telnet path (~860/h). `.142` lost its last SDR packages (43) and ~1,800 hand-built files; it now runs only the fleet agent. Pi hardware inventory saved as `vlan-setup/PI-HARDWARE.md` (private). Full story: SHACK_CHANGELOG 2026-10-03.
 
