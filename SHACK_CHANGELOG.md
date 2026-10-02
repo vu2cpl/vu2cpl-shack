@@ -8,6 +8,30 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-10-03
+
+### RustDesk on this Pi (`.169`), desktop switched to X11
+
+- **Install:** RustDesk 1.5.0 (official arm64 deb, SHA-256 checked) plus
+  `libayatana-appindicator3-1` for the tray icon, run through
+  `systemd-run` so an SSH drop couldn't interrupt dpkg. The service is on.
+- **Desktop:** `raspi-config nonint do_wayland W1` → `rpd-x` /
+  `pi-greeter-x` (backup `lightdm.conf.bak-pre-x11-20261003`), then
+  `systemctl restart lightdm`. Only the desktop shell ran in that
+  session; Node-RED and Mosquitto stayed `active` throughout. This was
+  done because RustDesk under labwc Wayland shows no screen (the `.164`
+  finding).
+- **Server:** pointed at `vu2cpl.ddns.net` with the key, and it registered as
+  `21464059`. It's a fresh install, so it has **no permanent password**
+  until one is set with `sudo rustdesk --password`.
+- REBUILD_PI.md has a new optional step with the recipe.
+
+Same session, other boxes (recorded in their own repos): `.170`
+(Win10) and `.109` moved to RustDesk 1.5.0 on the self-hosted server.
+The `.109` reboot for its new kernel + X11 left the **RX888 missing from
+USB**, which needs a physical ≥3 min power-cycle (`ubersdr-box`
+HANDOVER).
+
 ## 2026-10-02
 
 ### Self-hosted RustDesk server on .109; `.164` on it

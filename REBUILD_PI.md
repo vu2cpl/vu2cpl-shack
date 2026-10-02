@@ -717,6 +717,28 @@ wait
 
 Each reply should be `{"Timezone":"+05:30"}`.
 
+### Optional — remote desktop (RustDesk, X11)
+
+Added 2026-10-03. This isn't needed for the shack to work; it's for reaching
+the Pi's desktop remotely. The live Pi runs RustDesk 1.5.0 on an **X11** desktop
+(`rpd-x`). RustDesk under the default labwc **Wayland** session connects but
+shows no screen: the screencast pipeline stalls (seen on `.164`).
+
+```bash
+# official arm64 deb from github.com/rustdesk/rustdesk/releases — check its SHA-256 against the release digest
+sudo apt-get install -y ./rustdesk-<ver>-aarch64.deb libayatana-appindicator3-1   # 2nd pkg = tray icon
+sudo raspi-config nonint do_wayland W1        # X11: user/autologin session rpd-x, greeter pi-greeter-x
+sudo rustdesk --option custom-rendezvous-server vu2cpl.ddns.net
+sudo rustdesk --option key '<contents of ~/rustdesk-server/data/id_ed25519.pub on .109>'
+sudo rustdesk --password '<choose one>'       # a fresh install has no permanent password
+sudo systemctl restart lightdm                # desktop session only; Node-RED is a system service
+```
+
+Run the `apt-get` through `sudo systemd-run --wait -p Type=oneshot …` when you're
+on SSH: RustDesk's package scripts restart its service, and twice that dropped the SSH session
+mid-command. Never put the key in this repo (public). Server details: CLAUDE.md
+INFRASTRUCTURE → "RustDesk server".
+
 ---
 
 ## Step 12 — Final verification
