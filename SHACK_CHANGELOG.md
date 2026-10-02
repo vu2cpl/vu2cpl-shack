@@ -24,13 +24,18 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 - **Server:** pointed at `vu2cpl.ddns.net` with the key, and it registered as
   `21464059`. It's a fresh install, so it has **no permanent password**
   until one is set with `sudo rustdesk --password`.
+- **"No displays":** the Pi is headless, so both HDMI connectors read
+  `disconnected` and RustDesk logged `displays len: 0`. Fixed live by
+  forcing `card1-HDMI-A-1` on through sysfs plus an xrandr 1080p CEA mode,
+  and made permanent with ` video=HDMI-A-1:1920x1080@60D` on `cmdline.txt`
+  (backup `cmdline.txt.bak-pre-hdmi-force-20261003`). No reboot was needed.
 - REBUILD_PI.md has a new optional step with the recipe.
 
 Same session, other boxes (recorded in their own repos): `.170`
 (Win10) and `.109` moved to RustDesk 1.5.0 on the self-hosted server.
 The `.109` reboot for its new kernel + X11 left the **RX888 missing from
-USB**, which needs a physical ≥3 min power-cycle (`ubersdr-box`
-HANDOVER).
+USB**. Manoj power-cycled it on the rear port, and after one UberSDR
+restart it was back to 12 bands at 5000M (`ubersdr-box` HANDOVER).
 
 ## 2026-10-02
 

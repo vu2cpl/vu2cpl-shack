@@ -734,6 +734,18 @@ sudo rustdesk --password '<choose one>'       # a fresh install has no permanent
 sudo systemctl restart lightdm                # desktop session only; Node-RED is a system service
 ```
 
+**Headless (no monitor) → "No displays".** With nothing on HDMI, X has no active output
+and RustDesk logs `displays len: 0`. Force HDMI-A-1 on at boot by appending
+` video=HDMI-A-1:1920x1080@60D` to the single line of `/boot/firmware/cmdline.txt`. The `D`
+forces the connector on. To fix it live, without a reboot:
+
+```bash
+sudo sh -c 'echo on > /sys/class/drm/card1-HDMI-A-1/status'
+export DISPLAY=:0 XAUTHORITY=~/.Xauthority
+xrandr --newmode 1920x1080_cea 148.50 1920 2008 2052 2200 1080 1084 1089 1125 +hsync +vsync
+xrandr --addmode HDMI-1 1920x1080_cea && xrandr --output HDMI-1 --mode 1920x1080_cea --primary
+```
+
 Run the `apt-get` through `sudo systemd-run --wait -p Type=oneshot …` when you're
 on SSH: RustDesk's package scripts restart its service, and twice that dropped the SSH session
 mid-command. Never put the key in this repo (public). Server details: CLAUDE.md
