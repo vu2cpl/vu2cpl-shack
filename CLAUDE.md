@@ -100,7 +100,7 @@ Node-RED shack automation running on Raspberry Pi 4B. Controls and monitors:
 | LP-700 WS gateway | `lp700-server.service` on Pi @ `ws://192.168.1.169:8089/ws` (single HID owner, multi-client fan-out) |
 | Rotator WS gateway | `rotator-remote.service` on Pi @ `ws://192.168.1.169:8090/ws` (single FTDI-serial owner, multi-client fan-out). Repo [`vu2cpl/rotator-remote`](https://github.com/vu2cpl/rotator-remote). Azimuth/serial only — rotator power stays on Tasmota/MQTT. Also serves a standalone compass web UI at `http://192.168.1.169:8090/` (independent of Node-RED, like spe-remote's `:8888/`) |
 | Shack health check | `shack-health.timer` (system unit, runs as `vu2cpl`) at **07:15 IST daily** → `~/shack-health/scripts/shack_check.py --telegram --publish`: ~95 read-only checks across the whole shack, Telegram summary, retained `shack/health/summary`, reports in `~/shack-reports/`. Code lives in the private `vu2cpl/shack-health` repo and is deployed from the Mac (`deploy/deploy.sh`). A 07:30 dead-man on .109 alerts if the run is missing. |
-| Git function | `nrsave "message"` (bash function in `~/.bashrc` on Pi) → regen DXCC tab extract → add flows.json + extract → commit |
+| Git function | `nrsave "message"` (bash function in `~/.bashrc` on Pi) → `git add flows.json` → commit. No push (run `git push` after). The DXCC-extract step was retired 2026-07-01 (rule #4) |
 | Dashboard theme | Dark, base #097479, bg #111111 |
 
 ### Restart Node-RED
