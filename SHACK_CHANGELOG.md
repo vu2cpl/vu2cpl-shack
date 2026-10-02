@@ -10,6 +10,28 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-10-03
 
+### Pi 3B+ (`.142`) stripped to an idle box; Pi 5 bootloader updated
+
+- **`.142`:** on operator instruction, removed `varnish` + `varnishncsa`
+  (the `:6081` cache the old nginx site forwarded to), `codecserver`
+  (+ drivers), and the `sdrplay` API service (a hand-installed unit,
+  `/opt/sdrplay_api` kept). Then **purged `openwebrx`** with
+  `--auto-remove`: 190 packages, all its decoders and their libraries,
+  after a dry run showed nothing else on the box needed them. The
+  `openwebrx` user went too. Archives are in `~vu2cpl` on the box. RAM in use
+  went 425 → 176 MiB. Left: the fleet agent on :7799, `monitor.sh`, and
+  the unused hand-installed SoapySDR / rtl-sdr / sdrplay API files.
+- **`.164` Pi 5:** bootloader 2025-05-08 → **2026-09-25** (`rpi-eeprom-update
+  -a`, flashed and verified, then a reboot). The same headless "No displays"
+  issue as `.169` under X11 was fixed the same way: `video=HDMI-A-1:1920x1080@60D`
+  on `cmdline.txt` plus the live sysfs/xrandr step.
+- **`.169` Pi 4 (this Pi):** after Manoj's `apt upgrade` finished, bootloader 2025-05-08 →
+  **2026-09-23** (staged with `rpi-eeprom-update -a`) and kernel 6.18.39 → **6.18.50**, both
+  through one reboot at 00:40 IST, with Open-Meteo state `cold` and no storm. Back in ~50 s with every service
+  active, the flows guard OK, and lightning state + the AS3935 heartbeat flowing. X came back at
+  1024×768 (no EDID), so both headless Pis got `/etc/X11/xorg.conf.d/10-headless-hdmi.conf`
+  with a preferred 1080p CEA mode. Verified on `.169` by a lightdm restart.
+
 ### RustDesk on this Pi (`.169`), desktop switched to X11
 
 - **Install:** RustDesk 1.5.0 (official arm64 deb, SHA-256 checked) plus
@@ -97,8 +119,8 @@ name. The other tile addresses checked out: `.148` FlexRadio, `.164`
   `ORDER` arrays. The meridian process on the 3B+ turned out to be idle,
   with no SDR attached and only propagation refreshes in its log. On
   operator instruction it was stopped and removed, together with the
-  dead nginx `openwebrx` site (it proxied to an empty `:6081`); nginx
-  is disabled. The archive is at
+  nginx `openwebrx` site; nginx is disabled. (Its `:6081` upstream
+  was varnish, not "empty"; see the 2026-10-03 cleanup.) The archive is at
   `~vu2cpl/meridian-nginx-removed-20261002.tar.gz` on the box. The
   `shack-health` host list stopped expecting the `meridian` unit there
   (shack-health `5ab246c`, deployed).

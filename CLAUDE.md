@@ -99,7 +99,7 @@ Node-RED shack automation running on Raspberry Pi 4B. Controls and monitors:
 | SPE WS gateway | `spe-remote.service` on Pi @ `ws://192.168.1.169:8888/ws` (single FTDI-serial owner, multi-client fan-out). Repo [`vu2cpl/spe-remote`](https://github.com/vu2cpl/spe-remote). Also handles SPE power-on via DTR/RTS on the open port. No `/healthz` — liveness = `curl http://…:8888/` |
 | LP-700 WS gateway | `lp700-server.service` on Pi @ `ws://192.168.1.169:8089/ws` (single HID owner, multi-client fan-out) |
 | Rotator WS gateway | `rotator-remote.service` on Pi @ `ws://192.168.1.169:8090/ws` (single FTDI-serial owner, multi-client fan-out). Repo [`vu2cpl/rotator-remote`](https://github.com/vu2cpl/rotator-remote). Azimuth/serial only — rotator power stays on Tasmota/MQTT. Also serves a standalone compass web UI at `http://192.168.1.169:8090/` (independent of Node-RED, like spe-remote's `:8888/`) |
-| RustDesk server | Self-hosted `hbbs` + `hbbr` (`rustdesk/rustdesk-server:1.1.16`) on `.109`, added 2026-10-02. Compose stack `~/rustdesk-server/` on the box, tracked in the private `ubersdr-box` repo. Ports 21115–21117/tcp + 21116/udp; key-enforced (`-k _`), so clients need the public key (`~/rustdesk-server/data/id_ed25519.pub` on `.109`; never commit it here, since this repo is public). Public as `vu2cpl.ddns.net` via the UniFi forward "Rustdesk" (21115–21117 TCP/UDP → `.109`; LAN clients reach it by hairpin NAT). Client setup: ID server `vu2cpl.ddns.net`, Relay + API blank, Key = that pubkey. Clients on it (all 1.5.0): `.164` `meridianpi5` (ID 1252487319, X11), `.109` `ubersdr` (1733915999, GNOME switched to X11 2026-10-03 via `WaylandEnable=false`), `.170` `DESKTOP-IP8PT88` Win10 (1062710720), and **`.169` this Pi** (21464059, desktop switched labwc → X11 `rpd-x` 2026-10-03; headless, so HDMI-A-1 is forced on with `video=HDMI-A-1:1920x1080@60D` in `cmdline.txt` (otherwise RustDesk shows "No displays"); fresh install, so a permanent password has to be set with `sudo rustdesk --password`; recipe in REBUILD_PI.md 'Optional — remote desktop'). Machines not yet moved are reachable with `<ID>@public` from a client on this server. A client still on the public RustDesk server can't see peers registered here, so the phone/Mac need the same setting |
+| RustDesk server | Self-hosted `hbbs` + `hbbr` (`rustdesk/rustdesk-server:1.1.16`) on `.109`, added 2026-10-02. Compose stack `~/rustdesk-server/` on the box, tracked in the private `ubersdr-box` repo. Ports 21115–21117/tcp + 21116/udp; key-enforced (`-k _`), so clients need the public key (`~/rustdesk-server/data/id_ed25519.pub` on `.109`; never commit it here, since this repo is public). Public as `vu2cpl.ddns.net` via the UniFi forward "Rustdesk" (21115–21117 TCP/UDP → `.109`; LAN clients reach it by hairpin NAT). Client setup: ID server `vu2cpl.ddns.net`, Relay + API blank, Key = that pubkey. Clients on it (all 1.5.0): `.164` `meridianpi5` (ID 1252487319, X11, headless with HDMI-A-1 forced like `.169`), `.109` `ubersdr` (1733915999, GNOME switched to X11 2026-10-03 via `WaylandEnable=false`), `.170` `DESKTOP-IP8PT88` Win10 (1062710720), and **`.169` this Pi** (21464059, desktop switched labwc → X11 `rpd-x` 2026-10-03; headless, so HDMI-A-1 is forced on with `video=HDMI-A-1:1920x1080@60D` in `cmdline.txt` (otherwise RustDesk shows "No displays"); fresh install, so a permanent password has to be set with `sudo rustdesk --password`; recipe in REBUILD_PI.md 'Optional — remote desktop'). Machines not yet moved are reachable with `<ID>@public` from a client on this server. A client still on the public RustDesk server can't see peers registered here, so the phone/Mac need the same setting |
 | Shack health check | `shack-health.timer` (system unit, runs as `vu2cpl`) at **07:15 IST daily** → `~/shack-health/scripts/shack_check.py --telegram --publish`: ~95 read-only checks across the whole shack, Telegram summary, retained `shack/health/summary`, reports in `~/shack-reports/`. Code lives in the private `vu2cpl/shack-health` repo and is deployed from the Mac (`deploy/deploy.sh`). A 07:30 dead-man on .109 alerts if the run is missing. |
 | Git function | `nrsave "message"` (bash function in `~/.bashrc` on Pi) → `git add flows.json` → commit. No push (run `git push` after). The DXCC-extract step was retired 2026-07-01 (rule #4) |
 | Dashboard theme | Dark, base #097479, bg #111111 |
@@ -844,12 +844,21 @@ that day, and was repointed to `192.168.1.142`, the Raspberry Pi 3B+
 still named `openwebrxplus`. That Pi no longer runs OpenWebRX+: the
 service is disabled, and **OpenWebRX+ runs on `.109`** as the
 `openwebrx` container (`slechev/openwebrxplus-softmbe`, compose in the
-`ubersdr-box` repo). The 3B+'s idle leftovers (a `meridian.service`
-with no SDR attached, and an nginx `openwebrx` site proxying to a
-dead `:6081`) were removed on operator instruction the same day, with
-nginx disabled. An archive is at
-`~vu2cpl/meridian-nginx-removed-20261002.tar.gz` on the box, which is
-now an idle test box. The tile was relabelled rather than re-keyed:
+`ubersdr-box` repo). On operator instruction the 3B+ was then
+stripped back to an idle test box. 2026-10-02: an idle
+`meridian.service` (no SDR attached) and the nginx `openwebrx` site
+were removed, and nginx disabled. 2026-10-03: the site's `:6081`
+upstream was **varnish** (a cache in front of the disabled OpenWebRX),
+and it was removed together with `varnishncsa`, `codecserver` and the
+`sdrplay` API service. **OpenWebRX itself was then purged** with its
+190 now-unused dependencies (WSJT-X, JS8Call, direwolf, dump1090/978,
+ImageMagick, Qt5 …) and its system user. The SoapySDR modules, rtl-sdr
+and `/opt/sdrplay_api` were installed by hand and remain, but nothing
+uses them. Archives on the box:
+`~vu2cpl/meridian-nginx-removed-20261002.tar.gz`,
+`openwebrx-removed-20261003.tar.gz` (`/etc` + `/var/lib/openwebrx`),
+`sdrplay.service.removed-20261003`. It now runs only the fleet agent
+(`rpi_agent` on :7799) and `monitor.sh`. The tile was relabelled rather than re-keyed:
 the label lives in the stamp, but the key `OpenwebRX` is also in both
 dashboards' `ORDER` arrays, so renaming it would mean editing both
 plus a Vue build bump.

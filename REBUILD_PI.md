@@ -746,6 +746,18 @@ xrandr --newmode 1920x1080_cea 148.50 1920 2008 2052 2200 1080 1084 1089 1125 +h
 xrandr --addmode HDMI-1 1920x1080_cea && xrandr --output HDMI-1 --mode 1920x1080_cea --primary
 ```
 
+With no EDID, X still boots at its 1024×768 fallback even with the connector forced. To make 1080p
+stick, drop this in `/etc/X11/xorg.conf.d/10-headless-hdmi.conf` (modesetting matches the
+`Monitor` section to the output by name):
+
+```
+Section "Monitor"
+    Identifier "HDMI-1"
+    Modeline "1920x1080_cea" 148.50 1920 2008 2052 2200 1080 1084 1089 1125 +hsync +vsync
+    Option "PreferredMode" "1920x1080_cea"
+EndSection
+```
+
 Run the `apt-get` through `sudo systemd-run --wait -p Type=oneshot …` when you're
 on SSH: RustDesk's package scripts restart its service, and twice that dropped the SSH session
 mid-command. Never put the key in this repo (public). Server details: CLAUDE.md
