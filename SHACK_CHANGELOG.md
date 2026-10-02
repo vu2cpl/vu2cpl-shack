@@ -8,6 +8,30 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-10-02
+
+### Home Assistant's own Mosquitto add-on stopped (unused)
+
+HassPi was running the Mosquitto broker add-on alongside the shack broker.
+Nothing used it. HA's MQTT integration connects to the shack broker on
+`.169` (its connection shows in `.169`'s client list). The add-on had no
+logins and no custom config (so no bridge). It had sent about 16 KB in
+total since it started, and nothing in a 60-second sample, so no client
+held a session. The IoT VLAN couldn't reach it anyway, because the
+firewall only allows IoT → `.169:1883`.
+
+- **Change:** add-on `boot` set to `manual`, then stopped, both through
+  the Supervisor API over HA's WebSocket. It stays installed, so undoing
+  it is a click: Settings → Add-ons → Mosquitto broker → Start, with
+  "Start on boot" switched back on.
+- **Verified:** `.36:1883` and `.36:8883` now refuse connections. HA's
+  MQTT entry is still `loaded`, and `sensor.rpi_noderedpi4_cpu` kept
+  updating through the shack broker afterwards.
+
+Found while planning HANDOVER #48 (Node-RED to a container on .109).
+
+---
+
 ## 2026-10-01
 
 ### RBN Skimmer tab: the VU2CPL skimmer is now VU2CPL-88 (the .109 meridian container)
