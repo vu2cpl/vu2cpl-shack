@@ -832,10 +832,20 @@ a new device — see the "Please Read!!" comment node on this tab.
 |-----|-------|------|-------|
 | `Internet`  | Internet   | www.google.com | 100 |
 | `Flex`      | FlexRadio  | 192.168.1.148  | 5 |
-| `OpenwebRX` | OpenwebRX+ | 192.168.1.158  | 5 |
+| `OpenwebRX` | OpenwebRX+ | 192.168.1.142  | 5 |
 | `RBN_PC`    | RBN PC/PI  | 192.168.1.164  | 5 |
 | `RBN_SDR`   | RBN SDR    | rp-f02054.local | 5 |
 | `UBERSDR`   | Ubersdr    | 192.168.1.109  | 5 |
+
+`OpenwebRX` pinged `192.168.1.158` until 2026-10-02, but that address
+is `gpsntp`. The OpenWebRX+ box (`openwebrxplus`) is `192.168.1.142`, so
+the tile had been showing gpsntp's health under the OpenWebRX+ label.
+Both the ping node's `host` and the `stamp OpenwebRX` `addr` were
+repointed to `.142`. On the same day the `openwebrx` service on `.142`
+was found **disabled**: the box has run `meridian.service`
+(`~/meridian/meridian-server`) since 2026-09-25, with nginx on 80/443.
+So the tile now really answers "is the .142 box up", not "is
+OpenWebRX+ serving".
 
 `RBN_PC` was "Mac RBN", pinging a Mac (`192.168.1.245`) that's no
 longer active — repointed 2026-07-31 to the Pi running `meridian`

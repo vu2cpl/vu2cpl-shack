@@ -10,6 +10,28 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-10-02
 
+### Network monitor: OpenwebRX+ tile pointed at the wrong box
+
+The "OpenwebRX+" tile on the Internet and network monitor tab pinged
+`192.168.1.158`. That address is `gpsntp` (SSH `hostname` → `gpsntp`).
+The OpenWebRX+ box, `openwebrxplus`, is `192.168.1.142`
+(`openwebrxplus.local` resolves there). So the tile had been showing
+gpsntp's reachability under the OpenWebRX+ name. The other tile
+addresses checked out: `.148` FlexRadio, `.164` `meridianpi5`, `.109`
+`ubersdr`.
+
+- **Change:** the `OpenwebRX+` ping node's `host` and the
+  `stamp OpenwebRX` function's `addr` were both changed `.158` → `.142`.
+  The stamp owns the address both dashboards display, so it needs the
+  same edit as the ping node. Two field edits, no nodes or wires
+  touched, `flows_guard` OK.
+- **Found along the way:** the `openwebrx` service on `.142` is
+  **disabled**. OpenWebRX+ 1.2.123 is still installed (the newest in its
+  apt repo). The box has run `meridian.service`
+  (`~/meridian/meridian-server`) since 2026-09-25, with nginx on 80/443.
+  The tile therefore tracks whether the box is up, not whether
+  OpenWebRX+ is serving.
+
 ### Home Assistant's own Mosquitto add-on stopped (unused)
 
 HassPi was running the Mosquitto broker add-on alongside the shack broker.
