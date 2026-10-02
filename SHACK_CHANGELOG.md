@@ -61,8 +61,18 @@ name. The other tile addresses checked out: `.148` FlexRadio, `.164`
   **OpenWebRX+ runs on `.109`** as the `openwebrx` container
   (`slechev/openwebrxplus-softmbe:1.2.125`, compose in the `ubersdr-box`
   repo). So the tile now shows whether the old Pi is up, not whether
-  OpenWebRX+ is serving. Pointing it at `.109` would duplicate the
-  `UBERSDR` tile, so the right target or label is left to the operator.
+  OpenWebRX+ is serving.
+- **Resolved the same night (operator decision):** the tile is
+  relabelled **Pi 3B+** (ping node name, stamp name + `label`). The
+  internal key stays `OpenwebRX`, because it's also in both dashboards'
+  `ORDER` arrays. The meridian process on the 3B+ turned out to be idle,
+  with no SDR attached and only propagation refreshes in its log. On
+  operator instruction it was stopped and removed, together with the
+  dead nginx `openwebrx` site (it proxied to an empty `:6081`); nginx
+  is disabled. The archive is at
+  `~vu2cpl/meridian-nginx-removed-20261002.tar.gz` on the box. The
+  `shack-health` host list stopped expecting the `meridian` unit there
+  (shack-health `5ab246c`, deployed).
 
 ### Home Assistant's own Mosquitto add-on stopped (unused)
 

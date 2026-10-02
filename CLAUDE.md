@@ -833,24 +833,26 @@ a new device — see the "Please Read!!" comment node on this tab.
 |-----|-------|------|-------|
 | `Internet`  | Internet   | www.google.com | 100 |
 | `Flex`      | FlexRadio  | 192.168.1.148  | 5 |
-| `OpenwebRX` | OpenwebRX+ | 192.168.1.142  | 5 |
+| `OpenwebRX` | Pi 3B+     | 192.168.1.142  | 5 |
 | `RBN_PC`    | RBN PC/PI  | 192.168.1.164  | 5 |
 | `RBN_SDR`   | RBN SDR    | rp-f02054.local | 5 |
 | `UBERSDR`   | Ubersdr    | 192.168.1.109  | 5 |
 
-`OpenwebRX` pinged `192.168.1.158` until 2026-10-02, but that address
-is `gpsntp`, so the tile had been showing gpsntp's health under the
-OpenWebRX+ label. It was repointed (ping `host` + `stamp OpenwebRX`
-`addr`) to `192.168.1.142`, the host still named `openwebrxplus`.
-**That host no longer runs OpenWebRX+, though**: its `openwebrx`
-service is disabled, and it has run `meridian.service`
-(`~/meridian/meridian-server`) since 2026-09-25, with nginx on 80/443.
-**OpenWebRX+ itself runs on `.109`** as the `openwebrx` container
-(`slechev/openwebrxplus-softmbe`, compose in the `ubersdr-box` repo),
-the VHF receiver the OpenWebRX cards report on. So the tile shows
-whether the old `openwebrxplus` Pi is up. Whether it should instead
-watch `.109` (which the `UBERSDR` tile already pings) or be relabelled
-is an open operator decision.
+The `OpenwebRX` key's tile is now labelled **Pi 3B+** (2026-10-02).
+It pinged `192.168.1.158` (`gpsntp`) under an "OpenwebRX+" label until
+that day, and was repointed to `192.168.1.142`, the Raspberry Pi 3B+
+still named `openwebrxplus`. That Pi no longer runs OpenWebRX+: the
+service is disabled, and **OpenWebRX+ runs on `.109`** as the
+`openwebrx` container (`slechev/openwebrxplus-softmbe`, compose in the
+`ubersdr-box` repo). The 3B+'s idle leftovers (a `meridian.service`
+with no SDR attached, and an nginx `openwebrx` site proxying to a
+dead `:6081`) were removed on operator instruction the same day, with
+nginx disabled. An archive is at
+`~vu2cpl/meridian-nginx-removed-20261002.tar.gz` on the box, which is
+now an idle test box. The tile was relabelled rather than re-keyed:
+the label lives in the stamp, but the key `OpenwebRX` is also in both
+dashboards' `ORDER` arrays, so renaming it would mean editing both
+plus a Vue build bump.
 
 `RBN_PC` was "Mac RBN", pinging a Mac (`192.168.1.245`) that's no
 longer active — repointed 2026-07-31 to the Pi running `meridian`
