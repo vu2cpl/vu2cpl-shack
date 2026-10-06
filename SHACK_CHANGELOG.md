@@ -8,6 +8,35 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-10-06
+
+### RustDesk: `.164` and `.169` moved to the Oracle Cloud server
+
+- **New server:** self-hosted `hbbs` + `hbbr` (rustdesk-server 1.1.16, `-k _`
+  so only clients with the key can register or relay) on an Oracle Cloud
+  Always Free **VM.Standard.E2.1.Micro** in Hyderabad (ephemeral public
+  IP). Ubuntu 24.04, SSH keys only, fail2ban,
+  unattended-upgrades, 2 GB swap; Oracle security list and host iptables
+  open TCP 21115–21117 and UDP 21116 only. Setup, ports and the key backup:
+  `~/projects/oracle-rustdesk/HANDOVER.md` (not a git repo: it holds the
+  server's private key). The server's address and client key are kept there,
+  not here, because this repo is public.
+- **Clients:** on `.164` (`pi`) and `.169` (`vu2cpl`) the `rustdesk` service
+  was stopped, both `/root/.config/rustdesk/RustDesk2.toml` and the user's
+  copy backed up as `.bak-2026-10-06`, and `custom-rendezvous-server`,
+  `relay-server` and `rendezvous_server` set to the Oracle server with its
+  key. Restarted; the server
+  logged `update_pk` for `1252487319` (.164) and `21464059` (.169) within
+  seconds. `.170` (`1062710720`) had already registered there, switched by
+  Manoj.
+- **Not changed:** the `.109` server (`vu2cpl.ddns.net`, UniFi "Rustdesk"
+  forward) keeps running, and `.109`'s own client (`1733915999`) is still on
+  it. Phone/Mac clients need the Oracle server + key to reach these Pis.
+- **Roll back** a Pi: `sudo systemctl stop rustdesk`, copy each
+  `RustDesk2.toml.bak-2026-10-06` back, `sudo systemctl start rustdesk`.
+
+---
+
 ## 2026-10-03
 
 ### Pi 3B+ (`.142`) stripped to an idle box; Pi 5 bootloader updated
