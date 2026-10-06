@@ -31,8 +31,9 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
   Manoj.
 - **Also on the Oracle server:** `.109`'s own client (`1733915999`) and one
   more (`446570374`, from the home IP), switched by Manoj.
-- **Not changed:** the `.109` server (`vu2cpl.ddns.net`, UniFi "Rustdesk"
-  forward) keeps running, now with no known clients. Phone/Mac clients need the Oracle server + key to reach these Pis.
+- **Home server retired:** with no clients left, the `.109` server
+  (`vu2cpl.ddns.net`) was stopped and its containers removed (data kept; see
+  ubersdr-box). The UniFi "Rustdesk" forward (21115–21117) is to be deleted. Phone/Mac clients need the Oracle server + key to reach these Pis.
 - **Roll back** a Pi: `sudo systemctl stop rustdesk`, copy each
   `RustDesk2.toml.bak-2026-10-06` back, `sudo systemctl start rustdesk`.
 
