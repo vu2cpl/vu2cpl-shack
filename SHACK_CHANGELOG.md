@@ -30,7 +30,7 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
   seconds. `.170` (`1062710720`) had already registered there, switched by
   Manoj.
 - **Also on the Oracle server:** `.109`'s own client (`1733915999`) and one
-  more (`446570374`, from the home IP), switched by Manoj.
+  more (`446570374`, the Mac Mini), switched by Manoj.
 - **Home server retired:** with no clients left, the `.109` server
   (`vu2cpl.ddns.net`) was stopped and its containers removed (data kept; see
   ubersdr-box). The UniFi "Rustdesk" forward (21115–21117) was deleted by Manoj the same day; closed from outside. Phone/Mac clients need the Oracle server + key to reach these Pis.
