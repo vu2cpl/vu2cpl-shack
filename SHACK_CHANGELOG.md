@@ -29,9 +29,10 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
   logged `update_pk` for `1252487319` (.164) and `21464059` (.169) within
   seconds. `.170` (`1062710720`) had already registered there, switched by
   Manoj.
+- **Also on the Oracle server:** `.109`'s own client (`1733915999`) and one
+  more (`446570374`, from the home IP), switched by Manoj.
 - **Not changed:** the `.109` server (`vu2cpl.ddns.net`, UniFi "Rustdesk"
-  forward) keeps running, and `.109`'s own client (`1733915999`) is still on
-  it. Phone/Mac clients need the Oracle server + key to reach these Pis.
+  forward) keeps running, now with no known clients. Phone/Mac clients need the Oracle server + key to reach these Pis.
 - **Roll back** a Pi: `sudo systemctl stop rustdesk`, copy each
   `RustDesk2.toml.bak-2026-10-06` back, `sudo systemctl start rustdesk`.
 
