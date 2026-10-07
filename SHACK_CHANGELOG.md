@@ -44,8 +44,16 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
   instead of its real age.
 - **Removed:** `Route CW / FT8` and the two `Format CW/FT8 Spot Row`
   functions. Their outputs went nowhere (left over from an older RBN panel),
-  yet each formatter filtered the whole ring on every spot. `spots_all` is
-  still written by Parse DX Spot but nothing reads it now.
+  yet each formatter filtered the whole ring on every spot.
+- **Spot rings removed too (`542b0ff`, on operator request):** with no
+  reader left, Parse DX Spot no longer keeps `spots_all` (10,000) or the
+  per-skimmer `spots_<call>` rings (500). Every spot passed an `unshift`
+  on both rings, and once a ring was full the trim back to its cap copied
+  the whole array. A 2-minute sample showed no visible change (Node-RED
+  24.7% → 24.6% of one core), because the before-sample ran ~12 min after a
+  restart, while the ring was still filling. The copying only starts once
+  the 10,000 ring is full (~35 min at ~17k spots/h), so the saving is that
+  steady-state cost, which this sample couldn't show.
 - **D1:** the RBN Skimmer Panel draws a third card (`[d.sk1, d.sk2, d.sk3]`)
   and grew from height 8 to 12.
 - **Vue `v44`:** the RBN card already lists whatever skimmers arrive, so
