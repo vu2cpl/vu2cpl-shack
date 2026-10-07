@@ -450,6 +450,16 @@ Reverse Beacon Network monitoring — tracks how the VU2CPL signal is
 being heard worldwide via skimmer reports. Calibration data fetched
 from `sm7iun.se/rbnskew.csv` every 6 h.
 
+Three skimmer feeds, each with spot counts for the last 1 h / 12 h /
+24 h (CW vs FT8), last spot and frequency skew, on both dashboards and
+in Home Assistant:
+
+| Skimmer | Feed | Notes |
+|---------|------|-------|
+| VU2CPL-88 | `vu2cpl.ddns.net:7550` | the shack's own Meridian container on `.109`, via the router forward; login required |
+| VU2OY | `vu2oy.ddns.net:7550` | open port, no login |
+| VU24DX-1 | `vu24dx.ddns.net:7300` | Adersh VU24DX's Meridian server in Kozhikode (added 2026-10-07); login required. Feed prints `VU24DX-#`; keyed by its RBN call `VU24DX-1` so the skew lookup matches |
+
 ---
 
 ## Repository Layout

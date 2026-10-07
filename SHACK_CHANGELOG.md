@@ -8,6 +8,63 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-10-07
+
+### RBN Skimmer Monitor: VU24DX added as a third skimmer (`fa08ff2`)
+
+- **The feed:** VU24DX (Adersh, Kozhikode MK71UH) runs a Meridian 0.1.25
+  cluster server on **`vu24dx.ddns.net:7300`**. Of the ports suggested,
+  7550 is refused and 7330 is filtered. It asks for a callsign with an
+  unterminated `Please enter your callsign:` prompt (CwSkimmer style), so
+  the new **Login Handler VU24DX** is a copy of the VU2CPL one and logs in
+  as `VU2CPL-1`. It sends about 60–70 spots a minute at 02:00Z, nearly all
+  FT8, and the existing Parse DX Spot regexes read every sampled line.
+- **Named `VU24DX-1`:** the feed tags spots `VU24DX-#`, but the box uploads
+  to RBN as `VU24DX-1` (seen on `telnet.reversebeacon.net:7001`), and that
+  is its row in sm7iun's `rbnskew.csv` (−0.9 ppm). Tagging it `VU24DX-1`
+  makes the skew lookup match, the same way VU2CPL-88 is keyed by its RBN
+  call.
+- **New nodes:** `rbn_vu24dx_tcp_in` (`tcp in`, raw chunks),
+  `rbn_vu24dx_login` (2 outputs: login reply, spots → Parse DX Spot) and
+  `rbn_vu24dx_tcp_reply` (`tcp out`, `beserver: reply`). `sk3_call`
+  (default `VU24DX-1`) joins `sk1`/`sk2` in Parse Calibration CSV, Update
+  Spot Counters, Watchdog Check and the RBN State Aggregator (`st.sk3`), and
+  rides the Vue builder and `shack/rbn/state`.
+- **1h counts now come from per-minute buckets.** They used to filter the
+  10,000-spot `spots_all` ring, but VU2CPL-88 and VU2OY already averaged
+  about 13,700 spots/h together over 24 h (5,270 + 8,400), so the ring
+  covered less than an hour at peak and the counts came out low. VU24DX
+  adds about 3,700/h. Update Spot Counters keeps `minute_buckets` (memory
+  scope, last 60 minutes) and drops three full ring scans per spot. 12h and
+  24h still sum the file-scoped `hourly_buckets`.
+- **Watchdog reads `lastTs`.** Update Spot Counters stamps each skimmer's
+  `lastTs`/`lastSpot`/`lastFreq` from the spot it is handling. The watchdog
+  used to scan the ring, which three busy feeds now cycle in about half an
+  hour, so a quieter skimmer would have read "no spots received yet"
+  instead of its real age.
+- **Removed:** `Route CW / FT8` and the two `Format CW/FT8 Spot Row`
+  functions. Their outputs went nowhere (left over from an older RBN panel),
+  yet each formatter filtered the whole ring on every spot. `spots_all` is
+  still written by Parse DX Spot but nothing reads it now.
+- **D1:** the RBN Skimmer Panel draws a third card (`[d.sk1, d.sk2, d.sk3]`)
+  and grew from height 8 to 12.
+- **Vue `v44`:** the RBN card already lists whatever skimmers arrive, so
+  VU24DX-1 needed no template change. The skew line was wrong, though: it
+  said `Hz`, but sm7iun's values are ppm, and its colour bands (>2 amber,
+  >5 red) didn't match D1. It now reads ppm with D1's bands (<0.5 green,
+  <1.5 amber, else red), so the two dashboards agree on VU24DX-1's −0.9.
+- **Home Assistant:** new discovery sensor `rbn_vu24dx_h1` → entity
+  `sensor.rbn_skimmers_vu24dx_1_spots_1h` (93 configs, republished). The
+  Radio dashboard's RBN card loops over every skimmer in
+  `sensor.rbn_skimmers_state`, so it showed VU24DX-1 with no dashboard
+  edit (state "3 online").
+- **Verified live** after the Pi pull + restart: `Telnet VU24DX :7300`
+  connected, `shack/rbn/state` carried `sk3: VU24DX-1` with status online,
+  24 FT8 spots in its first half-minute and skew −0.9; no `Unmatched`
+  warnings in the journal; the Pi serves Vue `v44`.
+
+---
+
 ## 2026-10-06
 
 ### RustDesk: `.164` and `.169` moved to the Oracle Cloud server
