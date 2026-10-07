@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v43 · 2026-09-25 RPi fleet: full IPs + real uptime (parseFloat mangling fix)';
+window.__shackBuild = 'v44 · 2026-10-07 RBN: VU24DX-1 third skimmer, skew in ppm';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -2603,16 +2603,18 @@ const RBNCard = {
     const onlineCount = computed(() => skimmerNames.value.filter(n => isOnline(skim(n))).length);
     const totalH1 = computed(() => skimmerNames.value.reduce((sum, n) => sum + (skim(n).h1_total || 0), 0));
 
+    // sm7iun's rbnskew.csv gives skew in ppm (was mislabelled Hz until v44).
+    // Bands match the D1 panel: <0.5 Excellent, <1.5 Acceptable, else needs adjusting.
     function fmtSkew(v) {
       if (v == null) return '—';
       const sign = v > 0 ? '+' : '';
-      return sign + Number(v).toFixed(1) + ' Hz';
+      return sign + Number(v).toFixed(1) + ' ppm';
     }
     function skewColor(v) {
       if (v == null) return 'var(--muted)';
       const a = Math.abs(v);
-      if (a > 5) return 'var(--red)';
-      if (a > 2) return 'var(--amber)';
+      if (a >= 1.5) return 'var(--red)';
+      if (a >= 0.5) return 'var(--amber)';
       return 'var(--green)';
     }
 

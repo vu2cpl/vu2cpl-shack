@@ -3757,6 +3757,65 @@
         ]
     },
     {
+        "id": "rbn_vu24dx_tcp_in",
+        "type": "tcp in",
+        "z": "f9a0e3ad0e019052",
+        "name": "Telnet VU24DX :7300",
+        "server": "client",
+        "host": "vu24dx.ddns.net",
+        "port": "7300",
+        "datatype": "utf8",
+        "newline": "",
+        "topic": "",
+        "trim": true,
+        "tls": "",
+        "x": 120,
+        "y": 400,
+        "wires": [
+            [
+                "rbn_vu24dx_login"
+            ]
+        ]
+    },
+    {
+        "id": "rbn_vu24dx_login",
+        "type": "function",
+        "z": "f9a0e3ad0e019052",
+        "name": "Login Handler VU24DX",
+        "func": "// VU24DX (Adersh, Kozhikode MK71UH) -- Meridian cluster server at\n// vu24dx.ddns.net:7300 (7550/7330 are closed). Spots arrive as VU24DX-#;\n// tagged VU24DX-1 because that is the call it uploads to RBN under, so the\n// sm7iun skew lookup matches. Added 2026-10-07.\nvar raw = msg.payload || '';\nif (!raw) return null;\n\n// tcp-in newline is '' (raw chunks) so banner + prompt + spots\n// can arrive concatenated. Split for line-by-line handling.\nvar lines = raw.split(/\\r?\\n/);\n\n// Login prompt detection on the trailing NON-EMPTY line of the chunk.\n// CwSkimmer's prompt has no trailing newline (the original reason for\n// trailing-line detection); meridian's aggregator terminates its prompt\n// with \\r\\n, which makes the literal last split element an empty string\n// -- taking the last non-empty line handles both styles (2026-07-31).\nvar lastLine = '';\nfor (var li = lines.length - 1; li >= 0; li--) {\n    if (lines[li].trim()) { lastLine = lines[li].trim().toLowerCase(); break; }\n}\nif (lastLine.length < 40 && (\n    lastLine.endsWith('login:') ||\n    lastLine.endsWith('please login') ||\n    lastLine.endsWith('please login:') ||\n    lastLine.endsWith('callsign:') ||\n    lastLine.endsWith('callsign please:') ||\n    lastLine.endsWith('your callsign:') ||\n    lastLine.endsWith('enter your callsign:') ||\n    lastLine.endsWith('your call:')\n)) {\n    node.status({ fill: 'blue', shape: 'dot', text: 'VU24DX-1 \u2192 login sent' });\n    node.send([{ payload: 'VU2CPL-1\\r\\n', _session: msg._session }, null]);\n    // fall through \u2014 earlier lines in the same chunk could be spots\n}\n\n// DX spot extraction \u2014 emit one msg per DX line on output 1\nvar spotMsgs = [];\nfor (var i = 0; i < lines.length; i++) {\n    var l = lines[i].trim();\n    if (l.indexOf('DX de') === 0) {\n        spotMsgs.push({ payload: l, skimmer: 'VU24DX-1' });\n    }\n}\nif (spotMsgs.length === 0) return null;\nnode.status({ fill: 'green', shape: 'dot', text: 'VU24DX-1 +' + spotMsgs.length + ' spot' + (spotMsgs.length > 1 ? 's' : '') });\nreturn [null, spotMsgs];",
+        "outputs": 2,
+        "x": 370,
+        "y": 400,
+        "wires": [
+            [
+                "rbn_vu24dx_tcp_reply"
+            ],
+            [
+                "7d2c70d8935ef86f"
+            ]
+        ],
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": []
+    },
+    {
+        "id": "rbn_vu24dx_tcp_reply",
+        "type": "tcp out",
+        "z": "f9a0e3ad0e019052",
+        "name": "Reply to VU24DX (login)",
+        "host": "",
+        "port": "",
+        "beserver": "reply",
+        "base64": false,
+        "end": false,
+        "tls": "",
+        "x": 620,
+        "y": 400,
+        "wires": []
+    },
+    {
         "id": "7d2c70d8935ef86f",
         "type": "function",
         "z": "f9a0e3ad0e019052",
@@ -3772,7 +3831,6 @@
         "y": 180,
         "wires": [
             [
-                "7fb3b051c27b98a3",
                 "4335e42a92abe505"
             ]
         ]
@@ -3843,7 +3901,7 @@
         "type": "function",
         "z": "f9a0e3ad0e019052",
         "name": "Parse Calibration CSV",
-        "func": "var csv=msg.payload;\nvar lines=csv.split('\\n').filter(function(l){return l&&!l.startsWith('#')&&!l.startsWith('Callsign');});\nvar sk1=flow.get('sk1_call')||'VU2CPL-88';\nvar sk2=flow.get('sk2_call')||'VU2OY';\nvar skimmers=[sk1,sk2];\nvar calData={};\nlines.forEach(function(line){\nvar parts=line.split(',');\nif(parts.length<4)return;\nvar call=parts[0].trim();\nvar skew=parseFloat(parts[1]);\nvar spots=parseInt(parts[2]);\nvar factor=parseFloat(parts[3]);\ncalData[call]={skew:skew,spots:spots,factor:factor};\n});\nflow.set('cal_data',calData);\nflow.set('cal_fetched',new Date().toUTCString());\nvar rows=skimmers.map(function(sk){\nvar c=calData[sk];\nif(!c)return '<tr><td style=\"padding:6px 10px\"><b>'+sk+'</b></td><td colspan=\"4\" style=\"color:#f80\">Not found in calibration data</td></tr>';\nvar skewColor=Math.abs(c.skew)<0.5?'#0f0':Math.abs(c.skew)<1.5?'#ff0':'#f00';\nvar rating=Math.abs(c.skew)<0.5?'Excellent':Math.abs(c.skew)<1.5?'Acceptable':'Needs adjustment';\nreturn '<tr><td style=\"padding:6px 10px;font-size:1.1em\"><b>'+sk+'</b></td>'\n+'<td style=\"padding:6px 10px;color:'+skewColor+';font-size:1.2em\">'+(c.skew>0?'+':'')+c.skew+' ppm</td>'\n+'<td style=\"padding:6px 10px\">'+c.spots+' spots</td>'\n+'<td style=\"padding:6px 10px;font-family:monospace\">'+c.factor+'</td>'\n+'<td style=\"padding:6px 10px\">'+rating+'</td></tr>';\n}).join('');\nvar allRows=Object.keys(calData).sort().map(function(call){\nvar c=calData[call];\nvar isMine=skimmers.indexOf(call)!==-1;\nvar bg=isMine?'background:#1a3a1a;':'';\nvar skewColor=Math.abs(c.skew)<0.5?'#0f0':Math.abs(c.skew)<1.5?'#ff0':'#f00';\nreturn '<tr style=\"'+bg+'\"><td style=\"padding:3px 8px'+(isMine?';font-weight:bold':'')+'\">'+call+'</td>'\n+'<td style=\"padding:3px 8px;color:'+skewColor+'\">'+(c.skew>0?'+':'')+c.skew+'</td>'\n+'<td style=\"padding:3px 8px\">'+c.spots+'</td>'\n+'<td style=\"padding:3px 8px;font-family:monospace;font-size:0.85em\">'+c.factor+'</td></tr>';\n}).join('');\nmsg.payload='<h3 style=\"color:#4af\">Your Skimmers</h3>'\n+'<table style=\"width:100%;border-collapse:collapse;margin-bottom:20px\">'\n+'<tr style=\"background:#333;color:#ccc\"><th style=\"text-align:left;padding:6px 10px\">Callsign</th>'\n+'<th>Freq Skew</th><th>Spots</th><th>Correction Factor</th><th>Rating</th></tr>'\n+rows+'</table>'\n+'<p style=\"color:#888;font-size:0.85em\">Data from sm7iun.se \u00b7 Fetched: '+flow.get('cal_fetched')+'</p>'\n+'<details><summary style=\"cursor:pointer;color:#4af\">All Active Skimmers ('+Object.keys(calData).length+')</summary>'\n+'<table style=\"width:100%;border-collapse:collapse;font-size:0.85em;margin-top:8px\">'\n+'<tr style=\"background:#333;color:#ccc\"><th style=\"text-align:left;padding:3px 8px\">Callsign</th>'\n+'<th>Skew (ppm)</th><th>Spots</th><th>Correction</th></tr>'\n+allRows+'</table></details>';\nreturn msg;",
+        "func": "var csv=msg.payload;\nvar lines=csv.split('\\n').filter(function(l){return l&&!l.startsWith('#')&&!l.startsWith('Callsign');});\nvar sk1=flow.get('sk1_call')||'VU2CPL-88';\nvar sk2=flow.get('sk2_call')||'VU2OY';\nvar sk3=flow.get('sk3_call')||'VU24DX-1';\nvar skimmers=[sk1,sk2,sk3];\nvar calData={};\nlines.forEach(function(line){\nvar parts=line.split(',');\nif(parts.length<4)return;\nvar call=parts[0].trim();\nvar skew=parseFloat(parts[1]);\nvar spots=parseInt(parts[2]);\nvar factor=parseFloat(parts[3]);\ncalData[call]={skew:skew,spots:spots,factor:factor};\n});\nflow.set('cal_data',calData);\nflow.set('cal_fetched',new Date().toUTCString());\nvar rows=skimmers.map(function(sk){\nvar c=calData[sk];\nif(!c)return '<tr><td style=\"padding:6px 10px\"><b>'+sk+'</b></td><td colspan=\"4\" style=\"color:#f80\">Not found in calibration data</td></tr>';\nvar skewColor=Math.abs(c.skew)<0.5?'#0f0':Math.abs(c.skew)<1.5?'#ff0':'#f00';\nvar rating=Math.abs(c.skew)<0.5?'Excellent':Math.abs(c.skew)<1.5?'Acceptable':'Needs adjustment';\nreturn '<tr><td style=\"padding:6px 10px;font-size:1.1em\"><b>'+sk+'</b></td>'\n+'<td style=\"padding:6px 10px;color:'+skewColor+';font-size:1.2em\">'+(c.skew>0?'+':'')+c.skew+' ppm</td>'\n+'<td style=\"padding:6px 10px\">'+c.spots+' spots</td>'\n+'<td style=\"padding:6px 10px;font-family:monospace\">'+c.factor+'</td>'\n+'<td style=\"padding:6px 10px\">'+rating+'</td></tr>';\n}).join('');\nvar allRows=Object.keys(calData).sort().map(function(call){\nvar c=calData[call];\nvar isMine=skimmers.indexOf(call)!==-1;\nvar bg=isMine?'background:#1a3a1a;':'';\nvar skewColor=Math.abs(c.skew)<0.5?'#0f0':Math.abs(c.skew)<1.5?'#ff0':'#f00';\nreturn '<tr style=\"'+bg+'\"><td style=\"padding:3px 8px'+(isMine?';font-weight:bold':'')+'\">'+call+'</td>'\n+'<td style=\"padding:3px 8px;color:'+skewColor+'\">'+(c.skew>0?'+':'')+c.skew+'</td>'\n+'<td style=\"padding:3px 8px\">'+c.spots+'</td>'\n+'<td style=\"padding:3px 8px;font-family:monospace;font-size:0.85em\">'+c.factor+'</td></tr>';\n}).join('');\nmsg.payload='<h3 style=\"color:#4af\">Your Skimmers</h3>'\n+'<table style=\"width:100%;border-collapse:collapse;margin-bottom:20px\">'\n+'<tr style=\"background:#333;color:#ccc\"><th style=\"text-align:left;padding:6px 10px\">Callsign</th>'\n+'<th>Freq Skew</th><th>Spots</th><th>Correction Factor</th><th>Rating</th></tr>'\n+rows+'</table>'\n+'<p style=\"color:#888;font-size:0.85em\">Data from sm7iun.se \u00b7 Fetched: '+flow.get('cal_fetched')+'</p>'\n+'<details><summary style=\"cursor:pointer;color:#4af\">All Active Skimmers ('+Object.keys(calData).length+')</summary>'\n+'<table style=\"width:100%;border-collapse:collapse;font-size:0.85em;margin-top:8px\">'\n+'<tr style=\"background:#333;color:#ccc\"><th style=\"text-align:left;padding:3px 8px\">Callsign</th>'\n+'<th>Skew (ppm)</th><th>Spots</th><th>Correction</th></tr>'\n+allRows+'</table></details>';\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
@@ -3882,7 +3940,7 @@
         "type": "function",
         "z": "f9a0e3ad0e019052",
         "name": "Watchdog Check",
-        "func": "var spots=flow.get('spots_all')||[];\nvar now=Date.now();\nvar sk1=flow.get('sk1_call')||'VU2CPL-88';\nvar sk2=flow.get('sk2_call')||'VU2OY';\nvar skimmers=[sk1,sk2];\nvar stats=flow.get('skimmer_stats')||{};\nvar alerts=[];\nskimmers.forEach(function(sk){\nvar skSpots=spots.filter(function(s){return s.skimmer===sk;});\nif(skSpots.length===0){alerts.push(sk+' no spots received yet');\nif(!stats[sk])stats[sk]={};\nstats[sk].status='offline';\n}else{var age=now-skSpots[0].ts;\nif(age>300000){alerts.push(sk+' last spot '+Math.round(age/60000)+' min ago');\nif(stats[sk])stats[sk].status='offline';}}\n});\nflow.set('skimmer_stats',stats);\nif(alerts.length>0){msg.payload=alerts.join('\\n');return msg;}\nreturn null;",
+        "func": "var now=Date.now();\nvar sk1=flow.get('sk1_call')||'VU2CPL-88';\nvar sk2=flow.get('sk2_call')||'VU2OY';\nvar sk3=flow.get('sk3_call')||'VU24DX-1';\nvar skimmers=[sk1,sk2,sk3];\nvar stats=flow.get('skimmer_stats')||{};\nvar alerts=[];\n// lastTs is stamped per spot by Update Spot Counters (2026-10-07). It used to scan\n// spots_all, which three busy feeds now cycle in about half an hour.\nskimmers.forEach(function(sk){\nif(!stats[sk])stats[sk]={};\nvar last=stats[sk].lastTs;\nif(!last){alerts.push(sk+' no spots received yet');stats[sk].status='offline';}\nelse{var age=now-last;\nif(age>300000){alerts.push(sk+' last spot '+Math.round(age/60000)+' min ago');stats[sk].status='offline';}}\n});\nflow.set('skimmer_stats',stats);\nif(alerts.length>0){msg.payload=alerts.join('\\n');return msg;}\nreturn null;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
@@ -3920,7 +3978,7 @@
         "type": "function",
         "z": "f9a0e3ad0e019052",
         "name": "RBN State Aggregator",
-        "func": "var st = flow.get('rbn_dash', 'file') || {};\nvar stats = flow.get('skimmer_stats') || {};\nvar calData = flow.get('cal_data') || {};\nvar sk1 = flow.get('sk1_call') || 'VU2CPL-88';\nvar sk2 = flow.get('sk2_call') || 'VU2OY';\n\n// Skimmer stats\nst.skimmers = {};\n[sk1, sk2].forEach(function(sk){\n    var s = stats[sk] || {};\n    var c = calData[sk];\n    st.skimmers[sk] = {\n        status:    s.status || 'offline',\n        lastFreq:  s.lastFreq || null,\n        lastSpot:  s.lastSpot || null,\n        h1_total:  s.h1_total  || 0,\n        h1_cw:     s.h1_cw    || 0,\n        h1_ft8:    s.h1_ft8   || 0,\n        h12_total: s.h12_total || 0,\n        h12_cw:    s.h12_cw   || 0,\n        h12_ft8:   s.h12_ft8  || 0,\n        h24_total: s.h24_total || 0,\n        h24_cw:    s.h24_cw   || 0,\n        h24_ft8:   s.h24_ft8  || 0,\n        skew:      c ? c.skew  : null,\n        skewSpots: c ? c.spots : null,\n        factor:    c ? c.factor: null\n    };\n});\nst.calFetched = flow.get('cal_fetched') || null;\nst.sk1 = sk1;\nst.sk2 = sk2;\n\nflow.set('rbn_dash', st, 'file');\nmsg.payload = Object.assign({}, st);\nreturn msg;",
+        "func": "var st = flow.get('rbn_dash', 'file') || {};\nvar stats = flow.get('skimmer_stats') || {};\nvar calData = flow.get('cal_data') || {};\nvar sk1 = flow.get('sk1_call') || 'VU2CPL-88';\nvar sk2 = flow.get('sk2_call') || 'VU2OY';\nvar sk3 = flow.get('sk3_call') || 'VU24DX-1';\n\n// Skimmer stats\nst.skimmers = {};\n[sk1, sk2, sk3].forEach(function(sk){\n    var s = stats[sk] || {};\n    var c = calData[sk];\n    st.skimmers[sk] = {\n        status:    s.status || 'offline',\n        lastFreq:  s.lastFreq || null,\n        lastSpot:  s.lastSpot || null,\n        h1_total:  s.h1_total  || 0,\n        h1_cw:     s.h1_cw    || 0,\n        h1_ft8:    s.h1_ft8   || 0,\n        h12_total: s.h12_total || 0,\n        h12_cw:    s.h12_cw   || 0,\n        h12_ft8:   s.h12_ft8  || 0,\n        h24_total: s.h24_total || 0,\n        h24_cw:    s.h24_cw   || 0,\n        h24_ft8:   s.h24_ft8  || 0,\n        skew:      c ? c.skew  : null,\n        skewSpots: c ? c.spots : null,\n        factor:    c ? c.factor: null\n    };\n});\nst.calFetched = flow.get('cal_fetched') || null;\nst.sk1 = sk1;\nst.sk2 = sk2;\nst.sk3 = sk3;\n\nflow.set('rbn_dash', st, 'file');\nmsg.payload = Object.assign({}, st);\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
@@ -3942,8 +4000,8 @@
         "name": "RBN Skimmer Panel",
         "order": 1,
         "width": 18,
-        "height": 8,
-        "format": "<style>\n.rb{background:#0d1117;color:#c9d1d9;font-family:monospace;font-size:12px;border-radius:6px;padding:10px;}\n.rb-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;border-bottom:1px solid #21262d;padding-bottom:6px;}\n.rb-title{color:#58a6ff;font-weight:bold;font-size:14px;}\n.rb-sec{color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;margin-top:8px;}\n.rb-grid2{display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:6px;}\n.rb-card{background:#161b22;border:1px solid #21262d;border-radius:4px;padding:8px 10px;}\n.rb-card.online{border-left:3px solid #3fb950;}\n.rb-card.offline{border-left:3px solid #f85149;}\n.rb-name{font-size:13px;font-weight:bold;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}\n.rb-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;}\n.rb-dot.online{background:#3fb950;}\n.rb-dot.offline{background:#f85149;}\n.rb-counts{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:6px;}\n.rb-cnt{background:#0d1117;border-radius:3px;padding:4px 5px;text-align:center;}\n.rb-cnt-lbl{font-size:9px;color:#8b949e;}\n.rb-cnt-val{font-size:12px;font-weight:bold;margin-top:1px;}\n.rb-cnt-sub{display:flex;gap:4px;justify-content:center;margin-top:2px;}\n.rb-cw{font-size:9px;color:#58a6ff;}\n.rb-ft8{font-size:9px;color:#e3b341;}\n.rb-cal{margin-top:6px;padding-top:6px;border-top:1px solid #21262d;display:flex;align-items:center;justify-content:space-between;}\n.rb-skew{font-size:16px;font-weight:bold;}\n.rb-meta{font-size:9px;color:#8b949e;margin-top:2px;}\n</style>\n<div class=\"rb\">\n  <div class=\"rb-hdr\">\n    <span class=\"rb-title\">&#128225; RBN Skimmer Monitor</span>\n    <span id=\"rb-cal-ts\" style=\"font-size:9px;color:#8b949e;\"></span>\n  </div>\n  <div class=\"rb-sec\">Skimmer Status</div>\n  <div class=\"rb-grid2\" id=\"rb-cards\"></div>\n</div>\n<script>\n(function(){\n  function skewColor(s){ return Math.abs(s)<0.5?'#3fb950':Math.abs(s)<1.5?'#e3b341':'#f85149'; }\n  function skewLabel(s){ return Math.abs(s)<0.5?'Excellent':Math.abs(s)<1.5?'Acceptable':'Needs adj.'; }\n\n  scope.$watch('msg', function(msg){\n    if(!msg||!msg.payload) return;\n    var d=msg.payload;\n    if(!d.skimmers) return;\n\n    if(d.calFetched){\n      var ts=document.getElementById('rb-cal-ts');\n      if(ts) ts.textContent='Cal: '+d.calFetched;\n    }\n\n    var html='';\n    [d.sk1, d.sk2].forEach(function(sk){\n      if(!sk) return;\n      var s=d.skimmers[sk];\n      if(!s) return;\n      var online=s.status==='online';\n      var skew=s.skew;\n      var sc=skew!==null?skewColor(skew):'#8b949e';\n\n      html+='<div class=\"rb-card '+(online?'online':'offline')+'\">'\n          +'<div class=\"rb-name\">'\n          +'<span><span class=\"rb-dot '+(online?'online':'offline')+'\"></span>'+sk+'</span>'\n          +'<span style=\"font-size:10px;color:#8b949e;\">'+(s.lastFreq?s.lastFreq.toFixed(1)+' kHz':'')+' '+(s.lastSpot||'')+'</span>'\n          +'</div>'\n          +'<div class=\"rb-counts\">'\n          +'<div class=\"rb-cnt\"><div class=\"rb-cnt-lbl\">1h</div><div class=\"rb-cnt-val\">'+s.h1_total+'</div><div class=\"rb-cnt-sub\"><span class=\"rb-cw\">'+s.h1_cw+'CW</span><span class=\"rb-ft8\">'+s.h1_ft8+'FT8</span></div></div>'\n          +'<div class=\"rb-cnt\"><div class=\"rb-cnt-lbl\">12h</div><div class=\"rb-cnt-val\">'+s.h12_total+'</div><div class=\"rb-cnt-sub\"><span class=\"rb-cw\">'+s.h12_cw+'CW</span><span class=\"rb-ft8\">'+s.h12_ft8+'FT8</span></div></div>'\n          +'<div class=\"rb-cnt\"><div class=\"rb-cnt-lbl\">24h</div><div class=\"rb-cnt-val\">'+s.h24_total+'</div><div class=\"rb-cnt-sub\"><span class=\"rb-cw\">'+s.h24_cw+'CW</span><span class=\"rb-ft8\">'+s.h24_ft8+'FT8</span></div></div>'\n          +'</div>'\n          +'<div class=\"rb-cal\">'\n          +(skew!==null\n            ?'<div><div style=\"font-size:10px;color:#8b949e;\">Freq Skew</div><div class=\"rb-skew\" style=\"color:'+sc+';\">'+(skew>0?'+':'')+skew+' ppm</div><div class=\"rb-meta\">'+skewLabel(skew)+(s.skewSpots?' \u00b7 '+s.skewSpots+' spots':'')+'</div></div>'\n            +'<div style=\"text-align:right;\"><div style=\"font-size:10px;color:#8b949e;\">Correction</div><div style=\"font-family:monospace;font-size:11px;color:#58a6ff;\">'+s.factor+'</div></div>'\n            :'<div style=\"color:#8b949e;font-size:10px;\">Calibration data not yet loaded</div>'\n          )\n          +'</div>'\n          +'</div>';\n    });\n\n    var el=document.getElementById('rb-cards');\n    if(el) el.innerHTML=html;\n  });\n})();\n</script>",
+        "height": 12,
+        "format": "<style>\n.rb{background:#0d1117;color:#c9d1d9;font-family:monospace;font-size:12px;border-radius:6px;padding:10px;}\n.rb-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;border-bottom:1px solid #21262d;padding-bottom:6px;}\n.rb-title{color:#58a6ff;font-weight:bold;font-size:14px;}\n.rb-sec{color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;margin-top:8px;}\n.rb-grid2{display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:6px;}\n.rb-card{background:#161b22;border:1px solid #21262d;border-radius:4px;padding:8px 10px;}\n.rb-card.online{border-left:3px solid #3fb950;}\n.rb-card.offline{border-left:3px solid #f85149;}\n.rb-name{font-size:13px;font-weight:bold;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}\n.rb-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;}\n.rb-dot.online{background:#3fb950;}\n.rb-dot.offline{background:#f85149;}\n.rb-counts{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:6px;}\n.rb-cnt{background:#0d1117;border-radius:3px;padding:4px 5px;text-align:center;}\n.rb-cnt-lbl{font-size:9px;color:#8b949e;}\n.rb-cnt-val{font-size:12px;font-weight:bold;margin-top:1px;}\n.rb-cnt-sub{display:flex;gap:4px;justify-content:center;margin-top:2px;}\n.rb-cw{font-size:9px;color:#58a6ff;}\n.rb-ft8{font-size:9px;color:#e3b341;}\n.rb-cal{margin-top:6px;padding-top:6px;border-top:1px solid #21262d;display:flex;align-items:center;justify-content:space-between;}\n.rb-skew{font-size:16px;font-weight:bold;}\n.rb-meta{font-size:9px;color:#8b949e;margin-top:2px;}\n</style>\n<div class=\"rb\">\n  <div class=\"rb-hdr\">\n    <span class=\"rb-title\">&#128225; RBN Skimmer Monitor</span>\n    <span id=\"rb-cal-ts\" style=\"font-size:9px;color:#8b949e;\"></span>\n  </div>\n  <div class=\"rb-sec\">Skimmer Status</div>\n  <div class=\"rb-grid2\" id=\"rb-cards\"></div>\n</div>\n<script>\n(function(){\n  function skewColor(s){ return Math.abs(s)<0.5?'#3fb950':Math.abs(s)<1.5?'#e3b341':'#f85149'; }\n  function skewLabel(s){ return Math.abs(s)<0.5?'Excellent':Math.abs(s)<1.5?'Acceptable':'Needs adj.'; }\n\n  scope.$watch('msg', function(msg){\n    if(!msg||!msg.payload) return;\n    var d=msg.payload;\n    if(!d.skimmers) return;\n\n    if(d.calFetched){\n      var ts=document.getElementById('rb-cal-ts');\n      if(ts) ts.textContent='Cal: '+d.calFetched;\n    }\n\n    var html='';\n    [d.sk1, d.sk2, d.sk3].forEach(function(sk){\n      if(!sk) return;\n      var s=d.skimmers[sk];\n      if(!s) return;\n      var online=s.status==='online';\n      var skew=s.skew;\n      var sc=skew!==null?skewColor(skew):'#8b949e';\n\n      html+='<div class=\"rb-card '+(online?'online':'offline')+'\">'\n          +'<div class=\"rb-name\">'\n          +'<span><span class=\"rb-dot '+(online?'online':'offline')+'\"></span>'+sk+'</span>'\n          +'<span style=\"font-size:10px;color:#8b949e;\">'+(s.lastFreq?s.lastFreq.toFixed(1)+' kHz':'')+' '+(s.lastSpot||'')+'</span>'\n          +'</div>'\n          +'<div class=\"rb-counts\">'\n          +'<div class=\"rb-cnt\"><div class=\"rb-cnt-lbl\">1h</div><div class=\"rb-cnt-val\">'+s.h1_total+'</div><div class=\"rb-cnt-sub\"><span class=\"rb-cw\">'+s.h1_cw+'CW</span><span class=\"rb-ft8\">'+s.h1_ft8+'FT8</span></div></div>'\n          +'<div class=\"rb-cnt\"><div class=\"rb-cnt-lbl\">12h</div><div class=\"rb-cnt-val\">'+s.h12_total+'</div><div class=\"rb-cnt-sub\"><span class=\"rb-cw\">'+s.h12_cw+'CW</span><span class=\"rb-ft8\">'+s.h12_ft8+'FT8</span></div></div>'\n          +'<div class=\"rb-cnt\"><div class=\"rb-cnt-lbl\">24h</div><div class=\"rb-cnt-val\">'+s.h24_total+'</div><div class=\"rb-cnt-sub\"><span class=\"rb-cw\">'+s.h24_cw+'CW</span><span class=\"rb-ft8\">'+s.h24_ft8+'FT8</span></div></div>'\n          +'</div>'\n          +'<div class=\"rb-cal\">'\n          +(skew!==null\n            ?'<div><div style=\"font-size:10px;color:#8b949e;\">Freq Skew</div><div class=\"rb-skew\" style=\"color:'+sc+';\">'+(skew>0?'+':'')+skew+' ppm</div><div class=\"rb-meta\">'+skewLabel(skew)+(s.skewSpots?' \u00b7 '+s.skewSpots+' spots':'')+'</div></div>'\n            +'<div style=\"text-align:right;\"><div style=\"font-size:10px;color:#8b949e;\">Correction</div><div style=\"font-family:monospace;font-size:11px;color:#58a6ff;\">'+s.factor+'</div></div>'\n            :'<div style=\"color:#8b949e;font-size:10px;\">Calibration data not yet loaded</div>'\n          )\n          +'</div>'\n          +'</div>';\n    });\n\n    var el=document.getElementById('rb-cards');\n    if(el) el.innerHTML=html;\n  });\n})();\n</script>",
         "storeOutMessages": true,
         "fwdInMessages": false,
         "resendOnRefresh": true,
@@ -3956,78 +4014,11 @@
         ]
     },
     {
-        "id": "7fb3b051c27b98a3",
-        "type": "switch",
-        "z": "f9a0e3ad0e019052",
-        "name": "Route CW / FT8",
-        "property": "spot.mode",
-        "propertyType": "msg",
-        "rules": [
-            {
-                "t": "eq",
-                "v": "CW",
-                "vt": "str"
-            },
-            {
-                "t": "cont",
-                "v": "FT",
-                "vt": "str"
-            }
-        ],
-        "checkall": "false",
-        "repair": false,
-        "outputs": 2,
-        "x": 640,
-        "y": 100,
-        "wires": [
-            [
-                "fcb5f467b3e79131"
-            ],
-            [
-                "8e8ae5a54ee494aa"
-            ]
-        ]
-    },
-    {
-        "id": "fcb5f467b3e79131",
-        "type": "function",
-        "z": "f9a0e3ad0e019052",
-        "name": "Format CW Spot Row",
-        "func": "var s=msg.spot;\nvar spots=flow.get('spots_all')||[];\nvar cw=spots.filter(function(x){return x.mode==='CW';}).slice(0,30);\nvar rows=cw.map(function(sp){var snrColor=sp.snr>20?'#00cc00':sp.snr>10?'#cccc00':'#cc6600';\nreturn '<tr><td>'+sp.time+'Z</td><td><b>'+sp.spotted+'</b></td><td>'+sp.freq.toFixed(1)+'</td>'\n+'<td style=\"color:'+snrColor+'\">'+sp.snr+' dB</td><td>'+(sp.wpm||'-')+' wpm</td>'\n+'<td style=\"color:#aaa;font-size:0.85em\">'+sp.spotter+'</td></tr>';}).join('');\nmsg.payload='<table style=\"width:100%;border-collapse:collapse;font-size:0.9em\">'\n+'<tr style=\"background:#2a2a2a;color:#fff\"><th style=\"padding:3px 6px\">Time</th><th>Call</th>'\n+'<th>Freq kHz</th><th>SNR</th><th>Speed</th><th>Skimmer</th></tr>'\n+rows+'</table>';\nreturn msg;",
-        "outputs": 1,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 760,
-        "y": 40,
-        "wires": [
-            []
-        ]
-    },
-    {
-        "id": "8e8ae5a54ee494aa",
-        "type": "function",
-        "z": "f9a0e3ad0e019052",
-        "name": "Format FT8 Spot Row",
-        "func": "var spots=flow.get('spots_all')||[];\nvar ft8=spots.filter(function(x){return x.mode.indexOf('FT')!==-1;}).slice(0,30);\nvar rows=ft8.map(function(sp){var snrColor=sp.snr>15?'#00cc00':sp.snr>5?'#cccc00':'#cc6600';\nreturn '<tr><td>'+sp.time+'Z</td><td><b>'+sp.spotted+'</b></td><td>'+sp.freq.toFixed(1)+'</td>'\n+'<td style=\"color:'+snrColor+'\">'+sp.snr+' dB</td><td>'+sp.mode+'</td>'\n+'<td style=\"color:#aaa;font-size:0.85em\">'+sp.spotter+'</td></tr>';}).join('');\nmsg.payload='<table style=\"width:100%;border-collapse:collapse;font-size:0.9em\">'\n+'<tr style=\"background:#2a2a2a;color:#fff\"><th style=\"padding:3px 6px\">Time</th><th>Call</th>'\n+'<th>Freq kHz</th><th>SNR</th><th>Mode</th><th>Skimmer</th></tr>'\n+rows+'</table>';\nreturn msg;",
-        "outputs": 1,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 740,
-        "y": 160,
-        "wires": [
-            []
-        ]
-    },
-    {
         "id": "4335e42a92abe505",
         "type": "function",
         "z": "f9a0e3ad0e019052",
         "name": "Update Spot Counters",
-        "func": "var now=Date.now();\nvar spots=flow.get('spots_all')||[];\nvar sk1=flow.get('sk1_call')||'VU2CPL-88';\nvar sk2=flow.get('sk2_call')||'VU2OY';\nvar skimmers=[sk1,sk2];\nvar stats=flow.get('skimmer_stats')||{};\n// Per-skimmer hourly buckets, file scope so 12H/24H survive restarts.\n// Old global-format entries ({cw,ft8} numbers at top level) are dropped on sight.\nvar buckets=flow.get('hourly_buckets','file')||{};\nObject.keys(buckets).forEach(function(k){if(typeof buckets[k].cw==='number')delete buckets[k];});\nvar bucketKey=new Date(now).toISOString().slice(0,13);\nif(!buckets[bucketKey])buckets[bucketKey]={};\nif(!buckets[bucketKey][msg.spot.skimmer])buckets[bucketKey][msg.spot.skimmer]={total:0,cw:0,ft8:0};\nvar b=buckets[bucketKey][msg.spot.skimmer];\nb.total++;\nif(msg.spot.mode==='CW')b.cw++;\nelse if(msg.spot.mode.indexOf('FT')!==-1)b.ft8++;\nvar keys=Object.keys(buckets).sort();\nif(keys.length>240)keys.slice(0,keys.length-240).forEach(function(k){delete buckets[k];});\nflow.set('hourly_buckets',buckets,'file');\nskimmers.forEach(function(sk){\nvar skSpots=spots.filter(function(s){return s.skimmer===sk;});\nif(!stats[sk])stats[sk]={};\nvar recent=skSpots.filter(function(s){return s.ts>=now-3600000;});\nstats[sk].h1_total=recent.length;\nstats[sk].h1_cw=recent.filter(function(s){return s.mode==='CW';}).length;\nstats[sk].h1_ft8=recent.filter(function(s){return s.mode.indexOf('FT')!==-1;}).length;\n// 12H/24H from the buckets \u2014 the 10000-spot ring only holds a few hours\n[['h12',43200000],['h24',86400000]].forEach(function(w){\nvar t=0,c=0,f=0;\nObject.keys(buckets).forEach(function(k){\nif(now-Date.parse(k+':00:00Z')<=w[1]){var e=buckets[k][sk];if(e){t+=e.total;c+=e.cw;f+=e.ft8;}}\n});\nstats[sk][w[0]+'_total']=t;stats[sk][w[0]+'_cw']=c;stats[sk][w[0]+'_ft8']=f;\n});\nif(skSpots.length>0){stats[sk].lastSpot=new Date(skSpots[0].ts).toISOString().slice(11,19)+'Z';\nstats[sk].lastFreq=skSpots[0].freq;stats[sk].status='online';}\n});\nflow.set('skimmer_stats',stats);\nreturn msg;",
+        "func": "var now=Date.now();\nvar sk1=flow.get('sk1_call')||'VU2CPL-88';\nvar sk2=flow.get('sk2_call')||'VU2OY';\nvar sk3=flow.get('sk3_call')||'VU24DX-1';\nvar skimmers=[sk1,sk2,sk3];\nvar stats=flow.get('skimmer_stats')||{};\nvar sp=msg.spot;\nvar isCw=sp.mode==='CW', isFt=sp.mode.indexOf('FT')!==-1;\n// Per-skimmer hourly buckets, file scope so 12H/24H survive restarts.\n// Old global-format entries ({cw,ft8} numbers at top level) are dropped on sight.\nvar buckets=flow.get('hourly_buckets','file')||{};\nObject.keys(buckets).forEach(function(k){if(typeof buckets[k].cw==='number')delete buckets[k];});\nvar bucketKey=new Date(now).toISOString().slice(0,13);\nif(!buckets[bucketKey])buckets[bucketKey]={};\nif(!buckets[bucketKey][sp.skimmer])buckets[bucketKey][sp.skimmer]={total:0,cw:0,ft8:0};\nvar b=buckets[bucketKey][sp.skimmer];\nb.total++;\nif(isCw)b.cw++;\nelse if(isFt)b.ft8++;\nvar keys=Object.keys(buckets).sort();\nif(keys.length>240)keys.slice(0,keys.length-240).forEach(function(k){delete buckets[k];});\nflow.set('hourly_buckets',buckets,'file');\n// Per-minute buckets for the 1H window (memory scope, 2026-10-07). The three feeds\n// together run well past 10000 spots/h, so counting the spots_all ring undercounted\n// (and cost three full ring scans per spot).\nvar mins=flow.get('minute_buckets')||{};\nvar minKey=Math.floor(now/60000);\nif(!mins[minKey])mins[minKey]={};\nif(!mins[minKey][sp.skimmer])mins[minKey][sp.skimmer]={total:0,cw:0,ft8:0};\nvar m=mins[minKey][sp.skimmer];\nm.total++;\nif(isCw)m.cw++;\nelse if(isFt)m.ft8++;\nObject.keys(mins).forEach(function(k){if(+k<=minKey-60)delete mins[k];});\nflow.set('minute_buckets',mins);\nskimmers.forEach(function(sk){\nif(!stats[sk])stats[sk]={};\nvar t=0,c=0,f=0;\nObject.keys(mins).forEach(function(k){var e=mins[k][sk];if(e){t+=e.total;c+=e.cw;f+=e.ft8;}});\nstats[sk].h1_total=t;stats[sk].h1_cw=c;stats[sk].h1_ft8=f;\n// 12H/24H from the hourly buckets\n[['h12',43200000],['h24',86400000]].forEach(function(w){\nvar t=0,c=0,f=0;\nObject.keys(buckets).forEach(function(k){\nif(now-Date.parse(k+':00:00Z')<=w[1]){var e=buckets[k][sk];if(e){t+=e.total;c+=e.cw;f+=e.ft8;}}\n});\nstats[sk][w[0]+'_total']=t;stats[sk][w[0]+'_cw']=c;stats[sk][w[0]+'_ft8']=f;\n});\n});\n// Last spot comes from this spot, not a ring scan (the Watchdog reads lastTs).\nif(skimmers.indexOf(sp.skimmer)!==-1){\nvar st=stats[sp.skimmer];\nst.lastTs=sp.ts;\nst.lastSpot=new Date(sp.ts).toISOString().slice(11,19)+'Z';\nst.lastFreq=sp.freq;\nst.status='online';\n}\nflow.set('skimmer_stats',stats);\nreturn msg;",
         "outputs": 1,
         "timeout": "",
         "noerr": 0,
@@ -4070,7 +4061,7 @@
         "type": "function",
         "z": "f9a0e3ad0e019052",
         "name": "Build RBN state for Vue",
-        "func": "// flow.rbn_dash is file-backed by the existing RBN State Aggregator\nvar s = flow.get('rbn_dash', 'file') || flow.get('rbn_dash') || {};\nreturn {\n    topic: 'rbn',\n    payload: {\n        skimmers:   s.skimmers   || {},\n        calFetched: s.calFetched || null,\n        sk1:        s.sk1, sk2: s.sk2\n    }\n};\n",
+        "func": "// flow.rbn_dash is file-backed by the existing RBN State Aggregator\nvar s = flow.get('rbn_dash', 'file') || flow.get('rbn_dash') || {};\nreturn {\n    topic: 'rbn',\n    payload: {\n        skimmers:   s.skimmers   || {},\n        calFetched: s.calFetched || null,\n        sk1:        s.sk1, sk2: s.sk2, sk3: s.sk3\n    }\n};\n",
         "outputs": 1,
         "x": 490,
         "y": 720,
@@ -4123,7 +4114,7 @@
         "type": "function",
         "z": "f9a0e3ad0e019052",
         "name": "RBN state \u2192 MQTT",
-        "func": "// Publishes retained RBN skimmer state for Home Assistant (shack/rbn/state).\n// Read-only tap of flow.rbn_dash (file scope) on a 10 s tick; nested arrays\n// trimmed to their last 5 entries to keep the retained payload small.\nvar s = flow.get('rbn_dash', 'file') || flow.get('rbn_dash') || {};\nfunction trim(v) {\n    if (Array.isArray(v)) return v.slice(-5);\n    if (v && typeof v === 'object') {\n        var o = {};\n        Object.keys(v).forEach(function (k) { o[k] = trim(v[k]); });\n        return o;\n    }\n    return v;\n}\nmsg.payload = { skimmers: trim(s.skimmers || {}), sk1: s.sk1 || null, sk2: s.sk2 || null, ts: Date.now() };\nreturn msg;\n",
+        "func": "// Publishes retained RBN skimmer state for Home Assistant (shack/rbn/state).\n// Read-only tap of flow.rbn_dash (file scope) on a 10 s tick; nested arrays\n// trimmed to their last 5 entries to keep the retained payload small.\nvar s = flow.get('rbn_dash', 'file') || flow.get('rbn_dash') || {};\nfunction trim(v) {\n    if (Array.isArray(v)) return v.slice(-5);\n    if (v && typeof v === 'object') {\n        var o = {};\n        Object.keys(v).forEach(function (k) { o[k] = trim(v[k]); });\n        return o;\n    }\n    return v;\n}\nmsg.payload = { skimmers: trim(s.skimmers || {}), sk1: s.sk1 || null, sk2: s.sk2 || null, sk3: s.sk3 || null, ts: Date.now() };\nreturn msg;\n",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
