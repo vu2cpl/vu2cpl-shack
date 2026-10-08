@@ -8,6 +8,39 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-10-09
+
+### RustDesk: two faults behind "can't connect to .170 / .109"
+
+- **Leftover public-server login (Mac Mini).** Logging in with Google/GitHub
+  while on the public server (2026-10-08) left `access_token` in
+  `RustDesk_local.toml` after switching back. With a token set, RustDesk
+  1.5.0 waits for an encrypted TCP key exchange from the ID server. The free
+  `hbbs` 1.1.16 never sends one, so every connection the Mac started through
+  the Oracle server failed after ~18 s with `Failed to secure tcp: deadline
+  has elapsed`. Incoming connections were unaffected. Fixed by Account →
+  Log out. Restarting `hbbs` (tried first) made no difference.
+  `rd-mac-switch.sh oracle` now clears the login itself, and `status`
+  prints a `login:` line. The updated script is on both the Mac Mini and the
+  MacBook Air.
+- **`.170` key missing its trailing `=`** in both the user and LocalService
+  `RustDesk2.toml`. `hbbs` doesn't check the key at registration, so `.170`
+  showed online and LAN-direct connections from the Mac Mini worked. But
+  `hbbr` rejected every relay join (`Relay authentication failed - invalid
+  key`), so off-LAN clients such as the MacBook on mobile data timed out.
+  Fixed over SSH: service stopped, both files backed up as
+  `.bak-20261009-042603`, `=` added, service started. The MacBook then
+  connected.
+- **Verified:** Manoj switched both Macs to public and back to Oracle. Both
+  stuck, and the MacBook then reached the Mac Mini through the Oracle relay.
+  The token-clearing step is not yet tested live (no login during the test).
+- **Diagnosing next time:** `sudo docker logs --since 20m hbbr` on the
+  Oracle VM. `invalid key` from the shack's WAN IP means the TARGET host's
+  key is wrong. Details in `~/projects/oracle-rustdesk/HANDOVER.md`; the
+  server address and key stay out of this public repo.
+
+---
+
 ## 2026-10-07
 
 ### RBN Skimmer Monitor: VU24DX added as a third skimmer (`fa08ff2`)
