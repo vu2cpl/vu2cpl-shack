@@ -1,0 +1,17 @@
+[Unit]
+Description=restic nightly backup to the Synology
+Documentation=https://github.com/vu2cpl/vu2cpl-shack/tree/main/restic
+Wants=network-online.target
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/restic-backup
+# Exit 3 = finished with unreadable files: alerted by the script, not a unit failure.
+SuccessExitStatus=3
+# Stay out of the way of the real-time SDR work.
+Nice=19
+IOSchedulingClass=idle
+CPUWeight=10
+# The first backup of a large box takes hours over the NAS's SFTP.
+TimeoutStartSec=infinity

@@ -482,6 +482,7 @@ in Home Assistant:
 ├── power_spe_on.py                  SPE amp FTDI DTR/RTS power-on helper
 ├── enable_file_context.sh           One-shot Node-RED file context store enabler
 ├── rebuild_pi.sh                    Automated bare-metal rebuild script (paired with REBUILD_PI.md)
+├── restic/                          Nightly restic backups of the Linux boxes (.109, macmini-server) to the Synology
 │
 ├── as3935.service                   systemd unit for as3935_mqtt.py (installed but disabled; re-enable as fallback if ESP32 fails)
 │
@@ -512,6 +513,7 @@ in Home Assistant:
 | [DXCC.md](DXCC.md) / [PDF](DXCC_Tracker_README.pdf) | Operator | Working on the DXCC tab specifically |
 | [SHACK_CHANGELOG.md](SHACK_CHANGELOG.md) / [PDF](SHACK_CHANGELOG.pdf) | Future-self | "What did I change on day X" |
 | [HANDOVER.md](HANDOVER.md) | New session pickup | "What was I in the middle of" |
+| [restic/README.md](restic/README.md) | Operator | Backups of the Linux boxes: what is covered, where the password lives, how to restore |
 
 ---
 

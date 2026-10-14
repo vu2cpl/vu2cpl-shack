@@ -1,0 +1,37 @@
+# restic excludes shared by every shack box (one pattern per line, restic --exclude-file syntax).
+# Rule of thumb: leave out what can be re-downloaded or regenerated; keep config and data.
+
+# Pseudo/volatile file systems (also not crossed thanks to --one-file-system)
+/proc
+/sys
+/dev
+/run
+/tmp
+/var/tmp
+/lost+found
+/swap.img
+/swapfile
+
+# Package and app caches
+/var/cache
+/var/lib/apt/lists
+/var/lib/snapd/snaps
+/var/lib/snapd/cache
+/var/log/journal
+/root/.cache
+/home/*/.cache
+/home/*/.npm
+/home/*/.cargo/registry
+/home/*/.rustup
+/home/*/.local/share/Trash
+
+# Docker: images and container layers are re-pullable; volumes are kept.
+/var/lib/docker/overlay2
+/var/lib/docker/image
+/var/lib/docker/buildkit
+/var/lib/docker/tmp
+/var/lib/docker/containers/*/*-json.log
+/var/lib/containerd
+
+# UrBackup's own metadata (being retired in favour of restic)
+/var/urbackup

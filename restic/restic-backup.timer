@@ -1,0 +1,11 @@
+[Unit]
+Description=Nightly restic backup to the Synology
+
+[Timer]
+# Overridden per host by deploy.sh (drop-in from ONCALENDAR in hosts/<host>.conf)
+OnCalendar=*-*-* 01:30:00
+RandomizedDelaySec=5m
+Persistent=true
+
+[Install]
+WantedBy=timers.target
