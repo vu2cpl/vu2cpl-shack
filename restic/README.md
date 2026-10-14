@@ -63,21 +63,19 @@ files.
 - **Ports 9900/9901:** DSM's firewall is an allow-list that drops everything else, and changing it
   needs the DSM web UI. These two ports are already allowed because they belong to Surveillance
   Station, which isn't installed. If that ever changes, move the ports.
-- **Starting at boot** needs a one-time root step, because `admin` can't write to `/usr/local/etc/rc.d`.
-  DSM 5.2 runs every `S*.sh` there with `start` at boot, and the wrapper re-runs `rest-server.sh` as
-  `admin`. On the NAS as root:
+- **Starting at boot.** `admin` can't write to `/usr/local/etc/rc.d`, so Manoj installed the hook
+  as root on 2026-10-14: `/usr/local/etc/rc.d/S99restic-rest-server.sh` (root, 755). DSM 5.2 runs
+  every `S*.sh` there with `start` at boot. The hook calls `rest-server.sh`, which as root re-runs
+  itself as `admin` via `su -s /bin/sh -c … admin`. Options must come before the username for the
+  NAS's BusyBox 1.16 `su`. It hasn't been proven by a real NAS reboot yet.
 
-  ```bash
-  cp /volume1/homes/admin/rest-server/S99restic-rest-server.sh /usr/local/etc/rc.d/ && chmod 755 /usr/local/etc/rc.d/S99restic-rest-server.sh
-  ```
-
-  Until that's done, after any NAS reboot run as `admin`:
+  If it ever doesn't come up, start it by hand as `admin`:
 
   ```bash
   /volume1/homes/admin/rest-server/rest-server.sh start
   ```
 
-  The nightly runs fail and send a Telegram alert while it's down.
+  Nightly runs alert on Telegram while it's down.
 - **Logins.** The htpasswd files are bcrypt. Their plain passwords are on the Mac in
   `~/.config/vu2cpl-shack.env` as `RESTIC_REST_UBERSDR`, `RESTIC_REST_MACMINI_SERVER` and
   `RESTIC_REST_MAINT`. To add a box: `htpasswd -B` a new user into `users.htpasswd`, then run

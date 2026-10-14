@@ -21,7 +21,7 @@ DATA=/volume1/Backups/restic
 BIN=$DIR/rest-server
 
 if [ "$(id -u)" = 0 ]; then
-    exec su admin -s /bin/sh -c "$DIR/rest-server.sh $1"
+    exec su -s /bin/sh -c "$DIR/rest-server.sh $1" admin
 fi
 
 running() { [ -f "$DIR/$1.pid" ] && kill -0 "$(cat "$DIR/$1.pid")" 2>/dev/null; }
