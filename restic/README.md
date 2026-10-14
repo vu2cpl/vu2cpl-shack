@@ -4,8 +4,7 @@ This directory holds the nightly, encrypted, deduplicated backups of the shack's
 to a restic **rest-server** on the Synology NAS. The servers can only *add* to their backups.
 Deleting old snapshots happens in a weekly maintenance job on the Mac.
 
-Set up 2026-10-14 to replace UrBackup. The older backup jobs are being retired once restic has a few
-good nights behind it.
+Set up 2026-10-14 to replace UrBackup, which was uninstalled the same day.
 
 | Box | Repository on the NAS | Nightly (IST) | What is in it |
 |---|---|---|---|
@@ -13,7 +12,7 @@ good nights behind it.
 | macmini-server | `/volume1/Backups/restic/macmini-server` | 03:00 | whole root, `/boot`, `/boot/efi`, Immich library (`/mnt/immich`); ALPA-replica DB dump |
 | Mac (maintenance only) | — | Sun 10:30 | `forget --prune` + a rotating `check` of every repository |
 
-The Mac's own files aren't backed up here; it uses Time Machine.
+The Macs (Mac Mini and MacBook) are deliberately not in restic: they use Time Machine (Manoj, 2026-10-14).
 
 ## How it fits together
 
