@@ -2,17 +2,19 @@
 # restic-backup — nightly encrypted, deduplicated backup of a shack Linux box to the Synology.
 #
 # Installed as /usr/local/bin/restic-backup by restic/deploy.sh and run as root by
-# restic-backup.timer. Per-host settings live in /etc/restic/backup.conf (from restic/hosts/<host>.conf);
-# the repository password is /etc/restic/password (mode 600, generated on first deploy, never in git —
-# a copy must also be kept off the box, or the backups are unreadable once the box is gone).
+# restic-backup.timer. Per-host settings live in /etc/restic/backup.conf (from restic/hosts/<host>.conf).
+# Secrets, all root mode 600 and never in git:
+#   /etc/restic/password    repository encryption password (a copy must also be kept off the box, or the
+#                           backups are unreadable once the box is gone)
+#   /etc/restic/repository  rest:https://<host>:<pw>@192.168.1.101:9900/<host>/ — the NAS rest-server's
+#                           APPEND-ONLY endpoint: this box can add snapshots but never delete or rewrite
+#                           anything, so forget/prune/check run weekly from the Mac (restic-maint.sh).
 #
 # Each run:
 #   1. dumps the MariaDB containers listed in DB_DUMPS (their live data dirs are excluded — a file copy
 #      of a running database is not a usable backup), checks the Immich nightly dump is fresh;
 #   2. restic backup of BACKUP_PATHS (one file system per path, so /proc, /snap etc. are never crossed);
-#   3. forget by the KEEP_* policy, with a prune on PRUNE_DOW;
-#   4. on CHECK_DOW, restic check reading 1/20 of the pack data, rotating so every 20 weeks reads it all;
-#   5. retained MQTT status on shack/backup/<host>, Telegram only on failure/warning and on recovery.
+#   3. retained MQTT status on shack/backup/<host>, Telegram only on failure/warning and on recovery.
 #
 #   restic-backup            normal nightly run
 #   restic-backup --status   print the last run's status and the latest snapshots, change nothing
@@ -30,14 +32,10 @@ LOG_TAG=restic-backup
 
 # Defaults; backup.conf overrides.
 HOST_LABEL=$(hostname)
-RESTIC_REPOSITORY=""
 BACKUP_PATHS="/"
 EXCLUDE_FILES="/etc/restic/exclude-common.txt"
 DB_DUMPS=""
 IMMICH_DUMP_DIR=""
-KEEP_DAILY=7 KEEP_WEEKLY=5 KEEP_MONTHLY=12
-PRUNE_DOW=7          # ISO weekday (1=Mon .. 7=Sun) to prune on
-CHECK_DOW=7          # ISO weekday to run the partial data check on
 GOMAXPROCS=2
 ENV_FILE=/home/manoj/.config/vu2cpl-shack.env
 MQTT_HOST=192.168.1.169
@@ -47,10 +45,11 @@ MQTT_PORT=1883
 # shellcheck source=/dev/null
 . "$CONF"
 
-export RESTIC_REPOSITORY GOMAXPROCS
+export GOMAXPROCS
+export RESTIC_REPOSITORY_FILE=/etc/restic/repository
 export RESTIC_PASSWORD_FILE=/etc/restic/password
+export RESTIC_CACERT=/etc/restic/nas.crt      # the NAS rest-server's self-signed cert
 export RESTIC_CACHE_DIR=/var/cache/restic
-export RCLONE_CONFIG=/etc/restic/rclone.conf   # remote "nas" (see rclone.conf)
 SHORT=$(hostname -s)
 TOPIC="shack/backup/${SHORT}"
 
@@ -122,7 +121,7 @@ if [ -n "$IMMICH_DUMP_DIR" ]; then
 fi
 
 # ---- 2. backup --------------------------------------------------------------------------------
-restic unlock >/dev/null 2>&1 || true    # clears only stale locks left by a killed run
+restic unlock >/dev/null 2>&1 || true    # clears only stale locks (append-only still allows lock deletes)
 
 excl=()
 for f in $EXCLUDE_FILES; do [ -r "$f" ] && excl+=(--exclude-file "$f"); done
@@ -147,22 +146,7 @@ elif [ $RC -ne 0 ]; then
     STATE=fail
 fi
 
-# ---- 3. retention / 4. check (only after a usable snapshot) ------------------------------------
-DOW=$(date +%u)
-if [ "${STATE:-}" != fail ]; then
-    fargs=(--host "$SHORT" --keep-daily "$KEEP_DAILY" --keep-weekly "$KEEP_WEEKLY" --keep-monthly "$KEEP_MONTHLY")
-    [ "$DOW" = "$PRUNE_DOW" ] && fargs+=(--prune)
-    restic forget "${fargs[@]}" --quiet >"$STATE_DIR/forget.log" 2>&1 \
-        || WARN+=("forget/prune failed: $(tail -2 "$STATE_DIR/forget.log" | cut -c1-200)")
-    if [ "$DOW" = "$CHECK_DOW" ]; then
-        part=$(( $(date +%V | sed 's/^0//') % 20 + 1 ))
-        restic check --read-data-subset="${part}/20" >"$STATE_DIR/check.log" 2>&1 \
-            && log "check ${part}/20 ok" \
-            || WARN+=("restic check ${part}/20 FAILED: $(tail -3 "$STATE_DIR/check.log" | cut -c1-200)")
-    fi
-fi
-
-# ---- 5. report --------------------------------------------------------------------------------
+# ---- 3. report --------------------------------------------------------------------------------
 DUR=$(( $(date +%s) - START ))
 if [ "${STATE:-}" = fail ]; then
     MSG="backup failed (rc=$RC): ${ERRTAIL}"
