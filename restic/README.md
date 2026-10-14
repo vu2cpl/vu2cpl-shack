@@ -30,9 +30,9 @@ The Macs (Mac Mini and MacBook) are deliberately not in restic: they use Time Ma
   destroy its backups.
 - **Full access (:9901).** Only the `maint` login can use it. That credential lives only on the Mac.
 - **No SSH key for the servers.** Their SSH keys were taken off the NAS when this went in.
-  **Caveat:** macmini-server's `manoj` user still has the `alpaindia-backup` key, which logs in as
-  NAS `admin`, for `push-to-nas.sh` and `music-to-nas.sh`. Until those jobs are retired or moved to
-  a non-admin NAS user, a compromised macmini-server could still delete repository files over SSH.
+  macmini-server's other NAS key (`alpaindia-backup`, used by the old ALPA and music pushes, which were
+  retired on 2026-10-14) is now forced to `command="cat /volume1/Backups/mac-projects.status"`, so it
+  can't run anything else on the NAS.
 - **TLS** uses a self-signed cert (`nas/public.crt`, valid to 2036, SAN `IP:192.168.1.101`). Clients
   pin it with `RESTIC_CACERT`. TLS stays on, even though restic already encrypts the data, so the
   logins (above all `maint`) never cross the network in clear text.
