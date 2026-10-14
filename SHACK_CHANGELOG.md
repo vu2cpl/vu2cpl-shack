@@ -8,6 +8,43 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-10-14
+
+### AS3935 lightning sensor: three firmware releases in a day (v0.4.1 → v0.4.3)
+
+The bridge's MQTT link flapped from 04:31 to 12:14 (861 keepalive timeouts), the second time after
+2026-10-10; a `reboot` command sent through HA's `mqtt.publish` straight after a fresh `ready` fixed it.
+Firmware changes, all in [`vu2cpl-as3935-bridge`](https://github.com/vu2cpl/vu2cpl-as3935-bridge):
+
+- **v0.4.1** (USB 13:54): restart after 5 MQTT reconnects in 10 min (`boot_cause: mqtt_churn`);
+  `boot_cause` in status (it caught a brownout when the USB cable was pulled at 13:57); disturber/noise
+  events throttled to one a minute with a `count`; rates and reconnects in the heartbeat; HTTP OTA opened by
+  `ota_open`, with bootloader rollback (`ota.sh`); `modem_sleep: none`, now set.
+- **v0.4.2** (OTA): `wifi_off_test`. With the radio fully off the chip still counted 398 disturbers/min (405
+  and 403 with it on). An earlier A/B/A run (throttle on / every event published / on) gave 397.3 / 397.4 /
+  402.3 per min. So neither the MQTT traffic nor the WiFi radio makes the steady ~400/min; source unknown,
+  hunt parked (the battery check needs a cell that's in poor shape).
+- **v0.4.3** (OTA 17:59): a latched IRQ line is released after 1 s; 5 min with no IRQ re-inits the chip and
+  10 min restarts it (`irq_silence`). That covers the morning's other symptom: the counter froze with
+  heartbeats still arriving.
+
+Shack side: D1 Master Dashboard's Modem sleep dropdown gains `none` (`362745e`).
+
+### Home Assistant: TP-Link cameras reload themselves
+
+Entrance, South boundary and Utility area went unavailable 08:13–09:35 with python-kasa `-40105` while their
+video kept streaming. Camera reboots didn't help; reloading the config entries did, but South boundary
+dropped again at 14:58. New `automation.reload_tp_link_camera_when_unavailable` reloads a camera after 5 min
+unavailable, plus a half-hourly sweep; first run brought South boundary back in 5 s. Documented in
+CLAUDE.md (HassPi section), since HA config isn't in git.
+
+### OpenWebRX RSP2: third USB drop; now on the Renesas card
+
+RSP2 fell off Intel port `1-5` at 04:18 (also 09-28 and 10-09). After the replug, a public listener's dead
+connector blocked `openwebrx-restart.sh` for its full 10 min; it now skips the wait when
+`openwebrx-watch.sh --stream` confirms the stream dead twice. RSP2 moved to the Renesas card `3-2.1` with the
+same cable, so a further drop points at the RSP2/cable. Details in the `ubersdr-box` HANDOVER.
+
 ## 2026-10-09
 
 ### RustDesk: two faults behind "can't connect to .170 / .109"
