@@ -96,6 +96,8 @@ files.
    - Retained MQTT JSON on `shack/backup/<host>`: `state`, `time`, `snapshot`, `data_added`,
      `duration_s`, `message`. It uses the `svc` account from `~manoj/.config/vu2cpl-shack.env`.
    - Telegram: 🔴 when a run fails, 🟠 for a warning, ✅ on the first good run afterwards.
+   - The daily shack-health report (07:15) grades the retained topics: a missed night is WARN, two missed
+     nights or a failed run is FAIL, and a missed weekly maintenance run is WARN.
 
 The unit runs at Nice 19, idle IO, CPUWeight 10 and `GOMAXPROCS=2`, so radiod and UberSDR aren't
 starved.
