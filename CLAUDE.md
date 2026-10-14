@@ -1194,6 +1194,24 @@ devices here and still broadcast). Device push updates (UDP :8890
 broadcast) still cannot cross the VLAN — state freshness is the 5-min
 poll, which is also how it behaves for everyone else.
 
+### TP-Link camera reload automation (added 2026-10-14)
+
+`automation.reload_tp_link_camera_when_unavailable` (config id `tplink_camera_reload`, created through
+`POST /api/config/automation/config/tplink_camera_reload`, so it lives in HassPi's `automations.yaml`, not in
+git). Why: the 8 Tapo C200s drop out of HA's built-in TP-Link integration with python-kasa error `-40105` (a
+stale session) while their video keeps streaming. Rebooting the cameras doesn't help; reloading the camera's
+config entry does, at once. Three went down 08:13–09:35 on 2026-10-14, a manual reload fixed them, and South
+boundary dropped again at 14:58.
+
+- Triggers: any of the 8 `camera.*_live_view` entities `unavailable` for 5 min (reloads that one), plus a
+  half-hourly sweep for cameras already down more than 5 min. Each reload writes a `tplink_camera_reload`
+  warning to HA's system log.
+- No loop: a reload that doesn't bring a camera back causes no new state change, so only the sweep retries,
+  once per 30 min (a camera that's genuinely off just gets a harmless reload each sweep).
+- Verified 2026-10-14 18:03: a manual run reloaded only South boundary, which was `idle` again within 5 s.
+- Firmware isn't the cause: all 8 report 1.3.17. If `-40105` stops appearing after a python-kasa / HA update,
+  the automation can go.
+
 ---
 
 ## EXTERNAL APIs
