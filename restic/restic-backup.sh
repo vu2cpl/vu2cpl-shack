@@ -114,7 +114,7 @@ for c in $DB_DUMPS; do
     fi
 done
 
-# Immich writes its own DB dump at 02:00; the live postgres dir is excluded, so that dump is the
+# Immich writes its own DB dump at 07:30 IST (02:00 UTC); the live postgres dir is excluded, so that dump is the
 # database backup. Warn if the newest one is older than 26 h.
 if [ -n "$IMMICH_DUMP_DIR" ]; then
     newest=$(find "$IMMICH_DUMP_DIR" -maxdepth 1 -name 'immich-db-backup-*.sql.gz' -mmin -1560 2>/dev/null | head -1)

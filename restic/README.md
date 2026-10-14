@@ -19,8 +19,9 @@ Each run:
 1. **Dumps databases.** It dumps each MariaDB container in `DB_DUMPS` to `/var/backups/restic-dumps/`,
    using the container's own `MARIADB_*` env, so no credentials are stored here. The live data
    directories are excluded, because a file copy of a running database can't be relied on.
-   On macmini-server, Immich writes its own DB dump to `/mnt/immich/backups` at 02:00. The script
-   warns if that dump is more than 26 h old.
+   On macmini-server, Immich writes its own DB dump to `/mnt/immich/backups` at 07:30 IST (02:00 UTC),
+   so each 03:00 run carries a dump from about 19.5 h earlier. The script warns if the newest dump is
+   more than 26 h old.
 2. **Backs up.** It runs `restic backup` of `BACKUP_PATHS` with `--one-file-system`, using
    `exclude-common.txt` plus `hosts/<host>.exclude`.
    Excluded: anything that can be re-downloaded or regenerated, such as Docker image layers, caches,
