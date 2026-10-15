@@ -10,6 +10,38 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-10-15
 
+### RBN Skimmer Monitor: VU2OY needs a login now; retagged `VU2OY-9` (`a5c0325`)
+
+Manoj: "vu2oy in dashboard is not updating". The VU2OY tile had been offline since its last spot at
+18:59Z on 2026-10-14 (00:29 IST on the 15th). VU2CPL-88 and VU24DX-1 were fine.
+
+**Cause.** VU2OY (Ranjith, Trivandrum MJ88KN) changed what answers on `vu2oy.ddns.net:7550`. It used
+to be an open feed that streamed spots without a login. It is now a **Meridian 0.1.25** cluster server
+that sends a banner and stops at `Please enter your callsign:` (no trailing newline) until it gets one.
+Our side had two gaps. `Telnet VU2OY` split its input on `\n`, so it buffered the unterminated prompt and
+never emitted it. And `Login Handler VU2OY` was a bare `DX de` filter with no login path and no reply
+node. The connection stayed open and silent.
+
+**Fix** (same shape as VU24DX, added 2026-10-07):
+
+- `Telnet VU2OY :7550`: `newline` `\n` → `''` (raw chunks).
+- `Login Handler VU2OY`: now a copy of `Login Handler VU24DX`. It detects the prompt on the last
+  non-empty line and logs in as `VU2CPL-1`, and has 2 outputs.
+- New `tcp out` `Reply to VU2OY (login)` (`rbn_vu2oy_tcp_reply`, `beserver:reply`).
+- Spots are tagged **`VU2OY-9`** on Manoj's call, matching the feed's `VU2OY-9-#`. The `sk2_call`
+  default in Parse Calibration CSV, Watchdog Check, RBN State Aggregator and Update Spot Counters follows.
+- HA: `rbn_vu2oy_h1` (entity id unchanged) reads `skimmers['VU2OY-9']`, renamed "VU2OY-9 spots (1h)";
+  discovery republished. The Radio dashboard doesn't reference that sensor, so no card change.
+
+**Verified** after `git pull` + Node-RED restart on the Pi: logged in on the first connection, `VU2OY-9`
+online with 35 spots ten seconds later; HA sensor read 36.
+
+**Side effects.** sm7iun's `rbnskew.csv` lists plain `VU2OY` (+1.5 ppm, 44 spots), not `VU2OY-9`. The
+skew lookup is an exact match, so the skew cell reads "not found" until the table picks up the new call.
+The old `VU2OY` hourly buckets are no longer read and age out within 10 days, so 12H/24H restart from
+zero. The DXCC tab's VU2OY cluster (tab disabled) needs nothing: it already reads raw chunks, and
+`login-parse-dedup-v2` matches `enter your callsign:`.
+
 ### restic: second copy of the backups on the ubersdr box's 1 TB HDD (#50)
 
 Manoj's decision for `.109`'s two hard disks: the healthy 1 TB Seagate (`sda`, 1.3 years powered on)

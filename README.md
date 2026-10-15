@@ -457,7 +457,7 @@ in Home Assistant:
 | Skimmer | Feed | Notes |
 |---------|------|-------|
 | VU2CPL-88 | `vu2cpl.ddns.net:7550` | the shack's own Meridian container on `.109`, via the router forward; login required |
-| VU2OY | `vu2oy.ddns.net:7550` | open port, no login |
+| VU2OY-9 | `vu2oy.ddns.net:7550` | Ranjith VU2OY's Meridian server in Trivandrum; login required since 2026-10-14 (it was an open no-login port before). Feed prints `VU2OY-9-#`; keyed `VU2OY-9` since 2026-10-15 |
 | VU24DX-1 | `vu24dx.ddns.net:7300` | Adersh VU24DX's Meridian server in Kozhikode (added 2026-10-07); login required. Feed prints `VU24DX-#`; keyed by its RBN call `VU24DX-1` so the skew lookup matches |
 
 ---
