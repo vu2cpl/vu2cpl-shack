@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v44 · 2026-10-07 RBN: VU24DX-1 third skimmer, skew in ppm';
+window.__shackBuild = 'v45 · 2026-10-15 RBN: skimmer calibration history per exact SSID';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -2581,10 +2581,39 @@ const RBNCard = {
             <div class="rbn-skew">
               <span>Skew</span>
               <strong :style="{color: skewColor(skim(name).skew)}">{{ fmtSkew(skim(name).skew) }}</strong>
-              <span v-if="skim(name).skewSpots != null" style="color:var(--text-dim);font-size:var(--fs-xs);">{{ skim(name).skewSpots }} spots</span>
+              <span v-if="skim(name).skewAge > 0" style="color:var(--muted);font-size:var(--fs-xs);">{{ skim(name).skewAge }}d old</span>
+              <span v-else-if="skim(name).skewSpots != null" style="color:var(--text-dim);font-size:var(--fs-xs);">{{ skim(name).skewSpots }} spots</span>
+              <span v-if="skim(name).skew == null && state.skewTable" style="color:var(--muted);font-size:var(--fs-xs);">no sm7iun data</span>
             </div>
           </div>
         </div>
+
+        <!-- Skimmer calibration history (sm7iun rbnhist.txt), one row per exact SSID -->
+        <template v-if="state.skewTable && state.skewTable.rows">
+          <div class="solar-sec-label" style="cursor:pointer;user-select:none;" @click="toggleCal">
+            {{ calOpen ? '▼' : '▶' }} Skimmer calibration
+            <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;margin-left:4px;">{{ calSummary }}</span>
+          </div>
+          <div v-if="calOpen" class="rbn-cal">
+            <template v-for="r in calRows" :key="r.call">
+              <span class="rbn-cal__call" :class="{ 'rbn-cal__call--mine': r.mine }">{{ r.call }}</span>
+              <svg class="rbn-spark" viewBox="0 0 120 22" preserveAspectRatio="none">
+                <title>{{ r.tip }}</title>
+                <line x1="0" y1="11" x2="120" y2="11" class="rbn-spark__zero"/>
+                <path v-if="r.p.seg" :d="r.p.seg" class="rbn-spark__line"/>
+                <path v-if="r.p.g" :d="r.p.g" class="rbn-spark__dot" style="stroke:var(--green)"/>
+                <path v-if="r.p.a" :d="r.p.a" class="rbn-spark__dot" style="stroke:var(--amber)"/>
+                <path v-if="r.p.r" :d="r.p.r" class="rbn-spark__dot" style="stroke:var(--red)"/>
+              </svg>
+              <span class="rbn-cal__val">
+                <template v-if="r.last != null">
+                  <span :style="{color: skewColor(r.last)}">{{ fmtNum(r.last) }}</span><span v-if="r.age > 0" class="rbn-cal__age">{{ r.age }}d old</span>
+                </template>
+                <span v-else style="color:var(--muted)">no data</span>
+              </span>
+            </template>
+          </div>
+        </template>
 
         <div v-if="state.calFetched" class="statusline" style="margin-top:var(--sp-2);">
           <span>Calibration updated</span>
@@ -2595,7 +2624,7 @@ const RBNCard = {
   `,
   setup() {
     const expanded = ref(false);
-    const state = reactive({ skimmers: {}, calFetched: null, sk1: null, sk2: null });
+    const state = reactive({ skimmers: {}, calFetched: null, skewTable: null, sk1: null, sk2: null });
 
     const skimmerNames = computed(() => Object.keys(state.skimmers || {}));
     function skim(name) { return state.skimmers?.[name] || {}; }
@@ -2617,6 +2646,52 @@ const RBNCard = {
       if (a >= 0.5) return 'var(--amber)';
       return 'var(--green)';
     }
+    function fmtNum(v) { return (v > 0 ? '+' : '') + Number(v).toFixed(1); }
+    const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    function dm(iso) { return iso ? (+iso.slice(8, 10)) + ' ' + MON[+iso.slice(5, 7) - 1] : ''; }
+
+    // Calibration history section; open state remembered per browser.
+    let calInit = true;
+    try { calInit = localStorage.getItem('rbnCalOpen') !== '0'; } catch (e) {}
+    const calOpen = ref(calInit);
+    function toggleCal() {
+      calOpen.value = !calOpen.value;
+      try { localStorage.setItem('rbnCalOpen', calOpen.value ? '1' : '0'); } catch (e) {}
+    }
+    // Daily skew on a shared ±3 ppm scale, same as the D1 panel. Values beyond
+    // ±3 are pinned to the edge (the number beside it shows the real value).
+    // Gaps are days with no data. Dots are zero-length round-capped segments,
+    // so they stay round under preserveAspectRatio="none".
+    function sparkPaths(vals) {
+      const W = 120, H = 22, P = 3, n = vals.length;
+      const out = { seg: '', g: '', a: '', r: '' };
+      let prev = false;
+      vals.forEach((v, i) => {
+        if (v == null) { prev = false; return; }
+        const x = (n < 2 ? W / 2 : P + (W - 2 * P) * i / (n - 1)).toFixed(1);
+        const y = (H / 2 - Math.max(-3, Math.min(3, v)) / 3 * (H / 2 - P)).toFixed(1);
+        out.seg += (prev ? 'L' : 'M') + x + ' ' + y + ' ';
+        const a = Math.abs(v);
+        out[a < 0.5 ? 'g' : a < 1.5 ? 'a' : 'r'] += 'M' + x + ' ' + y + 'h0.01 ';
+        prev = true;
+      });
+      return out;
+    }
+    const calRows = computed(() => {
+      const t = state.skewTable;
+      if (!t || !t.rows) return [];
+      const days = t.days || [];
+      return t.rows.map(r => ({
+        ...r,
+        p: sparkPaths(r.vals || []),
+        tip: days.map((d, i) => d.slice(5) + '  ' + (r.vals[i] == null ? '—' : fmtNum(r.vals[i]))).join('\n')
+      }));
+    });
+    const calSummary = computed(() => {
+      const t = state.skewTable;
+      if (!t || !t.rows) return '';
+      return t.rows.length + ' local · ' + (t.days || []).length + ' days to ' + dm(t.newest) + ' · ±3 ppm scale';
+    });
 
     onMounted(() => {
       uibuilder.onTopic('rbn', (msg) => {
@@ -2628,7 +2703,8 @@ const RBNCard = {
 
     return {
       expanded, state, skimmerNames, skim, isOnline,
-      onlineCount, totalH1, fmtSkew, skewColor
+      onlineCount, totalH1, fmtSkew, skewColor,
+      fmtNum, calOpen, toggleCal, calRows, calSummary
     };
   }
 };

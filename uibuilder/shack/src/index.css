@@ -703,6 +703,26 @@ html, body {
 }
 .rbn-skew strong { font-family: var(--font-mono); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
 
+/* Skimmer calibration history: one shared grid so every sparkline lines up */
+.rbn-cal {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  column-gap: var(--sp-2);
+  row-gap: 2px;
+  align-items: center;
+  margin-top: var(--sp-1);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+.rbn-cal__call { color: var(--text-dim); white-space: nowrap; }
+.rbn-cal__call--mine { color: var(--accent); font-weight: 700; }
+.rbn-cal__val { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rbn-cal__age { color: var(--muted); margin-left: 4px; }
+.rbn-spark { width: 100%; min-width: 60px; height: 22px; display: block; }
+.rbn-spark__zero { stroke: var(--border); stroke-dasharray: 2 2; vector-effect: non-scaling-stroke; }
+.rbn-spark__line { fill: none; stroke: var(--muted); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.rbn-spark__dot { fill: none; stroke-width: 4; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+
 /* Inline rotator power pill (collapsed summary) */
 .rotator-pwr-pill {
   display: inline-flex;
