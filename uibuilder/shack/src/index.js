@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v45 · 2026-10-15 RBN: skimmer calibration history per exact SSID';
+window.__shackBuild = 'v46 · 2026-10-15 RBN: skimmer calibration sparklines, ±1.5 ppm guides';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -2597,9 +2597,11 @@ const RBNCard = {
           <div v-if="calOpen" class="rbn-cal">
             <template v-for="r in calRows" :key="r.call">
               <span class="rbn-cal__call" :class="{ 'rbn-cal__call--mine': r.mine }">{{ r.call }}</span>
-              <svg class="rbn-spark" viewBox="0 0 120 22" preserveAspectRatio="none">
+              <svg class="rbn-spark" viewBox="0 0 120 34" preserveAspectRatio="none">
                 <title>{{ r.tip }}</title>
-                <line x1="0" y1="11" x2="120" y2="11" class="rbn-spark__zero"/>
+                <line x1="0" y1="10.5" x2="120" y2="10.5" class="rbn-spark__guide"/>
+                <line x1="0" y1="23.5" x2="120" y2="23.5" class="rbn-spark__guide"/>
+                <line x1="0" y1="17" x2="120" y2="17" class="rbn-spark__zero"/>
                 <path v-if="r.p.seg" :d="r.p.seg" class="rbn-spark__line"/>
                 <path v-if="r.p.g" :d="r.p.g" class="rbn-spark__dot" style="stroke:var(--green)"/>
                 <path v-if="r.p.a" :d="r.p.a" class="rbn-spark__dot" style="stroke:var(--amber)"/>
@@ -2661,9 +2663,11 @@ const RBNCard = {
     // Daily skew on a shared ±3 ppm scale, same as the D1 panel. Values beyond
     // ±3 are pinned to the edge (the number beside it shows the real value).
     // Gaps are days with no data. Dots are zero-length round-capped segments,
-    // so they stay round under preserveAspectRatio="none".
+    // so they stay round under preserveAspectRatio="none". The template draws
+    // 0 (solid) and the ±1.5 ppm guides (dotted, where amber turns red) at
+    // y = 17 and 17 ∓ 6.5 for this W/H/P.
     function sparkPaths(vals) {
-      const W = 120, H = 22, P = 3, n = vals.length;
+      const W = 120, H = 34, P = 4, n = vals.length;
       const out = { seg: '', g: '', a: '', r: '' };
       let prev = false;
       vals.forEach((v, i) => {
@@ -2690,7 +2694,7 @@ const RBNCard = {
     const calSummary = computed(() => {
       const t = state.skewTable;
       if (!t || !t.rows) return '';
-      return t.rows.length + ' local · ' + (t.days || []).length + ' days to ' + dm(t.newest) + ' · ±3 ppm scale';
+      return t.rows.length + ' local · to ' + dm(t.newest) + ' · ±3 ppm';
     });
 
     onMounted(() => {
