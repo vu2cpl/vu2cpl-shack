@@ -144,7 +144,8 @@ The NAS (a DS710+ on DSM 5.2, unpatched since about 2017) would otherwise hold t
   stops overlapping runs.
 - Retained MQTT `shack/backup/copy`, graded by shack-health. Telegram only on failure or recovery.
 - What it protects against: a dead NAS or a broken NAS repository. What it doesn't: losing the house,
-  or a compromised `.109` (manoj can write that disk). Off-site is still #50 (e).
+  or a compromised `.109` (manoj can write that disk). Off-site (#50 e): the ALPA hosting server, once
+  ALPA's files are off it (Manoj, 2026-10-15; expected in a month or two).
 
 ```bash
 ~/.local/bin/restic-copy ubersdr -- snapshots

@@ -20,6 +20,9 @@ copies both NAS repositories to `/mnt/backups/restic/<host>` over sftp, with the
 retained `shack/backup/copy`, and shack-health grades it (`16c9e24`). `install-maint.sh` now installs both
 Mac agents, both under `caffeinate -i`. First seed: 2026-10-15 from 20:44, 45-55 MB/s.
 
+Off-site decided the same evening (Manoj): the ALPA hosting server, once ALPA's files are moved off it,
+expected in a month or two. Nothing is built for it yet.
+
 ### restic: first test restore passed (#50)
 
 Restored to scratch targets only and compared with the live files by sha256:
