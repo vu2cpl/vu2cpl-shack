@@ -11,6 +11,7 @@ Set up 2026-10-14 to replace UrBackup, which was uninstalled the same day.
 | ubersdr (192.168.1.109) | `/volume1/Backups/restic/ubersdr` | 01:30 | whole root + `/boot/efi`; Wavelog DB dump |
 | macmini-server | `/volume1/Backups/restic/macmini-server` | 03:00 | whole root, `/boot`, `/boot/efi`, Immich library (`/mnt/immich`); ALPA-replica DB dump |
 | Mac (maintenance only) | — | Sun 10:30 | `forget --prune` + a rotating `check` of every repository |
+| Mac → ubersdr HDD (second copy) | `/mnt/backups/restic/<host>` on `.109`'s 1 TB disk | 05:30 | `restic copy` of both repositories; Sundays also prune + check |
 
 The Macs (Mac Mini and MacBook) are deliberately not in restic: they use Time Machine (Manoj, 2026-10-14).
 
@@ -22,6 +23,8 @@ The Macs (Mac Mini and MacBook) are deliberately not in restic: they use Time Ma
  macmini ─┘  (each login reaches only its own repo)        └─ /volume1/Backups/restic/macmini-server
                                                 ▲
  Mac ───────── HTTPS :9901  full access, user `maint` ──────┘   forget / prune / check, weekly
+  │
+  └── sftp manoj@192.168.1.109 ──▶ /mnt/backups/restic/<host>   restic copy, daily 05:30 (second copy)
 ```
 
 - **Append-only (:9900).** Each server logs in as its own user (`ubersdr`, `macmini-server`) and
@@ -125,6 +128,30 @@ launchd, Pi or Linux via apt and crontab.
 The second form is a full-access restic shell for one repository. Use it for anything the
 append-only side can't do, such as deleting a snapshot by hand.
 
+## Second copy on the ubersdr box (`restic-copy.sh`)
+
+The NAS (a DS710+ on DSM 5.2, unpatched since about 2017) would otherwise hold the only copy. Since
+2026-10-15 the Mac copies every repository each morning to `.109`'s 1 TB Seagate (`sda`, `/mnt/backups`):
+
+- launchd `com.vu2cpl.restic-copy`, daily 05:30, under `caffeinate -i`. Log `~/Library/Logs/restic-copy.log`,
+  per-repo logs in `~/.local/state/restic-copy/`.
+- Source is the NAS `:9901` (`maint`), destination `sftp:manoj@192.168.1.109:/mnt/backups/restic/<host>`.
+  Each copy has the **same password as its source** and was initialised with `--copy-chunker-params`, so
+  dedup works and no new secret lives on `.109`.
+- `restic copy` only adds snapshots the copy doesn't have. On Sundays it also runs `forget --prune` with the
+  same 7/5/12 policy and a metadata `check`.
+- It refuses to run when `/mnt/backups` isn't mounted (fstab `nofail`), so it can't fill the NVMe. A lock
+  stops overlapping runs.
+- Retained MQTT `shack/backup/copy`, graded by shack-health. Telegram only on failure or recovery.
+- What it protects against: a dead NAS or a broken NAS repository. What it doesn't: losing the house,
+  or a compromised `.109` (manoj can write that disk). Off-site is still #50 (e).
+
+```bash
+~/.local/bin/restic-copy ubersdr -- snapshots
+```
+
+The first seed (about 620 GB) started 2026-10-15 20:44 at 45-55 MB/s.
+
 ## Secrets
 
 | Secret | Where | Can do |
@@ -197,6 +224,12 @@ From the Mac, if the box is gone, restore to anywhere:
 ~/.local/bin/restic-maint ubersdr -- restore latest --target ~/restore-ubersdr
 ```
 
+If the NAS is gone, restore from the second copy on `.109` instead (same password):
+
+```bash
+~/.local/bin/restic-copy macmini-server -- restore latest --target ~/restore-macmini --include /etc
+```
+
 To rebuild a whole box onto a new disk:
 
 1. Install the same Ubuntu release.
@@ -217,4 +250,5 @@ To rebuild a whole box onto a new disk:
 | `nas/public.crt` | `/etc/restic/nas.crt` on boxes, `~/.config/restic/nas.crt` on the Mac |
 | `nas/rest-server.sh`, `nas/S99restic-rest-server.sh` | `/volume1/homes/admin/rest-server/` on the NAS (+ the rc.d copy, as root) |
 | `restic-maint.sh` | `~/.local/bin/restic-maint` on the Mac (launchd `com.vu2cpl.restic-maint`) |
+| `restic-copy.sh` | `~/.local/bin/restic-copy` on the Mac (launchd `com.vu2cpl.restic-copy`) |
 | `deploy.sh`, `install-maint.sh` | run from the Mac |

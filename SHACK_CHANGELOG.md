@@ -10,6 +10,16 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-10-15
 
+### restic: second copy of the backups on the ubersdr box's 1 TB HDD (#50)
+
+Manoj's decision for `.109`'s two hard disks: the healthy 1 TB Seagate (`sda`, 1.3 years powered on)
+holds a second copy of the backups, and the 500 GB WD (`sdb`, ~9.9 years, the old Ubuntu fallback)
+was wiped and reused as `/mnt/scratch`. New `restic/restic-copy.sh` runs on the Mac daily at 05:30 and
+copies both NAS repositories to `/mnt/backups/restic/<host>` over sftp, with the same passwords and
+`--copy-chunker-params`. On Sundays it also prunes (same 7/5/12 policy) and runs a check. It reports on
+retained `shack/backup/copy`, and shack-health grades it (`16c9e24`). `install-maint.sh` now installs both
+Mac agents, both under `caffeinate -i`. First seed: 2026-10-15 from 20:44, 45-55 MB/s.
+
 ### restic: first test restore passed (#50)
 
 Restored to scratch targets only and compared with the live files by sha256:
