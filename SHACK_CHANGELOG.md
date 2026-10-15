@@ -10,6 +10,48 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-10-15
 
+### RBN Skimmer Monitor: skimmer calibration history, per exact SSID (`ccaef77`, `9ed8512`)
+
+Manoj: "why is skew information missing?" `rbnskew.csv` holds only sm7iun's newest day, and VU2OY-9 and
+VU2CPL-88 had no value that day, although sm7iun rated them a day or two earlier (VU2OY-9 +15.3 ppm on 10-13,
+VU2CPL-88 +0.0 on 10-12). The lookup was right to find nothing under those calls. Proposals to borrow the
+plain `VU2OY` row, or strip the SSID to find a base call, were rejected: **every call+SSID is its own
+receiver and must never be mixed** (Manoj). VU2OY sits near +1 ppm and VU2OY-9 near +14 ppm; they are two
+rigs. That rule is now written into CLAUDE.md under the RBN node table.
+
+**What changed:**
+
+- **History source.** New `GET rbnhist.txt` + `Parse Skew History`, on the same 6-h `Fetch Cal` inject as
+  the CSV. `https://sm7iun.se/rbnhist.txt` is sm7iun's plain-text 10-day table, the same one shown in a
+  `<pre>` block on `sm7iun.se/rbn/analytics/`. It's parsed by header column position. Local skimmers (Indian
+  prefixes plus our three) are kept per day in `flow.skew_hist` (file scope) for 30 days, so the history
+  outgrows sm7iun's window.
+- **Tiles.** Skew is the SSID's own last value, with "Nd old" when it isn't from sm7iun's newest day; the
+  CSV's spot count and correction factor appear only for a current value. Today: VU2OY-9 +15.3 ppm, 1 d old;
+  VU2CPL-88 +0.0, 2 d old; VU24DX-1 −0.3, current, 16 spots.
+- **Skimmer calibration section** on both dashboards (D1 `<details open>`, panel height 12 → 16; Vue v46,
+  open state in `localStorage`). One row per local SSID, ours highlighted: a sparkline on a shared ±3 ppm
+  scale (values beyond it pinned to the edge, the number shows the real value), a solid zero line, dotted
+  ±1.5 ppm guides where amber turns red, gaps on days without data, and the last value with its age.
+  Today it lists VU24DX-1, VU2CPL-88, VU2OY, VU2OY-9, VU2PTT and VU2TUM.
+- **`Parse DX Spot`** strips only the trailing `-#` skimmer marker; it used to strip `-<digits>` too. Nothing on
+  the RBN tab reads `spot.spotter`, so nothing displayed changed.
+- **VU24DX-1** confirmed by Manoj as VU24DX's only RBN receiver, so its tag stays even though its telnet port
+  prints `VU24DX-#`. Tags therefore stay per feed in the login handlers rather than being read off the spot.
+
+The idea of tracking every local skimmer's calibration over time comes from **VU2PTT's Skimmer Calibration
+tracker**, a Node-RED flow that scrapes the analytics page's third `<pre>` block and plots `VU2*` calls on a
+D1 chart. This version reads the plain-text table, covers all Indian prefixes, and doesn't clip: VU2PTT's
+fixed ±3 ppm chart axis would put VU2OY-9 off the top.
+
+**Verified:** stored history and MQTT fields on the Pi after deploy. Both dashboards were rendered locally
+from the real `index.js` and D1 template against today's data, at desktop and 375 px phone width, with no
+horizontal overflow; `/shack` itself needs a login, so it wasn't screenshotted live. The first cut used
+22 px sparklines and read nearly flat (1 ppm under 3 px), so it went to 34 px with the guides (`9ed8512`).
+
+**Found on the way (open, HANDOVER #52):** the raw-chunk login handlers drop a spot line split across two TCP
+chunks, about 0.06% of spots on VU24DX and VU2OY.
+
 ### RBN Skimmer Monitor: VU2OY needs a login now; retagged `VU2OY-9` (`a5c0325`)
 
 Manoj: "vu2oy in dashboard is not updating". The VU2OY tile had been offline since its last spot at
@@ -36,8 +78,9 @@ node. The connection stayed open and silent.
 **Verified** after `git pull` + Node-RED restart on the Pi: logged in on the first connection, `VU2OY-9`
 online with 35 spots ten seconds later; HA sensor read 36.
 
-**Side effects.** sm7iun's `rbnskew.csv` lists plain `VU2OY` (+1.5 ppm, 44 spots), not `VU2OY-9`. The
-skew lookup is an exact match, so the skew cell reads "not found" until the table picks up the new call.
+**Side effects.** sm7iun's `rbnskew.csv` lists plain `VU2OY` (+1.5 ppm, 44 spots) but has no `VU2OY-9`
+row for its newest day, so the skew cell read "not found". `VU2OY-9` is a separate receiver, not a rename,
+so the `VU2OY` row is not its skew; the fix is the calibration history in the next entry.
 The old `VU2OY` hourly buckets are no longer read and age out within 10 days, so 12H/24H restart from
 zero. The DXCC tab's VU2OY cluster (tab disabled) needs nothing: it already reads raw chunks, and
 `login-parse-dedup-v2` matches `enter your callsign:`.

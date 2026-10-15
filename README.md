@@ -452,13 +452,26 @@ from `sm7iun.se/rbnskew.csv` every 6 h.
 
 Three skimmer feeds, each with spot counts for the last 1 h / 12 h /
 24 h (CW vs FT8), last spot and frequency skew, on both dashboards and
-in Home Assistant:
+in Home Assistant. Each call+SSID is a separate receiver and is never
+merged with another: VU2OY and VU2OY-9 are two rigs with their own skew.
 
 | Skimmer | Feed | Notes |
 |---------|------|-------|
 | VU2CPL-88 | `vu2cpl.ddns.net:7550` | the shack's own Meridian container on `.109`, via the router forward; login required |
 | VU2OY-9 | `vu2oy.ddns.net:7550` | Ranjith VU2OY's Meridian server in Trivandrum; login required since 2026-10-14 (it was an open no-login port before). Feed prints `VU2OY-9-#`; keyed `VU2OY-9` since 2026-10-15 |
-| VU24DX-1 | `vu24dx.ddns.net:7300` | Adersh VU24DX's Meridian server in Kozhikode (added 2026-10-07); login required. Feed prints `VU24DX-#`; keyed by its RBN call `VU24DX-1` so the skew lookup matches |
+
+**Skimmer calibration.** sm7iun publishes each RBN skimmer's frequency
+skew daily, from yesterday's RBN data: `rbnskew.csv` for the newest day,
+`rbnhist.txt` for the last ten. Node-RED fetches both every 6 h, keeps
+the local skimmers' daily values for 30 days, and shows them in a
+*Skimmer calibration* section on both dashboards. Each local SSID gets a
+row with a sparkline on a shared ±3 ppm scale (dotted guides at ±1.5 ppm,
+where amber turns red; values beyond ±3 pinned to the edge) and its last
+value. When sm7iun has no value for a skimmer on its newest day, the tile
+shows that SSID's own last value with its age ("1d old"), never another
+SSID's. The idea of tracking every local skimmer's calibration over time
+comes from VU2PTT's Skimmer Calibration tracker.
+| VU24DX-1 | `vu24dx.ddns.net:7300` | Adersh VU24DX's Meridian server in Kozhikode (added 2026-10-07); login required. Feed prints `VU24DX-#`, but it is VU24DX's only RBN receiver, `VU24DX-1`, so it's keyed by that call |
 
 ---
 
