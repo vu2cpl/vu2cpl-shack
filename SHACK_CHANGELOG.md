@@ -25,6 +25,14 @@ Restored to scratch targets only and compared with the live files by sha256:
 
 Note: Immich originals live under `/mnt/immich/upload`; `library/` holds a single file.
 
+### restic: rest-server survives a NAS reboot (#50 b)
+
+Manoj restarted the DS710+ from DSM at 20:31. The root boot hook
+`/usr/local/etc/rc.d/S99restic-rest-server.sh` brought both endpoints back by 20:33, running as `admin`,
+with `:9900` still append-only. `.109` and macmini-server (`:9900`) and the Mac (`:9901`) all listed
+their snapshots straight away. Since the reboot the NAS no longer answers ping from the LAN, though SSH,
+DSM and the rest-server ports are fine. Nothing in the shack pings it, so this was left alone.
+
 ---
 
 ## 2026-10-14

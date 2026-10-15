@@ -66,7 +66,8 @@ files.
   as root on 2026-10-14: `/usr/local/etc/rc.d/S99restic-rest-server.sh` (root, 755). DSM 5.2 runs
   every `S*.sh` there with `start` at boot. The hook calls `rest-server.sh`, which as root re-runs
   itself as `admin` via `su -s /bin/sh -c … admin`. Options must come before the username for the
-  NAS's BusyBox 1.16 `su`. It hasn't been proven by a real NAS reboot yet.
+  NAS's BusyBox 1.16 `su`. **Proven by a real NAS reboot on 2026-10-15:** both endpoints came back
+  on their own as `admin`, `:9900` still append-only, and all three clients could list snapshots.
 
   If it ever doesn't come up, start it by hand as `admin`:
 
