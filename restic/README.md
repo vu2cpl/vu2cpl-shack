@@ -153,7 +153,12 @@ The NAS (a DS710+ on DSM 5.2, unpatched since about 2017) would otherwise hold t
 ~/.local/bin/restic-copy ubersdr -- snapshots
 ```
 
-The first seed (about 620 GB) started 2026-10-15 20:44 at 45-55 MB/s.
+The first seed (about 620 GB) started 2026-10-15 20:44 at 45-60 MB/s. `ubersdr` finished at 20:52 (29 GB);
+`macmini-server` was still running at 22:00, expected to finish about 23:00.
+
+**Snapshot IDs differ in the copy.** `restic copy` writes new snapshot IDs and records the source ID in the
+snapshot's `original` field (`snapshots --json`). Example: copy `4e46ed76` = NAS `b62c8459`. So the copy's
+"latest" in `shack/backup/copy` never matches the NAS ID; compare times, or `original`.
 
 ## Secrets
 
