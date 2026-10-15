@@ -175,6 +175,9 @@ test Telegram message.
 
 ## Restoring
 
+**Last tested 2026-10-15:** on-box restores on both boxes, and a Mac restore of 25 random Immich
+originals, all matched live by sha256 (SHACK_CHANGELOG 2026-10-15). Restore to a scratch target, never in place.
+
 From the box itself (append-only access is enough to read):
 
 ```bash

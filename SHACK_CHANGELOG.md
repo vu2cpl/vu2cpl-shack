@@ -8,6 +8,25 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-10-15
+
+### restic: first test restore passed (#50)
+
+Restored to scratch targets only and compared with the live files by sha256:
+
+- **`.109`**, snapshot `b62c8459` (01:33), restored on the box: `/etc`, `~/openwebrx`, `~/ubersdr` and
+  `/var/backups/restic-dumps` (2,153 files, `--verify` clean). The wavelog dump matches live and
+  decompresses complete. 6 files differed from live, all changed after 01:33 (cups, `ld.so.cache`, the
+  Caddy cert record, `receivers.json`).
+- **macmini-server**, snapshot `13c012c5` (03:01), restored on the box: `/etc` identical; the ALPA replica
+  dump and the 2026-10-14 Immich DB dump (560 MB, 72 `CREATE TABLE`) match live and decompress complete.
+- **From the Mac**, as if the box were gone (`restic-maint macmini-server -- restore`): 25 random Immich
+  originals, 101 MB, 25/25 sha256 OK.
+
+Note: Immich originals live under `/mnt/immich/upload`; `library/` holds a single file.
+
+---
+
 ## 2026-10-14
 
 ### AS3935 lightning sensor: three firmware releases in a day (v0.4.1 → v0.4.3)
