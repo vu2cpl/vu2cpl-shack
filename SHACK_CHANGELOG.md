@@ -10,6 +10,26 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-10-15
 
+### RBN Skimmer Monitor: spot lines split across TCP chunks are kept (`95d9f2a`, #52)
+
+The three raw-chunk login handlers (VU2CPL, VU2OY, VU24DX) split each chunk on newlines and passed on every
+line starting `DX de`. A spot cut at a chunk boundary became two fragments: the head failed `Parse DX Spot`
+(`Unmatched: DX de VU24DX-#:  14092`) and the tail was dropped. That was about 0.06% of spots (19 of ~30,000
+in an hour) on the internet feeds, VU24DX and, since its tcp-in went raw this morning, VU2OY. The LAN feed
+VU2CPL-88 showed none.
+
+Each handler now holds the unterminated tail of a chunk in node context, keyed by the connection's
+`_session.id`, and prepends it to the next chunk from that connection; spots are taken only from complete
+lines. The tail still goes through prompt detection, because `Please enter your callsign:` arrives without a
+newline, and it isn't held once the login is sent. Text over 1 KB with no newline isn't held, and a reconnect
+discards the old tail. Skimmer tags are unchanged. (Node-RED's tcp-in passes raw chunks through untouched when
+`newline` is empty; its `trim` option only applies when it splits on a delimiter, so this is safe.)
+
+Tested in node on 120 randomized chunkings (1–400-byte cuts, including between `\r` and `\n`) of a
+2000-spot stream, both prompt styles, for all three handlers: every spot whole and exactly one login per
+stream. The old code got 1309 of 2000 whole on the same input. Deployed 17:03:27Z with all three skimmers
+online; the 30-minute log check is still to do (HANDOVER #52).
+
 ### Repo docs: no more PDF copies (rules #3 and #6 retired)
 
 Manoj: "remove pdf generation requirement … md is good enough". CLAUDE.md rules #3 (`DXCC.md` →
