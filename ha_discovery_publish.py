@@ -283,8 +283,10 @@ sensor('rbn_state', 'State', DEV_RBN, BT,
 sensor('rbn_vu2cpl_h1', 'VU2CPL-88 spots (1h)', DEV_RBN, BT,
        tpl="{{ value_json.skimmers['VU2CPL-88'].h1_total }}",
        state_class='measurement', icon='mdi:counter', expire=60)
-sensor('rbn_vu2oy_h1', 'VU2OY spots (1h)', DEV_RBN, BT,
-       tpl="{{ value_json.skimmers['VU2OY'].h1_total }}",
+# Entity id kept as rbn_vu2oy_h1; keyed VU2OY-9 since 2026-10-15, when VU2OY's
+# port became a Meridian server spotting as VU2OY-9-#.
+sensor('rbn_vu2oy_h1', 'VU2OY-9 spots (1h)', DEV_RBN, BT,
+       tpl="{{ value_json.skimmers['VU2OY-9'].h1_total }}",
        state_class='measurement', icon='mdi:counter', expire=60)
 # VU24DX (Kozhikode) added 2026-10-07; keyed by its RBN call VU24DX-1.
 sensor('rbn_vu24dx_h1', 'VU24DX-1 spots (1h)', DEV_RBN, BT,
