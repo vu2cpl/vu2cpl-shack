@@ -410,8 +410,7 @@ to four cluster sources (VU2CPL, VU2OY, KIEL, N2WQ); resolves prefix
 via cty.xml; classifies against `bands[mk] === 2` confirmed criterion;
 fires alerts to dashboard, MQTT, FlexRadio, and Telegram.
 
-**Full reference:** [`DXCC.md`](DXCC.md) /
-[`DXCC_Tracker_README.pdf`](DXCC_Tracker_README.pdf).
+**Full reference:** [`DXCC.md`](DXCC.md).
 
 ### RPi Fleet Monitor
 
@@ -501,14 +500,12 @@ comes from VU2PTT's Skimmer Calibration tracker.
 │
 ├── README.md                        This file (umbrella overview)
 ├── DXCC.md                          DXCC Tracker reference
-├── DXCC_Tracker_README.pdf          DXCC reference (rendered PDF)
 ├── CLAUDE.md                        Operator deep-reference: node IDs, gotchas, runtimes
 ├── REBUILD_PI.md                    Disaster-recovery runbook: blank SD → working shack
 ├── DEPLOY_PI.md                     Per-host fleet-member onboarding runbook
 ├── FORK_GUIDE.md                    Customisation runbook for forking to a different station
 ├── HANDOVER.md                      Session pickup notes
 ├── SHACK_CHANGELOG.md               Dated changelog of non-DXCC tab changes
-├── SHACK_CHANGELOG.pdf              Changelog rendered PDF (always in sync with .md)
 └── LICENSE                          MIT
 ```
 
@@ -523,8 +520,8 @@ comes from VU2PTT's Skimmer Calibration tracker.
 | [REBUILD_PI.md](REBUILD_PI.md) | Operator (disaster recovery) | "The shack Pi died — rebuild from blank SD card" |
 | [DEPLOY_PI.md](DEPLOY_PI.md) | Operator | Onboarding a *different* Pi as a fleet member (telemetry + reboot agent only) |
 | [FORK_GUIDE.md](FORK_GUIDE.md) | Different operator forking the repo | "I'm not VU2CPL but I want to run this stack at my own QTH" — per-site customisation runbook (callsign, grid, MQTT broker, hardware substitutions, `/shack` rebadging) |
-| [DXCC.md](DXCC.md) / [PDF](DXCC_Tracker_README.pdf) | Operator | Working on the DXCC tab specifically |
-| [SHACK_CHANGELOG.md](SHACK_CHANGELOG.md) / [PDF](SHACK_CHANGELOG.pdf) | Future-self | "What did I change on day X" |
+| [DXCC.md](DXCC.md) | Operator | Working on the DXCC tab specifically |
+| [SHACK_CHANGELOG.md](SHACK_CHANGELOG.md) | Future-self | "What did I change on day X" |
 | [HANDOVER.md](HANDOVER.md) | New session pickup | "What was I in the middle of" |
 | [restic/README.md](restic/README.md) | Operator | Backups of the Linux boxes: what is covered, where the password lives, how to restore |
 

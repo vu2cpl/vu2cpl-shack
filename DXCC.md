@@ -186,7 +186,6 @@ flow.set('cfg_flows_dir', os.homedir() + '/.node-red/projects/vu2cpl-shack');
 | `nr_dxcc_seed.json` | Worked/confirmed seed |
 | `nr_dxcc_blacklist.json` | Blocked callsigns |
 | `DXCC.md` | This document |
-| `DXCC_Tracker_README.pdf` | PDF version (always in sync) |
 | `enable_file_context.sh` | One-time file context store setup |
 
 ---
@@ -195,9 +194,7 @@ flow.set('cfg_flows_dir', os.homedir() + '/.node-red/projects/vu2cpl-shack');
 
 ```bash
 cd ~/.node-red/projects/vu2cpl-shack
-# If this edit touched DXCC.md, regenerate the PDF first (CLAUDE.md rule #3):
-npx md-to-pdf DXCC.md && mv DXCC.pdf DXCC_Tracker_README.pdf
-git add flows.json DXCC.md DXCC_Tracker_README.pdf
+git add flows.json DXCC.md   # no PDF to regenerate since 2026-10-15
 git commit -m "v7: <description>"
 git push
 ```

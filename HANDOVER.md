@@ -2,7 +2,9 @@
 
 **Period:** 2026-05-01 → 2026-10-15
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
-**Last commit at handover:** **RBN skimmer calibration history, per exact SSID (`ccaef77`, `9ed8512`).** Manoj asked why VU2OY-9's skew was missing. `rbnskew.csv` only holds sm7iun's newest day, and VU2OY-9 and VU2CPL-88 had no value that day, although sm7iun rated them a day or two earlier. Manoj's rule, now in CLAUDE.md: **every call+SSID is its own receiver, never mix them** (VU2OY ≈ +1 ppm and VU2OY-9 ≈ +14 ppm are two rigs). New `GET rbnhist.txt` + `Parse Skew History` on the 6-h calibration inject read sm7iun's plain-text 10-day table and keep local skimmers per day in file context for 30 days. Tiles show that SSID's last value with "Nd old", and a *Skimmer calibration* section on both dashboards has a sparkline per local SSID (±3 ppm scale, ±1.5 ppm guides), after VU2PTT's Skimmer Calibration tracker (credited). `Parse DX Spot` no longer strips SSIDs. VU24DX-1 confirmed as VU24DX's only receiver, so its tag stays. Verified on the Pi (stored history, MQTT fields) and by rendering the real `index.js` and D1 template against today's data at desktop and phone width; `/shack` itself needs a login, so not screenshotted live. New open item #52 (spot lines split across TCP chunks).
+**Last commit at handover:** **No more PDF copies of repo docs.** Manoj: "md is good enough". CLAUDE.md rules #3 and #6 retired in place (numbering kept), `DXCC_Tracker_README.pdf` and `SHACK_CHANGELOG.pdf` deleted (in git history), live references removed from README, DXCC.md and this file. `cdp` is now commit, document (changelog, HANDOVER, every README), push.
+
+Prior handover tip: **RBN skimmer calibration history, per exact SSID (`ccaef77`, `9ed8512`).** Manoj asked why VU2OY-9's skew was missing. `rbnskew.csv` only holds sm7iun's newest day, and VU2OY-9 and VU2CPL-88 had no value that day, although sm7iun rated them a day or two earlier. Manoj's rule, now in CLAUDE.md: **every call+SSID is its own receiver, never mix them** (VU2OY ≈ +1 ppm and VU2OY-9 ≈ +14 ppm are two rigs). New `GET rbnhist.txt` + `Parse Skew History` on the 6-h calibration inject read sm7iun's plain-text 10-day table and keep local skimmers per day in file context for 30 days. Tiles show that SSID's last value with "Nd old", and a *Skimmer calibration* section on both dashboards has a sparkline per local SSID (±3 ppm scale, ±1.5 ppm guides), after VU2PTT's Skimmer Calibration tracker (credited). `Parse DX Spot` no longer strips SSIDs. VU24DX-1 confirmed as VU24DX's only receiver, so its tag stays. Verified on the Pi (stored history, MQTT fields) and by rendering the real `index.js` and D1 template against today's data at desktop and phone width; `/shack` itself needs a login, so not screenshotted live. New open item #52 (spot lines split across TCP chunks).
 
 Prior handover tip: **RBN: VU2OY logged in again and retagged `VU2OY-9` (`a5c0325`).** Manoj: "vu2oy in dashboard is not updating". Around 2026-10-14 19:00Z VU2OY turned `vu2oy.ddns.net:7550` from an open no-login feed into a Meridian 0.1.25 cluster server that waits at `Please enter your callsign:` (unterminated). Our VU2OY tcp-in split on `\n`, so the prompt was never emitted, and `Login Handler VU2OY` had no login path anyway; the tile sat offline ~21 h (last spot 18:59Z on the 14th). Now: raw chunks, the handler is a copy of VU24DX's (logs in as `VU2CPL-1`), new reply `tcp out` `rbn_vu2oy_tcp_reply`, spots tagged `VU2OY-9` on Manoj's call (the feed prints `VU2OY-9-#`), `sk2_call` defaults follow, HA `rbn_vu2oy_h1` reads `skimmers['VU2OY-9']` (republished). Verified: online with 35 spots ten seconds after the restart; HA sensor 36. Its skew came from the history fix that followed (below), never from the plain `VU2OY` row: that's a different receiver. The disabled DXCC tab's VU2OY cluster needs no change (raw chunks + a handler that already matches this prompt).
 
@@ -92,6 +94,7 @@ Prior handover tip: `98daacb` (Pi-committed) — VU2CPL cluster reverted to port
 
 | Day | Area | What changed |
 |-----|------|--------------|
+| 10-15 | **Repo docs: PDF copies dropped** | Rules #3/#6 retired (Manoj: "md is good enough"); both PDFs deleted rather than left stale; references removed from README, DXCC.md, HANDOVER. |
 | 10-15 | **RBN: skimmer calibration history per exact SSID** | Why VU2OY-9's skew was blank: the CSV is sm7iun's newest day only. `rbnhist.txt` (10-day table) fetched every 6 h, local skimmers stored per day for 30 days (`skew_hist`, file scope); tiles show the SSID's own last value + "Nd old"; new *Skimmer calibration* section with sparklines on both dashboards (D1 height 16, Vue v46). Never mix SSIDs (Manoj); VU24DX-1 = VU24DX's only receiver. Credit VU2PTT's tracker for the idea (`ccaef77`, `9ed8512`). |
 | 10-15 | **RBN: VU2OY login + retag `VU2OY-9`** | VU2OY's `:7550` became a Meridian 0.1.25 server asking for a callsign (~10-14 19:00Z); our tcp-in split on `\n` and the handler had no login, so zero spots for ~21 h. Raw chunks, VU24DX-style handler (login `VU2CPL-1`), new reply node, tag `VU2OY-9` (Manoj's call), `sk2_call` defaults + HA `rbn_vu2oy_h1` template follow (`a5c0325`). Pi pulled + Node-RED restarted; online within 10 s. Skew: see the calibration-history row above. |
 | 10-14 | **AS3935 bridge v0.4.1 → v0.4.3 (OTA)** | After a second keepalive-flapping outage (04:31–12:14, fixed by a timed `reboot` cmd via HA). v0.4.1: restart after 5 MQTT reconnects in 10 min, `boot_cause`, disturber/noise throttle (`evt_interval_s` 60), HTTP OTA with rollback (`ota.sh`), `modem_sleep none` (ping 266 → 13 ms). v0.4.2: `wifi_off_test` (405 / 398 / 403 per min, so the radio isn't the disturber source; an A/B/A run showed the MQTT traffic isn't either). v0.4.3: release a latched IRQ line; re-init/restart on IRQ silence. Full story in the bridge repo's HANDOVER. |
@@ -309,7 +312,7 @@ Prior handover tip: `98daacb` (Pi-committed) — VU2CPL cluster reverted to port
 flows.json                        — main flow file (Pi: ~/.node-red/projects/vu2cpl-shack/)
 as3935_mqtt.py                    — chip daemon (Pi: /home/vu2cpl/, source-of-truth in repo root)
 as3935_tune.py                    — tuning helper (run with service stopped)
-SHACK_CHANGELOG.md / .pdf         — must stay in sync (regen PDF on every changelog edit)
+SHACK_CHANGELOG.md                — dated change record (no PDF since 2026-10-15)
 nr_dxcc_seed.json                 — auto-updated by Club Log fetch; commit when changed
 HANDOVER.md                       — this file
 ```
@@ -332,10 +335,9 @@ Critical Node-RED IDs (per CLAUDE.md):
 
 ## Workflow reminders
 
-- **`cdp`** = Commit, Document (changelog + regen PDF), Push. Updates DXCC extract too if `flows.json` changed.
+- **`cdp`** = Commit, Document (changelog, HANDOVER, every README), Push. No PDF regen since 2026-10-15 (rules #3/#6 retired); the DXCC extract went 2026-07-01.
 - **Mac → Pi** for script changes: edit on Mac, `git push`; on Pi: `git pull` then `sudo cp <file> /home/vu2cpl/<file>; sudo systemctl restart <svc>`.
 - **Pi → Mac** for flow changes: `nrsave "<msg>"` on Pi; `git push`; on Mac: `git pull`.
-- **PDF regen:** `npx --yes md-to-pdf SHACK_CHANGELOG.md` (no pandoc on this Mac).
 - **AS3935 systemd unit needs** `Environment=PYTHONUNBUFFERED=1` in override or prints don't reach journalctl.
 
 ---

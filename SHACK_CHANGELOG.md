@@ -3,12 +3,23 @@
 Fixes and changes to non-DXCC tabs of the Node-RED shack automation
 (SPE amplifier, Power Control, Solar Conditions, Lightning, Rotator, etc.).
 
-The DXCC Tracker has its own doc: see `DXCC.md` / `DXCC_Tracker_README.pdf`.
+The DXCC Tracker has its own doc: see `DXCC.md`.
 For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
 ## 2026-10-15
+
+### Repo docs: no more PDF copies (rules #3 and #6 retired)
+
+Manoj: "remove pdf generation requirement … md is good enough". CLAUDE.md rules #3 (`DXCC.md` →
+`DXCC_Tracker_README.pdf`) and #6 (`SHACK_CHANGELOG.md` → `SHACK_CHANGELOG.pdf`) are retired in place,
+struck through like #4, so the rule numbers other docs cite still line up. Both PDFs were deleted from the
+repo rather than left to go stale under a README that called them "always in sync": nothing regenerates them
+now, nothing outside the repo links to them, and they stay in git history. Live references were removed
+from README (full-reference link, layout tree, docs table), DXCC.md (files table, commit sequence) and
+HANDOVER (key files, `cdp` definition, the regen command). Dated entries that mention past regenerations
+are left as history.
 
 ### RBN Skimmer Monitor: skimmer calibration history, per exact SSID (`ccaef77`, `9ed8512`)
 
