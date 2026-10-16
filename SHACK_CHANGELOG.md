@@ -10,6 +10,18 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-10-16
 
+### NAS → OpenMediaVault (#51): step 2, the DS710+ boots Debian from USB
+
+The DS710+ has a rear VGA port, so no serial adapter was needed. Its AMIBIOS 8 shows only "Press F11 for
+BBS POPUP" (Synology hid the setup prompt). F11's boot menu listed the Debian stick next to the Synology
+module, but its arrow keys didn't respond (number pad and Fn didn't help either). What worked: unplugging the Synology
+boot module inside the case. The stick is then the only boot device, and the Debian 13.7 installer came
+up in BIOS mode. The module went back in, and DSM and the rest-server came up clean.
+
+So the plan is Debian on its own USB device (a small USB SSD), with the Synology module kept as the way
+back to DSM. Step 3 (install, mount `/volume1` in place, move the rest-server, OMV) is an evening with the
+NAS down, details in HANDOVER #51.
+
 ### NAS → OpenMediaVault (#51): step 1, boot flash imaged
 
 Started the DSM 5.2 → Debian + OMV plan. The preconditions were met first: the 05:31 `restic-copy` had
