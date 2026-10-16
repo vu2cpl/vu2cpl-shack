@@ -7,6 +7,7 @@ The rest-server units live in `../restic/nas-debian/`.
 | File | Installed as | What it does |
 |---|---|---|
 | `ds710-microp` | `/usr/local/sbin/ds710-microp` | Sends commands to the front-panel microcontroller; `diskled` sets the bay LEDs |
+| `dsm-led-dump.py` | run by hand, Python 2/3 | Read-only register snapshot (ICH9 GPIO, PMBASE, PCI config, IT8720F LDN7), same output under DSM and Debian for diffing |
 | `ds710-btnwatch` | `/usr/local/sbin/ds710-btnwatch` | Read-only: prints anything that changes on the UARTs, chipset GPIOs, Super I/O GPIOs, ACPI status or input devices while you press buttons |
 | `ds710-buttons` + `ds710-buttons.service` | `/usr/local/sbin/`, `/etc/systemd/system/` (enabled) | Power held ~3 s → long beep + clean power-off. USB copy held ~1 s → logged |
 | `ds710-shutdown-hook` | `/usr/lib/systemd/system-shutdown/ds710` | At the very end of shutdown tells the controller `1` (power-off) or `C` (restart), as DSM's kernel does |
@@ -56,18 +57,11 @@ anything else, and never reconfigures a pin. The GPIO base comes from `setpci -s
 
 ## Still not working
 
-- **Disk 2 LED:** dark, although it worked under DSM (green, blinking with access). Bay 1's LED is
-  GPIO16 gated by hardware disk activity: it blinks while its disk is read. Bay 2 stays dark with
-  GPIO20 high (the boot preset sets it) even while its disk is read. Tried, each with no light on
-  bay 2: GPIO20/32 in all four combinations, GPIO33/34, 49/55, the IT8720F's GP32/GP33 (BIOS-set
-  outputs, DSM's "disk 5" pins), AHCI enclosure messages with and without GPIO20 high, and SATA link
-  power `max_performance`. So a third signal gates bay 2. DSM's userland (`scemd`, packed) can set
-  any whitelisted GPIO through synobios's raw GPIO ioctl, which may be how. What's left are pins
-  that are inputs today; making one an output could cut disk power or short a USB over-current
-  line, so nothing is guessed. A drive swap (2026-10-16) showed the fault stays with bay 2, not the
-  drive, and every safe pin combination with GPIO20 high was tried too. Likeliest now: a loose or
-  damaged front-panel LED cable from today's case opening. Check it next time the case is open.
-  Details in HANDOVER #53d.
+- **Disk 2 LED: same as under DSM, nothing more to do in software.** Booting DSM once (2026-10-16)
+  showed HDD 2 dark at idle under DSM too, with DSM driving GPIO20 high and every chipset/Super I/O
+  register identical to Debian's (`dsm-led-dump.py`). Under DSM it only flickers faintly green on
+  disk access. The LED itself tests fine with a meter, so bay 2's steady-green drive on the board is
+  weak. `ds710-microp diskled 2 …` drives exactly DSM's pins (GPIO20 green / GPIO32 orange).
 - ~~**Power button and the USB copy button**~~ **work since 2026-10-16.** The controller reports a
   button on ttyS0 only once it's **held**: `0` after ~3 s on power (it also starts blinking the power
   LED), `` ` `` after ~1 s on USB copy. Taps send nothing, and nothing reaches GPIO, ACPI or input

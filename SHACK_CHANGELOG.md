@@ -29,6 +29,22 @@ DSM's last word (`1` before power-off, `C` before restart). Without it a power-o
 on, and GRUB then couldn't read the boot stick until a cold start. Reboot and button power-off are
 both tested clean.
 
+### NAS: HDD 2 LED, closed (DSM does no better)
+
+A one-off DSM boot showed HDD 2 dark at idle under DSM too, with DSM driving the same GPIO20 and
+every chipset/Super I/O register identical to Debian's. It only flickers faintly green on access;
+the LED itself tests fine. So bay 2's drive circuit is weak, and Debian already matches DSM. A drive
+swap earlier kept the fault with the bay. New read-only `nas-debian/dsm-led-dump.py`.
+
+### NAS: power and USB copy buttons work
+
+The front-panel controller reports a button on ttyS0 once it's held: `0` after ~3 s on power,
+`` ` `` after ~1 s on USB copy. New `nas-debian/ds710-buttons` + unit: a power hold gives a long beep
+and a clean `systemctl poweroff`; copy is logged. A systemd-shutdown hook now sends the controller
+DSM's last word (`1` before power-off, `C` before restart). Without it a power-off came straight back
+on, and GRUB then couldn't read the boot stick until a cold start. Reboot and button power-off are
+both tested clean.
+
 ### NAS: HDD 2 LED, the fault stays with the bay
 
 A drive swap kept HDD 1 green and HDD 2 dark, so it's bay 2, not the drive. With GPIO20 high, every
