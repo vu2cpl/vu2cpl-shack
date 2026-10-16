@@ -34,8 +34,10 @@ sudo ds710-microp LE3      # eSATA LED off
 
 ## Still not working
 
-- **Disk 1 / Disk 2 LEDs:** not on the microcontroller. DSM drives them through GPIO pins on the
-  IT8720F Super I/O (`SetDiskLedStatusBySataSuperIO`, `syno_superio_gpio_pin` in `synobios.ko`).
+- **Disk 1 / Disk 2 LEDs:** not on the microcontroller. DSM sends the internal bays to
+  `sata_syno_ahci_diskled_set`, a function in DSM's own modified kernel. Ruled out on 2026-10-16:
+  IT8720F GPIO; ICH9R GPIO30/31/46/47 (USB over-current pins, which DSM uses for "disks" 7/8);
+  standard AHCI enclosure-management LED messages (accepted, no LED). Details in HANDOVER #53d.
 - **Power button and the second front button:** no bytes reach Linux and no ACPI events. A short
   press does nothing, and a long press is a hard power-off. Shut down from OMV or `sudo poweroff`.
 - **Fan:** runs at whatever speed the controller holds. `-Vnn` should set it (untested).
