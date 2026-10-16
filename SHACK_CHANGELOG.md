@@ -29,6 +29,12 @@ DSM's last word (`1` before power-off, `C` before restart). Without it a power-o
 on, and GRUB then couldn't read the boot stick until a cold start. Reboot and button power-off are
 both tested clean.
 
+### NAS: spare boot stick re-cloned; procedure written down
+
+The Cruzer Fit spare now has everything from today (LED/button/shutdown-hook units, `RESUME=none`),
+cloned live with no downtime. The procedure is in `nas-debian/README.md`, including the shared-mount
+trap: bind `/` with `--make-private` before mounting the spare, or rsync copies the spare into itself.
+
 ### NAS: HDD 2 LED, closed (DSM does no better)
 
 A one-off DSM boot showed HDD 2 dark at idle under DSM too, with DSM driving the same GPIO20 and

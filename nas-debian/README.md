@@ -72,3 +72,38 @@ anything else, and never reconfigures a pin. The GPIO base comes from `setpci -s
   unreadable to GRUB ("failure reading sector 0x802 from hd0", fixed by a cold start). With the
   hook: reboot and button power-off both tested clean (stays off).
 - **Fan:** runs at whatever speed the controller holds. `-Vnn` should set it (untested).
+
+## Re-cloning the spare boot stick
+
+The spare is the SanDisk **Cruzer Fit** (serial …6472, kept in the drawer with the Synology module).
+It holds the original 2026-10-16 13:02 install: `sdX1` root plus an unused swap partition `sdX5`.
+Its root filesystem has the **same UUID** as the Ultra Fit's (`c6160f5b…`), so it can boot in its
+place, and the two must never be in at boot together. Re-clone it after any real change to the
+system. Last re-cloned 2026-10-16 22:11 (all of `nas-debian/`, `RESUME=none`).
+
+Live, with no downtime, on the running NAS (plug the Cruzer in *after* boot):
+
+```bash
+lsblk -dno NAME,MODEL                       # find the Cruzer, e.g. sdd; use the device path, never the UUID
+sudo mkdir -p /mnt/rootsrc /mnt/spare
+sudo mount --bind / /mnt/rootsrc
+sudo mount --make-private /mnt/rootsrc      # MUST come before mounting the spare (see below)
+sudo mount -o remount,bind,ro /mnt/rootsrc
+sudo mount /dev/sdd1 /mnt/spare
+sudo systemd-run --unit=spare-clone rsync -aHAXS --numeric-ids --delete --delete-excluded \
+    "--exclude=/mnt/*" /mnt/rootsrc/ /mnt/spare/          # ~2.5 min; survives the ssh session
+sudo grub-install --target=i386-pc --boot-directory=/mnt/spare/boot /dev/sdd
+sync; sudo umount /mnt/spare /mnt/rootsrc; sudo rmdir /mnt/spare /mnt/rootsrc
+```
+
+Then pull the Cruzer.
+
+- **Why the bind mount:** it shows the root filesystem as it is on the stick, without OMV's
+  writecache overlays (`/var/log`, apt, rrd, monit) on top.
+- **Why `--make-private`:** `/` is a *shared* mount under systemd. Without it, mounting the spare
+  also appears inside the bind (`/mnt/rootsrc/mnt/spare`), and rsync copies the spare into itself.
+  That happened on 2026-10-16: 8.9 GB of junk before it was stopped.
+- **Why `systemd-run`:** a backgrounded `nohup` rsync was still killed by SIGHUP when the ssh session
+  closed.
+- While the Cruzer is plugged in, `/dev/disk/by-uuid/c6160f5b…` points at whichever stick appeared
+  last. The running system is unaffected, but don't reboot until it's out.
