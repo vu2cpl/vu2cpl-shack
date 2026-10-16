@@ -29,6 +29,12 @@ DSM's last word (`1` before power-off, `C` before restart). Without it a power-o
 on, and GRUB then couldn't read the boot stick until a cold start. Reboot and button power-off are
 both tested clean.
 
+### NAS: HDD 2 LED, the fault stays with the bay
+
+A drive swap kept HDD 1 green and HDD 2 dark, so it's bay 2, not the drive. With GPIO20 high, every
+other BIOS-set output pin was tried in turn: nothing. Likeliest is a loose front-panel LED cable from
+today's case opening; check it next time the case is open.
+
 ### NAS: bay 2 LED and buttons, narrowed down
 
 Bay 2's LED worked under DSM like bay 1's. Bay 1's LED is GPIO16 gated by hardware disk activity

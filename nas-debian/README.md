@@ -64,7 +64,10 @@ anything else, and never reconfigures a pin. The GPIO base comes from `setpci -s
   power `max_performance`. So a third signal gates bay 2. DSM's userland (`scemd`, packed) can set
   any whitelisted GPIO through synobios's raw GPIO ioctl, which may be how. What's left are pins
   that are inputs today; making one an output could cut disk power or short a USB over-current
-  line, so nothing is guessed. Details in HANDOVER #53d.
+  line, so nothing is guessed. A drive swap (2026-10-16) showed the fault stays with bay 2, not the
+  drive, and every safe pin combination with GPIO20 high was tried too. Likeliest now: a loose or
+  damaged front-panel LED cable from today's case opening. Check it next time the case is open.
+  Details in HANDOVER #53d.
 - ~~**Power button and the USB copy button**~~ **work since 2026-10-16.** The controller reports a
   button on ttyS0 only once it's **held**: `0` after ~3 s on power (it also starts blinking the power
   LED), `` ` `` after ~1 s on USB copy. Taps send nothing, and nothing reaches GPIO, ACPI or input
