@@ -8,6 +8,17 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-10-16
+
+### Home Assistant: DiskStation entities back (DSM update check disabled)
+
+The 07:15 health check was 🟡: 26 `diskstation_*` entities unavailable since 20:39 IST the day before. The NAS
+was up. HA's Synology integration fails its whole poll when one API call errors, and the DSM-update check on
+the end-of-life DS710+ had started failing (codes 5214 / 105). `update.diskstation_dsm_update`, the only entity
+using that call, is now disabled in HA and the entry reloaded; all 26 came back. Documented in CLAUDE.md
+(HassPi section), since HA config isn't in git. In the shack-health repo, the master-bedroom Hue bulbs
+(`mbr_1`, `mbr_2`), which drop off Zigbee 100+ times a day, were added to the HA ignore list.
+
 ## 2026-10-15
 
 ### RBN Skimmer Monitor: spot lines split across TCP chunks are kept (`95d9f2a`, #52)

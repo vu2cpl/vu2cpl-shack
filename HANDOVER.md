@@ -1,6 +1,6 @@
 # Session Handover — VU2CPL Shack
 
-**Period:** 2026-05-01 → 2026-10-15
+**Period:** 2026-05-01 → 2026-10-16
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
 **Last commit at handover:** **RBN #52 fixed, confirmation pending (`95d9f2a`).** The three login handlers now carry a chunk's unterminated tail into the next chunk, so spots split across TCP chunks are no longer dropped. Unit-tested on 120 randomized chunkings; deployed 17:03:27Z with all three skimmers online. The 30-min log check was cut short by the session ending, so **first thing next session:** run the #52 check and close it if it reads 0.
 
@@ -96,6 +96,7 @@ Prior handover tip: `98daacb` (Pi-committed) — VU2CPL cluster reverted to port
 
 | Day | Area | What changed |
 |-----|------|--------------|
+| 10-16 | **HA: DiskStation entities back** | Health check 🟡: 26 `diskstation_*` unavailable since 10-15 20:39 with the NAS up. HA's Synology poll failed on the DSM-update call (5214 / 105, end-of-life DS710+), and one failing call takes down the whole poll. `update.diskstation_dsm_update` disabled + entry reloaded → all 26 back. Recorded in CLAUDE.md's HassPi section. shack-health: master-bedroom Hue bulbs (`mbr_1`/`mbr_2`) added to the HA ignore list. |
 | 10-15 | **RBN #52: spot lines split across TCP chunks** | The three login handlers hold each chunk's unterminated tail per session and prepend it to the next (`95d9f2a`); 120 randomized chunk tests pass; deployed 17:03:27Z, log confirmation pending (see #52). |
 | 10-15 | **Repo docs: PDF copies dropped** | Rules #3/#6 retired (Manoj: "md is good enough"); both PDFs deleted rather than left stale; references removed from README, DXCC.md, HANDOVER. |
 | 10-15 | **RBN: skimmer calibration history per exact SSID** | Why VU2OY-9's skew was blank: the CSV is sm7iun's newest day only. `rbnhist.txt` (10-day table) fetched every 6 h, local skimmers stored per day for 30 days (`skew_hist`, file scope); tiles show the SSID's own last value + "Nd old"; new *Skimmer calibration* section with sparklines on both dashboards (D1 height 16, Vue v46). Never mix SSIDs (Manoj); VU24DX-1 = VU24DX's only receiver. Credit VU2PTT's tracker for the idea (`ccaef77`, `9ed8512`). |

@@ -1217,6 +1217,21 @@ boundary dropped again at 14:58.
 - Firmware isn't the cause: all 8 report 1.3.17. If `-40105` stops appearing after a python-kasa / HA update,
   the automation can go.
 
+### Synology DiskStation: DSM update entity disabled (2026-10-16)
+
+HA's built-in `synology_dsm` integration watches the DS710+ NAS (`192.168.1.101`, DSM 5.2-5967 Update 9, end of
+life). From 2026-10-15 20:39 IST every poll failed on the DSM-update call (`SYNO.Core.Upgrade.Server`, codes
+5214 and 105). One API error fails the whole poll, so all 26 `diskstation_*` entities went unavailable while
+the NAS and the config entry (`loaded`) were fine. The shack health check flagged it the next morning.
+
+- Fix: `update.diskstation_dsm_update` is **disabled** in the entity registry (`disabled_by: user`). It is the
+  only entity on that API, so HA stops calling it. Then a config-entry reload brought all 26 back.
+- Nothing is lost: the DS710+ will never get another DSM update.
+- Re-enabling the entity brings the failure back. If the `diskstation_*` entities all go unavailable again,
+  check that it is still disabled, then read `synology_dsm.coordinator` in WS `system_log/list`.
+- `binary_sensor.diskstation_security_status` reads `on` (a problem): that's DSM's Security Advisor on an
+  out-of-date DSM, not a new fault.
+
 ---
 
 ## EXTERNAL APIs
