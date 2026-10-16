@@ -1,6 +1,6 @@
 # Session Handover — VU2CPL Shack
 
-**Period:** 2026-05-01 → 2026-10-16
+**Period:** 2026-05-01 → 2026-10-17
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
 **Last commit at handover:** **NAS front buttons work (#53d).** Hold power ~3 s → long beep → clean power-off (`ds710-buttons`). USB copy is logged only. A systemd-shutdown hook sends the controller DSM's `1`/`C`; without it a power-off came back on and GRUB couldn't read the boot stick until a cold start. Reboot and button power-off are tested clean. HDD 1 LED works, HDD 2 LED is still open (a third signal gates it; see #53d).
 
@@ -108,6 +108,7 @@ Prior handover tip: `98daacb` (Pi-committed) — VU2CPL cluster reverted to port
 
 | Day | Area | What changed |
 |-----|------|--------------|
+| 10-17 | **Synology boot module re-imaged (way back to DSM checked)** | Module (USB `f400:f400` "Diskstation", 128 MB) plugged into the Mac and imaged with `dd` to `~/Documents/Synology NAS DS710+ files/`: sha256 `2d463865…01148`, **byte-identical to both 10-16 reads** in `~/nas-omv-prep/`, so the one DSM boot on 10-16 didn't change it. Read with `debugfs` (read-only, on a temp copy): p1 (16 MB, ext2, clean) = GRUB 0.97 + install-time `zImage`/`rd.gz` (2009) + `GRUB_VER` (`MODEL="DS710+"`, `DSM_VERSION="5644"`); p2 (99 MB, ext2, clean) = DSM 5.2 `zImage`/`rd.gz` (2019-07-05) + checksums + `vender` (holds the NAS's real MAC, the one `10-nas-mac.link` pins, and its serial). `grub.conf`: serial 115200, default entry 2 (`root=/dev/md0`), fallback to entry 1 (ramdisk recovery); both pass `syno_hw_version=DS1010+` (same platform). |
 | 10-16 | **NAS front buttons work (#53d)** | Held presses report on ttyS0: power ~3 s = `0`, USB copy ~1 s = `` ` ``. `ds710-buttons`: power → beep + clean poweroff. New systemd-shutdown hook sends DSM's `1`/`C` to the controller, without which a power-off came straight back on and GRUB couldn't read the stick. Reboot + button power-off tested clean. `ds710-btnwatch` read-only diagnostic. HDD 2 LED still open. |
 | 10-16 | **NAS disk 1 bay LED (#53d)** | DSM's DS710+ path traced: synobios keeps its generic `SetDiskLedStatus` → ICH9R GPIO (disk 1 = 16/18, disk 2 = 20/32, green/orange, high = on); the AHCI-message path (`sata_syno_ahci_diskled_set`, decoded from DSM's kernel: green = em_message `0x80000`, orange `0x400000`) is the DS712+'s. Watched on the panel: bay 1 green + orange work; bay 2 dark on 20/32, 33/34, 49/55 and on the AHCI messages. `ds710-microp diskled`, boot preset sets the disks green; reboot-tested twice (HDD 1 green by itself). Also fixed the ~30 s initramfs resume wait at boot (#53h). |
 | 10-16 | **NAS RAID / SMART / temp alerting (#53b)** | shack-health `2145275`: NAS section in the 07:15 report (md2, SMART per disk, disk temps 50/55 °C, CPU, `/volume1`, rest-servers, smbd, mdmonitor) via a forced-command key on `nasadmin` + one no-arg sudoers rule; `mdadm --monitor --program=nas-md-alert` Telegrams any RAID event at once (+ daily degraded reminder). Live: md2 `[UU]`, both IronWolfs PASSED with 0 bad sectors, 37/34 °C. |
