@@ -22,9 +22,14 @@ Verified 2026-10-16: disk 1 green and orange work. Disk 2 stays dark on DSM's pi
 33/34/49/55), although it worked under DSM, so DSM must reach it some other way (not found yet).
 The disk 2 entry is kept so "all" does what DSM's code does; it lights nothing today.
 
+DSM's kernel tells the controller how the box is going down: "1" right before an ACPI power-off,
+"C" before a restart. Without it, a power-off after a power-button press came straight back on
+(2026-10-16), so ds710-shutdown-hook sends the same at the very end of shutdown.
+
 usage: ds710-microp CMD [CMD ...]           e.g.  ds710-microp 4 8 LE3
        ds710-microp diskled 1|2|all green|orange|off
        ds710-microp boot | shutdown
+       ds710-microp final-poweroff | final-reboot    (only from the systemd-shutdown hook)
 """
 import os, struct, subprocess, sys, termios, time
 
@@ -33,12 +38,16 @@ PRESETS = {
     "boot":     ["4", "8", "LE3"],     # power on, status steady green, eSATA off
     "shutdown": ["7", "5"],            # status off, power LED blinking
 }
+FINAL = {                              # systemd-shutdown hook only: filesystems are read-only by then
+    "final-poweroff": ["1"],           # DSM's kernel sends "1" before kernel_power_off()
+    "final-reboot":   ["C"],           # ... and "C" before a restart
+}
 FORBIDDEN = {"1"}                      # hard power-off
 
 DISK_PINS = {1: (16, 18), 2: (20, 32)}               # (green, orange) ICH9R GPIO, from synobios
 DISK_STATES = {"off": (0, 0), "green": (1, 0), "orange": (0, 1)}
 
-def send(cmds):
+def send(cmds, final=False):
     fd = os.open(PORT, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
     try:
         a = termios.tcgetattr(fd)
@@ -47,7 +56,7 @@ def send(cmds):
         a[4] = a[5] = termios.B9600
         termios.tcsetattr(fd, termios.TCSANOW, a)
         for c in cmds:
-            if c in FORBIDDEN or c.upper() in ("V00", "V0"):
+            if (c in FORBIDDEN and not final) or c.upper() in ("V00", "V0"):
                 sys.exit(f"refusing '{c}'")
             os.write(fd, b"-" + c.encode())
             termios.tcdrain(fd)
@@ -86,6 +95,8 @@ if __name__ == "__main__":
         if len(args) != 3 or args[1] not in ("1", "2", "all") or args[2] not in DISK_STATES:
             sys.exit("usage: ds710-microp diskled 1|2|all green|orange|off")
         diskled(sorted(DISK_PINS) if args[1] == "all" else [int(args[1])], args[2])
+    elif len(args) == 1 and args[0] in FINAL:
+        send(FINAL[args[0]], final=True)
     elif len(args) == 1 and args[0] in PRESETS:
         send(PRESETS[args[0]])
         if args[0] == "boot":

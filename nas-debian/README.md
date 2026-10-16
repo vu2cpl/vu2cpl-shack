@@ -8,6 +8,8 @@ The rest-server units live in `../restic/nas-debian/`.
 |---|---|---|
 | `ds710-microp` | `/usr/local/sbin/ds710-microp` | Sends commands to the front-panel microcontroller; `diskled` sets the bay LEDs |
 | `ds710-btnwatch` | `/usr/local/sbin/ds710-btnwatch` | Read-only: prints anything that changes on the UARTs, chipset GPIOs, Super I/O GPIOs, ACPI status or input devices while you press buttons |
+| `ds710-buttons` + `ds710-buttons.service` | `/usr/local/sbin/`, `/etc/systemd/system/` (enabled) | Power held ~3 s → long beep + clean power-off. USB copy held ~1 s → logged |
+| `ds710-shutdown-hook` | `/usr/lib/systemd/system-shutdown/ds710` | At the very end of shutdown tells the controller `1` (power-off) or `C` (restart), as DSM's kernel does |
 | `ds710-leds.service` | `/etc/systemd/system/` (enabled) | Boot: power LED on, status steady green, eSATA off, disk LEDs green. Shutdown: status off, power LED blinking |
 
 ## The microcontroller
@@ -63,9 +65,13 @@ anything else, and never reconfigures a pin. The GPIO base comes from `setpci -s
   any whitelisted GPIO through synobios's raw GPIO ioctl, which may be how. What's left are pins
   that are inputs today; making one an output could cut disk power or short a USB over-current
   line, so nothing is guessed. Details in HANDOVER #53d.
-- **Power button and the USB copy button:** nothing reaches Linux. During taps (2026-10-16, twice,
-  `ds710-btnwatch`): no UART byte on ttyS0 or ttyS1 (the Synology protocol would send `0` /
-  `` ` ``), no change on any of the 64 chipset GPIOs or the Super I/O GPIO sets, no ACPI PM1/GPE
-  status, no input event, although Linux has an ACPI power-button device. Held presses (about 1-2 s)
-  are still to be tried. A long press is a hard power-off. Shut down from OMV or `sudo poweroff`.
+- ~~**Power button and the USB copy button**~~ **work since 2026-10-16.** The controller reports a
+  button on ttyS0 only once it's **held**: `0` after ~3 s on power (it also starts blinking the power
+  LED), `` ` `` after ~1 s on USB copy. Taps send nothing, and nothing reaches GPIO, ACPI or input
+  devices. `ds710-buttons` turns a power hold into a long beep + `systemctl poweroff`. Holding 4 s
+  or more is still the hardware hard-off. Copy is only logged (`journalctl -u ds710-buttons`).
+  **Power-off needs the shutdown hook:** without telling the controller `1`, it switched the box
+  straight back on after a button power-off, and that quick power cycle left the boot stick
+  unreadable to GRUB ("failure reading sector 0x802 from hd0", fixed by a cold start). With the
+  hook: reboot and button power-off both tested clean (stays off).
 - **Fan:** runs at whatever speed the controller holds. `-Vnn` should set it (untested).

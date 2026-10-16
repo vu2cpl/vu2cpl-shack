@@ -495,7 +495,7 @@ comes from VU2PTT's Skimmer Calibration tracker.
 ├── enable_file_context.sh           One-shot Node-RED file context store enabler
 ├── rebuild_pi.sh                    Automated bare-metal rebuild script (paired with REBUILD_PI.md)
 ├── restic/                          Nightly restic backups of the Linux boxes (.109, macmini-server) to the NAS (DS710+, Debian + OMV)
-├── nas-debian/                      DS710+ front panel under Debian: status/power/eSATA LEDs (microcontroller) + disk 1 bay LED (GPIO)
+├── nas-debian/                      DS710+ front panel under Debian: status/power/eSATA LEDs + power/copy buttons (microcontroller), disk 1 bay LED (GPIO)
 │
 ├── as3935.service                   systemd unit for as3935_mqtt.py (installed but disabled; re-enable as fallback if ESP32 fails)
 │

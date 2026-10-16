@@ -1,0 +1,8 @@
+#!/bin/sh
+# DS710+: tell the front-panel controller how the box is going down, as DSM's kernel does
+# ("1" before power-off, "C" before restart). Installed as /usr/lib/systemd/system-shutdown/ds710;
+# systemd-shutdown runs it last, with filesystems already read-only. vu2cpl-shack nas-debian/.
+case "$1" in
+    poweroff) exec /usr/local/sbin/ds710-microp final-poweroff ;;
+    reboot)   exec /usr/local/sbin/ds710-microp final-reboot ;;
+esac

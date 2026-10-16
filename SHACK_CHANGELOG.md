@@ -20,7 +20,16 @@ alone or together, or on 33/34/49/55, although all LEDs worked under DSM. New `d
 1|2|all green|orange|off` only writes the level bits of pins the BIOS already made outputs. The
 `boot` preset now also sets the disks green; after a reboot HDD 1 comes up green by itself. Bay 2 stays open (#53d).
 
-### NAS: bay 2 LED and buttons, narrowed down (still not working)
+### NAS: power and USB copy buttons work
+
+The front-panel controller reports a button on ttyS0 once it's held: `0` after ~3 s on power,
+`` ` `` after ~1 s on USB copy. New `nas-debian/ds710-buttons` + unit: a power hold gives a long beep
+and a clean `systemctl poweroff`; copy is logged. A systemd-shutdown hook now sends the controller
+DSM's last word (`1` before power-off, `C` before restart). Without it a power-off came straight back
+on, and GRUB then couldn't read the boot stick until a cold start. Reboot and button power-off are
+both tested clean.
+
+### NAS: bay 2 LED and buttons, narrowed down
 
 Bay 2's LED worked under DSM like bay 1's. Bay 1's LED is GPIO16 gated by hardware disk activity
 (it blinks on reads). Bay 2 stays dark with its GPIO20 high, so a third signal gates it. Ruled out:

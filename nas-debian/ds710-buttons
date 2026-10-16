@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+"""DS710+ front buttons under Debian: listen to the front-panel microcontroller on ttyS0.
+
+Found 2026-10-16 with ds710-btnwatch: the controller reports a button only once it has been HELD.
+  "0" (0x30)  power button held ~3 s; the controller also starts blinking the power LED itself
+  "`" (0x60)  USB copy button held ~1 s
+Quick taps send nothing, and nothing reaches GPIO, ACPI or /dev/input. A power hold of 4 s or more
+is still the hardware's own hard power-off.
+
+Power -> long beep, then a clean "systemctl poweroff" (ds710-leds.service then shows status off +
+power blinking until the box is off). USB copy -> logged only, no action assigned yet.
+Other bytes (e.g. the "1" ID stream that "-R" starts) are ignored.
+"""
+import os, subprocess, sys, termios, time
+
+PORT = "/dev/ttyS0"
+
+def log(msg):
+    print(msg, flush=True)                     # journald via systemd
+
+def open_port():
+    fd = os.open(PORT, os.O_RDWR | os.O_NOCTTY)
+    a = termios.tcgetattr(fd)
+    a[0] = a[1] = a[3] = 0                     # raw, same settings as ds710-microp
+    a[2] = termios.B9600 | termios.CS8 | termios.CREAD | termios.CLOCAL
+    a[4] = a[5] = termios.B9600
+    a[6][termios.VMIN] = 1
+    a[6][termios.VTIME] = 0
+    termios.tcsetattr(fd, termios.TCSANOW, a)
+    return fd
+
+def main():
+    fd = open_port()
+    log(f"listening on {PORT}")
+    shutting_down = False
+    while True:
+        b = os.read(fd, 1)
+        if b == b"0":
+            if shutting_down:
+                continue
+            shutting_down = True
+            log("power button held: long beep, clean shutdown")
+            os.write(fd, b"-3")                # long beep as acknowledgement
+            termios.tcdrain(fd)
+            time.sleep(0.2)
+            subprocess.run(["systemctl", "poweroff"], check=False)
+        elif b == b"`":
+            log("USB copy button held (no action assigned)")
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        sys.exit(0)

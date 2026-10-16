@@ -1,0 +1,13 @@
+# DS710+ front buttons under Debian + OMV (vu2cpl-shack nas-debian/, 2026-10-16).
+# Power held ~3 s -> long beep + clean poweroff. USB copy held ~1 s -> logged.
+[Unit]
+Description=DS710+ front buttons (microcontroller on ttyS0)
+
+[Service]
+Type=simple
+ExecStart=/usr/local/sbin/ds710-buttons
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
