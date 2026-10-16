@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Talk to the DS710+'s front-panel microcontroller (LEDs, fan) from Debian.
+"""Drive the DS710+'s front panel from Debian: the microcontroller (LEDs, fan) and the disk-bay LEDs.
 
 Found 2026-10-16 by reading DSM's own driver (synobios.ko, source ds710+.c) off the untouched DSM
 system partition: the controller sits on the UART at I/O 0x3F8 (Debian /dev/ttyS0; DSM calls it
@@ -13,10 +13,19 @@ From DSM's tables:         -4/-5/-6 power LED on/blink/off, -7 status off, -9 gr
 The short beep (-2) does nothing on this unit; the long beep (-3) works. The PC speaker
 (pcspkr) is not wired to the buzzer.  NEVER send "-1": hard power-off.
 
-usage: ds710-microp CMD [CMD ...]      e.g.  ds710-microp 4 8 LE3
+Disk-bay LEDs are not on the microcontroller. On the DS710+ synobios keeps its generic
+SetDiskLedStatus (the AHCI enclosure-message path is the DS712+'s), which drives ICH9R GPIOs:
+disk 1 = GPIO16 green / GPIO18 orange, disk 2 = GPIO20 green / GPIO32 orange, pin high = on.
+The BIOS already makes all four GPIO outputs; only their level bits are written here.
+Verified 2026-10-16: disk 1 green and orange work. Disk 2 stays dark on DSM's pins 20/32 (and on
+33/34/49/55), although it worked under DSM, so DSM must reach it some other way (not found yet).
+The disk 2 entry is kept so "all" does what DSM's code does; it lights nothing today.
+
+usage: ds710-microp CMD [CMD ...]           e.g.  ds710-microp 4 8 LE3
+       ds710-microp diskled 1|2|all green|orange|off
        ds710-microp boot | shutdown
 """
-import os, sys, termios, time
+import os, struct, subprocess, sys, termios, time
 
 PORT = "/dev/ttyS0"
 PRESETS = {
@@ -24,6 +33,9 @@ PRESETS = {
     "shutdown": ["7", "5"],            # status off, power LED blinking
 }
 FORBIDDEN = {"1"}                      # hard power-off
+
+DISK_PINS = {1: (16, 18), 2: (20, 32)}               # (green, orange) ICH9R GPIO, from synobios
+DISK_STATES = {"off": (0, 0), "green": (1, 0), "orange": (0, 1)}
 
 def send(cmds):
     fd = os.open(PORT, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
@@ -42,8 +54,40 @@ def send(cmds):
     finally:
         os.close(fd)
 
+def diskled(disks, state):
+    # GPIOBASE from the LPC bridge (D31:F0 0x48); GP_LVL at +0x0C (pins 0-31), GP_LVL2 at +0x38.
+    base = int(subprocess.check_output(["setpci", "-s", "00:1f.0", "48.l"], text=True), 16) & 0xFF80
+    fd = os.open("/dev/port", os.O_RDWR)
+    def inl(p):
+        os.lseek(fd, p, 0)
+        return struct.unpack("<I", os.read(fd, 4))[0]
+    def outl(p, v):
+        os.lseek(fd, p, 0)
+        os.write(fd, struct.pack("<I", v))
+    try:
+        for d in disks:
+            for pin, on in zip(DISK_PINS[d], DISK_STATES[state]):
+                use, io, lvl = (0x00, 0x04, 0x0C) if pin < 32 else (0x30, 0x34, 0x38)
+                bit = 1 << (pin % 32)
+                # never reconfigure a pin: only touch it if the BIOS already made it a GPIO output
+                if not inl(base + use) & bit or inl(base + io) & bit:
+                    sys.exit(f"GPIO{pin} is not a GPIO output, not touching it")
+                v = inl(base + lvl)
+                outl(base + lvl, v | bit if on else v & ~bit)
+    finally:
+        os.close(fd)
+
 if __name__ == "__main__":
     args = sys.argv[1:]
     if not args:
         sys.exit(__doc__)
-    send(PRESETS.get(args[0], args) if len(args) == 1 else args)
+    if args[0] == "diskled":
+        if len(args) != 3 or args[1] not in ("1", "2", "all") or args[2] not in DISK_STATES:
+            sys.exit("usage: ds710-microp diskled 1|2|all green|orange|off")
+        diskled(sorted(DISK_PINS) if args[1] == "all" else [int(args[1])], args[2])
+    elif len(args) == 1 and args[0] in PRESETS:
+        send(PRESETS[args[0]])
+        if args[0] == "boot":
+            diskled(sorted(DISK_PINS), "green")
+    else:
+        send(args)

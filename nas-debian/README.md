@@ -6,8 +6,8 @@ The rest-server units live in `../restic/nas-debian/`.
 
 | File | Installed as | What it does |
 |---|---|---|
-| `ds710-microp` | `/usr/local/sbin/ds710-microp` | Sends commands to the front-panel microcontroller |
-| `ds710-leds.service` | `/etc/systemd/system/` (enabled) | Boot: power LED on, status steady green, eSATA off. Shutdown: status off, power LED blinking |
+| `ds710-microp` | `/usr/local/sbin/ds710-microp` | Sends commands to the front-panel microcontroller; `diskled` sets the bay LEDs |
+| `ds710-leds.service` | `/etc/systemd/system/` (enabled) | Boot: power LED on, status steady green, eSATA off, disk LEDs green. Shutdown: status off, power LED blinking |
 
 ## The microcontroller
 
@@ -32,12 +32,32 @@ sudo ds710-microp ';'      # status orange blinking
 sudo ds710-microp LE3      # eSATA LED off
 ```
 
+## Disk-bay LEDs
+
+Not on the microcontroller. On the DS710+, DSM's `synobios.ko` drives them from chipset (ICH9R)
+GPIOs, pin high = LED on. The AHCI enclosure-message path (`sata_syno_ahci_diskled_set`) is the
+DS712+'s; synobios never selects it on this model.
+
+| Bay | Green | Orange | Works under Debian |
+|---|---|---|---|
+| Disk 1 | GPIO16 | GPIO18 | yes, both colours (2026-10-16) |
+| Disk 2 | GPIO20 | GPIO32 | **no**: those pins light nothing on this board, although bay 2 worked under DSM |
+
+```bash
+sudo ds710-microp diskled 1 green      # or orange / off; "all" for both bays
+```
+
+The helper only flips the level bit of a pin the BIOS already made a GPIO output. It refuses
+anything else, and never reconfigures a pin. The GPIO base comes from `setpci -s 00:1f.0 48.l`
+(`0x480`).
+
 ## Still not working
 
-- **Disk 1 / Disk 2 LEDs:** not on the microcontroller. DSM sends the internal bays to
-  `sata_syno_ahci_diskled_set`, a function in DSM's own modified kernel. Ruled out on 2026-10-16:
-  IT8720F GPIO; ICH9R GPIO30/31/46/47 (USB over-current pins, which DSM uses for "disks" 7/8);
-  standard AHCI enclosure-management LED messages (accepted, no LED). Details in HANDOVER #53d.
+- **Disk 2 LED:** dark. Tried, each with no light on bay 2: DSM's pins GPIO20/32 (alone and
+  together), GPIO33/34 and 49/55 (DSM's disk 3/4 pins), AHCI enclosure messages (green `0x80000`,
+  orange `0x400000`, plus earlier `0x10000`/`0x490000`), IT8720F GPIO, and ICH9R GPIO30/46. What's
+  left are pins that are inputs today; making one an output could cut disk power or short a USB
+  over-current line, so nothing is guessed. Details in HANDOVER #53d.
 - **Power button and the second front button:** no bytes reach Linux and no ACPI events. A short
   press does nothing, and a long press is a hard power-off. Shut down from OMV or `sudo poweroff`.
 - **Fan:** runs at whatever speed the controller holds. `-Vnn` should set it (untested).

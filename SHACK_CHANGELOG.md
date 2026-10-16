@@ -10,6 +10,20 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-10-16
 
+### NAS: disk 1 bay LED works under Debian (bay 2 still dark)
+
+The DS710+ doesn't use the AHCI enclosure-message path for its bay LEDs; synobios only switches
+that path on for the DS712+. The DS710+ keeps synobios's generic `SetDiskLedStatus`, which drives
+ICH9R GPIOs (pin high = on): disk 1 = GPIO16 green / GPIO18 orange, disk 2 = GPIO20 green / GPIO32
+orange. Watched on the front panel: bay 1 green and orange both work. Bay 2 lights nothing on 20/32,
+alone or together, or on 33/34/49/55, although all LEDs worked under DSM. New `ds710-microp diskled
+1|2|all green|orange|off` only writes the level bits of pins the BIOS already made outputs. The
+`boot` preset now also sets the disks green; after a reboot HDD 1 comes up green by itself. Bay 2 stays open (#53d).
+
+### NAS: no more 30 s resume wait at boot
+
+The initramfs still pointed `RESUME=` at the boot stick's old swap partition, which was disabled and no longer exists. Every boot waited ~30 s and printed "Gave up waiting for suspend/resume device". Now `RESUME=none` (#53h); boot takes 1 min 8 s.
+
 ### NAS: front LEDs work under Debian (DS710+ microcontroller protocol found)
 
 The DS710+'s front-panel controller sits on Debian's `ttyS0` (I/O 0x3F8) at 9600 8N1, and on this

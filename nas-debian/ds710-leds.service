@@ -1,5 +1,5 @@
 # DS710+ front LEDs under Debian + OMV (vu2cpl-shack nas-debian/, 2026-10-16).
-# Boot: power LED on, status steady green, eSATA off, once the NAS's services are up.
+# Boot: power LED on, status steady green, eSATA off, both disk-bay LEDs green, once the NAS's services are up.
 # Shutdown: status off, power LED blinking (DSM's cue that it is going down).
 [Unit]
 Description=DS710+ front LEDs (microcontroller on ttyS0)
