@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+"""Talk to the DS710+'s front-panel microcontroller (LEDs, fan) from Debian.
+
+Found 2026-10-16 by reading DSM's own driver (synobios.ko, source ds710+.c) off the untouched DSM
+system partition: the controller sits on the UART at I/O 0x3F8 (Debian /dev/ttyS0; DSM calls it
+ttyS1), 9600 8N1, and on this model every command is sent as "-" + command. Bare bytes are ignored.
+
+Verified on the hardware:  -8 status green   -LE1 / -LE3 eSATA LED on / off   -3 long beep
+                           -R reads the ID.
+From DSM's tables:         -4/-5/-6 power LED on/blink/off, -7 status off, -9 green blink,
+                           -: orange, -; orange blink, -LA2/-LA3 alarm LED blink/off,
+                           -Vnn fan duty % (DSM used 20..99; never send V00 = fan stopped).
+The short beep (-2) does nothing on this unit; the long beep (-3) works. The PC speaker
+(pcspkr) is not wired to the buzzer.  NEVER send "-1": hard power-off.
+
+usage: ds710-microp CMD [CMD ...]      e.g.  ds710-microp 4 8 LE3
+       ds710-microp boot | shutdown
+"""
+import os, sys, termios, time
+
+PORT = "/dev/ttyS0"
+PRESETS = {
+    "boot":     ["4", "8", "LE3"],     # power on, status steady green, eSATA off
+    "shutdown": ["7", "5"],            # status off, power LED blinking
+}
+FORBIDDEN = {"1"}                      # hard power-off
+
+def send(cmds):
+    fd = os.open(PORT, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
+    try:
+        a = termios.tcgetattr(fd)
+        a[0] = a[1] = a[3] = 0                                  # raw
+        a[2] = termios.B9600 | termios.CS8 | termios.CREAD | termios.CLOCAL
+        a[4] = a[5] = termios.B9600
+        termios.tcsetattr(fd, termios.TCSANOW, a)
+        for c in cmds:
+            if c in FORBIDDEN or c.upper() in ("V00", "V0"):
+                sys.exit(f"refusing '{c}'")
+            os.write(fd, b"-" + c.encode())
+            termios.tcdrain(fd)
+            time.sleep(0.2)                                      # let the controller digest it
+    finally:
+        os.close(fd)
+
+if __name__ == "__main__":
+    args = sys.argv[1:]
+    if not args:
+        sys.exit(__doc__)
+    send(PRESETS.get(args[0], args) if len(args) == 1 else args)

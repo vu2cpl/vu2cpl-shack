@@ -1,0 +1,15 @@
+# DS710+ front LEDs under Debian + OMV (vu2cpl-shack nas-debian/, 2026-10-16).
+# Boot: power LED on, status steady green, eSATA off, once the NAS's services are up.
+# Shutdown: status off, power LED blinking (DSM's cue that it is going down).
+[Unit]
+Description=DS710+ front LEDs (microcontroller on ttyS0)
+After=multi-user.target rest-server-backup.service rest-server-maint.service smbd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/ds710-microp boot
+ExecStop=/usr/local/sbin/ds710-microp shutdown
+
+[Install]
+WantedBy=multi-user.target

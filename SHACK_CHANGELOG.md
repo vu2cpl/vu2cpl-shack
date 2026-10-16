@@ -10,6 +10,16 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-10-16
 
+### NAS: front LEDs work under Debian (DS710+ microcontroller protocol found)
+
+The DS710+'s front-panel controller sits on Debian's `ttyS0` (I/O 0x3F8) at 9600 8N1, and on this
+model every command needs a `-` prefix, which is why the bare bytes other Synology models use did
+nothing. Found by disassembling DSM's own `synobios.ko` from DSM's untouched system partition,
+mounted read-only. New `nas-debian/ds710-microp` helper and `ds710-leds.service`: at boot power on,
+status steady green, eSATA off; at shutdown status off and power LED blinking. The long beep (`-3`)
+works; the short beep and the PC speaker don't. Disk LEDs (Super I/O GPIO), the buttons and fan
+control remain open (#53d).
+
 ### NAS: RAID, SMART and disk-temperature alerting (#53b)
 
 DSM used to warn about a failing disk; after the move to Debian + OMV nothing did (OMV mail is
