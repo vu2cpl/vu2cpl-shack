@@ -1221,8 +1221,9 @@ boundary dropped again at 14:58.
 
 > **Superseded the same afternoon:** the NAS no longer runs DSM. Since 2026-10-16 it is Debian 13 +
 > OpenMediaVault 8 (HANDOVER #51), so HA's `synology_dsm` integration has nothing to talk to and all
-> `diskstation_*` entities will stay unavailable. **Open:** remove the `synology_dsm` config entry in HA
-> (Settings → Devices & services → Synology DSM → Delete). HA's SMB backup location (share `Backups` on
+> `diskstation_*` entities went unavailable. **Removed 2026-10-16 ~15:30:** config entry `01M0S73Z5FHR673ZS7J7TMDM2R`
+> ("DiskStation", 4 devices, 39 entities) deleted via the REST API after checking nothing used it (WS
+> `search/related`: no automation/script/scene; no hits in the 5 stored dashboards or the Node-RED flows). HA's SMB backup location (share `Backups` on
 > `192.168.1.101`, user `manoj`) is unaffected: it reconnected to OMV's Samba on its own at 14:43.
 
 HA's built-in `synology_dsm` integration watches the DS710+ NAS (`192.168.1.101`, DSM 5.2-5967 Update 9, end of
