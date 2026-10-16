@@ -10,6 +10,19 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-10-16
 
+### NAS → OpenMediaVault (#51): step 1, boot flash imaged
+
+Started the DSM 5.2 → Debian + OMV plan. The preconditions were met first: the 05:31 `restic-copy` had
+finished `ok ok` and all three RAID1 arrays were healthy. Manoj ran a read-only root script
+(`omv-prep-root.sh`) that read the 128 MB boot flash twice (identical sha256) and saved the md, LVM,
+partition and ext4 layout. Copies are on the NAS (`/volume1/homes/admin/omv-prep/`), the Mac
+(`~/nas-omv-prep/`) and `.109` (`/mnt/backups/nas-omv-prep/`). They are not in this repo, because they hold the NAS serial and MACs.
+
+The image answers most of the boot question. The flash is a plain legacy-BIOS MBR disk booted by
+Synology-patched GRUB 0.97, which runs its console on serial at 115200. The BIOS is a generic OEM one
+doing an ordinary USB legacy boot, so Debian's own GRUB should boot from it. Next: a 3.3 V USB-TTL adapter
+on the serial header, and a decision on where Debian's root goes (details in HANDOVER #51).
+
 ### Home Assistant: DiskStation entities back (DSM update check disabled)
 
 The 07:15 health check was 🟡: 26 `diskstation_*` entities unavailable since 20:39 IST the day before. The NAS
