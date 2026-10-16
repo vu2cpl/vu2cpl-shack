@@ -16,8 +16,15 @@ The 07:15 health check was 🟡: 26 `diskstation_*` entities unavailable since 2
 was up. HA's Synology integration fails its whole poll when one API call errors, and the DSM-update check on
 the end-of-life DS710+ had started failing (codes 5214 / 105). `update.diskstation_dsm_update`, the only entity
 using that call, is now disabled in HA and the entry reloaded; all 26 came back. Documented in CLAUDE.md
-(HassPi section), since HA config isn't in git. In the shack-health repo, the master-bedroom Hue bulbs
-(`mbr_1`, `mbr_2`), which drop off Zigbee 100+ times a day, were added to the HA ignore list.
+(HassPi section), since HA config isn't in git.
+
+In the shack-health repo (`db5db34`), an unavailable light now gets a 24 h grace and then warns under Needs
+attention, on Manoj's call. The master-bedroom Hue bulbs drop off Zigbee 100+ times a day and would otherwise
+warn on any morning they happened to be out.
+
+### RBN Skimmer Monitor: #52 confirmed and closed
+
+The split-line fix (`95d9f2a`) holds: 0 `Unmatched: DX de` lines in the 9.1 h from the 17:03:27Z deploy to 2026-10-16 02:12Z (the old rate of ~19/h would have given ~175).
 
 ## 2026-10-15
 
