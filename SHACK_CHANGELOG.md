@@ -10,6 +10,31 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-10-16
 
+### NAS: RAID, SMART and disk-temperature alerting (#53b)
+
+DSM used to warn about a failing disk; after the move to Debian + OMV nothing did (OMV mail is
+unconfigured, the front LEDs are dead). Two paths now, both in shack-health (`2145275`, files in
+its `deploy/nas/`):
+
+- **Daily, in the 07:15 report:** a NAS section with ten rows. `md2` from `/proc/mdstat` + md sysfs
+  (`[UU]` clean = OK, degraded/member missing = FAIL, resync = WARN, the monthly scrub = OK,
+  `mismatch_cnt` > 0 = WARN); SMART per disk (health, reallocated / pending / uncorrectable / CRC above
+  an accepted baseline, smartctl exit bits); disk temps from smartctl (WARN > 50, FAIL > 55 °C); CPU
+  coretemp + uptime; `/volume1` mounted; `rest-server-backup`, `rest-server-maint`, `smbd` and
+  `mdmonitor` active; failed units.
+- **Immediately:** drop-ins for `mdmonitor.service` and `mdmonitor-oneshot.service` add
+  `--program=/usr/local/sbin/nas-md-alert`, which sends every RAID event (Fail, DegradedArray,
+  rebuild start/finish …) to the shack Telegram chat; the daily oneshot repeats a degraded array.
+
+The Pi reads the NAS as `nasadmin` with a key that is `from="192.168.1.169"` and forced to
+`sudo -n /usr/local/sbin/nas-health-status`; a sudoers rule allows exactly that file with no
+arguments. The Pi had no known_hosts entry for the NAS; the Mac's verified ed25519 key was copied.
+
+Tested with 20 faked inputs, ssh/sudo failures, the forced key (other commands just print the
+status), and one real `mdadm --monitor --oneshot --test` message. Live: `md2` `[2/2] [UU]`, both
+IronWolfs PASSED with 0 bad sectors, 37 / 34 °C, CPU 46 °C. Not covered: an immediate SMART alert
+(smartd is disabled).
+
 ### NAS → OpenMediaVault (#51): step 3 done, the DS710+ runs Debian 13 + OMV 8
 
 The NAS was switched over this afternoon and every client works against it unchanged.

@@ -35,7 +35,9 @@ The Macs (Mac Mini and MacBook) are deliberately not in restic: they use Time Ma
 - **No SSH key for the servers.** Their SSH keys were taken off the NAS when this went in.
   macmini-server's other NAS key (`alpaindia-backup`, used by the old ALPA and music pushes, which were
   retired on 2026-10-14) is now forced to `command="cat /volume1/Backups/mac-projects.status"`, so it
-  can't run anything else on the NAS.
+  can't run anything else on the NAS. noderedpi4's key (shack-health's NAS checks, since 2026-10-16)
+  sits on `nasadmin` too, `from="192.168.1.169"` and forced to `sudo -n /usr/local/sbin/nas-health-status`,
+  a root-owned read-only status script that a no-argument sudoers rule allows and nothing else.
 - **TLS** uses a self-signed cert (`nas/public.crt`, valid to 2036, SAN `IP:192.168.1.101`). Clients
   pin it with `RESTIC_CACERT`. TLS stays on, even though restic already encrypts the data, so the
   logins (above all `maint`) never cross the network in clear text.
