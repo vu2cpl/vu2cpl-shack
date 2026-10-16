@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+"""Read-only watcher for finding the DS710+ front buttons (vu2cpl-shack nas-debian/, HANDOVER #53d).
+
+For N seconds (default 60) prints every change it sees on: both UARTs (ttyS0 = front-panel
+microcontroller, ttyS1), the 64 ICH9R GPIO levels, the IT8720F Super I/O simple-I/O sets 1-5
+(base 0x0A20), ICH9 PM1_STS (timer/bus-master noise masked) and GPE0_STS, every /dev/input event
+device, and the IRQ counters that moved. It writes nothing to any device; opening ttyS0/ttyS1 only
+sets 9600 8N1 raw on them.
+
+usage: sudo ds710-btnwatch [SECONDS]      then press the buttons while it runs
+"""
+import os, struct, sys, termios, time, select, glob
+dur = float(sys.argv[1]) if len(sys.argv) > 1 else 45
+fd = os.open("/dev/port", os.O_RDONLY)
+def inl(p):
+    os.lseek(fd, p, 0); return struct.unpack("<I", os.read(fd, 4))[0]
+tty = os.open("/dev/ttyS0", os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
+a = termios.tcgetattr(tty)
+a[0] = a[1] = a[3] = 0
+a[2] = termios.B9600 | termios.CS8 | termios.CREAD | termios.CLOCAL
+a[4] = a[5] = termios.B9600
+a[6][termios.VMIN] = 0; a[6][termios.VTIME] = 0
+termios.tcsetattr(tty, termios.TCSANOW, a)
+tty1 = os.open("/dev/ttyS1", os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
+termios.tcsetattr(tty1, termios.TCSANOW, a)
+evs = []
+for p in glob.glob("/dev/input/event*"):
+    try: evs.append((os.open(p, os.O_RDONLY | os.O_NONBLOCK), p))
+    except OSError: pass
+def inb(p):
+    os.lseek(fd, p, 0); return os.read(fd, 1)[0]
+def inw(p):
+    os.lseek(fd, p, 0); return struct.unpack("<H", os.read(fd, 2))[0]
+def extra():   # Super I/O simple-I/O sets 1-5 (base 0xA20), ICH9 PM1_STS, GPE0_STS (64-bit)
+    return tuple(inb(0xA20 + i) for i in range(5)) + (inw(0x800) & ~0x11, inl(0x820), inl(0x824))   # PM1_STS minus TMR/BM noise
+XN = ["SIO set1", "SIO set2", "SIO set3", "SIO set4", "SIO set5", "PM1_STS", "GPE0_STS lo", "GPE0_STS hi"]
+def irqs():
+    return {l.split(":")[0].strip(): l for l in open("/proc/interrupts") if ":" in l}
+def irqsum(l):
+    return sum(int(x) for x in l.split(":")[1].split()[:2] if x.isdigit())
+i0 = irqs()
+t0 = time.time()
+prev = (inl(0x48c), inl(0x4b8))
+xprev = extra()
+print("start extra", " ".join(f"{n}={v:#x}" for n, v in zip(XN, xprev)), flush=True)
+print(f"start GP_LVL={prev[0]:#010x} GP_LVL2={prev[1]:#010x}", flush=True)
+while time.time() - t0 < dur:
+    now = (inl(0x48c), inl(0x4b8))
+    if now != prev:
+        for bank, (o, n) in enumerate(zip(prev, now)):
+            ch = o ^ n
+            for b in range(32):
+                if ch >> b & 1:
+                    print(f"{time.time()-t0:6.2f}s GPIO{bank*32+b} {o>>b&1}->{n>>b&1}", flush=True)
+        prev = now
+    x = extra()
+    if x != xprev:
+        for n, o, v in zip(XN, xprev, x):
+            if o != v: print(f"{time.time()-t0:6.2f}s {n} {o:#x}->{v:#x}", flush=True)
+        xprev = x
+    r, _, _ = select.select([tty, tty1] + [e for e, _ in evs], [], [], 0.01)
+    for f in r:
+        data = os.read(f, 256)
+        if f in (tty, tty1):
+            print(f"{time.time()-t0:6.2f}s {'ttyS0' if f == tty else 'ttyS1'} {data!r} hex={data.hex()}", flush=True)
+        else:
+            name = dict(evs)[f]
+            for k in range(0, len(data) - 23, 24):
+                _, _, typ, code, val = struct.unpack("llHHi", data[k:k+24])
+                if typ: print(f"{time.time()-t0:6.2f}s {name} type={typ} code={code} val={val}", flush=True)
+i1 = irqs()
+for k, l in i1.items():
+    if k in i0 and irqsum(l) != irqsum(i0[k]) and k not in ("LOC", "RES", "CAL", "TLB"):
+        d = irqsum(l) - irqsum(i0[k])
+        if d < 200: print(f"irq {k}: +{d}  {l.split(None, 3)[-1].strip()}")
+print("done", flush=True)

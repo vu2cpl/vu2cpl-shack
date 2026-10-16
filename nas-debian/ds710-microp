@@ -6,7 +6,8 @@ system partition: the controller sits on the UART at I/O 0x3F8 (Debian /dev/ttyS
 ttyS1), 9600 8N1, and on this model every command is sent as "-" + command. Bare bytes are ignored.
 
 Verified on the hardware:  -8 status green   -LE1 / -LE3 eSATA LED on / off   -3 long beep
-                           -R reads the ID.
+                           -R toggles the controller streaming its ID byte ("1", ~12/s); send it
+                           a second time to stop, as DSM's ReadUart does.
 From DSM's tables:         -4/-5/-6 power LED on/blink/off, -7 status off, -9 green blink,
                            -: orange, -; orange blink, -LA2/-LA3 alarm LED blink/off,
                            -Vnn fan duty % (DSM used 20..99; never send V00 = fan stopped).

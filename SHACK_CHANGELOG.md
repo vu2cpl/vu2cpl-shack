@@ -20,6 +20,15 @@ alone or together, or on 33/34/49/55, although all LEDs worked under DSM. New `d
 1|2|all green|orange|off` only writes the level bits of pins the BIOS already made outputs. The
 `boot` preset now also sets the disks green; after a reboot HDD 1 comes up green by itself. Bay 2 stays open (#53d).
 
+### NAS: bay 2 LED and buttons, narrowed down (still not working)
+
+Bay 2's LED worked under DSM like bay 1's. Bay 1's LED is GPIO16 gated by hardware disk activity
+(it blinks on reads). Bay 2 stays dark with its GPIO20 high, so a third signal gates it. Ruled out:
+GPIO20/32 combinations, the Super I/O GP32/GP33, AHCI enclosure messages, SATA link power. The
+buttons send nothing anywhere Linux can see (UARTs, GPIOs, Super I/O, ACPI, input devices). New
+read-only `nas-debian/ds710-btnwatch` for the held-press test still to do. `-R` toggles an ID
+stream on the controller (send it twice), docs corrected.
+
 ### NAS: no more 30 s resume wait at boot
 
 The initramfs still pointed `RESUME=` at the boot stick's old swap partition, which was disabled and no longer exists. Every boot waited ~30 s and printed "Gave up waiting for suspend/resume device". Now `RESUME=none` (#53h); boot takes 1 min 8 s.
