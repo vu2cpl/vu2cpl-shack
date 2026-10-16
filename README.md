@@ -494,7 +494,7 @@ comes from VU2PTT's Skimmer Calibration tracker.
 ├── power_spe_on.py                  SPE amp FTDI DTR/RTS power-on helper
 ├── enable_file_context.sh           One-shot Node-RED file context store enabler
 ├── rebuild_pi.sh                    Automated bare-metal rebuild script (paired with REBUILD_PI.md)
-├── restic/                          Nightly restic backups of the Linux boxes (.109, macmini-server) to the Synology
+├── restic/                          Nightly restic backups of the Linux boxes (.109, macmini-server) to the NAS (DS710+, Debian + OMV)
 │
 ├── as3935.service                   systemd unit for as3935_mqtt.py (installed but disabled; re-enable as fallback if ESP32 fails)
 │

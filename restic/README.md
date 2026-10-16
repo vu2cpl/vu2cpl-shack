@@ -52,37 +52,47 @@ The Macs (Mac Mini and MacBook) are deliberately not in restic: they use Time Ma
 The NAS is a DS710+, with an Atom D410 that has no AES-NI. Its CPU is the limit. SSH used AES-GCM
 in software, which is why SFTP was so slow.
 
-## The NAS side (`nas/`)
+## The NAS side (`nas-debian/`, since 2026-10-16)
 
-DSM 5.2 gives `admin` no root, no `sudo` and no user crontab. So rest-server runs as `admin`, who
-also owns the repository files, from `/volume1/homes/admin/rest-server/`. That directory holds the
-binary, `rest-server.sh`, the cert and key, `users.htpasswd`, `maint.htpasswd`, the logs and the pid
-files.
+The DS710+ runs **Debian 13 + OpenMediaVault 8** since 2026-10-16 (DSM 5.2 before; see "Before
+2026-10-16" below). The repositories, logins, cert and ports did not change, so no client changed.
 
-- **Binary:** rest-server v0.14.0, linux_amd64, the official release. It was SHA256-checked and its
-  GPG signature verified against restic's release key `CF8F18F2844575973F79D4E191A6868BD3F7A907`.
-- **Control:** `rest-server.sh start|stop|restart|status`.
-- **Ports 9900/9901:** DSM's firewall is an allow-list that drops everything else, and changing it
-  needs the DSM web UI. These two ports are already allowed because they belong to Surveillance
-  Station, which isn't installed. If that ever changes, move the ports.
-- **Starting at boot.** `admin` can't write to `/usr/local/etc/rc.d`, so Manoj installed the hook
-  as root on 2026-10-14: `/usr/local/etc/rc.d/S99restic-rest-server.sh` (root, 755). DSM 5.2 runs
-  every `S*.sh` there with `start` at boot. The hook calls `rest-server.sh`, which as root re-runs
-  itself as `admin` via `su -s /bin/sh -c … admin`. Options must come before the username for the
-  NAS's BusyBox 1.16 `su`. **Proven by a real NAS reboot on 2026-10-15:** both endpoints came back
-  on their own as `admin`, `:9900` still append-only, and all three clients could list snapshots.
-
-  If it ever doesn't come up, start it by hand as `admin`:
+- **Volume:** the DSM data array `md2` + LVM `vg1000/lv` (ext4) is mounted by OMV at
+  `/srv/dev-disk-by-uuid-179587aa-f31b-4d5c-94be-de3ba4582f55` and **bind-mounted at `/volume1`**
+  (an `/etc/fstab` line outside OMV's block), so every DSM-era path still holds.
+- **User:** `nasadmin`, uid 1024 / gid 100 (`users`) = DSM's `admin`, so the repository files kept their
+  owner. OMV reserves the name `admin` for its web UI.
+- **Binary:** the same rest-server v0.14.0, copied to `/usr/local/bin/rest-server`.
+- **Config:** unchanged in `/volume1/homes/admin/rest-server/` (`public.crt`, `private.key`,
+  `users.htpasswd`, `maint.htpasswd`). The DSM-era `rest-server.sh`, logs and pid files there are unused.
+- **Control:** two systemd units from `nas-debian/`, `rest-server-backup.service` (`:9900`,
+  append-only, private repos) and `rest-server-maint.service` (`:9901`, full access, `maint`).
+  Both run as `nasadmin`, `RequiresMountsFor=/volume1`, write access only to `/volume1/Backups/restic`,
+  logs in the journal (`journalctl -u rest-server-backup`). Install or update:
 
   ```bash
-  /volume1/homes/admin/rest-server/rest-server.sh start
+  scp restic/nas-debian/rest-server-*.service vu2cpl@192.168.1.101:/tmp/
+  ssh vu2cpl@192.168.1.101 'sudo install -m 644 /tmp/rest-server-*.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl restart rest-server-backup rest-server-maint'
   ```
 
-  Nightly runs alert on Telegram while it's down.
+- **Ports 9900/9901:** no firewall on the Debian side (DSM's allow-list is gone); the NAS stays a
+  LAN-only backup site.
+- **Proven 2026-10-16:** after two reboots both endpoints came back on their own, and .109 and
+  macmini-server listed their snapshots over `:9900`, the Mac over `:9901`.
 - **Logins.** The htpasswd files are bcrypt. Their plain passwords are on the Mac in
   `~/.config/vu2cpl-shack.env` as `RESTIC_REST_UBERSDR`, `RESTIC_REST_MACMINI_SERVER` and
-  `RESTIC_REST_MAINT`. To add a box: `htpasswd -B` a new user into `users.htpasswd`, then run
-  `rest-server.sh restart`.
+  `RESTIC_REST_MAINT`. To add a box: `htpasswd -B` a new user into `users.htpasswd`, then
+  `sudo systemctl restart rest-server-backup`.
+
+### Before 2026-10-16: DSM 5.2 (`nas/`, kept for the way back)
+
+Plugging the Synology boot module back in boots DSM again on the same disks, and then `nas/` applies.
+DSM 5.2 gave `admin` no root, no `sudo` and no user crontab, so rest-server ran as `admin` from
+`/volume1/homes/admin/rest-server/` via `rest-server.sh start|stop|restart|status`, started at boot
+by a root hook `/usr/local/etc/rc.d/S99restic-rest-server.sh` that Manoj installed on 2026-10-14
+(proven by a NAS reboot on 2026-10-15). Ports 9900/9901 were chosen because DSM's allow-list
+firewall already allowed them (Surveillance Station's, not installed). The binary was SHA256-checked
+and GPG-verified against restic's release key `CF8F18F2844575973F79D4E191A6868BD3F7A907`.
 
 ## What a nightly run does (`restic-backup.sh`)
 

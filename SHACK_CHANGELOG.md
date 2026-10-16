@@ -10,6 +10,32 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-10-16
 
+### NAS → OpenMediaVault (#51): step 3 done, the DS710+ runs Debian 13 + OMV 8
+
+The NAS was switched over this afternoon and every client works against it unchanged.
+
+- **System:** Debian 13.7 on a SanDisk USB stick, with the Synology boot module unplugged (it's the
+  way back to DSM). OMV 8.5.11 + omv-extras + `writecache` keeps `/var/log` and other busy folders in
+  RAM. A cloned, test-booted spare stick is in the drawer.
+- **Network:** the NIC's own EEPROM holds a placeholder MAC (`88:88:88:88:87:88`); DSM always set
+  the real one. `/etc/systemd/network/10-nas-mac.link` sets `00:11:32:06:11:4e`, so the router still
+  gives .101. Networking is OMV's (netplan + systemd-networkd) after the install script skipped it.
+- **Data:** `md2` + `vg1000/lv` assembled as is. A read-only `e2fsck` found 505 "invalid HTREE"
+  directories and 150 bogus 2490/1946 timestamps. The cause: the filesystem has `dir_index` off, but
+  DSM flagged directories as indexed anyway. Debian read every file fine (29,795 restic packs looked up
+  by name). Manoj chose to repair: `e2fsck -fy` cleared the flags and fixed the dates, file count
+  unchanged, and a final check was clean. Mounted by OMV and bind-mounted at `/volume1`; 2 GB swap
+  file on the volume. DSM's md0/md1 are left untouched for the way back.
+- **Services:** rest-server as two systemd units under `nasadmin` (uid 1024 = DSM admin;
+  `restic/nas-debian/`). SMB share `Backups` for Home Assistant (user `manoj`, uid 1046). The Mac's
+  projects push and shack-health's status read moved to `nasadmin` (shack-health `8407f14`).
+- **Proven:** reboots come back unattended; .109, macmini-server and the Mac list snapshots; HA
+  reconnected; the Mac push dry-run works.
+- **Not working:** the front LEDs and buttons. Neither UART gets a byte from either button, the
+  documented LED byte does nothing, and the power button isn't an ACPI key. A short press does
+  nothing and a long press is a hard power-off; shut down from OMV or `sudo poweroff`. The fan runs
+  at a fixed low speed; temperatures are fine (CPU 46 °C, disks 33–36 °C).
+
 ### NAS → OpenMediaVault (#51): step 2, the DS710+ boots Debian from USB
 
 The DS710+ has a rear VGA port, so no serial adapter was needed. Its AMIBIOS 8 shows only "Press F11 for

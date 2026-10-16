@@ -1,0 +1,26 @@
+# restic rest-server :9901 on the NAS (Debian 13 + OMV 8, since 2026-10-16): full access, user maint — weekly prune/check from the Mac.
+# Replaces DSM's rest-server.sh + rc.d hook. Same binary version, cert, htpasswd files and repositories;
+# /volume1 is a bind mount of OMV's /srv/dev-disk-by-uuid-… mount, so DSM-era paths still hold.
+[Unit]
+Description=restic rest-server :9901 (maint)
+Wants=network-online.target
+After=network-online.target
+RequiresMountsFor=/volume1
+
+[Service]
+Type=simple
+User=nasadmin
+Group=users
+Environment=DIR=/volume1/homes/admin/rest-server
+ExecStart=/usr/local/bin/rest-server --path /volume1/Backups/restic --listen :9901 --htpasswd-file ${DIR}/maint.htpasswd \
+    --tls --tls-cert ${DIR}/public.crt --tls-key ${DIR}/private.key
+Restart=on-failure
+RestartSec=10
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/volume1/Backups/restic
+
+[Install]
+WantedBy=multi-user.target

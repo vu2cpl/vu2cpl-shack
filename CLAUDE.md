@@ -1219,6 +1219,12 @@ boundary dropped again at 14:58.
 
 ### Synology DiskStation: DSM update entity disabled (2026-10-16)
 
+> **Superseded the same afternoon:** the NAS no longer runs DSM. Since 2026-10-16 it is Debian 13 +
+> OpenMediaVault 8 (HANDOVER #51), so HA's `synology_dsm` integration has nothing to talk to and all
+> `diskstation_*` entities will stay unavailable. **Open:** remove the `synology_dsm` config entry in HA
+> (Settings → Devices & services → Synology DSM → Delete). HA's SMB backup location (share `Backups` on
+> `192.168.1.101`, user `manoj`) is unaffected: it reconnected to OMV's Samba on its own at 14:43.
+
 HA's built-in `synology_dsm` integration watches the DS710+ NAS (`192.168.1.101`, DSM 5.2-5967 Update 9, end of
 life). From 2026-10-15 20:39 IST every poll failed on the DSM-update call (`SYNO.Core.Upgrade.Server`, codes
 5214 and 105). One API error fails the whole poll, so all 26 `diskstation_*` entities went unavailable while
