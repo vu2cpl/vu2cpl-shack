@@ -11,6 +11,7 @@ The rest-server units live in `../restic/nas-debian/`.
 | `ds710-btnwatch` | `/usr/local/sbin/ds710-btnwatch` | Read-only: prints anything that changes on the UARTs, chipset GPIOs, Super I/O GPIOs, ACPI status or input devices while you press buttons |
 | `ds710-buttons` + `ds710-buttons.service` | `/usr/local/sbin/`, `/etc/systemd/system/` (enabled) | Power held ~3 s → long beep + clean power-off. USB copy held ~1 s → logged |
 | `ds710-shutdown-hook` | `/usr/lib/systemd/system-shutdown/ds710` | At the very end of shutdown tells the controller `1` (power-off) or `C` (restart), as DSM's kernel does |
+| `ds710-fan` + `ds710-fan.service` | `/usr/local/sbin/`, `/etc/systemd/system/` (enabled) | Fan duty from disk + CPU temperature: 30 % floor, DSM's steps up to 99 %, 2 °C hysteresis, 65 % if a reading fails |
 | `ds710-leds.service` | `/etc/systemd/system/` (enabled) | Boot: power LED on, eSATA off, then `raid`: status + disk LEDs green, or orange if md2 came up degraded. Shutdown: status off, power LED blinking |
 
 ## The microcontroller
@@ -25,7 +26,7 @@ partition, mounted read-only:
 - **Works (tested 2026-10-16):** `8` status green, `LE1`/`LE3` eSATA LED on/off, `3` long beep,
   `R` toggles the controller streaming its ID byte (`1`, about 12 a second); send it again to stop, as DSM does.
 - **From DSM's tables, not all tested:** `4`/`5`/`6` power LED on/blink/off, `7` status off,
-  `9` green blink, `:` orange, `;` orange blink, `LA2`/`LA3` alarm LED blink/off, `Vnn` fan duty %
+  `9` green blink, `:` orange, `;` orange blink, `LA2`/`LA3` alarm LED blink/off, `Vnn` fan duty % (tested 2026-10-17)
   (DSM's DS710+ table: 20, 30, 40, 50, 65, 80, 99).
 - **Doesn't work:** `2` short beep. The PC speaker isn't wired to the buzzer either.
 - **Never send:** `1` (hard power-off) or `V00` (fan stopped). The helper refuses both.
@@ -81,7 +82,14 @@ anything else, and never reconfigures a pin. The GPIO base comes from `setpci -s
   straight back on after a button power-off, and that quick power cycle left the boot stick
   unreadable to GRUB ("failure reading sector 0x802 from hd0", fixed by a cold start). With the
   hook: reboot and button power-off both tested clean (stays off).
-- **Fan:** runs at whatever speed the controller holds. `-Vnn` should set it (untested).
+- **Fan (2026-10-17):** `-Vnn` works: 30 → 65 → 99 each audibly faster (checked by ear by Manoj), and 30 sounds
+  the same as the speed the controller held before, so 30 % is the floor. Nothing on this board reports fan RPM
+  (no it87/IT8720F fan inputs under Debian; the controller has no read-back). `ds710-fan.service` sets the duty
+  every minute from the hottest data disk (`smartctl -n standby`, every 5 min, never wakes a sleeping disk) and
+  the hottest CPU core: 40 % at disk 38 / CPU 58 °C, 50 % at 41 / 63, 65 % at 44 / 68, 80 % at 47 / 72, 99 % at
+  50 / 76; down only once 2 °C clear; 65 % if a temperature can't be read. Changes go to the journal
+  (`journalctl -t ds710-fan`); `ds710-fan --once` prints readings and the duty without touching anything.
+  At normal temps (disks 31-35, CPU 41-49 °C) it stays at 30 %.
 
 ## Re-cloning the spare boot stick
 

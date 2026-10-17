@@ -1,0 +1,12 @@
+# DS710+ fan follows disk/CPU temperature (vu2cpl-shack nas-debian/, 2026-10-17). See /usr/local/sbin/ds710-fan.
+[Unit]
+Description=DS710+ fan speed from disk and CPU temperature
+After=ds710-leds.service smartmontools.service
+
+[Service]
+ExecStart=/usr/local/sbin/ds710-fan
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

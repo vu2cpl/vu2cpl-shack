@@ -1,0 +1,121 @@
+#!/usr/bin/env python3
+"""ds710-fan — set the DS710+ fan from disk and CPU temperature (vu2cpl-shack nas-debian/, 2026-10-17).
+
+Under DSM the fan followed temperature; under Debian it sat at whatever the controller last held. The
+controller takes "-Vnn" = fan duty % (DSM's DS710+ steps 20/30/40/50/65/80/99; never V00). Tested by ear
+2026-10-17: 30 -> 65 -> 99 each audibly faster, and 30 sounds the same as the box ran before, so 30 is
+the floor here.
+
+Every INTERVAL s it reads the CPU (coretemp, hottest core) and, every DISK_EVERY s, the data disks'
+temperature with `smartctl -n standby` (never spins a sleeping disk up; a sleeping disk keeps its last
+reading). The duty is the highest step whose disk OR CPU threshold is reached. It only steps down once
+both are HYST °C below the step's thresholds, so it doesn't flap. Unreadable temperatures -> FAILSAFE.
+The controller is told only on a change, and again every REASSERT s in case it reset itself.
+
+  ds710-fan            run (ds710-fan.service)
+  ds710-fan --once     print readings and the duty it would set; changes nothing
+"""
+import glob, json, subprocess, sys, time
+
+MICROP = "/usr/local/sbin/ds710-microp"
+INTERVAL, DISK_EVERY, REASSERT = 60, 300, 600
+HYST = 2
+FLOOR = 30
+FAILSAFE = 65
+#        duty, disk °C, CPU °C  (reach either -> at least this duty)
+STEPS = [(40, 38, 58), (50, 41, 63), (65, 44, 68), (80, 47, 72), (99, 50, 76)]
+
+
+def log(msg):
+    subprocess.run(["logger", "-t", "ds710-fan", msg], check=False)
+
+
+def cpu_temp():
+    vals = []
+    for f in glob.glob("/sys/class/hwmon/hwmon*/temp*_input"):
+        try:
+            if open(f.rsplit("/", 1)[0] + "/name").read().strip() == "coretemp":
+                vals.append(int(open(f).read()) / 1000)
+        except (OSError, ValueError):
+            pass
+    return max(vals) if vals else None
+
+
+def data_disks():
+    """Whole SATA disks behind libata (the data bays), not the USB boot stick."""
+    out = []
+    for d in sorted(glob.glob("/sys/block/sd?")):
+        try:
+            if "/ata" in subprocess.run(["readlink", "-f", d], capture_output=True, text=True).stdout:
+                out.append("/dev/" + d.rsplit("/", 1)[1])
+        except OSError:
+            pass
+    return out
+
+
+def disk_temps(last):
+    temps = dict(last)
+    for dev in data_disks():
+        r = subprocess.run(["smartctl", "-A", "-j", "-n", "standby", dev], capture_output=True, text=True)
+        try:
+            t = json.loads(r.stdout).get("temperature", {}).get("current")
+        except ValueError:
+            t = None
+        if t is not None:
+            temps[dev] = t
+        elif dev not in temps:
+            temps[dev] = None       # asleep since boot or unreadable: no reading yet
+    return temps
+
+
+def want(disk, cpu, current):
+    """Duty for the hottest disk / CPU, with hysteresis against `current`."""
+    if disk is None or cpu is None:
+        return FAILSAFE
+    duty = FLOOR
+    for d, dt, ct in STEPS:
+        if disk >= dt or cpu >= ct:
+            duty = d
+    if duty < current:   # only come down once clear of the current step's thresholds by HYST
+        for d, dt, ct in STEPS:
+            if d == current and (disk > dt - HYST or cpu > ct - HYST):
+                return current
+    return duty
+
+
+def readings(last_disks):
+    disks = disk_temps(last_disks)
+    known = [t for t in disks.values() if t is not None]
+    return disks, (max(known) if known else None), cpu_temp()
+
+
+def main():
+    if "--once" in sys.argv:
+        disks, disk, cpu = readings({})
+        print(f"disks {disks}  hottest {disk}  cpu {cpu}  -> V{want(disk, cpu, FLOOR)}")
+        return
+    disks, current, told = {}, None, 0
+    next_disk = 0
+    while True:
+        now = time.time()
+        if now >= next_disk:
+            disks = disk_temps(disks)
+            next_disk = now + DISK_EVERY
+        known = [t for t in disks.values() if t is not None]
+        disk, cpu = (max(known) if known else None), cpu_temp()
+        if disk is None and disks and all(t is None for t in disks.values()):
+            disk = 0        # every disk asleep since boot: nothing to cool, let the CPU decide
+        duty = want(disk, cpu, current if current is not None else FLOOR)
+        if duty != current or now - told >= REASSERT:
+            r = subprocess.run([MICROP, f"V{duty}"], capture_output=True, text=True)
+            if r.returncode == 0:
+                if duty != current:
+                    log(f"fan V{duty} (disk {disk} °C, cpu {cpu} °C)")
+                current, told = duty, now
+            else:
+                log(f"ds710-microp V{duty} failed: {r.stderr.strip()}")
+        time.sleep(INTERVAL)
+
+
+if __name__ == "__main__":
+    main()
