@@ -1,7 +1,9 @@
 # DS710+ fan follows disk/CPU temperature (vu2cpl-shack nas-debian/, 2026-10-17). See /usr/local/sbin/ds710-fan.
 [Unit]
 Description=DS710+ fan speed from disk and CPU temperature
-After=ds710-leds.service smartmontools.service
+# NOT After=ds710-leds: that unit is ordered after multi-user.target, so it would be an ordering cycle
+# (systemd dropped this job at boot on 2026-10-17; same trap as ds710-buttons on 10-16).
+After=smartmontools.service
 
 [Service]
 ExecStart=/usr/local/sbin/ds710-fan

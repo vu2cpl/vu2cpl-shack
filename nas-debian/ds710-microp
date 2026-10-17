@@ -46,7 +46,10 @@ FINAL = {                              # systemd-shutdown hook only: filesystems
 FORBIDDEN = {"1"}                      # hard power-off
 
 DISK_PINS = {1: (16, 18), 2: (20, 32)}               # (green, orange) ICH9R GPIO, from synobios
-BAY_PORT = {1: "ata3", 2: "ata4"}                    # bay -> libata port (AHCI host2/host3), checked 2026-10-17
+# bay -> /dev/disk/by-path name (ICH9R AHCI 00:1f.2, ports 1 and 2). NOT the libata "ataN" number: that
+# depends on which SATA controller probes first and moved from ata3/ata4 to ata1/ata2 between two boots
+# on 2026-10-17 (the eSATA chip 01:00.0 also has ports), which turned a clean array orange.
+BAY_PATH = {1: "pci-0000:00:1f.2-ata-1", 2: "pci-0000:00:1f.2-ata-2"}
 MD = "md2"                                           # the data array (DSM's md0/md1 stay unassembled)
 DISK_STATES = {"off": (0, 0), "green": (1, 0), "orange": (0, 1)}
 
@@ -98,21 +101,20 @@ def raid_state():
         return True, {}
     i = next((n for n, l in enumerate(lines) if l.startswith(MD + " :")), None)
     if i is None:                                    # array not assembled at all
-        return True, {b: False for b in BAY_PORT}
+        return True, {b: False for b in BAY_PATH}
     status = lines[i + 1] if i + 1 < len(lines) else ""
     degraded = "inactive" in lines[i] or "_" in status.rsplit("[", 1)[-1]
-    in_sync = {b: False for b in BAY_PORT}
+    in_sync = {b: False for b in BAY_PATH}
     md_dir = f"/sys/block/{MD}/md"
     for dev in os.listdir(md_dir) if os.path.isdir(md_dir) else []:
         if not dev.startswith("dev-"):
             continue
         part = dev[4:]                               # e.g. sda5
         disk = part.rstrip("0123456789")
-        port = next((seg for seg in os.path.realpath(f"/sys/block/{disk}").split("/")
-                     if seg.startswith("ata")), "")
         state = open(f"{md_dir}/{dev}/state").read().strip()
-        for b, p in BAY_PORT.items():
-            if p == port and "in_sync" in state.split(",") and "faulty" not in state:
+        for b, name in BAY_PATH.items():
+            bay_disk = os.path.basename(os.path.realpath(f"/dev/disk/by-path/{name}"))
+            if bay_disk == disk and "in_sync" in state.split(",") and "faulty" not in state:
                 in_sync[b] = True
     return degraded, in_sync
 

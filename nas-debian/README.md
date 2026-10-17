@@ -57,8 +57,10 @@ sudo ds710-microp raid --show-degraded 20   # visual test: degraded look for 20 
 **RAID state on the front panel (2026-10-17, #53d).** `raid` reads `/proc/mdstat` and
 `/sys/block/md2/md/dev-*/state`. md2 clean with both members `in_sync` → status steady green and both
 bays green. Degraded, not assembled, rebuilding, or a member faulty/missing → status **blinking orange**
-and each bay whose disk isn't an in-sync member **orange** (bay 1 = libata `ata3`, bay 2 = `ata4`, so it
-follows the slot, not the drive). Bay 2's LED is weak (above), so on that bay only the status LED is
+and each bay whose disk isn't an in-sync member **orange** (bay 1 = `/dev/disk/by-path/pci-0000:00:1f.2-ata-1`, bay 2 = `…-ata-2`, i.e. ICH9R AHCI ports 1 and 2, so it
+follows the slot, not the drive). **Not** the libata `ataN` number: that depends on probe order (the eSATA
+chip `01:00.0` has ports too) and moved from ata3/ata4 to ata1/ata2 between two boots on 2026-10-17, which
+turned a clean array orange until the helper switched to by-path. Bay 2's LED is weak (above), so on that bay only the status LED is
 reliable. `ds710-leds.service` runs it at boot and shack-health's `nas-md-alert` (mdadm's PROGRAM) on every
 RAID event, including the daily degraded reminder.
 
@@ -91,7 +93,25 @@ anything else, and never reconfigures a pin. The GPIO base comes from `setpci -s
   (`journalctl -t ds710-fan`); `ds710-fan --once` prints readings and the duty without touching anything.
   At normal temps (disks 31-35, CPU 41-49 °C) it stays at 30 %.
 
+## Boot stick: which one, and the headless-boot problem (2026-10-17)
+
+- **Running from the Cruzer Fit since 2026-10-17 06:54.** After the move to the rack the Ultra Fit failed to
+  boot several times. Read on the running NAS afterwards it is healthy: `e2fsck -fn` clean and all 30.75 GB
+  read with `dd iflag=direct`, no I/O errors, no USB resets. Its old GRUB error ("failure reading sector
+  0x802" = the ext4 superblock, the first thing GRUB reads) is a BIOS-level read failure. Likely cause: this
+  2010 AMIBIOS's USB boot support and a USB 3 stick; the Cruzer is USB 2. The Ultra Fit (…4094) is now the
+  out-of-date one (it lacks everything after 06:30 on 10-17) and must not be booted as is.
+- **It does not boot headless.** With monitor + keyboard unplugged, a reboot never reached Linux (no ARP
+  reply, power LED left blinking, no journal), even from the Cruzer; with both plugged in it booted at
+  once. A hot-plugged monitor stays blank, so the stopping point wasn't seen. Under DSM the box always
+  booted headless, so it is this BIOS + USB-stick boot path. Next test: keyboard only, to decide between a
+  USB keyboard emulator / any cheap USB keyboard left plugged in and a VGA dummy plug. Until then **keep a
+  keyboard and monitor connected** (or expect a manual boot after every power cut).
+
 ## Re-cloning the spare boot stick
+
+**Since 2026-10-17 the Cruzer Fit (…6472) is the running root and the Ultra Fit (…4094) is the stale one**
+(above); the text below predates that swap, so read "spare" as "the stick not in use".
 
 The spare is the SanDisk **Cruzer Fit** (serial …6472, kept in the drawer with the Synology module).
 It holds the original 2026-10-16 13:02 install: `sdX1` root plus an unused swap partition `sdX5`.
