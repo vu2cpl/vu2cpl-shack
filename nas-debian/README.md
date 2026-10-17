@@ -118,9 +118,9 @@ sudo nas-grub-native DISK UUID       # e.g. the spare stick while plugged in aft
 **Upgrades:** `grub-pc/install_devices` is empty (`install_devices_empty=true`) so grub-pc's postinst no longer
 writes the boot sector, and `DPkg::Post-Invoke` (`99nas-grub-native`) runs `nas-grub-native` after every
 dpkg run. Tested: stock `grub-install` → not native → `apt-get install --reinstall grub-pc` → native again.
-**Spares:** the Cruzer (…6472) still has the stock core and no hook (as of its 09:22 sync): it needs a
-keyboard until `nas-grub-native /dev/disk/by-id/usb-SanDisk_Cruzer_Fit_4C530001270216116472-0:0
-c6160f5b-8f8a-4ac1-af5e-f55ae8e98b1b` is run on it (or it is re-synced from the Ultra Fit). The USB HDD (WD
+**Spares:** the Cruzer (…6472) got the native core, the tool, the apt hook and the emptied
+`install_devices` at 14:12 (its system is the 09:22 sync; boot-sector backup `/root/cruzer-mbr-gap-20261017.img`
+on the Ultra Fit); not boot-tested since. Same fs UUID as the Ultra Fit, so never both in at boot. The USB HDD (WD
 WD1600BEVS, UUID `aa326d50…`, 40 GiB root) has the native core and hook, but is bus-powered and was **not
 detected at one cold power-on** — fine as a spare, not for unattended use. Boot-sector backups in `/root`
 on the HDD: `hdd-mbr-gap-20261017.img`, `ultrafit-mbr-gap-20261017.img`.
