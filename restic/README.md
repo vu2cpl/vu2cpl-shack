@@ -142,7 +142,7 @@ append-only side can't do, such as deleting a snapshot by hand.
 
 ## Second copy on the ubersdr box (`restic-copy.sh`)
 
-The NAS (a DS710+ on DSM 5.2, unpatched since about 2017) would otherwise hold the only copy. Since
+The NAS (a 2010 DS710+, on Debian 13 + OMV 8 since 2026-10-16) would otherwise hold the only copy. Since
 2026-10-15 the Mac copies every repository each morning to `.109`'s 1 TB Seagate (`sda`, `/mnt/backups`):
 
 - launchd `com.vu2cpl.restic-copy`, daily 05:30, under `caffeinate -i`. Log `~/Library/Logs/restic-copy.log`,
@@ -166,7 +166,20 @@ The NAS (a DS710+ on DSM 5.2, unpatched since about 2017) would otherwise hold t
 ```
 
 The first seed (about 620 GB) started 2026-10-15 20:44 at 45-60 MB/s. `ubersdr` finished at 20:52 (29 GB);
-`macmini-server` was still running at 22:00, expected to finish about 23:00.
+`macmini-server` finished at 23:05.
+
+**Restore test from the copy passed 2026-10-17.** Both copies list the same 4 snapshots as the NAS (matched by
+`original`). From `macmini-server` copy `f3d71199` (= NAS `6d4f1cdb`, 03:04) the Mac restored 25 random Immich
+originals, the newest Immich DB dump, the ALPA dump, `/etc/fstab` and `/etc/hostname` (29 files, 668 MB, 16 s):
+all 29 sha256 = the live files on macmini-server, both dumps pass `gzip -t`. The `ubersdr` copy was checked
+on 2026-10-15. Restore to a scratch target, never in place:
+
+```bash
+~/.local/bin/restic-copy macmini-server -- restore latest --target /tmp/restore --include /etc/fstab
+```
+
+Immich writes its own DB dump at 02:00 UTC = **07:32 IST**, after the 03:00 restic run, so each night's
+snapshot holds the previous morning's dump (about 20 h old). The ALPA dump is made just before the backup.
 
 **Snapshot IDs differ in the copy.** `restic copy` writes new snapshot IDs and records the source ID in the
 snapshot's `original` field (`snapshots --json`). Example: copy `4e46ed76` = NAS `b62c8459`. So the copy's

@@ -2,7 +2,7 @@
 # restic-copy — nightly second copy of every shack restic repository onto the UberSDR box's 1 TB HDD,
 # run from the Mac.
 #
-# The NAS (DS710+, DSM 5.2, unpatched since ~2017) holds the only copy of the backups. This copies new
+# The NAS (2010 DS710+, Debian 13 + OMV 8 since 2026-10-16) would otherwise hold the only copy. This copies new
 # snapshots from each NAS repository (full-access endpoint :9901, user `maint`) to a repository of the same
 # name on .109's /mnt/backups (sda) over sftp. Each copy uses the same password as its source and the same
 # chunker parameters, so dedup works and no new secret lands on .109. It protects against a NAS failure,
