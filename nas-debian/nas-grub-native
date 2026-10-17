@@ -1,0 +1,74 @@
+#!/bin/sh
+# nas-grub-native — install a GRUB first stage that reads the boot disk with GRUB's OWN USB driver, so the
+# DS710+ boots without a USB keyboard (vu2cpl-shack nas-debian/, HANDOVER #54, 2026-10-17).
+#
+# Why: on this board's AMIBIOS 08.00.16 the BIOS's USB disk emulation (INT13) stops working part-way into
+# GRUB 2 unless a USB keyboard is plugged in: the BIOS still loads GRUB's core image, but GRUB's first read
+# of the filesystem fails ("failure reading sector 0x802", "hd0,msdos1 not found"). Same on a fixed-media
+# USB HDD, so it's not the removable bit. DSM's GRUB 0.97 never hit it.
+# Fix: a core image with NO biosdisk, but usb + ehci/uhci + usbms built in. The BIOS only has to load the
+# ~128 KB core (that part always worked); GRUB then finds root by UUID on its own USB stack and goes on to
+# normal mode / grub.cfg as usual. Tested keyboard-free 2026-10-17 13:51 (USB HDD).
+#
+# The early config must be SIMPLE commands only: it runs before normal.mod, so no if/for/[ ].
+#
+#   nas-grub-native                 build for the running root (its disk + fs UUID); install if different
+#   nas-grub-native DISK UUID       same for another disk, e.g. a spare stick while it is plugged in
+#   nas-grub-native --check         exit 0 if the root disk already has the native core, 1 if not
+#
+# Run from apt (DPkg::Post-Invoke, /etc/apt/apt.conf.d/99nas-grub-native) so a grub-pc upgrade or a
+# grub-install can't silently put the stock (keyboard-needing) core back.
+set -eu
+
+CHECK=0
+[ "${1:-}" = "--check" ] && { CHECK=1; shift; }
+if [ $# -ge 2 ]; then
+    DISK=$1; UUID=$2
+else
+    SRC=$(findmnt -no SOURCE /)
+    UUID=$(findmnt -no UUID /)
+    DISK=/dev/$(lsblk -no PKNAME "$SRC")
+fi
+[ -b "$DISK" ] || { echo "nas-grub-native: $DISK is not a block device" >&2; exit 2; }
+[ -n "$UUID" ] || { echo "nas-grub-native: no filesystem UUID" >&2; exit 2; }
+
+# On a real disk, not /tmp: grub-bios-setup resolves the device the -d directory lives on and fails on tmpfs.
+mkdir -p /var/lib/nas-grub-native
+W=$(mktemp -d -p /var/lib/nas-grub-native)
+trap 'rm -rf "$W"' EXIT
+cat > "$W/early.cfg" <<EOF
+echo "nas: GRUB native USB boot (no BIOS disk), waiting 3 s for USB..."
+sleep 3
+search --no-floppy --fs-uuid --set=root $UUID
+set prefix=(\$root)/boot/grub
+echo "nas: root=\$root prefix=\$prefix"
+terminal_input --append usb_keyboard
+sleep 5
+EOF
+grub-mkimage -O i386-pc -o "$W/core.img" -c "$W/early.cfg" -p /boot/grub \
+    usb ehci uhci usbms scsi part_msdos ext2 search search_fs_uuid echo sleep terminal usb_keyboard
+cp /usr/lib/grub/i386-pc/boot.img "$W/"
+
+# grub-bios-setup patches the first sectors of the core with the disk's block list, so compare from 4 KiB on.
+same() {
+    sz=$(stat -c %s "$W/core.img"); off=4096; n=$((sz - off))
+    a=$(dd if="$DISK" bs=512 skip=$((1 + off / 512)) count=$(((n + 511) / 512)) status=none | head -c $n | sha256sum)
+    b=$(tail -c $n "$W/core.img" | sha256sum)
+    [ "$a" = "$b" ]
+}
+
+if same; then
+    [ $CHECK -eq 1 ] || echo "nas-grub-native: $DISK already has the native-USB core (root $UUID)"
+    exit 0
+fi
+[ $CHECK -eq 1 ] && { echo "nas-grub-native: $DISK does NOT have the native-USB core" >&2; exit 1; }
+
+grub-bios-setup -d "$W" "$DISK"
+if same; then
+    echo "nas-grub-native: installed native-USB core on $DISK (root $UUID)"
+    logger -t nas-grub-native "installed native-USB core on $DISK (root $UUID)"
+else
+    echo "nas-grub-native: install on $DISK did not verify" >&2
+    logger -t nas-grub-native "install on $DISK did not verify"
+    exit 1
+fi

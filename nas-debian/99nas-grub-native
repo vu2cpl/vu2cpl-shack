@@ -1,0 +1,4 @@
+// /etc/apt/apt.conf.d/99nas-grub-native (vu2cpl-shack nas-debian/, #54)
+// After every dpkg run: if a grub-pc upgrade (or anything) put the stock GRUB core back on the boot disk,
+// reinstall the native-USB core so the NAS keeps booting without a keyboard. No-op when it's already there.
+DPkg::Post-Invoke { "if [ -x /usr/local/sbin/nas-grub-native ]; then /usr/local/sbin/nas-grub-native || true; fi"; };

@@ -11,6 +11,7 @@ The rest-server units live in `../restic/nas-debian/`.
 | `ds710-btnwatch` | `/usr/local/sbin/ds710-btnwatch` | Read-only: prints anything that changes on the UARTs, chipset GPIOs, Super I/O GPIOs, ACPI status or input devices while you press buttons |
 | `ds710-buttons` + `ds710-buttons.service` | `/usr/local/sbin/`, `/etc/systemd/system/` (enabled) | Power held ~3 s → long beep + clean power-off. USB copy held ~1 s → logged |
 | `ds710-shutdown-hook` | `/usr/lib/systemd/system-shutdown/ds710` | At the very end of shutdown tells the controller `1` (power-off) or `C` (restart), as DSM's kernel does |
+| `nas-grub-native` + `99nas-grub-native` | `/usr/local/sbin/`, `/etc/apt/apt.conf.d/` | Installs a GRUB first stage that reads the boot disk with GRUB's own USB driver, so the NAS **boots without a USB keyboard**; the apt hook re-applies it after any package run (a grub-pc upgrade can't undo it) |
 | `ds710-fan` + `ds710-fan.service` | `/usr/local/sbin/`, `/etc/systemd/system/` (enabled) | Fan duty from disk + CPU temperature: 30 % floor, DSM's steps up to 99 %, 2 °C hysteresis, 65 % if a reading fails |
 | `ds710-leds.service` | `/etc/systemd/system/` (enabled) | Boot: power LED on, eSATA off, then `raid`: status + disk LEDs green, or orange if md2 came up degraded. Shutdown: status off, power LED blinking |
 
@@ -93,7 +94,40 @@ anything else, and never reconfigures a pin. The GPIO base comes from `setpci -s
   (`journalctl -t ds710-fan`); `ds710-fan --once` prints readings and the duty without touching anything.
   At normal temps (disks 31-35, CPU 41-49 °C) it stays at 30 %.
 
+## Booting without a keyboard: `nas-grub-native` (2026-10-17, #54)
+
+**The NAS boots with nothing plugged in but the stick** (tested cold from the Ultra Fit 14:02 and warm from a
+USB HDD 13:51, both with no keyboard). On this AMIBIOS (08.00.16, 05/21/12) the BIOS's USB disk emulation
+stops working part-way into GRUB 2 unless a USB keyboard is present: the BIOS still loads GRUB's core image,
+but GRUB's first filesystem read fails ("failure reading sector 0x802", `hd0,msdos1` not found). It's not the
+removable bit (a fixed-media USB HDD failed the same way) and not the display. DSM's GRUB 0.97 never hit it.
+
+`nas-grub-native` builds a core image **without `biosdisk`** and with `usb ehci uhci usbms scsi part_msdos ext2
+search search_fs_uuid echo sleep terminal usb_keyboard` built in, plus an early config that waits 3 s, finds
+root by UUID on GRUB's own USB stack, sets `prefix` and shows `nas: root=… prefix=…` for 5 s; then normal mode
+and `grub.cfg` run as usual. The early config may only use simple commands (it runs before `normal.mod`: no
+`if`/`for`/`[` — the first attempt used a loop and stopped at a `grub>` prompt). The work dir must be on disk,
+not tmpfs (`grub-bios-setup` resolves its device).
+
+```bash
+sudo nas-grub-native                 # root disk: install if not already native
+sudo nas-grub-native --check         # exit 0 if native
+sudo nas-grub-native DISK UUID       # e.g. the spare stick while plugged in after boot
+```
+
+**Upgrades:** `grub-pc/install_devices` is empty (`install_devices_empty=true`) so grub-pc's postinst no longer
+writes the boot sector, and `DPkg::Post-Invoke` (`99nas-grub-native`) runs `nas-grub-native` after every
+dpkg run. Tested: stock `grub-install` → not native → `apt-get install --reinstall grub-pc` → native again.
+**Spares:** the Cruzer (…6472) still has the stock core and no hook (as of its 09:22 sync): it needs a
+keyboard until `nas-grub-native /dev/disk/by-id/usb-SanDisk_Cruzer_Fit_4C530001270216116472-0:0
+c6160f5b-8f8a-4ac1-af5e-f55ae8e98b1b` is run on it (or it is re-synced from the Ultra Fit). The USB HDD (WD
+WD1600BEVS, UUID `aa326d50…`, 40 GiB root) has the native core and hook, but is bus-powered and was **not
+detected at one cold power-on** — fine as a spare, not for unattended use. Boot-sector backups in `/root`
+on the HDD: `hdd-mbr-gap-20261017.img`, `ultrafit-mbr-gap-20261017.img`.
+
 ## Boot stick: which one, and the headless-boot problem (2026-10-17)
+
+*(Superseded the same afternoon by `nas-grub-native` above: no keyboard is needed any more.)*
 
 **Resolved the same morning (HANDOVER #54):** the cause was the missing USB keyboard, not the stick or the
 display. Without a USB keyboard present at boot, GRUB can't read the USB stick; with one, every boot works.
