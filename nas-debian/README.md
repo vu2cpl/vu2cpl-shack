@@ -95,6 +95,13 @@ anything else, and never reconfigures a pin. The GPIO base comes from `setpci -s
 
 ## Boot stick: which one, and the headless-boot problem (2026-10-17)
 
+**Resolved the same morning (HANDOVER #54):** the cause was the missing USB keyboard, not the stick or the
+display. Without a USB keyboard present at boot, GRUB can't read the USB stick; with one, every boot works.
+**An HP 330 wireless combo receiver (`03f0:6341`) stays plugged into the NAS for that.** The Ultra Fit was
+re-cloned from the Cruzer at 09:21 and booted fine at 09:25, so it is the root again and the **Cruzer is the
+current spare**. The NAS powers itself back on when the mains returns (tested after a clean shutdown).
+The notes below are the morning's investigation, kept for the record.
+
 - **Running from the Cruzer Fit since 2026-10-17 06:54.** After the move to the rack the Ultra Fit failed to
   boot several times. Read on the running NAS afterwards it is healthy: `e2fsck -fn` clean and all 30.75 GB
   read with `dd iflag=direct`, no I/O errors, no USB resets. Its old GRUB error ("failure reading sector
@@ -110,8 +117,9 @@ anything else, and never reconfigures a pin. The GPIO base comes from `setpci -s
 
 ## Re-cloning the spare boot stick
 
-**Since 2026-10-17 the Cruzer Fit (…6472) is the running root and the Ultra Fit (…4094) is the stale one**
-(above); the text below predates that swap, so read "spare" as "the stick not in use".
+**Since 2026-10-17 09:25 the Ultra Fit (…4094) is the root again and the Cruzer Fit (…6472) is the spare,
+re-synced 09:22 (it was the root 06:54-09:20).** Last clone direction was Cruzer → Ultra Fit; next time it's
+Ultra Fit → Cruzer with the same steps.
 
 The spare is the SanDisk **Cruzer Fit** (serial …6472, kept in the drawer with the Synology module).
 It holds the original 2026-10-16 13:02 install: `sdX1` root plus an unused swap partition `sdX5`.
