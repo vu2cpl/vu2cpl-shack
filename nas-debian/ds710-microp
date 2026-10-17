@@ -29,6 +29,7 @@ DSM's kernel tells the controller how the box is going down: "1" right before an
 usage: ds710-microp CMD [CMD ...]           e.g.  ds710-microp 4 8 LE3
        ds710-microp diskled 1|2|all green|orange|off
        ds710-microp boot | shutdown
+       ds710-microp raid [--show-degraded SECONDS]   LEDs from md2's state (nas-md-alert runs it)
        ds710-microp final-poweroff | final-reboot    (only from the systemd-shutdown hook)
 """
 import os, struct, subprocess, sys, termios, time
@@ -45,6 +46,8 @@ FINAL = {                              # systemd-shutdown hook only: filesystems
 FORBIDDEN = {"1"}                      # hard power-off
 
 DISK_PINS = {1: (16, 18), 2: (20, 32)}               # (green, orange) ICH9R GPIO, from synobios
+BAY_PORT = {1: "ata3", 2: "ata4"}                    # bay -> libata port (AHCI host2/host3), checked 2026-10-17
+MD = "md2"                                           # the data array (DSM's md0/md1 stay unassembled)
 DISK_STATES = {"off": (0, 0), "green": (1, 0), "orange": (0, 1)}
 
 def send(cmds, final=False):
@@ -87,6 +90,41 @@ def diskled(disks, state):
     finally:
         os.close(fd)
 
+def raid_state():
+    """(degraded, {bay: in_sync}) for MD, read from /proc/mdstat and /sys/block/MD/md/dev-*/state."""
+    try:
+        lines = open("/proc/mdstat").read().splitlines()
+    except OSError:
+        return True, {}
+    i = next((n for n, l in enumerate(lines) if l.startswith(MD + " :")), None)
+    if i is None:                                    # array not assembled at all
+        return True, {b: False for b in BAY_PORT}
+    status = lines[i + 1] if i + 1 < len(lines) else ""
+    degraded = "inactive" in lines[i] or "_" in status.rsplit("[", 1)[-1]
+    in_sync = {b: False for b in BAY_PORT}
+    md_dir = f"/sys/block/{MD}/md"
+    for dev in os.listdir(md_dir) if os.path.isdir(md_dir) else []:
+        if not dev.startswith("dev-"):
+            continue
+        part = dev[4:]                               # e.g. sda5
+        disk = part.rstrip("0123456789")
+        port = next((seg for seg in os.path.realpath(f"/sys/block/{disk}").split("/")
+                     if seg.startswith("ata")), "")
+        state = open(f"{md_dir}/{dev}/state").read().strip()
+        for b, p in BAY_PORT.items():
+            if p == port and "in_sync" in state.split(",") and "faulty" not in state:
+                in_sync[b] = True
+    return degraded, in_sync
+
+def raid_leds(degraded, in_sync):
+    if degraded or not all(in_sync.values()):
+        send([";"])                                  # status orange blinking
+        for b, ok in in_sync.items():
+            diskled([b], "green" if ok else "orange")
+    else:
+        send(["8"])                                  # status steady green
+        diskled(sorted(DISK_PINS), "green")
+
 if __name__ == "__main__":
     args = sys.argv[1:]
     if not args:
@@ -95,11 +133,18 @@ if __name__ == "__main__":
         if len(args) != 3 or args[1] not in ("1", "2", "all") or args[2] not in DISK_STATES:
             sys.exit("usage: ds710-microp diskled 1|2|all green|orange|off")
         diskled(sorted(DISK_PINS) if args[1] == "all" else [int(args[1])], args[2])
+    elif args[0] == "raid":
+        if len(args) == 3 and args[1] == "--show-degraded":
+            raid_leds(True, {1: False, 2: False})      # visual test: what a dead array looks like
+            time.sleep(min(int(args[2]), 120))
+        elif len(args) != 1:
+            sys.exit("usage: ds710-microp raid [--show-degraded SECONDS]")
+        raid_leds(*raid_state())
     elif len(args) == 1 and args[0] in FINAL:
         send(FINAL[args[0]], final=True)
     elif len(args) == 1 and args[0] in PRESETS:
         send(PRESETS[args[0]])
         if args[0] == "boot":
-            diskled(sorted(DISK_PINS), "green")
+            raid_leds(*raid_state())                 # green, unless md2 came up degraded
     else:
         send(args)

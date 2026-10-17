@@ -6,12 +6,12 @@ The rest-server units live in `../restic/nas-debian/`.
 
 | File | Installed as | What it does |
 |---|---|---|
-| `ds710-microp` | `/usr/local/sbin/ds710-microp` | Sends commands to the front-panel microcontroller; `diskled` sets the bay LEDs |
+| `ds710-microp` | `/usr/local/sbin/ds710-microp` | Sends commands to the front-panel microcontroller; `diskled` sets the bay LEDs; `raid` sets status + bay LEDs from md2's state (run at boot and by shack-health's `nas-md-alert` on every RAID event) |
 | `dsm-led-dump.py` | run by hand, Python 2/3 | Read-only register snapshot (ICH9 GPIO, PMBASE, PCI config, IT8720F LDN7), same output under DSM and Debian for diffing |
 | `ds710-btnwatch` | `/usr/local/sbin/ds710-btnwatch` | Read-only: prints anything that changes on the UARTs, chipset GPIOs, Super I/O GPIOs, ACPI status or input devices while you press buttons |
 | `ds710-buttons` + `ds710-buttons.service` | `/usr/local/sbin/`, `/etc/systemd/system/` (enabled) | Power held ~3 s → long beep + clean power-off. USB copy held ~1 s → logged |
 | `ds710-shutdown-hook` | `/usr/lib/systemd/system-shutdown/ds710` | At the very end of shutdown tells the controller `1` (power-off) or `C` (restart), as DSM's kernel does |
-| `ds710-leds.service` | `/etc/systemd/system/` (enabled) | Boot: power LED on, status steady green, eSATA off, disk LEDs green. Shutdown: status off, power LED blinking |
+| `ds710-leds.service` | `/etc/systemd/system/` (enabled) | Boot: power LED on, eSATA off, then `raid`: status + disk LEDs green, or orange if md2 came up degraded. Shutdown: status off, power LED blinking |
 
 ## The microcontroller
 
@@ -49,7 +49,17 @@ DS712+'s; synobios never selects it on this model.
 
 ```bash
 sudo ds710-microp diskled 1 green      # or orange / off; "all" for both bays
+sudo ds710-microp raid                 # LEDs from md2's live state (see below)
+sudo ds710-microp raid --show-degraded 20   # visual test: degraded look for 20 s, then the real state
 ```
+
+**RAID state on the front panel (2026-10-17, #53d).** `raid` reads `/proc/mdstat` and
+`/sys/block/md2/md/dev-*/state`. md2 clean with both members `in_sync` → status steady green and both
+bays green. Degraded, not assembled, rebuilding, or a member faulty/missing → status **blinking orange**
+and each bay whose disk isn't an in-sync member **orange** (bay 1 = libata `ata3`, bay 2 = `ata4`, so it
+follows the slot, not the drive). Bay 2's LED is weak (above), so on that bay only the status LED is
+reliable. `ds710-leds.service` runs it at boot and shack-health's `nas-md-alert` (mdadm's PROGRAM) on every
+RAID event, including the daily degraded reminder.
 
 The helper only flips the level bit of a pin the BIOS already made a GPIO output. It refuses
 anything else, and never reconfigures a pin. The GPIO base comes from `setpci -s 00:1f.0 48.l`
