@@ -447,7 +447,8 @@ station-wide problem is local network or upstream.
 
 Reverse Beacon Network monitoring — tracks how the VU2CPL signal is
 being heard worldwide via skimmer reports. Calibration data fetched
-from `sm7iun.se/rbnskew.csv` every 6 h.
+from `sm7iun.se/rbnskew.csv` daily at 00:30 UTC (retry 01:30 UTC),
+just after sm7iun's ~00:15 UTC recalculation.
 
 Three skimmer feeds, each with spot counts for the last 1 h / 12 h /
 24 h (CW vs FT8), last spot and frequency skew, on both dashboards and
@@ -461,7 +462,8 @@ merged with another: VU2OY and VU2OY-9 are two rigs with their own skew.
 
 **Skimmer calibration.** sm7iun publishes each RBN skimmer's frequency
 skew daily, from yesterday's RBN data: `rbnskew.csv` for the newest day,
-`rbnhist.txt` for the last ten. Node-RED fetches both every 6 h, keeps
+`rbnhist.txt` for the last ten. Node-RED fetches both at 00:30 UTC (retry
+01:30 UTC) and on start, keeps
 the local skimmers' daily values for 30 days, and shows them in a
 *Skimmer calibration* section on both dashboards. Each local SSID gets a
 row with a sparkline on a shared ±3 ppm scale (dotted guides at ±1.5 ppm,

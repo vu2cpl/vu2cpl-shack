@@ -8,6 +8,19 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-10-18
+
+### RBN: skimmer calibration fetched right after sm7iun publishes
+
+Manoj: "calibration is not updated for skimmers". The `Fetch Cal` inject fetched `rbnskew.csv` and
+`rbnhist.txt` every 6 h, counted from the last Node-RED start, so its timing drifted. On 2026-10-18 it
+last ran at 23:03Z, sm7iun recalculated at 00:17Z, and the next fetch wasn't due until ~05:03Z: the
+dashboards showed the day before for up to six hours. The inject is now a cron, `0 6-7 * * *` on the
+Pi's IST clock, which fires at **00:30 UTC** with a **01:30 UTC** retry for a late recalculation or a
+failed fetch. The fetch 10 s after start stays. The cron is the editor's own "every 60 minutes between
+06:00 and 08:00", so opening the node in the editor doesn't rewrite it. Two fetches a day instead of
+four.
+
 ## 2026-10-16
 
 ### NAS: disk 1 bay LED works under Debian (bay 2 still dark)
