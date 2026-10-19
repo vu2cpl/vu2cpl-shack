@@ -12,7 +12,9 @@ so Safari never needs CORS or the token.
     python3 load_monitor.py --open     # same, and opens it in the default browser
     python3 load_monitor.py --port 9000 --bind 0.0.0.0   # reachable on the LAN
 
-Needs HA_URL / HA_TOKEN in ~/.config/vu2cpl-shack.env (same contract as
+Runs for days as a launchd agent on the Mac (see load_monitor.plist next
+to this file: copy to ~/Library/LaunchAgents and `launchctl bootstrap
+gui/$(id -u) <plist>`). Needs HA_URL / HA_TOKEN in ~/.config/vu2cpl-shack.env (same contract as
 ha_discovery_publish.py). Written 2026-10-19 during the inverter-overload
 work (HANDOVER #55); the phase names below follow the re-landed inputs of
 that day — change PHASES if the electrician moves them again.
@@ -115,10 +117,24 @@ def history(ha, minutes):
         if eid == GRID:
             grid = [(iso_ts(p["last_changed"]), p["state"]) for p in s]
             continue
-        series[eid] = [(iso_ts(p["last_changed"]), num(p["state"])) for p in s]
+        pts = [(iso_ts(p["last_changed"]), num(p["state"])) for p in s]
+        series[eid] = thin(pts, 1500)
     out = {"grid": grid}
     for key, pat in SERIES.items():
         out[key] = [series.get(pat.format(p=t), []) for _, t in PHASES]
+    return out
+
+
+def thin(pts, max_pts):
+    """Keep at most max_pts points, preserving each bucket's max so peaks survive."""
+    if len(pts) <= max_pts:
+        return pts
+    size = len(pts) / float(max_pts)
+    out = []
+    for i in range(max_pts):
+        chunk = [p for p in pts[int(i * size):int((i + 1) * size)] if p[1] is not None]
+        if chunk:
+            out.append(max(chunk, key=lambda p: p[1]))
     return out
 
 
@@ -173,7 +189,7 @@ footer{color:var(--muted);font-size:11px;display:flex;gap:16px;flex-wrap:wrap}
  <div class="tile" style="flex:1 1 160px"><div class="k">Geysers on</div><div class="v" id="gey" style="font-size:16px">…</div></div>
  <div class="ctl">
   <label>Series <select id="set"><option value="total">Total load</option><option value="essential">Essential (UPS)</option><option value="smartload">SmartLoad port</option></select></label>
-  <label>Window <select id="win"><option value="15">15 min</option><option value="30">30 min</option><option value="60" selected>60 min</option><option value="180">3 h</option></select></label>
+  <label>Window <select id="win"><option value="15">15 min</option><option value="30">30 min</option><option value="60" selected>60 min</option><option value="180">3 h</option><option value="360">6 h</option><option value="720">12 h</option><option value="1440">24 h</option><option value="4320">3 days</option></select></label>
   <button id="tbl" title="Show last values as a table">Table</button>
  </div>
 </header>
@@ -228,8 +244,8 @@ function draw(){
   ctx.strokeStyle='#30363d';ctx.lineWidth=1;ctx.fillStyle='#8b949e';ctx.font='11px -apple-system,Helvetica,Arial';ctx.textAlign='right';
   for(let v=0;v<=maxV;v+=500){const y=Y(v);ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x1,y);ctx.stroke();if(v%1000===0)ctx.fillText((v/1000)+' kW',x0-6,y+4);}
   ctx.textAlign='center';
-  const step=winMin<=15?120:winMin<=30?300:winMin<=60?600:1800;
-  for(let t=Math.ceil(t0/step)*step;t<=now;t+=step){const x=X(t);ctx.beginPath();ctx.moveTo(x,y1);ctx.lineTo(x,y1+4);ctx.stroke();ctx.fillText(hhmm(t).slice(0,5),x,y1+16);}
+  const step=winMin<=15?120:winMin<=30?300:winMin<=60?600:winMin<=180?1800:winMin<=720?3600:winMin<=1440?7200:21600;
+  for(let t=Math.ceil(t0/step)*step;t<=now;t+=step){const x=X(t);ctx.beginPath();ctx.moveTo(x,y1);ctx.lineTo(x,y1+4);ctx.stroke();ctx.fillText(winMin>1440?new Date(t*1000).toLocaleString('en-GB',{weekday:'short',hour:'2-digit',minute:'2-digit'}):hhmm(t).slice(0,5),x,y1+16);}
   // reference lines
   ctx.lineWidth=1.5;ctx.strokeStyle='#f85149';ctx.beginPath();ctx.moveTo(x0,Y(LIMIT));ctx.lineTo(x1,Y(LIMIT));ctx.stroke();
   ctx.setLineDash([6,4]);ctx.strokeStyle='#d29922';ctx.beginPath();ctx.moveTo(x0,Y(SHED));ctx.lineTo(x1,Y(SHED));ctx.stroke();ctx.setLineDash([]);
@@ -298,7 +314,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.send(200, json.dumps(snapshot(self.ha)))
             elif u.path == "/api/history":
                 q = urllib.parse.parse_qs(u.query)
-                minutes = max(5, min(720, int(q.get("minutes", ["60"])[0])))
+                minutes = max(5, min(4320, int(q.get("minutes", ["60"])[0])))
                 self.send(200, json.dumps(history(self.ha, minutes)))
             else:
                 self.send(404, "not found", "text/plain")
