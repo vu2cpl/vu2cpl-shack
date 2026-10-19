@@ -76,6 +76,12 @@ hot phase, 5 s dwell), and grid-on / not-from-unavailable conditions on "Load re
 on two HA starts (battery sensor unavailable → 100) and turned Utility + Dryer Kitchen on with the
 grid off. The electrician has been asked to move two geysers from Y to R.
 
+**Paused 13:22 IST.** **PAUSED 13:22 IST 2026-10-19 (Manoj: "stop the smartload tripping at grid loss, its creating lots of fluctuation and flapping" and "pause all automations done today").** The three automations are **disabled, not deleted** (`automation.grid_loss_shed_geysers`, `automation.grid_loss_shed_utility_then_dryer_kitchen_on_overload`, `automation.grid_restored_restore_dryer_kitchen_then_utility` all `off`), and the inverter's SmartLoad Off/On are **back to 90 / 95 %** (were 99 / 100). Reason: the 99/100 rule plus the electrician's repeated grid drops made the SmartLoad port fall out and come back over and over. The device settings stay (Utility + Dryer Kitchen `PowerOnState 0`, four Tuya plugs `power_off`). The three prepared fixes (geyser guard, phase-aware escalation, Load-restore-95 conditions) are files only, not applied.
+
+Also added: [`load_monitor.py`](load_monitor.py) — a stdlib desktop page on `localhost:8765` that draws the
+three phases as R / Y / B live from HA (5 s), with the 3.3 kW limit and 2.8 kW shedding line, grid-off
+spells shaded and the geysers that are on listed; its `PHASES` map follows the re-landed inputs.
+
 ## 2026-10-18
 
 ### RBN: skimmer calibration fetched right after sm7iun publishes
