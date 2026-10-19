@@ -1270,10 +1270,12 @@ Facts the design rests on (all from the recorder + the Solarman profile `deye_p3
   the Smart Life app.**
 - Phase map from 10 days of recorder data (10-09 → 10-19): all four house circuits are on inverter
   **L3** (L1/L2 essential load never above ~50 W); on the SmartLoad port two geysers are on **L2**,
-  two on **L3**, one never switched on. L1 of the port is unused. **R/Y/B at the inverter terminals
-  (downstream of the stabiliser): R = L3, Y = L1, B = L2** — settled 2026-10-19 by opening the incoming
-  MCBs one at a time and watching `sensor.inverter_grid_lX_voltage` (details in SHACK_CHANGELOG
-  2026-10-19). So the house and the heavier geyser share are on R, two geysers on B, and Y is empty.
+  two on **L3**, one never switched on. L1 of the port is unused. **Rewired 2026-10-19 ~12:30:** the
+  inverter's grid inputs were re-landed as **R = L1, Y = L2, B = L3** (the 11:15 MCB result R = L3 /
+  Y = L1 / B = L2 is superseded) and the house circuits spread out: Dryer Kitchen on L1, GF on L2, FF
+  on L3, Utility unplaced until the pump runs; SmartLoad port three geysers on L2 (one 3 kW), two on
+  L3, none on L1 — the electrician was asked to move two from L2 to L1. A second trip on L2 at 13:04
+  and the pending HA fixes are in SHACK_CHANGELOG 2026-10-19 / HANDOVER #55.
 - Live-tested 2026-10-19 10:02–10:06 IST: `grid_loss_escalate` with `threshold: 500` /
   `require_off_grid: false` switched Utility off, then Dryer Kitchen 30 s later; `grid_restore_staggered`
   brought Dryer Kitchen back at once and Utility 2 min later, one Telegram each step; no errors in

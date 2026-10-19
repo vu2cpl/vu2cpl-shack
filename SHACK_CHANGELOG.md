@@ -58,13 +58,23 @@ HA system log; real parameters re-read afterwards. Pre- and post-change automati
 inverter L3 and, on the SmartLoad port, two geysers on L2, two on L3, L1 unused. Manoj is getting
 an electrician to spread the house circuits across L1/L2/L3 and move geysers from L3 to the port's
 L1. HA only knows L1/L2/L3 and the DB is labelled R/Y/B, so Manoj opened the incoming MCBs one at a
-time (11:15–11:23 IST) and read the inverter's grid phase voltages: **R = L3, Y = L1, B = L2**
-(R open → L3 at 0 V twice, Y open → L1 at 0 V, L2 never dropped, so B by elimination; the same in
-HA and in `~/grid_voltage.csv`). The inverter's grid input sits downstream of the servo stabiliser,
-so this is the order at the inverter terminals. Translated for the electrician: everything on the
-house side and most of the essential load is on **R**, two geysers are on SmartLoad **R** and two on
-SmartLoad **B**, and **Y is empty on both the house side and the SmartLoad port** — Y is where the
-load should move. The textbook L1/L2/L3 = R/Y/B order was wrong here.
+time (11:15–11:23 IST) and read the inverter's grid phase voltages: R = L3, Y = L1, B = L2 (R open →
+L3 at 0 V twice, Y open → L1 at 0 V, L2 never dropped; the same in HA and in `~/grid_voltage.csv`).
+**Superseded the same day:** during the 12:13–12:33 power-off he re-landed the inverter's grid-input
+wires, so from ~12:30 the order at the inverter terminals (downstream of the servo stabiliser) is
+**R = L1, Y = L2, B = L3**, and the electrician moved the house circuits off the single phase. Picture
+at 13:00: Dryer Kitchen on R (L1) ≈ 1.9 kW, GF on Y (L2) 1.7–3.1 kW, FF with the MBR AC on B (L3)
+≈ 0.9 kW, Utility not yet seen under load; on the SmartLoad port three geysers on Y (L2), one of them
+3 kW, two on B (L3), none on R (L1). **Second trip at 13:04 IST, on Y:** a minute after a grid drop
+(the electrician's work) the 3 kW geyser was switched on by hand and a GF-side load came on, Y ≈ 6 kW.
+The grid-loss trigger had already run with no geyser on, and the escalation's tiers (Utility, Dryer
+Kitchen) were not on Y. The breakers did not even reboot (last restart 12:27:47, so `PowerOnState 0`
+has not been exercised yet; the SY2 is a two-coil bistable relay and rides through short dips). Fixes
+prepared, to be applied once the supply is stable: a guard that switches any geyser turned on while
+off grid straight back off, a phase-aware escalation (geysers first, then the sheddable circuit on the
+hot phase, 5 s dwell), and grid-on / not-from-unavailable conditions on "Load restore 95", which fired
+on two HA starts (battery sensor unavailable → 100) and turned Utility + Dryer Kitchen on with the
+grid off. The electrician has been asked to move two geysers from Y to R.
 
 ## 2026-10-18
 
