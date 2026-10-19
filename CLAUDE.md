@@ -1288,8 +1288,17 @@ Facts the design rests on (all from the recorder + the Solarman profile `deye_p3
   brought Dryer Kitchen back at once and Utility 2 min later, one Telegram each step; no errors in
   `system_log/list`. Real parameters restored and re-read afterwards.
 
-Planned electrical work (HANDOVER #55): the electrician rebalances the house circuits across the
-three phases and moves geysers from L3 to the unused L1 of the SmartLoad port.
+**Electrical work done 2026-10-19 15:04–15:16 IST (HANDOVER #55).** Grid input R = L1, Y = L2, B = L3
+(verified by Manoj + electrician; the MCBs are ganged so there is no per-phase MCB test); SmartLoad
+output re-coloured to the port's N R S T (red → R = L1, yellow → S = L2, blue → T = L3), and the 3 kW
+geyser moved to L1. **Final map, measured live 15:06–15:56:** L1/R: Dryer Kitchen (dryer 1.9 kW) ·
+port = Maid's 3.0 kW + entertainment AC 1.1 kW. L2/Y: ~0.7 kW base + kitchen boiler 1.4 kW + washing
+machine on the **Utility** breaker (2 kW heating; phase read from the 188 W drain cycle, confirm at the
+next wash) · port = two 1.8–2.0 kW geysers. L3/B: both pumps on a direct line (1.1 / 2.6 kW, on no
+breaker meter) + **GF Load with the ground-floor AC** 0.7 kW · port = two 1.8 kW geysers. Worst case
+essential-only R 1.9 / Y 4.1 / B 4.4 kW. **Open consequence for the escalation:** `circuit_phase`
+still maps Utility to L3 — it is on **L2** now — and GF Load no longer carries the pump, so it could be
+the sheddable breaker for L3; both wait for Manoj's decision. Full timeline: SHACK_CHANGELOG 2026-10-19.
 
 ### Synology DiskStation: DSM update entity disabled (2026-10-16)
 
@@ -1467,7 +1476,7 @@ historical context lives in `SHACK_CHANGELOG.md`, indexed by date.
 
 | # | Item | Status |
 |---|------|--------|
-| 55 | **Load rebalancing across phases + SmartLoad L1 (electrician)** (opened 2026-10-19) | Planned, not yet scheduled. All house circuits and the heavier geyser share sit on inverter L3 (5.5 kW on a ~3.3 kW per-phase off-grid limit tripped the Deye 2026-10-19 09:07). HA now sheds on grid loss (CLAUDE.md "Grid-loss load shedding"), but the fix is electrical: spread FF/GF/Utility/Dryer across L1/L2/L3 and move geysers from L3 to the unused L1 of the SmartLoad port. Also open: the fifth Tuya geyser plug's power-on behaviour (Smart Life app). See HANDOVER #55 | **Open** |
+| 55 | **Load rebalancing across phases + SmartLoad L1 (electrician)** (opened 2026-10-19) | **Electrician done 2026-10-19 15:16 IST** (inputs verified, SmartLoad output re-coloured to N R S T, 3 kW geyser moved to L1; final map in CLAUDE.md "Grid-loss load shedding" + SHACK_CHANGELOG). Remaining: escalation `circuit_phase` Utility → L2 (and GF Load sheddable for L3?) pending Manoj; washing-machine heater phase from the recorder; Raji's plug power-on (Smart Life app); `PowerOnState 0` unverified. Originally: All house circuits and the heavier geyser share sit on inverter L3 (5.5 kW on a ~3.3 kW per-phase off-grid limit tripped the Deye 2026-10-19 09:07). HA now sheds on grid loss (CLAUDE.md "Grid-loss load shedding"), but the fix is electrical: spread FF/GF/Utility/Dryer across L1/L2/L3 and move geysers from L3 to the unused L1 of the SmartLoad port. Also open: the fifth Tuya geyser plug's power-on behaviour (Smart Life app). See HANDOVER #55 | **Mostly done** |
 | 52 | ~~**RBN: spot lines split across TCP chunks are dropped**~~ (opened 2026-10-15) | **Closed 2026-10-16.** Fixed 2026-10-15 (`95d9f2a`): the three login handlers hold each chunk's unterminated tail per `_session.id` and prepend it to the next chunk. Confirmed: 0 `Unmatched: DX de` lines in the 9.1 h from the 17:03:27Z deploy to 2026-10-16 02:12Z (the old rate of ~19/h would have given ~175). See HANDOVER #52 | **Closed** |
 | 49 | **LP-700: Pi server and Mac app months behind; forks unsynced** (opened 2026-10-14) | Both update-check PRs merged upstream 2026-10-10 (Server #4, App #19); VU3ESV's follow-ups released **v0.2.3** and **0.1.17**. Here: the Pi runs a 2026-05-16 `lp700-server` build, the Mac runs App 0.1.7-display-autoscale (0.1.17 includes that auto-scale work). Forks are 11 / 43 commits behind, 0 ahead. App branch `feat/scope-spectrum-views` was never sent upstream. Waiting on Manoj: sync the forks, `redeploy.sh` v0.2.3 to the Pi, install App 0.1.17, decide what to do with the branch. Full notes in HANDOVER #49 | **Open** |
 | 48 | ~~**Plan only — Node-RED → container on .109 + movable broker address**~~ (opened 2026-10-02) | Nothing changed yet. Feasible: no serial/GPIO/exec/file nodes left, and the hardware gateways stay on the Pi. Decide the broker's home first, because moving Node-RED alone makes lightning protection depend on two boxes. Broker "redirect" = a UniFi DNS name for all clients (permanent) + DNAT on the Pi (cutover bridge); MQTT 5 redirect is unusable with Tasmota/ESP. HA stays on HassPi and only needs its MQTT host and `rest_command.shack_*` URLs repointed. Full step list in HANDOVER #48 | **Dropped 2026-10-03** |
