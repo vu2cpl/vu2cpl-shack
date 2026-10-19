@@ -201,6 +201,10 @@ consumption monitoring. The rotator outlet has a 5 min auto-off timer
 with idempotent retrigger guard + 10 s cooldown to prevent reset loops.
 
 Below the 16 A voltage/current/power/today line, both dashboards carry
+a **Phase loads** graph tile (added 2026-10-19): inverter L1 / L2 / L3 = R / Y / B
+load over the last ten minutes with the 3.3 kW per-phase off-grid limit and the
+2.8 kW shedding line, live watts per phase, fed every 5 s straight from the
+inverter's logger by `solar_phases_mqtt.py` (retained `shack/solar/phases`), plus
 two further rows (added 2026-08-25): a **solar row** of two half-width
 tiles — **Grid** (ON/OFF plus the three input phase voltages) and
 **Battery** (state of charge, with charge state and power on one line)
@@ -489,6 +493,8 @@ comes from VU2PTT's Skimmer Calibration tracker.
 ├── rpi-agent.service                systemd unit for rpi_agent
 ├── monitor.sh                       MQTT telemetry cron (every minute)
 ├── solar_inverter_mqtt.py           Deye inverter → retained shack/solar/inverter + ~/grid_voltage.csv (1-min cron)
+├── solar_phases_mqtt.py             Deye per-phase load → retained shack/solar/phases every 5 s (daemon, feeds the Vue Phase-loads tile)
+├── solar-phases.service             systemd unit for it on noderedpi4
 ├── grid_voltage_report.py           grid_voltage.csv → Markdown + SVG evidence report (pure stdlib)
 ├── stabiliser_watch.py              Stabiliser trip / outage / dropout → Telegram (1-min cron, pure stdlib)
 ├── deye_history_report.py           Solarman xlsx cloud exports → supply-interruption report + timeline (pure stdlib)

@@ -330,6 +330,7 @@ Agent endpoints: `POST /reboot`, `POST /shutdown`
 | `a1fbb636a745e687` | Power TOGGLE Router | Routes toggle commands |
 | `e72813d4b7791246` | Energy Aggregator | 16A energy data + `ctx.solar` (from `energy/solar`) + `ctx.house` (per-device merge from `energy/house`) since 2026-08-25 |
 | `solar_inv_mqtt_in` | shack/solar/inverter | mqtt in — retained Deye JSON from `solar_inverter_mqtt.py` cron |
+| `solar_phases_mqtt_in` | shack/solar/phases | mqtt in — retained per-phase JSON from `solar_phases_mqtt.py` (5-s daemon) → `solar_phases_parse_fn` (Parse Solar Phases → `energy/phases` into the Energy Aggregator; `Build Power state for Vue` passes it through as `energy.phases`) — added 2026-10-19 for the Phase-loads tile |
 | `solar_inv_parse_fn` | Parse Solar Inverter | validates payload → `energy/solar` → Energy Aggregator |
 | `house_state_mqtt_in` / `house_sensor_mqtt_in` / `house_lwt_mqtt_in` / `house_stat_mqtt_in` | tele/+/STATE · tele/+/SENSOR · tele/+/LWT · stat/+/POWER | wildcard mqtt ins feeding Parse House Loads (`stat/+/POWER` only matches single-relay devices = exactly the house set) |
 | `house_parse_fn` | Parse House Loads | filters to the 4 house devices, emits `energy/house` per-device updates (relay/p/today/v/online/ts) |
@@ -648,6 +649,16 @@ House Loads", `height` 2→6; Vue PowerCard build `v25`):
   Source:
   retained `shack/solar/inverter` published by `solar_inverter_mqtt.py`
   (1-min cron on the Pi — see the Solar inverter row in INFRASTRUCTURE).
+- **Phase-loads tile (Vue v47, 2026-10-19, #55):** one full-width tile under the solar row —
+  R / Y / B (= inverter L1 / L2 / L3 since the 2026-10-19 input re-landing) over the last ~10 min as an
+  SVG sparkline with the solid 3.3 kW per-phase off-grid limit and the dotted 2.8 kW shedding line,
+  the three live watts in the phase colours (`--red` / `--amber` / `--accent`), grid state + SOC in the
+  footer; greys to 45 % when `phases.ts` is older than 30 s. Fed by `state.energy.phases` ←
+  `shack/solar/phases` (`solar_phases_mqtt.py`, 5 s, direct from the logger — **no HA in the path**, per
+  the "read devices directly" rule); the Vue keeps 200 samples client-side (3-s pushes, de-duplicated on
+  `ts`). HA's Radio dashboard got the equivalent the same day as a native `history-graph` card
+  ("Phase loads — R · Y · B", `sensor.inverter_load_l1/l2/l3_power`, 6 h) in the Solar · Grid · Battery
+  section, right after the three grid gauges (backup `dashboard-193-radio-pre-phaseloads-20261019.json`).
   The whole row dims when the payload `ts` is >5 min stale (publisher
   dead or logger unreachable); the retained message means the last
   reading survives Node-RED restarts.
@@ -1288,7 +1299,10 @@ Facts the design rests on (all from the recorder + the Solarman profile `deye_p3
   brought Dryer Kitchen back at once and Utility 2 min later, one Telegram each step; no errors in
   `system_log/list`. Real parameters restored and re-read afterwards.
 
-**Electrical work done 2026-10-19 15:04–15:16 IST (HANDOVER #55).** Grid input R = L1, Y = L2, B = L3
+**Escalation circuit map updated 16:25 IST on Manoj's "utility to L2, GF sheddable yes":** `circuit_phase` is now
+`{switch.dryer_kitchen: 1, switch.tasmota_3 (Utility): 2, switch.tasmota (GF Load): 3}` — GF Load is sheddable
+since the pumps turned out to be on a direct line and GF carries the ground-floor AC (backup
+`automation-grid_loss_escalate-pre-circuitmap-20261019.json`; FF Load still never). **Electrical work done 2026-10-19 15:04–15:16 IST (HANDOVER #55).** Grid input R = L1, Y = L2, B = L3
 (verified by Manoj + electrician; the MCBs are ganged so there is no per-phase MCB test); SmartLoad
 output re-coloured to the port's N R S T (red → R = L1, yellow → S = L2, blue → T = L3), and the 3 kW
 geyser moved to L1. **Final map, measured live 15:06–15:56:** L1/R: Dryer Kitchen (dryer 1.9 kW) ·
@@ -1296,9 +1310,8 @@ port = Maid's 3.0 kW + entertainment AC 1.1 kW. L2/Y: ~0.7 kW base + kitchen boi
 machine on the **Utility** breaker (2 kW heating; phase read from the 188 W drain cycle, confirm at the
 next wash) · port = two 1.8–2.0 kW geysers. L3/B: both pumps on a direct line (1.1 / 2.6 kW, on no
 breaker meter) + **GF Load with the ground-floor AC** 0.7 kW · port = two 1.8 kW geysers. Worst case
-essential-only R 1.9 / Y 4.1 / B 4.4 kW. **Open consequence for the escalation:** `circuit_phase`
-still maps Utility to L3 — it is on **L2** now — and GF Load no longer carries the pump, so it could be
-the sheddable breaker for L3; both wait for Manoj's decision. Full timeline: SHACK_CHANGELOG 2026-10-19.
+essential-only R 1.9 / Y 4.1 / B 4.4 kW. The escalation's `circuit_phase` was
+updated the same afternoon (Utility → L2, GF Load → L3 sheddable; see the status note above). Full timeline: SHACK_CHANGELOG 2026-10-19.
 
 ### Synology DiskStation: DSM update entity disabled (2026-10-16)
 
@@ -1556,6 +1569,8 @@ Pi-side scripts already in this repo (canonical paths shown):
 | `rpi-agent.service` | `/etc/systemd/system/rpi-agent.service` | systemd unit for rpi_agent |
 | `monitor.sh` | `/home/vu2cpl/monitor.sh` | MQTT telemetry cron (every minute) |
 | `solar_inverter_mqtt.py` | `/home/vu2cpl/solar_inverter_mqtt.py` | Deye inverter → retained `shack/solar/inverter` (every minute, user crontab; needs `pip3 install --user pysolarmanv5`; `svc` creds from the same env files as monitor.sh). Also appends `~/grid_voltage.csv` |
+| `solar_phases_mqtt.py` | `/home/vu2cpl/solar_phases_mqtt.py` on noderedpi4 (`solar-phases.service`) | **Fast per-phase load feed (added 2026-10-19, #55):** holds ONE Solarman connection and every **5 s** reads regs 598-600 (grid V), 586-591 (battery), **650-653 load L1/L2/L3 + total** and **664-667 SmartLoad L1/L2/L3 + total** (map verified against HA's sensors 16:21 IST), publishes retained `shack/solar/phases` `{ts, grid_on, grid_v[3], load[3], smartload[3], ups[3] (= load − smartload), load_total, smartload_total, soc, batt_p_w}`. On a read error it drops and reopens the socket; after 3 consecutive failures the interval doubles up to 20 s (the logger tolerates few clients; HA holds one). Nothing published on failure, so the Vue tile greys out on a stale `ts`. `svc` account via the same two env files as `monitor.sh`; paho-mqtt. `--once --verbose` for a spot check; `journalctl -u solar-phases -f`. The 1-min cron + `grid_voltage.csv` stay as they are — watch the cron's `read_fail` rows as the collision metric |
+| `solar-phases.service` | `/etc/systemd/system/` on noderedpi4 | systemd unit for the above (User `vu2cpl`, Restart=always); install steps in its header |
 | `stabiliser_watch.py` | `/home/vu2cpl/stabiliser_watch.py` — **cron removed 2026-08-30 on operator request ("stop monitoring"); script + state + env creds left in place, re-enable with one crontab line: `* * * * * /usr/bin/python3 /home/vu2cpl/stabiliser_watch.py --cron`** | Servo-stabiliser watchdog → Telegram. Tails `~/grid_voltage.csv`; alerts on transition into **outage** (grid absent 2+ samples — the nightly-cut pattern under test), **dropout** (vmax > `RAW_MAINS_V` 245 V for `CONFIRM_DROPOUT` = **5** consecutive samples = stabiliser out of circuit), or **stale** (no new row 6 min), plus a ✅ recovery. State in `~/.stabiliser_watch.state` so each transition alerts once. Phase *spread* is deliberately not the discriminator — it overlapped completely between regulated and bypassed operation; absolute voltage separates them better (regulated ~230 V vs raw mains 250–264 V). **The confirm count, not the threshold, carries the false-alarm defence:** regulated output hit 242.2 V in its first hour (3.9 V margin at k=3), so k was raised 3→5 — worst sustained regulated reading 238.0 V (+7.0 V) for a night-coverage cost of only 96.7%→95.5%. Raising the threshold instead is far worse (250 V → 75.9% coverage). Re-measure both if the stabiliser is reconfigured. Telegram creds resolve env → shack env files (`/etc/default/vu2cpl-shack`, then `~/.config/vu2cpl-shack.env` which wins — monitor.sh's precedence) → Node-RED's `/proc/<pid>/environ` as fallback, so **alerting survives Node-RED being down** (env-file step added 2026-08-29; `flows_guard.py` got the same). `--status` / `--test` for checks. Added 2026-08-29 |
 | `grid_voltage_report.py` | run in-place (Mac or Pi) | Turns `grid_voltage.csv` into a utility-facing Markdown report + SVG chart: daily per-phase min/mean/max, night-window section, over-voltage episodes, supply interruptions. Chart is fixed 200–300 V with red "BESCOM off" bands over grid-absent windows (traces break there, since 2026-08-26). Pure stdlib |
 | `load_monitor.py` | `/home/vu2cpl/bin/load_monitor.py` on **meridianpi5** (`load-monitor.service`) | Live three-phase load page for the inverter at **`http://192.168.1.164:8765/`** (`--open`, `--port`, `--bind 0.0.0.0`): polls HA every 5 s, draws R / Y / B as lines with the 3.3 kW per-phase limit and the 2.8 kW shedding threshold, shades grid-off spells, lists geysers that are on; total / essential / SmartLoad series selectable; windows 6 h / 12 h / 24 h / 3 days, server-side thinning to ≤ 1500 points per series (bucket max, peaks survive), history cap 4320 min. Pure stdlib, `HA_URL`/`HA_TOKEN` from `~/.config/vu2cpl-shack.env`; the `PHASES` map encodes the 2026-10-19 input re-landing (R = L1, Y = L2, B = L3). HA history is fetched with an explicit `end_time` (HA otherwise defaults to start + 1 day, which hid everything but one day of the longer windows) and a 180 s request timeout (a real 3-day fetch takes ~10 s). **Runs on meridianpi5 as `load-monitor.service`** (`load_monitor.service`: User `vu2cpl`, `--bind 0.0.0.0 --port 8765`, Restart=always; install steps in its header; `journalctl -u load-monitor -f`) since 2026-10-19 14:35 on Manoj's request ("can we run it from pi? can use pi5 which is idle"). The Mac launchd agent (`load_monitor.plist`) ran 15:06 → 14:35 the same day and is booted out and removed from `~/Library/LaunchAgents`; the repo copy stays as the Mac alternative. **The script reads `HA_URL`/`HA_TOKEN` from `/home/vu2cpl/.config/vu2cpl-shack.env` on that Pi (mode 600), so meridianpi5 is now the second holder of the HA token besides the Mac.** Added 2026-10-19 for the phase-rebalancing work (HANDOVER #55) |
