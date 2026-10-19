@@ -8,6 +8,59 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-10-19
+
+### HA: grid-loss load shedding, after the inverter tripped on L3 overload
+
+**Timeline (IST).** 08:55:10 BESCOM grid off, battery 100 %, load about 3 kW and all of it on
+inverter L3. 08:58:49 a geyser switched on, L3 at 4.5 kW; the dryer had been running since 08:33 (1.8–2.5 kW
+on the Dryer Kitchen circuit) and kept going. 09:05–09:07 L3 at 5.5 kW (3.7 kW essential + 1.8 kW on
+the SmartLoad port) with L1 and L2 at about 10 W each. 09:07:38 last reading: the Deye tripped on
+per-phase off-grid overload (10 kW three-phase ≈ 3.3 kW per phase) and the whole house went dark,
+HassPi and the Pis included, so no fault code was captured. About 09:09:45 the inverter restarted
+itself and the Pis booted. 09:12 all four house relays were ON again (Tasmota `PowerOnState 3` =
+restore last state) and a geyser plug too, 4.7 kW back on L3 while still off grid. 09:33:34 grid
+restored. The SOC load shedding never fired because SOC only fell 100 → 95 %.
+
+**What HA does now** (three automations, config ids `grid_loss_shed_geysers`,
+`grid_loss_escalate`, `grid_restore_staggered`; the SOC automations are unchanged):
+
+- Grid drops → the five Tuya geyser plugs are switched off at once, Telegram with L1/L2/L3 W and
+  SOC. Also 60 s after an HA start while off grid (the 09:12 case).
+- Off grid and any of `sensor.inverter_load_l1/l2/l3_power` over **2800 W for 10 s** → Utility
+  (the pump) off, 30 s later re-check, then Dryer Kitchen off; a message if both are already off and
+  a phase is still over the line. It also runs 10 s after grid loss, because at 08:55 the load was
+  already over the threshold and a crossing trigger alone would never have fired. FF and GF loads
+  are never shed. The three load sensors include the SmartLoad port (2729 + 1839 = 4559 W on L3 at
+  09:00), so the trigger stays right after any rewiring.
+- Grid back for 5 min and battery > 90 % → Dryer Kitchen on, 2 min, Utility on, one Telegram.
+  At or below 90 % it stays out of the way of "load shedding 90/80/70" / "Load restore 95".
+  Geysers are not restored; the family switches them on as before.
+
+**Device and inverter settings.** `GF_UTILITY` and `GF_Dryer_Kit` → Tasmota `PowerOnState 0`
+(no fridge on Dryer Kitchen: 0–3 W all night with no compressor cycling), FF/GF stay 3. Four Tuya
+geyser plugs: power-on behaviour `last` → `power_off`; the fifth plug has no such entity in HA and
+is still to be set in the Smart Life app. The geysers hang off the Deye **SmartLoad port**, which HA
+cannot cut instantly — `switch.inverter_smartload` turned out to be holding register 132, Deye's
+"Gen Force", and was proven harmless to the port (it went off at 09:17:49 with 1.88 kW still
+flowing until the geyser's timer at 09:30). The HA-independent fallback is therefore the inverter's
+own thresholds, set by Manoj in the Solarman portal: SmartLoad Off **90 → 99 %**, On **95 → 100 %**.
+Off grid the port now drops as soon as SOC reads below 99.
+
+**Test.** 10:02–10:06 IST, on grid: the escalation run with `threshold: 500` and
+`require_off_grid: false` switched Utility off, then Dryer Kitchen 30 s later; the restore run
+brought Dryer Kitchen back at once and Utility 2 min later; Telegram on every step, no errors in the
+HA system log; real parameters re-read afterwards. Pre- and post-change automation dumps are in
+`~/Documents/vu2cpl-ha-backups/` (not in this public repo).
+
+**Planned electrical work (HANDOVER #55).** Ten days of history show every house circuit on
+inverter L3 and, on the SmartLoad port, two geysers on L2, two on L3, L1 unused. Manoj is getting
+an electrician to spread the house circuits across L1/L2/L3 and move geysers from L3 to the port's
+L1. HA only knows L1/L2/L3, the DB is labelled R/Y/B: identify the mapping with a clamp meter at
+the inverter's LOAD and Gen terminals while a known geyser or the dryer runs (the wire carrying the
+current is that phase), or watch the Deye LCD per-phase watts while MCBs are flipped one at a time.
+The nominal L1/L2/L3 = R/Y/B order is only a guess until checked.
+
 ## 2026-10-18
 
 ### RBN: skimmer calibration fetched right after sm7iun publishes

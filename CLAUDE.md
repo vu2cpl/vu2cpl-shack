@@ -190,6 +190,18 @@ dialog, `POST /power/house-toggle`). HA's automations still drive them
 | `GF_Dryer_Kit` | Dryer Kit | dryer + kitchen circuit |
 | `GF_UTILITY` | Utility | utility circuit |
 
+**Grid-loss load shedding (added 2026-10-19)** — a second set of HA
+automations now also switches `GF_UTILITY` and `GF_Dryer_Kit` (never
+`FF_LOAD` / `GF_LOAD`) when the house is off grid and a phase is
+overloaded; see "Grid-loss load shedding" under HOUSEHOLD HA
+INTEGRATIONS. Same day, `GF_UTILITY` and `GF_Dryer_Kit` were set to
+Tasmota **`PowerOnState 0`** (come up OFF after a power cut; was 3 =
+restore last state) so an inverter trip-and-restart cannot reapply the
+full load by itself. `FF_LOAD` / `GF_LOAD` stay at 3. Read/set from HA
+without the `iot` password: `mqtt.publish` to `cmnd/<dev>/PowerOnState`
+(empty payload reads; the `ha` broker account has write on `#`), reply
+on `stat/<dev>/RESULT`.
+
 All 9 devices: `Timezone +05:30` (IST) — the 5 shack devices set
 2026-05-14, the 4 house devices set 2026-08-25 (via a temporary
 one-shot inject at deploy; all four acked `+05:30` on
@@ -1217,6 +1229,56 @@ boundary dropped again at 14:58.
 - Firmware isn't the cause: all 8 report 1.3.17. If `-40105` stops appearing after a python-kasa / HA update,
   the automation can go.
 
+### Grid-loss load shedding (added 2026-10-19)
+
+Why: on 2026-10-19 the Deye tripped on **per-phase off-grid overload** and restarted itself, blacking
+out the whole house including HassPi (timeline in SHACK_CHANGELOG 2026-10-19). Nearly all house load
+sits on inverter **L3**; the per-phase off-grid limit of the 10 kW three-phase unit is about 3.3 kW.
+The existing "load shedding 90/80/70" / "Load restore 95" automations react to battery SOC only
+(SOC stayed ≥ 95 %), and "Grid Disconnected" / "Grid Restored" only send Telegram. Three new
+automations, created through `POST /api/config/automation/config/<id>` (so they live in HassPi's
+`automations.yaml`, not in git; dumps in `~/Documents/vu2cpl-ha-backups/`, never here), with the
+SOC automations left untouched:
+
+| Config id | Alias | What it does |
+|---|---|---|
+| `grid_loss_shed_geysers` | Grid loss: shed geysers | `binary_sensor.inverter_grid` on→off (or HA start + 60 s while off grid): `switch.turn_off` the five Tuya geyser plugs (`switch.*_geyser_socket_1`) at once + Telegram (same three recipients as the grid alerts, with L1/L2/L3 W and SOC). Geysers are never auto-restored. |
+| `grid_loss_escalate` | Grid loss: shed Utility, then Dryer Kitchen on overload | Triggers: grid on→off (+10 s), HA start (+60 s), or any of `sensor.inverter_load_l1/l2/l3_power` above **2800 W for 10 s**. Only while off grid: up to two passes 30 s apart — if a phase is still over the threshold, switch off `switch.tasmota_3` (Utility, the pump), then `switch.dryer_kitchen`; Telegram per step, and a "switch something off by hand" message if both are already off. Script-level `variables`: `threshold: 2800`, `require_off_grid: true` (a low threshold + `false` is how it was live-tested on grid). |
+| `grid_restore_staggered` | Grid restored: restore Dryer Kitchen, then Utility | Grid on for **5 min** and `sensor.inverter_battery` > 90: Dryer Kitchen back on, 2 min, Utility back on (if the grid is still up), one Telegram. State-based (restores whatever is off), so it also recovers the trip case where HA was down and the PowerOnState-0 relays simply came up OFF. At ≤ 90 % SOC it does nothing and "Load restore 95" owns the relays — the two never fight. `mode: restart`. |
+
+Facts the design rests on (all from the recorder + the Solarman profile `deye_p3.yaml`):
+
+- `sensor.inverter_load_lX_power` = UPS load **plus** the SmartLoad port on that phase (09:00 IST:
+  2729 UPS + 1839 SmartLoad = 4559 load L3), so the three load sensors already see the geysers and
+  the trigger stays correct after any rewiring.
+- **The geysers are fed by the Deye SmartLoad (Gen) port**, not by the house relays. The port
+  cannot be cut instantly from HA: `switch.inverter_smartload` is holding register **132 = Deye
+  "Gen Force"** (the profile's "Generator" switch renamed by IO mode), proven on 10-19 when it went
+  off at 09:17:49 while the port kept feeding a geyser at 1.88 kW until its timer at 09:30;
+  `valve.inverter_smartload` is a switch-as-x wrapper of it; `binary_sensor.inverter_smartload` is
+  the port relay state bit (reg 552 bit 3, read-only); `switch.inverter_smartload_on_grid` (reg 178
+  bit 6) = "on-grid always on". Leave register 132 alone.
+- **HA-down fallback, set by Manoj in the Solarman portal 2026-10-19:** `number.inverter_smartload_off`
+  **90 → 99 %**, `number.inverter_smartload_on` **95 → 100 %** (min PV 500 W unchanged). Off grid the
+  port now drops as soon as SOC reads < 99 (minutes, not the 38 min of the outage) and returns at
+  SOC 100 or when the grid is back. Trade-off accepted: no geysers in any off-grid spell.
+- Tuya plugs: four of the five expose `select.*_geyser_power_on_behavior`, set **`last` →
+  `power_off`** 2026-10-19 (every port drop now power-cycles them, and `last` could bring a geyser
+  back ON). The fifth plug (a different "16A Smart Plug" model) has no such entity — **open: set it in
+  the Smart Life app.**
+- Phase map from 10 days of recorder data (10-09 → 10-19): all four house circuits are on inverter
+  **L3** (L1/L2 essential load never above ~50 W); on the SmartLoad port two geysers are on **L2**,
+  two on **L3**, one never switched on. L1 of the port is unused. R/Y/B ↔ L1/L2/L3 is not known
+  from HA — the electrician identifies it with a clamp meter at the inverter terminals while a known
+  geyser runs (method in SHACK_CHANGELOG 2026-10-19).
+- Live-tested 2026-10-19 10:02–10:06 IST: `grid_loss_escalate` with `threshold: 500` /
+  `require_off_grid: false` switched Utility off, then Dryer Kitchen 30 s later; `grid_restore_staggered`
+  brought Dryer Kitchen back at once and Utility 2 min later, one Telegram each step; no errors in
+  `system_log/list`. Real parameters restored and re-read afterwards.
+
+Planned electrical work (HANDOVER #55): the electrician rebalances the house circuits across the
+three phases and moves geysers from L3 to the unused L1 of the SmartLoad port.
+
 ### Synology DiskStation: DSM update entity disabled (2026-10-16)
 
 > **Superseded the same afternoon:** the NAS no longer runs DSM. Since 2026-10-16 it is Debian 13 +
@@ -1393,6 +1455,7 @@ historical context lives in `SHACK_CHANGELOG.md`, indexed by date.
 
 | # | Item | Status |
 |---|------|--------|
+| 55 | **Load rebalancing across phases + SmartLoad L1 (electrician)** (opened 2026-10-19) | Planned, not yet scheduled. All house circuits and the heavier geyser share sit on inverter L3 (5.5 kW on a ~3.3 kW per-phase off-grid limit tripped the Deye 2026-10-19 09:07). HA now sheds on grid loss (CLAUDE.md "Grid-loss load shedding"), but the fix is electrical: spread FF/GF/Utility/Dryer across L1/L2/L3 and move geysers from L3 to the unused L1 of the SmartLoad port. Also open: the fifth Tuya geyser plug's power-on behaviour (Smart Life app). See HANDOVER #55 | **Open** |
 | 52 | ~~**RBN: spot lines split across TCP chunks are dropped**~~ (opened 2026-10-15) | **Closed 2026-10-16.** Fixed 2026-10-15 (`95d9f2a`): the three login handlers hold each chunk's unterminated tail per `_session.id` and prepend it to the next chunk. Confirmed: 0 `Unmatched: DX de` lines in the 9.1 h from the 17:03:27Z deploy to 2026-10-16 02:12Z (the old rate of ~19/h would have given ~175). See HANDOVER #52 | **Closed** |
 | 49 | **LP-700: Pi server and Mac app months behind; forks unsynced** (opened 2026-10-14) | Both update-check PRs merged upstream 2026-10-10 (Server #4, App #19); VU3ESV's follow-ups released **v0.2.3** and **0.1.17**. Here: the Pi runs a 2026-05-16 `lp700-server` build, the Mac runs App 0.1.7-display-autoscale (0.1.17 includes that auto-scale work). Forks are 11 / 43 commits behind, 0 ahead. App branch `feat/scope-spectrum-views` was never sent upstream. Waiting on Manoj: sync the forks, `redeploy.sh` v0.2.3 to the Pi, install App 0.1.17, decide what to do with the branch. Full notes in HANDOVER #49 | **Open** |
 | 48 | ~~**Plan only — Node-RED → container on .109 + movable broker address**~~ (opened 2026-10-02) | Nothing changed yet. Feasible: no serial/GPIO/exec/file nodes left, and the hardware gateways stay on the Pi. Decide the broker's home first, because moving Node-RED alone makes lightning protection depend on two boxes. Broker "redirect" = a UniFi DNS name for all clients (permanent) + DNAT on the Pi (cutover bridge); MQTT 5 redirect is unusable with Tasmota/ESP. HA stays on HassPi and only needs its MQTT host and `rest_command.shack_*` URLs repointed. Full step list in HANDOVER #48 | **Dropped 2026-10-03** |
