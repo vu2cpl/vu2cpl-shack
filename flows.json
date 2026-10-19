@@ -8322,7 +8322,7 @@
         "type": "function",
         "z": "b76a5310767803b4",
         "name": "Energy Aggregator",
-        "func": "var ctx=flow.get('energy_state')||{};\nvar t=msg.topic,p=msg.payload;\nif(t==='energy/voltage')ctx.voltage=p;\nelse if(t==='energy/current')ctx.current=p;\nelse if(t==='energy/power')ctx.power=p;\nelse if(t==='energy/today')ctx.today=p;\nelse if(t==='energy/total')ctx.total=p;\nelse if(t==='energy/solar')ctx.solar=p;\nelse if(t==='energy/house'){var h=ctx.house||{};var d=h[p.dev]||{};Object.keys(p).forEach(function(k){if(k!=='dev')d[k]=p[k];});h[p.dev]=d;ctx.house=h;}\nelse return null;\nflow.set('energy_state',ctx);\nmsg.payload=ctx;\nreturn msg;",
+        "func": "var ctx=flow.get('energy_state')||{};\nvar t=msg.topic,p=msg.payload;\nif(t==='energy/voltage')ctx.voltage=p;\nelse if(t==='energy/current')ctx.current=p;\nelse if(t==='energy/power')ctx.power=p;\nelse if(t==='energy/today')ctx.today=p;\nelse if(t==='energy/total')ctx.total=p;\nelse if(t==='energy/solar')ctx.solar=p;\nelse if(t==='energy/phases')ctx.phases=p;\nelse if(t==='energy/house'){var h=ctx.house||{};var d=h[p.dev]||{};Object.keys(p).forEach(function(k){if(k!=='dev')d[k]=p[k];});h[p.dev]=d;ctx.house=h;}\nelse return null;\nflow.set('energy_state',ctx);\nmsg.payload=ctx;\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "x": 1230,
@@ -8451,7 +8451,7 @@
         "type": "function",
         "z": "b76a5310767803b4",
         "name": "Build Power state for Vue",
-        "func": "// flow.power_states is keyed by stat/<dev>/POWERn \u2192 'ON'|'OFF'\n// Plus flow.energy_state for the 16A master, flow.rotatorTimerEnd for rotator auto-off\nvar raw = flow.get('power_states') || {};\n// Vue indexes by cmnd topic. Map stat \u2192 cmnd by simple string swap.\nvar byCmnd = {};\nObject.keys(raw).forEach(function(k){\n    var cmnd = k.replace(/^stat\\//, 'cmnd/');\n    byCmnd[cmnd] = raw[k];\n    byCmnd[k] = raw[k];  // also keep the original in case some keys are already cmnd\n});\n\nvar e = flow.get('energy_state') || {};\nvar energy = {\n    voltage: e.voltage,\n    current: e.current,\n    power:   e.power,\n    today:   e.today,\n    solar:   e.solar || null,\n    house:   e.house || null\n};\n\nreturn {\n    topic: 'power',\n    payload: {\n        power: byCmnd,\n        energy: (energy.voltage != null || energy.power != null || energy.solar || energy.house) ? energy : null,\n        rotatorTimerEnd: flow.get('rotatorTimerEnd') || null\n    }\n};\n",
+        "func": "// flow.power_states is keyed by stat/<dev>/POWERn \u2192 'ON'|'OFF'\n// Plus flow.energy_state for the 16A master, flow.rotatorTimerEnd for rotator auto-off\nvar raw = flow.get('power_states') || {};\n// Vue indexes by cmnd topic. Map stat \u2192 cmnd by simple string swap.\nvar byCmnd = {};\nObject.keys(raw).forEach(function(k){\n    var cmnd = k.replace(/^stat\\//, 'cmnd/');\n    byCmnd[cmnd] = raw[k];\n    byCmnd[k] = raw[k];  // also keep the original in case some keys are already cmnd\n});\n\nvar e = flow.get('energy_state') || {};\nvar energy = {\n    voltage: e.voltage,\n    current: e.current,\n    power:   e.power,\n    today:   e.today,\n    solar:   e.solar || null,\n    phases:  e.phases || null,\n    house:   e.house || null\n};\n\nreturn {\n    topic: 'power',\n    payload: {\n        power: byCmnd,\n        energy: (energy.voltage != null || energy.power != null || energy.solar || energy.phases || energy.house) ? energy : null,\n        rotatorTimerEnd: flow.get('rotatorTimerEnd') || null\n    }\n};\n",
         "outputs": 1,
         "x": 360,
         "y": 900,
@@ -8540,6 +8540,47 @@
         "libs": [],
         "x": 960,
         "y": 820,
+        "wires": [
+            [
+                "e72813d4b7791246"
+            ]
+        ]
+    },
+    {
+        "id": "solar_phases_mqtt_in",
+        "type": "mqtt in",
+        "z": "b76a5310767803b4",
+        "name": "shack/solar/phases",
+        "topic": "shack/solar/phases",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "f4785be9863eab08",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 710,
+        "y": 860,
+        "wires": [
+            [
+                "solar_phases_parse_fn"
+            ]
+        ]
+    },
+    {
+        "id": "solar_phases_parse_fn",
+        "type": "function",
+        "z": "b76a5310767803b4",
+        "name": "Parse Solar Phases",
+        "func": "// shack/solar/phases \u2014 retained JSON from solar_phases_mqtt.py (5-s daemon on this Pi,\n// solar-phases.service): per-phase load / SmartLoad / UPS watts, grid volts, SOC.\n// Feeds the Energy Aggregator as energy/phases; Build Power state for Vue passes it\n// through as energy.phases for the Phase loads tile. Added 2026-10-19 (HANDOVER #55).\nvar p = msg.payload;\nif (typeof p === 'string') { try { p = JSON.parse(p); } catch (e) { return null; } }\nif (!p || typeof p !== 'object' || !Array.isArray(p.load) || p.load.length !== 3) return null;\nreturn { topic: 'energy/phases', payload: p };",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 960,
+        "y": 860,
         "wires": [
             [
                 "e72813d4b7791246"

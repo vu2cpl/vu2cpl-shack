@@ -1142,6 +1142,21 @@ html, body {
    sub-line down to a clipped 10-11px. 2-across gives ~145px — the volts line
    renders at 19px, nothing clips. Measured, not guessed. */
 .energy-row--wide { grid-template-columns: repeat(2, 1fr); }
+/* Phase-loads graph tile (2026-10-19): one full-width tile under the solar row —
+   header line with the three live watts in the phase colours, then an SVG
+   sparkline of R/Y/B (non-scaling strokes so the lines stay 1.5 px however the
+   card is stretched), limit and shed lines, a one-line footer. */
+.energy-row--graph { grid-template-columns: 1fr; }
+.energy-tile--graph { text-align: left; }
+.energy-tile--graph.is-stale { opacity: 0.45; }
+.phase-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-2); flex-wrap: wrap; }
+.phase-val { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: var(--fs-sm); white-space: nowrap; }
+.phase-val b { font-weight: 600; }
+.phase-val .unit { font-size: var(--fs-xs); color: var(--text-dim); margin-left: 1px; font-family: var(--font-sans); }
+.phase-svg { display: block; width: 100%; height: 80px; margin-top: var(--sp-1); border-radius: 4px; background: rgba(255,255,255,0.03); }
+.phase-limit { stroke: var(--red); stroke-width: 1; vector-effect: non-scaling-stroke; opacity: 0.8; }
+.phase-shed  { stroke: var(--amber); stroke-width: 1; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; opacity: 0.8; }
+.phase-foot { color: var(--text-dim); font-size: var(--fs-xs); margin-top: 2px; }
 .energy-tile {
   text-align: center;
   background: var(--bg);

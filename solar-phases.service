@@ -1,0 +1,17 @@
+# VU2CPL shack: Deye per-phase load -> shack/solar/phases every 5 s (solar_phases_mqtt.py).
+# Install (noderedpi4):  cp solar_phases_mqtt.py ~/   (scripts live in /home/vu2cpl like solar_inverter_mqtt.py)
+#   sudo cp solar-phases.service /etc/systemd/system/ && sudo systemctl daemon-reload
+#   sudo systemctl enable --now solar-phases      Logs: journalctl -u solar-phases -f
+[Unit]
+Description=VU2CPL Deye per-phase load publisher (shack/solar/phases)
+After=network-online.target mosquitto.service
+Wants=network-online.target
+
+[Service]
+User=vu2cpl
+ExecStart=/usr/bin/python3 /home/vu2cpl/solar_phases_mqtt.py
+Restart=always
+RestartSec=15
+
+[Install]
+WantedBy=multi-user.target

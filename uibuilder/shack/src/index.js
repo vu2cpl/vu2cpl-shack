@@ -5,14 +5,14 @@
    - Responsive via CSS Grid auto-fit (in index.css)
 */
 
-const { createApp, ref, reactive, computed, onMounted } = Vue;
+const { createApp, ref, reactive, computed, watch, onMounted } = Vue;
 
 // =====================================================================
 // Build version stamp (visible in TopBar — distinguishes "code didn't
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v46 · 2026-10-15 RBN: skimmer calibration sparklines, ±1.5 ppm guides';
+window.__shackBuild = 'v47 · 2026-10-19 Power: live R/Y/B phase-load graph (shack/solar/phases, 5 s)';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -2205,6 +2205,29 @@ const PowerCard = {
           </div>
         </div>
 
+        <!-- Phase loads (Deye per-phase load from shack/solar/phases — solar_phases_mqtt.py,
+             a 5-s daemon on the Pi reading the Solarman logger directly, no HA in the path):
+             R / Y / B over the last ~10 min (3-s Vue pushes, 200 kept client-side) with the
+             3.3 kW per-phase off-grid limit (solid) and the 2.8 kW shedding threshold
+             (dotted). Greys out when the feed is older than 30 s. Added 2026-10-19 (#55). -->
+        <div v-if="phases" class="energy-row energy-row--graph">
+          <div class="energy-tile energy-tile--graph" :class="{ 'is-stale': phaseStale }">
+            <div class="phase-head">
+              <span class="energy-tile__lbl">Phase loads · R Y B</span>
+              <span v-for="t in phaseTiles" :key="t.k" class="phase-val" :style="{color: t.color}">
+                {{ t.name }}·{{ t.term }} <b>{{ t.w == null ? '—' : t.w }}</b><span class="unit">W</span>
+              </span>
+            </div>
+            <svg class="phase-svg" :viewBox="'0 0 ' + phaseSvg.W + ' ' + phaseSvg.H" preserveAspectRatio="none">
+              <line x1="0" :y1="phaseSvg.yLimit" :x2="phaseSvg.W" :y2="phaseSvg.yLimit" class="phase-limit"/>
+              <line x1="0" :y1="phaseSvg.yShed" :x2="phaseSvg.W" :y2="phaseSvg.yShed" class="phase-shed"/>
+              <polyline v-for="(pts, k) in phaseSvg.lines" :key="k" :points="pts" fill="none"
+                        :stroke="phaseTiles[k].color" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+            </svg>
+            <div class="phase-foot">last 10 min · solid 3.3 kW per-phase limit · dotted 2.8 kW shed · {{ phaseGrid }}</div>
+          </div>
+        </div>
+
         <!-- House load circuits (Tasmota switches + energy monitors) — tile = switch.
              All four across one row, so the W / kWh readings stack as two short
              lines rather than one long one that would clip at this tile width. -->
@@ -2379,8 +2402,40 @@ const PowerCard = {
       });
     });
 
+    // --- Phase loads tile (state.energy.phases from shack/solar/phases, 5-s daemon) ---
+    const phases = computed(() => state.energy?.phases || null);
+    const phaseStale = computed(() =>
+      !phases.value?.ts || (Date.now() / 1000 - phases.value.ts) > 30);
+    const PH_NAMES = ['R', 'Y', 'B'];                                   // inverter L1/L2/L3 (re-landed 2026-10-19)
+    const PH_COLORS = ['var(--red)', 'var(--amber)', 'var(--accent)'];
+    const PH_LIMIT = 3300, PH_SHED = 2800, PH_KEEP = 200;              // 200 × 3 s ≈ 10 min
+    const phaseHist = reactive([]);                                     // [{ ts, l: [W, W, W] }]
+    watch(phases, (p) => {
+      if (!p || !Array.isArray(p.load) || p.load.length !== 3) return;
+      const last = phaseHist[phaseHist.length - 1];
+      if (last && last.ts === p.ts) return;                             // same 5-s sample re-pushed
+      phaseHist.push({ ts: p.ts, l: p.load.map(Number) });
+      while (phaseHist.length > PH_KEEP) phaseHist.shift();
+    }, { immediate: true });
+    const phaseSvg = computed(() => {
+      const W = 300, H = 80, n = phaseHist.length;
+      const maxV = Math.max(PH_LIMIT * 1.1, ...phaseHist.flatMap(s => s.l));
+      const y = v => H - (v / maxV) * H;
+      const x = i => n > 1 ? (i / (n - 1)) * W : W;
+      const lines = [0, 1, 2].map(k =>
+        phaseHist.map((s, i) => x(i).toFixed(1) + ',' + y(s.l[k]).toFixed(1)).join(' '));
+      return { W, H, lines, yLimit: y(PH_LIMIT), yShed: y(PH_SHED) };
+    });
+    const phaseTiles = computed(() => [0, 1, 2].map(k => ({
+      k, name: PH_NAMES[k], term: 'L' + (k + 1), color: PH_COLORS[k],
+      w: phases.value?.load?.[k] ?? null
+    })));
+    const phaseGrid = computed(() =>
+      phases.value ? (phases.value.grid_on ? 'grid ON' : 'grid OFF') + (phases.value.soc != null ? ' · SOC ' + phases.value.soc + '%' : '') : '');
+
     return { expanded, state, plugs, plugRows, plugClass, plugIsOn, toggle, onCount, rotatorRemain,
              solar, solarColor, gridVText, socColor, battStateText, battStateColor, battSummary,
+             phases, phaseStale, phaseSvg, phaseTiles, phaseGrid,
              houseTiles, toggleHouse };
   }
 };
