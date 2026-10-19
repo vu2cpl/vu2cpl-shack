@@ -87,8 +87,9 @@ spells shaded and the geysers that are on listed; its `PHASES` map follows the r
 
 **Electrician brief** (consolidated map + target, HANDOVER #55): per phase worst case with the SmartLoad
 port on is R 3.05 / Y 9.25 / B 8.25 kW against ≈ 3.3 kW off grid; essential-only R 1.95 / Y 2.6 /
-B 4.4. Target: kitchen boiler B → R (essential side then holds with the port off), one 1.8 kW geyser
-Y → R (port two-two-two incl. the AC). The port's 11.6 kW must still drop off grid by SOC rule or
+B 4.4. The boiler move B → R was tried and abandoned ("whole kitchen is on one line"), so B relies on
+the escalation shedding Utility (washing machine 2.0 kW → B 2.4 kW); Dryer Kitchen covers R. Optional
+remaining item: one 1.8 kW geyser Y → R (port two-two-two incl. the AC). The port's 11.6 kW must still drop off grid by SOC rule or
 automation; wiring cannot fix that.
 
 ## 2026-10-18

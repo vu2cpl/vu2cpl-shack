@@ -1279,7 +1279,8 @@ Facts the design rests on (all from the recorder + the Solarman profile `deye_p3
   meter and L2, not on Utility (to confirm, HANDOVER #55); SmartLoad port three geysers on L2 (one 3 kW), two on
   L3, none on L1 — the electrician was asked to move two from L2 to L1. A second trip on L2 at 13:04,
   the pending HA fixes and the **consolidated electrician brief** (measured map per phase, worst cases
-  R 3.05 / Y 9.25 / B 8.25 kW with the port on, target: boiler B → R, one geyser Y → R) are in
+  R 3.05 / Y 9.25 / B 8.25 kW with the port on; the boiler B → R move was abandoned, B relies on the
+  Utility shed, optional: one geyser Y → R) are in
   SHACK_CHANGELOG 2026-10-19 / HANDOVER #55.
 - Live-tested 2026-10-19 10:02–10:06 IST: `grid_loss_escalate` with `threshold: 500` /
   `require_off_grid: false` switched Utility off, then Dryer Kitchen 30 s later; `grid_restore_staggered`
