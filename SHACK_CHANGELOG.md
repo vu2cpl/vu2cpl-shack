@@ -57,10 +57,14 @@ HA system log; real parameters re-read afterwards. Pre- and post-change automati
 **Planned electrical work (HANDOVER #55).** Ten days of history show every house circuit on
 inverter L3 and, on the SmartLoad port, two geysers on L2, two on L3, L1 unused. Manoj is getting
 an electrician to spread the house circuits across L1/L2/L3 and move geysers from L3 to the port's
-L1. HA only knows L1/L2/L3, the DB is labelled R/Y/B: identify the mapping with a clamp meter at
-the inverter's LOAD and Gen terminals while a known geyser or the dryer runs (the wire carrying the
-current is that phase), or watch the Deye LCD per-phase watts while MCBs are flipped one at a time.
-The nominal L1/L2/L3 = R/Y/B order is only a guess until checked.
+L1. HA only knows L1/L2/L3 and the DB is labelled R/Y/B, so Manoj opened the incoming MCBs one at a
+time (11:15–11:23 IST) and read the inverter's grid phase voltages: **R = L3, Y = L1, B = L2**
+(R open → L3 at 0 V twice, Y open → L1 at 0 V, L2 never dropped, so B by elimination; the same in
+HA and in `~/grid_voltage.csv`). The inverter's grid input sits downstream of the servo stabiliser,
+so this is the order at the inverter terminals. Translated for the electrician: everything on the
+house side and most of the essential load is on **R**, two geysers are on SmartLoad **R** and two on
+SmartLoad **B**, and **Y is empty on both the house side and the SmartLoad port** — Y is where the
+load should move. The textbook L1/L2/L3 = R/Y/B order was wrong here.
 
 ## 2026-10-18
 
