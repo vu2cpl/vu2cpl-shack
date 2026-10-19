@@ -492,8 +492,9 @@ comes from VU2PTT's Skimmer Calibration tracker.
 ├── grid_voltage_report.py           grid_voltage.csv → Markdown + SVG evidence report (pure stdlib)
 ├── stabiliser_watch.py              Stabiliser trip / outage / dropout → Telegram (1-min cron, pure stdlib)
 ├── deye_history_report.py           Solarman xlsx cloud exports → supply-interruption report + timeline (pure stdlib)
-├── load_monitor.py                  live R/Y/B per-phase inverter load page on localhost:8765, from HA (pure stdlib)
-├── load_monitor.plist               launchd user agent (com.vu2cpl.load-monitor) that keeps load_monitor.py running on the Mac
+├── load_monitor.py                  live R/Y/B per-phase inverter load page on :8765, from HA (pure stdlib) — runs on meridianpi5
+├── load_monitor.service             systemd unit for it on a Pi (deployed on meridianpi5, http://192.168.1.164:8765/)
+├── load_monitor.plist               launchd user agent, the Mac alternative (not installed since 2026-10-19 14:35)
 ├── monitor_redpitaya.sh             Fleet telemetry variant for the Red Pitaya (Alpine/BusyBox, Zynq XADC temp)
 ├── flows_guard.py                   Stale-tab wipe tripwire (git pre-commit hook + 1-min cron w/ Telegram alert)
 ├── flows_guard_middleware.js        Server-side deploy rejection (httpAdminMiddleware in settings.js)

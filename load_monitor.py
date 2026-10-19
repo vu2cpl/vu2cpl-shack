@@ -65,22 +65,23 @@ class HA:
         self.url = url.rstrip("/")
         self.token = token
 
-    def get(self, path, params=None):
+    def get(self, path, params=None, timeout=10):
         q = ("?" + urllib.parse.urlencode(params)) if params else ""
         req = urllib.request.Request(self.url + path + q, headers={
             "Authorization": "Bearer " + self.token})
-        with urllib.request.urlopen(req, timeout=10) as r:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
             return json.load(r)
 
     def states(self):
         return {s["entity_id"]: s for s in self.get("/api/states")}
 
     def history(self, entity_ids, minutes):
-        start = time.strftime("%Y-%m-%dT%H:%M:%S+00:00",
-                              time.gmtime(time.time() - minutes * 60))
-        return self.get("/api/history/period/" + start, {
-            "filter_entity_id": ",".join(entity_ids),
-            "minimal_response": "", "no_attributes": ""})
+        now = time.time()
+        fmt = lambda t: time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime(t))
+        # HA defaults end_time to start + 1 day, so pass it explicitly
+        return self.get("/api/history/period/" + fmt(now - minutes * 60), {
+            "end_time": fmt(now), "filter_entity_id": ",".join(entity_ids),
+            "minimal_response": "", "no_attributes": ""}, timeout=180)
 
 
 def num(v):
