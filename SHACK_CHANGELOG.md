@@ -83,6 +83,7 @@ three phases as R / Y / B live from HA (5 s), with the 3.3 kW limit and 2.8 kW s
 spells shaded and the geysers that are on listed; its `PHASES` map follows the re-landed inputs.
 
 **Pump test 13:26:08 IST (Manoj, via `load_monitor.py`):** a geyser known to be on SmartLoad Y drew 1.84–1.88 kW on `smartload_l2` 13:24:41–13:25:35 (Manoj: "its showing on yellow"). The pump, started 13:26:08, put 2.96 kW inrush then ~2.6 kW on `load_ups_l2` (Y) — **and on the GF_LOAD meter** (`sensor.tasmota_energy_power` 4 → 2602 → 2742 W at the next two tele reports), while the **Utility meter sat at ~2.0 kW from 13:20 on with Y at 15 W**, i.e. that 2 kW is on **B (L3)**. So the meters say: **Utility circuit on B; the pump is fed by GF_LOAD (Y), not by the Utility breaker.** Manoj had placed the pump on Utility; **to confirm** by switching `switch.tasmota_3` off for a few seconds while the pump runs — if it keeps running, GF feeds it, and the escalation's circuit map (and the 'never shed GF' rule vs. 'shed the pump') need Manoj's decision. The grid also dropped 13:26:06–13:27:21, the same seconds the pump started (electrician).
+ **Kitchen water boiler:** on ~13:27:15–13:27:55, +1.45 kW on `load_ups_l3` (2.9 → 4.35 kW and back) with none of the four breaker meters moving — a direct circuit on **B (L3)**, not behind any relay. Essential-load snapshot at 13:28 with the pump running: R (L1) cycling 0.8–2.0 kW (dryer), Y (L2) 2.7 kW (pump), B (L3) 2.95 kW base (Utility 2.0 kW + ~0.9 kW direct).
 
 ## 2026-10-18
 
