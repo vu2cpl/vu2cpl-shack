@@ -43,7 +43,8 @@ geyser plugs: power-on behaviour `last` → `power_off`; the fifth plug has no s
 is still to be set in the Smart Life app. The geysers hang off the Deye **SmartLoad port**, which HA
 cannot cut instantly — `switch.inverter_smartload` turned out to be holding register 132, Deye's
 "Gen Force", and was proven harmless to the port (it went off at 09:17:49 with 1.88 kW still
-flowing until the geyser's timer at 09:30). The HA-independent fallback is therefore the inverter's
+flowing until the geyser's timer at 09:30; nobody touched it — Manoj: "i did not touch it, leave it
+off" — most likely HA's first read after the restart caught a transient, and it stays off). The HA-independent fallback is therefore the inverter's
 own thresholds, set by Manoj in the Solarman portal: SmartLoad Off **90 → 99 %**, On **95 → 100 %**.
 Off grid the port now drops as soon as SOC reads below 99.
 

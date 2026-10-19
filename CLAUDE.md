@@ -1257,7 +1257,9 @@ Facts the design rests on (all from the recorder + the Solarman profile `deye_p3
   off at 09:17:49 while the port kept feeding a geyser at 1.88 kW until its timer at 09:30;
   `valve.inverter_smartload` is a switch-as-x wrapper of it; `binary_sensor.inverter_smartload` is
   the port relay state bit (reg 552 bit 3, read-only); `switch.inverter_smartload_on_grid` (reg 178
-  bit 6) = "on-grid always on". Leave register 132 alone.
+  bit 6) = "on-grid always on". Leave register 132 alone — it reads off, nobody set it (Manoj,
+  2026-10-19: "i did not touch it, leave it off"; the 09:17 flip was most likely a transient on HA's
+  first read after the restart).
 - **HA-down fallback, set by Manoj in the Solarman portal 2026-10-19:** `number.inverter_smartload_off`
   **90 → 99 %**, `number.inverter_smartload_on` **95 → 100 %** (min PV 500 W unchanged). Off grid the
   port now drops as soon as SOC reads < 99 (minutes, not the 38 min of the outage) and returns at
