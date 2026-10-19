@@ -64,7 +64,7 @@ L3 at 0 V twice, Y open → L1 at 0 V, L2 never dropped; the same in HA and in `
 wires, so from ~12:30 the order at the inverter terminals (downstream of the servo stabiliser) is
 **R = L1, Y = L2, B = L3**, and the electrician moved the house circuits off the single phase. Picture
 at 13:00: Dryer Kitchen on R (L1) ≈ 1.9 kW, GF on Y (L2) 1.7–3.1 kW, FF with the MBR AC on B (L3)
-≈ 0.9 kW, Utility not yet seen under load; on the SmartLoad port three geysers on Y (L2), one of them
+≈ 0.9 kW, Utility on B (L3) by its own meter; on the SmartLoad port three geysers on Y (L2), one of them
 3 kW, two on B (L3), none on R (L1). **Second trip at 13:04 IST, on Y:** a minute after a grid drop
 (the electrician's work) the 3 kW geyser was switched on by hand and a GF-side load came on, Y ≈ 6 kW.
 The grid-loss trigger had already run with no geyser on, and the escalation's tiers (Utility, Dryer
@@ -81,6 +81,8 @@ grid off. The electrician has been asked to move two geysers from Y to R.
 Also added: [`load_monitor.py`](load_monitor.py) — a stdlib desktop page on `localhost:8765` that draws the
 three phases as R / Y / B live from HA (5 s), with the 3.3 kW limit and 2.8 kW shedding line, grid-off
 spells shaded and the geysers that are on listed; its `PHASES` map follows the re-landed inputs.
+
+**Pump test 13:26:08 IST (Manoj, via `load_monitor.py`):** a geyser known to be on SmartLoad Y drew 1.84–1.88 kW on `smartload_l2` 13:24:41–13:25:35 (Manoj: "its showing on yellow"). The pump, started 13:26:08, put 2.96 kW inrush then ~2.6 kW on `load_ups_l2` (Y) — **and on the GF_LOAD meter** (`sensor.tasmota_energy_power` 4 → 2602 → 2742 W at the next two tele reports), while the **Utility meter sat at ~2.0 kW from 13:20 on with Y at 15 W**, i.e. that 2 kW is on **B (L3)**. So the meters say: **Utility circuit on B; the pump is fed by GF_LOAD (Y), not by the Utility breaker.** Manoj had placed the pump on Utility; **to confirm** by switching `switch.tasmota_3` off for a few seconds while the pump runs — if it keeps running, GF feeds it, and the escalation's circuit map (and the 'never shed GF' rule vs. 'shed the pump') need Manoj's decision. The grid also dropped 13:26:06–13:27:21, the same seconds the pump started (electrician).
 
 ## 2026-10-18
 
