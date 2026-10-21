@@ -200,8 +200,8 @@ restore last state) so an inverter trip-and-restart cannot reapply the
 full load by itself. **Reverted 2026-10-21 on Manoj's "all smart plugs to
 retain last state after power resume": all nine Tasmotas (4 house + 5 shack)
 read back `PowerOnState 3`**; the Tuya plugs (four geysers + clothes dryer)
-`power_on_behavior = last`; Raji's plug has no such entity in HA (set it in
-the Smart Life app). Read/set from HA
+`power_on_behavior = last`; Raji's plug cannot be set: its firmware offers only on/off and a
+countdown (no `relay_status` data point), so its power-on behaviour is fixed. Read/set from HA
 without the `iot` password: `mqtt.publish` to `cmnd/<dev>/PowerOnState`
 (empty payload reads; the `ha` broker account has write on `#`), reply
 on `stat/<dev>/RESULT`.
