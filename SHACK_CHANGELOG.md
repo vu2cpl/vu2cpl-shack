@@ -10,6 +10,32 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-10-21
 
+### restic: off-site copy on Google Drive (#50 e)
+
+Manoj checked his Google storage: a 5 TB plan, nearly empty, so the off-site copy goes there now instead of waiting
+for the ALPA hosting server (that plan is dropped: he moves out of it after ALPA's migration, and ALPA will hire its
+own backup space).
+
+- `restic/restic-copy.sh` picks its target by the name it's installed under. As `~/.local/bin/restic-offsite`
+  (launchd `com.vu2cpl.restic-offsite`, daily 06:30) it copies both NAS repositories to
+  `rclone:gdrive-restic:shack-restic/<host>`, with the same passwords and `--copy-chunker-params` (no new secret;
+  Google only holds restic ciphertext) and 64 MiB packs.
+- rclone remote `gdrive-restic`: own OAuth client (Cloud project `vu2cpl-rclone`, Desktop app, published so the token
+  doesn't expire weekly), scope `drive.file` (sees only its own files). Tested: folder created, a file written, read
+  back and deleted.
+- Daytime cap 6 MB/s, unlimited 23:00-06:00 (rclone env vars; restic's `-o rclone.args` rejects the quoted
+  timetable). Uplink 135 Mbps measured.
+- Prune monthly (first Sunday, `--max-unused 10%`) with a rotating 1/12 data check; metadata check every Sunday.
+  Deleted files go to Drive's Trash for 30 days.
+- MQTT `shack/backup/offsite`, graded by shack-health (new check next to the `.109` copy). `install-maint.sh` now
+  installs rclone and the third agent.
+- First seed started 23:33 (about 620 GB, ~7 MB/s, about 1.5 days).
+
+Found on the way: shack-health had graded the `.109` copy FAIL ("no copy for over two nights"), but the copies on
+10-20 and 10-21 ran; only their MQTT publish failed ("Bad file descriptor", no connection reached the broker),
+right after the Mac's 05:30 wake. On 10-20 the NAS also gave "no route to host" at 05:59. The publish is now retried
+3× with the error logged; the 10-21 result was republished by hand.
+
 ### Grid-loss load shedding switched off; SmartLoad back to 90 / 95
 
 **Follow-up, same evening (Manoj: "smart grid to be off at 99 percent. and on at 100 %."):** SmartLoad Off/On set back to **99 / 100 %** (ON raised first, then OFF; read back 99 / 100). So the inverter-native rule is the only geyser protection now: off grid, the SmartLoad port drops as soon as SOC leaves 100 %, and comes back on grid return or at 100 %. Its blind spot remains SOC sitting at 100 under midday PV. The four HA automations stay off.

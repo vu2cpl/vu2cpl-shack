@@ -1,4 +1,4 @@
-# restic backups to the Synology
+# restic backups to the Synology (+ copies on .109 and Google Drive)
 
 This directory holds the nightly, encrypted, deduplicated backups of the shack's Linux boxes. They go
 to a restic **rest-server** on the Synology NAS. The servers can only *add* to their backups.
@@ -12,6 +12,7 @@ Set up 2026-10-14 to replace UrBackup, which was uninstalled the same day.
 | macmini-server | `/volume1/Backups/restic/macmini-server` | 03:00 | whole root, `/boot`, `/boot/efi`, Immich library (`/mnt/immich`); ALPA-replica DB dump |
 | Mac (maintenance only) | — | Sun 10:30 | `forget --prune` + a rotating `check` of every repository |
 | Mac → ubersdr HDD (second copy) | `/mnt/backups/restic/<host>` on `.109`'s 1 TB disk | 05:30 | `restic copy` of both repositories; Sundays also prune + check |
+| Mac → Google Drive (off-site copy) | `shack-restic/<host>` in Manoj's Google Drive (rclone remote `gdrive-restic`) | 06:30 | `restic copy` of both repositories; Sundays check, first Sunday of the month prune + 1/12 data check |
 
 The Macs (Mac Mini and MacBook) are deliberately not in restic: they use Time Machine (Manoj, 2026-10-14).
 
@@ -24,7 +25,9 @@ The Macs (Mac Mini and MacBook) are deliberately not in restic: they use Time Ma
                                                 ▲
  Mac ───────── HTTPS :9901  full access, user `maint` ──────┘   forget / prune / check, weekly
   │
-  └── sftp manoj@192.168.1.109 ──▶ /mnt/backups/restic/<host>   restic copy, daily 05:30 (second copy)
+  ├── sftp manoj@192.168.1.109 ──▶ /mnt/backups/restic/<host>   restic copy, daily 05:30 (second copy)
+  │
+  └── rclone (drive.file) ───────▶ Google Drive shack-restic/<host>   restic copy, daily 06:30 (off-site copy)
 ```
 
 - **Append-only (:9900).** Each server logs in as its own user (`ubersdr`, `macmini-server`) and
@@ -156,8 +159,7 @@ The NAS (a 2010 DS710+, on Debian 13 + OMV 8 since 2026-10-16) would otherwise h
   stops overlapping runs.
 - Retained MQTT `shack/backup/copy`, graded by shack-health. Telegram only on failure or recovery.
 - What it protects against: a dead NAS or a broken NAS repository. What it doesn't: losing the house,
-  or a compromised `.109` (manoj can write that disk). Off-site (#50 e): the ALPA hosting server, once
-  ALPA's files are off it (Manoj, 2026-10-15; expected in a month or two).
+  or a compromised `.109` (manoj can write that disk). Off-site: the Google Drive copy below (since 2026-10-21).
 - The NAS itself stays a local-only backup site for as long as it works reliably, deliberately not used
   over the internet (Manoj, 2026-10-15).
 
@@ -185,6 +187,48 @@ snapshot holds the previous morning's dump (about 20 h old). The ALPA dump is ma
 snapshot's `original` field (`snapshots --json`). Example: copy `4e46ed76` = NAS `b62c8459`. So the copy's
 "latest" in `shack/backup/copy` never matches the NAS ID; compare times, or `original`.
 
+## Off-site copy on Google Drive (`restic-offsite`, since 2026-10-21)
+
+The third copy, outside the house (#50 e). Manoj's Google account has a 5 TB plan, so it costs nothing extra. The
+earlier plan, the ALPA hosting server, was dropped the same day: Manoj is moving out of it once ALPA's migration is
+done, and ALPA will hire its own backup space.
+
+- **Same script.** `restic-copy.sh` installed a second time as `~/.local/bin/restic-offsite` switches to the Drive
+  target by its name. launchd `com.vu2cpl.restic-offsite`, daily 06:30, under `caffeinate -i`. Log
+  `~/Library/Logs/restic-offsite.log`, per-repo logs in `~/.local/state/restic-offsite/`.
+- **Destination** `rclone:gdrive-restic:shack-restic/<host>`. Like the `.109` copy: same password as the source,
+  `--copy-chunker-params`, so dedup works and no new secret exists. restic encrypts before upload; Google only holds
+  ciphertext. 64 MiB packs (`--pack-size 64`) keep the file count on Drive down.
+- **rclone remote** `gdrive-restic` in `~/.config/rclone/rclone.conf` (mode 600): Manoj's own OAuth client (Google
+  Cloud project `vu2cpl-rclone`, Desktop app, published "In production" so the token doesn't expire after 7 days),
+  scope **`drive.file`**: rclone sees only the files it created, nothing else in the Drive. If the sign-in ever
+  breaks, the run fails with "sign-in expired?"; fix with `rclone config reconnect gdrive-restic:` (opens Safari).
+- **Bandwidth.** rclone settings come from the environment (`RCLONE_BWLIMIT="06:00,6M 23:00,off"`,
+  `RCLONE_DRIVE_CHUNK_SIZE=64M`, `RCLONE_TPSLIMIT=10`; restic's `-o rclone.args` can't carry the quoted
+  timetable): 6 MB/s by day, unlimited 23:00-06:00. Uplink measured 135 Mbps (2026-10-21).
+- **Retention and checks.** Same 7/5/12 policy. Pruning on Drive means download + re-upload, so it runs only on the
+  first Sunday of the month, with `--max-unused 10%`, followed by `check --read-data-subset=<month>/12` (all data
+  re-read once a year). Other Sundays: a metadata `check`.
+- **Trash as a safety net.** rclone moves deleted files to Drive's Trash (its default), where they stay 30 days.
+  If the Mac were compromised and the repositories deleted, they can be restored from Trash within a month.
+- **Reporting.** Retained MQTT `shack/backup/offsite`, graded by shack-health like the `.109` copy. Telegram only on
+  failure or recovery. The MQTT publish is retried 3× (the `.109` copy's 05:30 publish failed twice with "Bad file
+  descriptor", 2026-10-20/21).
+- **What it protects against:** losing the house (fire, theft, lightning), with the NAS and `.109` gone together.
+  What it doesn't: a compromised Mac, which holds the `maint` login and the Drive token for all three copies
+  (Drive's Trash softens that), or losing the Google account.
+
+```bash
+~/.local/bin/restic-offsite ubersdr -- snapshots
+```
+
+**First seed** started 2026-10-21 23:33 (both repositories, about 620 GB, ~7 MB/s, so about 1.5 days).
+
+**If the house is gone:** on any machine, install restic and rclone, run `rclone config` to recreate the remote
+(`drive`, scope `drive.file`; the Google sign-in is enough, the OAuth client can be recreated), then
+`restic -r rclone:gdrive-restic:shack-restic/<host> restore latest --target <dir>` with the repository password
+from the **password manager**. Without that password the copy can't be decrypted.
+
 ## Secrets
 
 | Secret | Where | Can do |
@@ -192,6 +236,7 @@ snapshot's `original` field (`snapshots --json`). Example: copy `4e46ed76` = NAS
 | Repository password, one per repo | `/etc/restic/password` on the box; Mac env `RESTIC_PASSWORD_<HOST>`; password manager | decrypt the backup. **Without it the data is unrecoverable.** |
 | Server login | `/etc/restic/repository` on the box; Mac env `RESTIC_REST_<HOST>` | append to its own repo |
 | `maint` login | Mac env `RESTIC_REST_MAINT` only | delete or prune anything |
+| Google Drive token (rclone `gdrive-restic`) | Mac `~/.config/rclone/rclone.conf` only | read, write and delete the off-site copy (only files rclone created) |
 
 None of these values go in git; this repo is public. The cert is public, so it's committed.
 
@@ -257,7 +302,8 @@ From the Mac, if the box is gone, restore to anywhere:
 ~/.local/bin/restic-maint ubersdr -- restore latest --target ~/restore-ubersdr
 ```
 
-If the NAS is gone, restore from the second copy on `.109` instead (same password):
+If the NAS is gone, restore from the second copy on `.109` instead (same password). If `.109` is gone too, use
+`~/.local/bin/restic-offsite` the same way (Google Drive):
 
 ```bash
 ~/.local/bin/restic-copy macmini-server -- restore latest --target ~/restore-macmini --include /etc
@@ -283,5 +329,5 @@ To rebuild a whole box onto a new disk:
 | `nas/public.crt` | `/etc/restic/nas.crt` on boxes, `~/.config/restic/nas.crt` on the Mac |
 | `nas/rest-server.sh`, `nas/S99restic-rest-server.sh` | `/volume1/homes/admin/rest-server/` on the NAS (+ the rc.d copy, as root) |
 | `restic-maint.sh` | `~/.local/bin/restic-maint` on the Mac (launchd `com.vu2cpl.restic-maint`) |
-| `restic-copy.sh` | `~/.local/bin/restic-copy` on the Mac (launchd `com.vu2cpl.restic-copy`) |
+| `restic-copy.sh` | `~/.local/bin/restic-copy` (launchd `com.vu2cpl.restic-copy`) and `~/.local/bin/restic-offsite` (launchd `com.vu2cpl.restic-offsite`) on the Mac |
 | `deploy.sh`, `install-maint.sh` | run from the Mac |
