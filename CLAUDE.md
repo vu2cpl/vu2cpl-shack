@@ -197,7 +197,11 @@ overloaded; see "Grid-loss load shedding" under HOUSEHOLD HA
 INTEGRATIONS. Same day, `GF_UTILITY` and `GF_Dryer_Kit` were set to
 Tasmota **`PowerOnState 0`** (come up OFF after a power cut; was 3 =
 restore last state) so an inverter trip-and-restart cannot reapply the
-full load by itself. `FF_LOAD` / `GF_LOAD` stay at 3. Read/set from HA
+full load by itself. **Reverted 2026-10-21 on Manoj's "all smart plugs to
+retain last state after power resume": all nine Tasmotas (4 house + 5 shack)
+read back `PowerOnState 3`**; the Tuya plugs (four geysers + clothes dryer)
+`power_on_behavior = last`; Raji's plug has no such entity in HA (set it in
+the Smart Life app). Read/set from HA
 without the `iot` password: `mqtt.publish` to `cmnd/<dev>/PowerOnState`
 (empty payload reads; the `ha` broker account has write on `#`), reply
 on `stat/<dev>/RESULT`.
