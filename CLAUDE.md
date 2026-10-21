@@ -187,7 +187,7 @@ dialog, `POST /power/house-toggle`). HA's automations still drive them
 |--------------|--------------|-------|
 | `FF_LOAD` | FF Load | first-floor load circuit |
 | `GF_LOAD` | GF Load | ground-floor load circuit |
-| `GF_Dryer_Kit` | Dryer Kit | dryer + kitchen circuit |
+| `GF_Dryer_Kit` | Dryer Kit | clothes dryer + induction cooker (the whole kitchen circuit; Manoj 2026-10-21); on **R (L1)** since the 2026-10-19 re-landing |
 | `GF_UTILITY` | Utility | utility circuit |
 
 **Grid-loss load shedding (added 2026-10-19)** — a second set of HA
