@@ -8,6 +8,14 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-10-21
+
+### Grid-loss load shedding switched off; SmartLoad back to 90 / 95
+
+Manoj, 20:53 IST: "change smartload cut at 99, and stop load shedding created now" (after "load shedding is glitching i am sure"). Done and read back: `number.inverter_smartload_off` 90, `_on` 95 (OFF lowered first so ON ≥ OFF throughout); `automation.grid_loss_shed_geysers`, `automation.grid_loss_geysers_stay_off`, `automation.grid_loss_shed_utility_then_dryer_kitchen_on_overload` and `automation.grid_restored_restore_dryer_kitchen_then_utility` are **off** (disabled, not deleted, configs intact). Left as they were: `Load restore 95` (still carries the grid-on / not-from-unavailable conditions from 19 Oct step 1) and the original SOC shedding 90 / 80 / 70.
+
+What the two days showed (19 Oct 16:30 → 21 Oct 20:50): 46 grid drops, about 21/day, the same rate as the week before; **no inverter trip**. No automation ever touched an inverter control; every escalation shed came 10 s after a drop, never before. But from Wed 15:35 most drops followed heavy single-phase import on grid (2.5–5 kW on Y, once 3 kW on B), and the staggered restore turned **Utility (washing machine, 2 kW, on Y)** back on before 9 of them — 2 s to 3.6 min before the next drop — giving a 7-minute drop cycle 16:39–17:43. In the week before the rewiring, 226 on-grid stretches above 2.5 kW (up to 7 kW, 79 min) showed no such link. A live watch at 20:49 (Utility on by the restore, Y import 3.4 kW for 4 min) did **not** drop, so the cause is not settled; voltage held 233–238 V up to each cut. Kitchen boiler confirmed on Y (L2) and the washing machine confirmed on Y via Utility (+2.0 kW on the Utility meter, Y import 1.3 → 3.4 kW at 20:49). Open: find why heavy Y load is sometimes followed by a supply cut since the rewiring; re-enable nothing until Manoj says so.
+
 ## 2026-10-19
 
 ### HA: grid-loss load shedding, after the inverter tripped on L3 overload
