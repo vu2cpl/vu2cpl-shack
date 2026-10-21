@@ -178,6 +178,10 @@ sync; sudo umount /mnt/spare /mnt/rootsrc; sudo rmdir /mnt/spare /mnt/rootsrc
 
 Then pull the Cruzer.
 
+- **OMV performance graphs (Diagnostics → Performance statistics):** off from the 16 Oct setup until
+  2026-10-22, when Manoj switched them on (System → Monitoring). The RRD data lives in the writecache
+  overlay in RAM and reaches the stick only at a clean shutdown, so a power cut loses the graph history
+  since boot — expected, not a fault.
 - **Why the bind mount:** it shows the root filesystem as it is on the stick, without OMV's
   writecache overlays (`/var/log`, apt, rrd, monit) on top.
 - **Why `--make-private`:** `/` is a *shared* mount under systemd. Without it, mounting the spare
