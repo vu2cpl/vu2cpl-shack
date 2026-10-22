@@ -16,6 +16,14 @@ Manoj: "remove the cap". The first Drive seed was crawling at 6 MB/s after 06:00
 lifted on the running upload at 10:32 with `kill -USR2` on its `rclone serve restic` (17.4 MB/s straight after,
 no restart), then removed from `restic-copy.sh` for good: nightly runs carry only a few GB.
 
+## 2026-10-22
+
+### Geysers off the inverter; shed cut to the dryer; yellow phase swinging since last night
+
+**Geysers on direct grid lines (electrician, ~09:12 IST).** The SmartLoad port last drew >500 W at 09:11:56 (a geyser); grid drops at 09:11:56, 09:13:58 and 09:15:30 were the changeover. Manoj: "geysers out of inverter". As agreed, `grid_loss_shed_geysers` was cut to the **clothes dryer only** (alias "Grid loss: shed clothes dryer"; backup `automation-grid_loss_shed_geysers-pre-dryer-only-20261022.json`) — with the geysers on the grid, every drop was just switching their plugs off and leaving them off (Maid's and Pranav's at 10:39).
+
+**Yellow (inverter L2) swinging since ~00:00 (Manoj: "lot of fluctuations happening in supply. esp in one phase").** From the inverter's 5-s readings (taken **after the stabiliser**): 00:00–10:39 Y moved 8 V or more between readings **350 times** (Tue all day 99, Wed 73); range **190–274 V**; worst 00:00–04:00 (54–128 jumps/h, peaks 262–274 V), dips to 190–196 V after 08:00. The 1-min log shows the previous nine nights (00–05) never above 240 V; last night 274 V, 10 min above 253 V. R and B were steadier than on earlier days. Of 398 big Y jumps, **303 coincided with a ≥300 W load step** (mostly ~±0.9 kW on Y's own import) and in 164 the R and B voltages moved **the opposite way** (same way only 7) — the usual signature of a **loose / high-resistance neutral** or a failing stabiliser channel on Y; the readings sit downstream of the stabiliser, so the two can't be told apart from here. It began before the geyser move. 38 grid drops by 10:39, 36 of them with normal voltage just before (supply cuts as before); two (03:21, 04:27) followed Y at 269–271 V, near the inverter's 265 V grid-high limit. **Action asked of the electrician today:** check and tighten every neutral termination (main incomer, stabiliser in/out, inverter grid input, anything touched on 19 Oct and today); measure neutral-to-earth at the inverter's grid input while switching ~2 kW on yellow; read the stabiliser's Y output on its display.
+
 ## 2026-10-21
 
 ### restic: off-site copy on Google Drive (#50 e)
