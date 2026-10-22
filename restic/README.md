@@ -203,9 +203,11 @@ done, and ALPA will hire its own backup space.
   Cloud project `vu2cpl-rclone`, Desktop app, published "In production" so the token doesn't expire after 7 days),
   scope **`drive.file`**: rclone sees only the files it created, nothing else in the Drive. If the sign-in ever
   breaks, the run fails with "sign-in expired?"; fix with `rclone config reconnect gdrive-restic:` (opens Safari).
-- **Bandwidth.** rclone settings come from the environment (`RCLONE_BWLIMIT="06:00,6M 23:00,off"`,
-  `RCLONE_DRIVE_CHUNK_SIZE=64M`, `RCLONE_TPSLIMIT=10`; restic's `-o rclone.args` can't carry the quoted
-  timetable): 6 MB/s by day, unlimited 23:00-06:00. Uplink measured 135 Mbps (2026-10-21).
+- **Bandwidth.** No cap: the daytime 6 MB/s limit was removed on 2026-10-22 (Manoj), since nightly runs carry only a
+  few GB. rclone settings come from the environment (`RCLONE_DRIVE_CHUNK_SIZE=64M`, `RCLONE_TPSLIMIT=10`; restic's
+  `-o rclone.args` can't carry quoted values). A cap can come back as `RCLONE_BWLIMIT` (e.g.
+  `"06:00,6M 23:00,off"`); `kill -USR2 <rclone serve restic pid>` toggles it on a running upload. Uplink measured
+  135 Mbps (2026-10-21); the seed ran at 14-18 MB/s uncapped.
 - **Retention and checks.** Same 7/5/12 policy. Pruning on Drive means download + re-upload, so it runs only on the
   first Sunday of the month, with `--max-unused 10%`, followed by `check --read-data-subset=<month>/12` (all data
   re-read once a year). Other Sundays: a metadata `check`.
@@ -222,7 +224,8 @@ done, and ALPA will hire its own backup space.
 ~/.local/bin/restic-offsite ubersdr -- snapshots
 ```
 
-**First seed** started 2026-10-21 23:33 (both repositories, about 620 GB, ~7 MB/s, so about 1.5 days).
+**First seed** started 2026-10-21 23:33 (both repositories, about 620 GB): `ubersdr` done 00:15; `macmini-server`
+ran 14-18 MB/s at night, 6 MB/s under the old daytime cap until it was lifted live at 10:32 on 2026-10-22.
 
 **If the house is gone:** on any machine, install restic and rclone, run `rclone config` to recreate the remote
 (`drive`, scope `drive.file`; the Google sign-in is enough, the OAuth client can be recreated), then

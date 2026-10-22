@@ -8,6 +8,14 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-10-22
+
+### restic: off-site copy runs uncapped
+
+Manoj: "remove the cap". The first Drive seed was crawling at 6 MB/s after 06:00 (about 110 GB left). The cap was
+lifted on the running upload at 10:32 with `kill -USR2` on its `rclone serve restic` (17.4 MB/s straight after,
+no restart), then removed from `restic-copy.sh` for good: nightly runs carry only a few GB.
+
 ## 2026-10-21
 
 ### restic: off-site copy on Google Drive (#50 e)

@@ -20,7 +20,8 @@
 #      data is re-read once a year. rclone moves deleted files to Drive's Trash (30 days to undo).
 # HDD refuses to run if /mnt/backups isn't mounted on .109 (fstab nofail), so it can't fill the NVMe; Drive
 # refuses if the rclone remote doesn't answer (sign-in expired: rclone config reconnect gdrive-restic:).
-# Drive uploads are capped at 6 MB/s 06:00-23:00 IST, unlimited at night.
+# Drive uploads run at full speed (the daytime 6 MB/s cap was removed 2026-10-22, Manoj); nightly runs carry only
+# a few GB. To slow a running upload, send SIGUSR2 to its `rclone serve restic` (toggles RCLONE_BWLIMIT if set).
 # Reports retained MQTT on shack/backup/copy or shack/backup/offsite; Telegram only on failure and on the first
 # good run after.
 #
@@ -51,9 +52,9 @@ case "$(basename "$0")" in
         TOPIC=shack/backup/offsite
         LABEL="restic off-site copy to Google Drive"
         # 64 MiB packs: a quarter of the files on Drive. The rclone child reads its settings from the env
-        # (restic's -o rclone.args can't carry the quoted timetable); the daytime cap keeps the uplink usable.
+        # (restic's -o rclone.args can't carry quoted values, e.g. an RCLONE_BWLIMIT timetable). No bandwidth cap.
         EXTRA=(--pack-size 64)
-        export RCLONE_BWLIMIT="06:00,6M 23:00,off" RCLONE_DRIVE_CHUNK_SIZE=64M RCLONE_TPSLIMIT=10
+        export RCLONE_DRIVE_CHUNK_SIZE=64M RCLONE_TPSLIMIT=10
         ;;
     *)
         TARGET=hdd
