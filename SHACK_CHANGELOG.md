@@ -24,6 +24,16 @@ no restart), then removed from `restic-copy.sh` for good: nightly runs carry onl
 
 **Yellow (inverter L2) swinging since ~00:00 (Manoj: "lot of fluctuations happening in supply. esp in one phase").** From the inverter's 5-s readings (taken **after the stabiliser**): 00:00–10:39 Y moved 8 V or more between readings **350 times** (Tue all day 99, Wed 73); range **190–274 V**; worst 00:00–04:00 (54–128 jumps/h, peaks 262–274 V), dips to 190–196 V after 08:00. The 1-min log shows the previous nine nights (00–05) never above 240 V; last night 274 V, 10 min above 253 V. R and B were steadier than on earlier days. Of 398 big Y jumps, **303 coincided with a ≥300 W load step** (mostly ~±0.9 kW on Y's own import) and in 164 the R and B voltages moved **the opposite way** (same way only 7) — the usual signature of a **loose / high-resistance neutral** or a failing stabiliser channel on Y; the readings sit downstream of the stabiliser, so the two can't be told apart from here. It began before the geyser move. 38 grid drops by 10:39, 36 of them with normal voltage just before (supply cuts as before); two (03:21, 04:27) followed Y at 269–271 V, near the inverter's 265 V grid-high limit. **Action asked of the electrician today:** check and tighten every neutral termination (main incomer, stabiliser in/out, inverter grid input, anything touched on 19 Oct and today); measure neutral-to-earth at the inverter's grid input while switching ~2 kW on yellow; read the stabiliser's Y output on its display.
 
+**Cause of the overnight cycling found (Manoj: "its radio transmitting ft8").** The ~1 kW on/off load on yellow 00:00–04:30 was the SPE amplifier keying on FT8 (about 80 key edges per half hour; `binary_sensor.spe_amplifier_transmitting` shows 95–115 key-ups per hour 00:00–04:00). So nothing was cutting out on over-voltage; each transmit period simply ended. What changed is **how much each key-up moves the voltage**, measured at every on-grid key edge with the same ~0.9–1 kW step:
+
+| FT8 session | Amp on | Volts per kW at the edge | Swing within 15 s, median / max |
+|---|---|---|---|
+| Wed 14 Oct 04:00–06:00 (before rewiring) | inverter L3 (incoming R at the time) | 1.7 | 2.2 / 8 V |
+| Sun 18 Oct 06:00 (before rewiring) | inverter L3 (incoming R) | 1.9 | 2.4 / 8 V |
+| Thu 22 Oct 00:00–04:30 (after rewiring) | inverter L2 (incoming Y) | 4.0 | 5.0 / **39 V** |
+
+The same transmitter load now moves its phase about twice as much, with occasional swings to 39 V. Since the 19 Oct re-landing the shack sits on incoming **Y** instead of incoming R, so either the yellow path is softer (a high-resistance joint on the Y conductor or neutral from the re-landing, or the stabiliser's Y channel) or BESCOM's Y is weaker than R. Next: the electrician checks the Y and neutral terminations and the stabiliser's Y output under a 2 kW load; if the path is sound, consider putting the shack back on incoming R.
+
 ## 2026-10-21
 
 ### restic: off-site copy on Google Drive (#50 e)
