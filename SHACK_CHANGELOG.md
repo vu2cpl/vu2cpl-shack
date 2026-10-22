@@ -34,6 +34,8 @@ no restart), then removed from `restic-copy.sh` for good: nightly runs carry onl
 
 The same transmitter load now moves its phase about twice as much, with occasional swings to 39 V. Since the 19 Oct re-landing the shack sits on incoming **Y** instead of incoming R, so either the yellow path is softer (a high-resistance joint on the Y conductor or neutral from the re-landing, or the stabiliser's Y channel) or BESCOM's Y is weaker than R. Next: the electrician checks the Y and neutral terminations and the stabiliser's Y output under a 2 kW load; if the path is sound, consider putting the shack back on incoming R.
 
+**Morning dips (05:55–10:45) were not the radio** (Manoj: "radio was not transmitting after 0400 am or so"). Five of eight deep yellow dips came the moment the **washing machine heater** (2 kW, Utility breaker) switched on (05:55 234→206 V, 08:02 236→196 V with B rising to 252 V, 08:19, 09:44, 10:31), one when Raji's geyser started (08:56, still on the SmartLoad port then), two while the washer was heating (06:55 272 V, 09:15 195 V with B 250 V). A separate ~0.85 kW unmetered load on Y cycled ~30 s on every 1.5–3 min from 10:15 — Manoj: likely the **clothes iron**. Conclusion unchanged: any 1–2 kW step on yellow sags it 20–40 V while another phase lifts — yellow or neutral joint suspected; test after the electrician: start the washing machine and watch Y and B.
+
 ## 2026-10-21
 
 ### restic: off-site copy on Google Drive (#50 e)
