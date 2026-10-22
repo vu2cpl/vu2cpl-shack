@@ -10,13 +10,22 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-10-22
 
+### restic: cache out of ~/Library/Caches; off-site seed finished
+
+The first Drive seed died at 10:36 with `mkdir ~/Library/Caches/restic/…/index/6b: no such file or directory`: the
+Mac cleaner Mole had emptied `~/Library/Caches` at 10:33 (free space 47 → 71 GB), restic's cache included. Rerun at
+12:25 resumed from the last saved index (`ubersdr` also picked up the 01:34 snapshot) and **finished at 13:13**: both
+repositories on Drive, 489 GiB, `macmini-server` 9 snapshots, MQTT `shack/backup/offsite` ok. Packs uploaded after
+the last index save are orphaned; the monthly prune removes them.
+
+Fix (Manoj: "yes, move it"): `restic-maint.sh` and `restic-copy.sh` set `RESTIC_CACHE_DIR=$HOME/.cache/restic`, out
+of cleaners' reach; the existing 463 MB cache was moved there, so nothing had to be rebuilt.
+
 ### restic: off-site copy runs uncapped
 
 Manoj: "remove the cap". The first Drive seed was crawling at 6 MB/s after 06:00 (about 110 GB left). The cap was
 lifted on the running upload at 10:32 with `kill -USR2` on its `rclone serve restic` (17.4 MB/s straight after,
 no restart), then removed from `restic-copy.sh` for good: nightly runs carry only a few GB.
-
-## 2026-10-22
 
 ### Geysers off the inverter; shed cut to the dryer; yellow phase swinging since last night
 

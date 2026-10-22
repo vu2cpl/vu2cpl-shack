@@ -129,7 +129,12 @@ The launchd agent `com.vu2cpl.restic-maint` runs every Sunday at 10:30. For each
   every 20 weeks.
 
 It publishes retained MQTT on `shack/backup/maint` and sends Telegram only on failure or recovery.
-Its log is `~/Library/Logs/restic-maint.log`. `install-maint.sh` installs it: macOS via brew and
+Its log is `~/Library/Logs/restic-maint.log`.
+
+**restic's cache on the Mac** is `~/.cache/restic` (`RESTIC_CACHE_DIR` in `restic-maint.sh` and `restic-copy.sh`),
+not macOS's default `~/Library/Caches/restic`: on 2026-10-22 the cleaner app Mole emptied `~/Library/Caches` at 10:33
+and the off-site seed died mid-run ("mkdir …/index/6b: no such file or directory"). If the cache is ever lost, the
+next run rebuilds it. `install-maint.sh` installs it: macOS via brew and
 launchd, Pi or Linux via apt and crontab.
 
 ```bash
@@ -224,8 +229,10 @@ done, and ALPA will hire its own backup space.
 ~/.local/bin/restic-offsite ubersdr -- snapshots
 ```
 
-**First seed** started 2026-10-21 23:33 (both repositories, about 620 GB): `ubersdr` done 00:15; `macmini-server`
-ran 14-18 MB/s at night, 6 MB/s under the old daytime cap until it was lifted live at 10:32 on 2026-10-22.
+**First seed** 2026-10-21 23:33 → **2026-10-22 13:13**, both repositories, 489 GiB on Drive. `ubersdr` was done at
+00:15. `macmini-server` ran 14-18 MB/s at night and 6 MB/s under the old daytime cap until it was lifted live at
+10:32; at 10:36 it died at ~92 % when Mole wiped restic's cache (see "restic's cache on the Mac"), and a rerun at
+12:25 resumed from the saved index and finished at 13:13 (9 snapshots).
 
 **If the house is gone:** on any machine, install restic and rclone, run `rclone config` to recreate the remote
 (`drive`, scope `drive.file`; the Google sign-in is enough, the OAuth client can be recreated), then

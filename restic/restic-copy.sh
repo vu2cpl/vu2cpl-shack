@@ -37,6 +37,9 @@
 
 set -u
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+# Not ~/Library/Caches (restic's macOS default): a cleaner (Mole) emptied it at 10:33 on 2026-10-22 and killed the
+# first off-site seed mid-run.
+export RESTIC_CACHE_DIR="$HOME/.cache/restic"
 
 ENV_FILE="$HOME/.config/vu2cpl-shack.env"
 HOSTS="ubersdr macmini-server"
