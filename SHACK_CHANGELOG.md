@@ -8,6 +8,33 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-10-23
+
+### eMudhra CA key compromise: shack trust stores updated
+
+The private keys of eight eMudhra intermediate CAs could be recovered (weak key generation, disclosed
+17 Oct). They chain to `emSign ECC Root CA - G3` and `Comodo AAA Services root` (also called AAA
+Certificate Services). Browsers block them, but anything that reads a PEM bundle directly does not.
+Updated:
+
+- **Pis:** `ca-certificates` upgraded. noderedpi4 and gpsntp are on `20250419+deb13u1` (trixie),
+  openwebrxplus (.142) and meridianpi5 on `20250419~deb12u2` (bookworm). Both roots are gone from
+  `/etc/ssl/certs`, and HTTPS works on all four.
+- **Mac:** Homebrew `ca-certificates` is on 2026-10-20. certifi is on 2026.10.19 in not1mm's `.venv`,
+  `~/.platformio/penv` (plus its ESP-IDF 5.5.5 env), `~/.pio-venv313`, the AetherSDR aqt venv, Homebrew
+  python3.9 and osxphotos' venv. The two PlatformIO venvs pointed at the deleted Cellar
+  python 3.13.15. They are now relinked to `/opt/homebrew/opt/python@3.13`, so a brew upgrade doesn't break them again.
+- **Still open:** the system `/etc/ssl/cert.pem`, which macOS curl and `/usr/bin/python3` use, needs Manoj's
+  sudo. The awk one-liner is on emudhra.we-have-a-problem.com. The Keychain is already covered by
+  Apple's 22 Oct block.
+- **Rust:** dxca `webpki-roots` 1.0.10 is merged (dxca#12), but it isn't in a release yet. meridian#116 waits
+  for Basil. rbn-client#11 is open.
+
+### rbnclient uninstalled from the Pi 5
+
+It had been disabled since 2026-09-25. `rbnclient.service` and `~/RBNClient` were removed from meridianpi5.
+Its config, store and logs are in `~pi/rbnclient-config-store-logs-2026-10-23.tar.gz`.
+
 ## 2026-10-22
 
 ### restic: cache out of ~/Library/Caches; off-site seed finished
