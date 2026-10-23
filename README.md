@@ -507,6 +507,8 @@ comes from VU2PTT's Skimmer Calibration tracker.
 ├── power_spe_on.py                  SPE amp FTDI DTR/RTS power-on helper
 ├── enable_file_context.sh           One-shot Node-RED file context store enabler
 ├── rebuild_pi.sh                    Automated bare-metal rebuild script (paired with REBUILD_PI.md)
+├── disk-survey.sh                   Read-only audit of where a shack Mac's disk went (volume, TM snapshots, build trees, caches)
+├── reclaim-disk.sh                  Frees it: gitignored build trees under ~/projects + named caches. Dry-run unless --apply
 ├── restic/                          Nightly restic backups of the Linux boxes (.109, macmini-server) to the NAS (DS710+, Debian + OMV), copied to .109's HDD and off-site to Google Drive
 ├── nas-debian/                      DS710+ front panel under Debian: status/power/eSATA LEDs + power/copy buttons (microcontroller), disk 1 bay LED (GPIO), RAID state on the LEDs, temperature-driven fan
 │
