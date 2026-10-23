@@ -10,6 +10,44 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-10-23
 
+### Disk: 92% → 61% on the Mac Mini, and two scripts to keep it measurable
+
+Started from a wrong suspect: Ulanzi Studio looked like the problem at 1.03 GB
+but is ~100 MB of RAM and 0.4% CPU, and removing it would kill the D100H dial
+integration outright (the plugin runs inside Studio's own Node runtime).
+
+Where the space actually was, on a 460 GB volume with 35 GB free:
+
+| | |
+|---|---|
+| gitignored build trees under `~/projects` | 67 GB (`meridian/target` 37.7, `Aether SDR/build` 16.4, `dxca/target` 10.9) |
+| Xcode iOS simulator runtimes + devices | 22 GB (two iOS 26.x runtimes unused since 3 Aug, 134 devices) |
+| caches (Xcode DeviceSupport, Spotify, Homebrew, go-build, npm, Claude scratchpads) | 18 GB |
+| held only by local Time Machine snapshots | ~29 GB |
+
+**The snapshot trap:** deleting 85.6 GB moved `df` by ~10 GB. 24 hourly local
+snapshots still pinned the blocks, and one fired mid-cleanup and captured the
+pre-deletion state. `sudo tmutil deletelocalsnapshots /` released 112 GB at
+once — more than was deleted, since ~18 GB existed only inside the snapshots.
+Consumed 414.2 → 302.2 GB. Snapshots cost only local hourly rollback points,
+not the Time Machine destination.
+
+New `disk-survey.sh` (read-only) and `reclaim-disk.sh` (dry-run unless
+`--apply`). Two guardrails in the reclaim script, both learned here: a build
+dir is deleted only when `git check-ignore` agrees it is ignored — which spared
+`meridian/build` and `MSHV-Mac/MSHV/build`, both source — and only **named**
+subdirectories of `~/Library/Caches` are cleared, never the directory itself,
+after Mole emptied it mid-seed on 10-22. `dxca/target/win-bundle` held five
+Windows release zips, safe to drop only because the same filenames are
+published as GitHub release assets (`gh release view <tag> --json assets`).
+
+Xcode: every iOS simulator runtime removed (no project targets iOS any more —
+the Jukebox app is done). Xcode 27.1 and the toolchain verified afterwards;
+macOS projects build unchanged. Xcode re-downloads a runtime (~8 GB) if needed.
+`Xcode.app` itself (3.9 GB) cannot be trimmed — its signature covers the bundle.
+
+Final: 171 GB free, 61% capacity.
+
 ### eMudhra CA key compromise: shack trust stores updated
 
 The private keys of eight eMudhra intermediate CAs could be recovered (weak key generation, disclosed
