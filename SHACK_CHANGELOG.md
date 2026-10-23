@@ -10,6 +10,23 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-10-23
 
+### restic: restore test from the Google Drive copy passed; #50 closed
+
+The scheduled task `restic-offsite-seed-restore-test` (10:00) checked the off-site copy and restored from it.
+
+- **Snapshots:** Drive holds the same 10 snapshots per repository as the NAS (matched by `original`), latest
+  2026-10-23 01:30 (`ubersdr`) and 03:01 (`macmini-server`). 525 GiB on Drive (36.1 + 489). The 06:30 run took about a
+  minute per repository; `shack/backup/offsite` ok.
+- **Restore** from Drive's latest snapshots to `/private/tmp`, never in place: `macmini-server` 25 random Immich
+  originals, the newest Immich DB dump (20261022), the ALPA dump, `/etc/fstab`, `/etc/hostname` (29 files);
+  `ubersdr` 12 openwebrx/ubersdr files, the wavelog dump, `/etc/fstab`, `/etc/hostname` (15 files). **44/44 sha256 =
+  live**, dumps pass `gzip -t`. Scratch folders deleted; ✅ Telegram sent.
+- **Speed:** ~2.5 MiB/s (706 MiB in 4 min 44 s). A full `macmini-server` restore from Drive would take about two days,
+  so Drive is the last resort; rebuild from the NAS or `.109` first.
+
+With this every part of #50 is done: restic on both boxes, append-only NAS, weekly maintenance, the `.109` copy and
+the off-site copy, each restore-tested.
+
 ### Disk: 92% → 61% on the Mac Mini, and two scripts to keep it measurable
 
 Started from a wrong suspect: Ulanzi Studio looked like the problem at 1.03 GB

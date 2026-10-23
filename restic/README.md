@@ -234,6 +234,14 @@ done, and ALPA will hire its own backup space.
 10:32; at 10:36 it died at ~92 % when Mole wiped restic's cache (see "restic's cache on the Mac"), and a rerun at
 12:25 resumed from the saved index and finished at 13:13 (9 snapshots).
 
+**Restore test from Drive passed 2026-10-23** (scheduled task, 10:00). Drive held the same 10 snapshots per repository
+as the NAS (matched by `original`), 525 GiB in all. From Drive's latest snapshots, restored to `/private/tmp`:
+`macmini-server` 25 random Immich originals, the newest Immich DB dump, the ALPA dump, `/etc/fstab`, `/etc/hostname`
+(29 files); `ubersdr` 12 openwebrx/ubersdr files, the wavelog dump, `/etc/fstab`, `/etc/hostname` (15 files). **All 44
+sha256 = the live files**, all dumps pass `gzip -t`. Restores ran at only **~2.5 MiB/s** (706 MiB in 4 min 44 s): fine
+for files, but a full `macmini-server` restore from Drive would take about two days, so rebuild from the NAS or the
+`.109` copy and keep Drive for when both are gone.
+
 **If the house is gone:** on any machine, install restic and rclone, run `rclone config` to recreate the remote
 (`drive`, scope `drive.file`; the Google sign-in is enough, the OAuth client can be recreated), then
 `restic -r rclone:gdrive-restic:shack-restic/<host> restore latest --target <dir>` with the repository password
@@ -292,7 +300,8 @@ test Telegram message.
 ## Restoring
 
 **Last tested 2026-10-15:** on-box restores on both boxes, and a Mac restore of 25 random Immich
-originals, all matched live by sha256 (SHACK_CHANGELOG 2026-10-15). Restore to a scratch target, never in place.
+originals, all matched live by sha256 (SHACK_CHANGELOG 2026-10-15). The `.109` copy was tested 2026-10-17 and the
+Google Drive copy 2026-10-23 (44/44 sha256 = live), both from the Mac. Restore to a scratch target, never in place.
 
 From the box itself (append-only access is enough to read):
 
