@@ -77,7 +77,7 @@ blank while the DXCC Tracker flow tab is disabled — it has been since
 | Radio | FlexRadio FLEX-6600, RGO One, Icom IC-705 |
 | Amplifier | SPE Expert 1.5 KFA |
 | Antennas | Hex beam, 160 m inverted-L, 6 m LFA Yagi, Beverage / N6RK / K9AY receive |
-| Power | 21 Tasmota-controlled outlets across 5 shack devices, plus 4 house-load Tasmota circuits (FF/GF load, dryer-kitchen, utility — HA's load-shedding relays — battery-SOC since 2026-05, and grid-loss overload shedding of utility + dryer-kitchen since 2026-10-19 — toggleable from the Power card) |
+| Power | 21 Tasmota-controlled outlets across 5 shack devices, plus 4 house-load Tasmota circuits (FF/GF load, dryer-kitchen, utility — HA's load-shedding relays — battery-SOC since 2026-05, and grid-loss overload shedding of utility + dryer-kitchen added 2026-10-19, all grid-loss shedding off since 2026-10-25 — toggleable from the Power card) |
 | Solar | Deye SG0*LP3 LV 3-phase hybrid inverter, read locally via its Solarman WiFi logger (no cloud, no Home Assistant in the path) |
 | Power meter | Telepost LP-700 (USB HID, owned by `lp700-server` on the Pi) |
 | Rotator | Yaesu (rotates past 360° into an overlap zone) behind an Idiom Press Rotor-EZ / DCU-1 serial interface |
@@ -216,9 +216,9 @@ house Tasmota circuits (FF Load, GF Load, Dryer Kit, Utility): relay
 ON/OFF, live watts, and today's kWh. Each house tile is also the
 switch — click, confirm, and it toggles the relay via
 `POST /power/house-toggle`. The relays belong to Home Assistant's
-load-shedding automations (battery-SOC, and since 2026-10-19 grid-loss
-overload shedding of Utility and Dryer Kitchen, see the shack CLAUDE.md
-"Grid-loss load shedding"), which may override a manual
+load-shedding automations (battery-SOC; the grid-loss overload shedding
+of Utility and Dryer Kitchen added 2026-10-19 is all off since 2026-10-25,
+see the shack CLAUDE.md "Grid-loss load shedding"), which may override a manual
 toggle on their next threshold rule.
 
 #### Grid voltage log

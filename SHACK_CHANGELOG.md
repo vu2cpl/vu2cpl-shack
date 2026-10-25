@@ -8,6 +8,18 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-10-25
+
+### HA: dryer grid-loss shed disabled
+
+On Manoj's "Disable the dryer load shedding for now", `automation.grid_loss_shed_geysers`
+(alias "Grid loss: shed clothes dryer", the only grid-loss automation still on since 2026-10-21)
+was turned off with `automation/turn_off` and read back `off`. Not deleted; re-enable with
+`automation.turn_on` when he asks. It last fired at 08:25 IST the same morning. The SOC-based
+`load shedding 90/80/70` and `Load restore 95` are unchanged and still switch the Dryer Kitchen
+circuit. Side note: the dryer's Tuya plug `switch.clothes_dryer_socket_1` has read `unavailable`
+since 06:01 IST.
+
 ## 2026-10-23
 
 ### restic: restore test from the Google Drive copy passed; #50 closed
