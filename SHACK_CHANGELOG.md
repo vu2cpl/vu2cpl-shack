@@ -20,6 +20,10 @@ was turned off with `automation/turn_off` and read back `off`. Not deleted; re-e
 circuit. Side note: the dryer's Tuya plug `switch.clothes_dryer_socket_1` has read `unavailable`
 since 06:01 IST.
 
+Why: the Bosch dryer does not resume after a power cut, so each shed or grid loss leaves it
+stopped until someone restarts it by hand. Manoj considered removing the plug (its power-off state
+does not stick) and decided to leave it in place.
+
 ## 2026-10-23
 
 ### restic: restore test from the Google Drive copy passed; #50 closed
