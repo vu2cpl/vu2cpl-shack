@@ -10,6 +10,18 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-10-25
 
+### Overload levels raised: 5 kW per phase, 10 kW total
+
+Manoj checked with Deye: each phase of the 10 kW unit can take up to 5 kW as long as the
+other phases are lightly loaded, 10 kW in total. The old 3.3 kW per-phase figure was an even
+split, not the real limit. Changes, keeping the same 500 W margin as before:
+
+- HA `grid_loss_escalate`: per-phase threshold 2800 → 4500 W; new template trigger
+  `overload_total` and loop check when L1 + L2 + L3 is above 9500 W (`total_threshold`).
+  Saved via the config API and read back. The automation stays disabled.
+- `load_monitor.py` on meridianpi5: limit line 5 kW, shed line 4.5 kW (redeployed, page checked).
+- Vue Power card phase-loads tile v48: same two lines.
+
 ### HA: dryer grid-loss shed disabled
 
 On Manoj's "Disable the dryer load shedding for now", `automation.grid_loss_shed_geysers`

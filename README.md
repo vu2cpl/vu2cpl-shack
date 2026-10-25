@@ -202,8 +202,8 @@ with idempotent retrigger guard + 10 s cooldown to prevent reset loops.
 
 Below the 16 A voltage/current/power/today line, both dashboards carry
 a **Phase loads** graph tile (added 2026-10-19): inverter L1 / L2 / L3 = R / Y / B
-load over the last ten minutes with the 3.3 kW per-phase off-grid limit and the
-2.8 kW shedding line, live watts per phase, fed every 5 s straight from the
+load over the last ten minutes with the 5 kW per-phase off-grid limit and the
+4.5 kW shedding line (Deye: 5 kW per phase, 10 kW total), live watts per phase, fed every 5 s straight from the
 inverter's logger by `solar_phases_mqtt.py` (retained `shack/solar/phases`), plus
 two further rows (added 2026-08-25): a **solar row** of two half-width
 tiles — **Grid** (ON/OFF plus the three input phase voltages) and

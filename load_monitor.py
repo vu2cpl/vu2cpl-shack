@@ -3,7 +3,7 @@
 
 Serves one HTML page on localhost that draws the inverter's per-phase load
 as three lines (R / Y / B), polled from Home Assistant every 5 s, with the
-3.3 kW per-phase off-grid limit and the 2.8 kW shedding threshold drawn as
+5 kW per-phase off-grid limit and the 4.5 kW shedding threshold drawn as
 reference lines, grid-off spells shaded, and the geyser plugs that are on
 listed in the header. Pure stdlib; HA is reached only from this process,
 so Safari never needs CORS or the token.
@@ -32,8 +32,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 # Physical phase -> inverter terminal, as of 2026-10-19 12:30 IST re-landing.
 PHASES = [("R", "l1"), ("Y", "l2"), ("B", "l3")]
-LIMIT_W = 3300        # 10 kW three-phase unit: per-phase off-grid limit
-SHED_W = 2800         # HA escalation threshold
+LIMIT_W = 5000        # 10 kW three-phase unit: per-phase off-grid limit (Deye, 2026-10-25; 10 kW total)
+SHED_W = 4500         # HA escalation threshold
 SERIES = {            # selectable series set -> HA sensor pattern
     "total": "sensor.inverter_load_{p}_power",
     "essential": "sensor.inverter_load_ups_{p}_power",
@@ -195,7 +195,7 @@ footer{color:var(--muted);font-size:11px;display:flex;gap:16px;flex-wrap:wrap}
  </div>
 </header>
 <div id="wrap"><canvas id="c"></canvas><div id="tip"></div></div>
-<footer><span>Solid red line: 3.3 kW per-phase off-grid limit. Dashed: 2.8 kW shedding threshold. Shaded: grid off.</span>
+<footer><span>Solid red line: 5 kW per-phase off-grid limit (10 kW total). Dashed: 4.5 kW shedding threshold. Shaded: grid off.</span>
  <span id="stat">connecting…</span></footer>
 <script>
 const LIMIT=__LIMIT__, SHED=__SHED__, NAMES=__NAMES__, TERMS=__TERMS__;
@@ -250,7 +250,7 @@ function draw(){
   // reference lines
   ctx.lineWidth=1.5;ctx.strokeStyle='#f85149';ctx.beginPath();ctx.moveTo(x0,Y(LIMIT));ctx.lineTo(x1,Y(LIMIT));ctx.stroke();
   ctx.setLineDash([6,4]);ctx.strokeStyle='#d29922';ctx.beginPath();ctx.moveTo(x0,Y(SHED));ctx.lineTo(x1,Y(SHED));ctx.stroke();ctx.setLineDash([]);
-  ctx.textAlign='left';ctx.fillStyle='#f85149';ctx.fillText('3.3 kW limit',x1+6,Y(LIMIT)+4);ctx.fillStyle='#d29922';ctx.fillText('2.8 kW shed',x1+6,Y(SHED)+4);
+  ctx.textAlign='left';ctx.fillStyle='#f85149';ctx.fillText('5 kW limit',x1+6,Y(LIMIT)+4);ctx.fillStyle='#d29922';ctx.fillText('4.5 kW shed',x1+6,Y(SHED)+4);
   // series
   ctx.lineWidth=2;ctx.lineJoin='round';
   const ends=[];

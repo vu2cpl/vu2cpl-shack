@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, watch, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v47 · 2026-10-19 Power: live R/Y/B phase-load graph (shack/solar/phases, 5 s)';
+window.__shackBuild = 'v48 · 2026-10-25 Power: phase-load limit 5 kW, shed line 4.5 kW (Deye per-phase limit)';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -2208,7 +2208,7 @@ const PowerCard = {
         <!-- Phase loads (Deye per-phase load from shack/solar/phases — solar_phases_mqtt.py,
              a 5-s daemon on the Pi reading the Solarman logger directly, no HA in the path):
              R / Y / B over the last ~10 min (3-s Vue pushes, 200 kept client-side) with the
-             3.3 kW per-phase off-grid limit (solid) and the 2.8 kW shedding threshold
+             5 kW per-phase off-grid limit (solid) and the 4.5 kW shedding threshold
              (dotted). Greys out when the feed is older than 30 s. Added 2026-10-19 (#55). -->
         <div v-if="phases" class="energy-row energy-row--graph">
           <div class="energy-tile energy-tile--graph" :class="{ 'is-stale': phaseStale }">
@@ -2224,7 +2224,7 @@ const PowerCard = {
               <polyline v-for="(pts, k) in phaseSvg.lines" :key="k" :points="pts" fill="none"
                         :stroke="phaseTiles[k].color" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
             </svg>
-            <div class="phase-foot">last 10 min · solid 3.3 kW per-phase limit · dotted 2.8 kW shed · {{ phaseGrid }}</div>
+            <div class="phase-foot">last 10 min · solid 5 kW per-phase limit · dotted 4.5 kW shed · {{ phaseGrid }}</div>
           </div>
         </div>
 
@@ -2408,7 +2408,7 @@ const PowerCard = {
       !phases.value?.ts || (Date.now() / 1000 - phases.value.ts) > 30);
     const PH_NAMES = ['R', 'Y', 'B'];                                   // inverter L1/L2/L3 (re-landed 2026-10-19)
     const PH_COLORS = ['var(--red)', 'var(--amber)', 'var(--accent)'];
-    const PH_LIMIT = 3300, PH_SHED = 2800, PH_KEEP = 200;              // 200 × 3 s ≈ 10 min
+    const PH_LIMIT = 5000, PH_SHED = 4500, PH_KEEP = 200;              // 200 × 3 s ≈ 10 min
     const phaseHist = reactive([]);                                     // [{ ts, l: [W, W, W] }]
     watch(phases, (p) => {
       if (!p || !Array.isArray(p.load) || p.load.length !== 3) return;
