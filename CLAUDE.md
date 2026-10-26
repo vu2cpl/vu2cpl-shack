@@ -1324,6 +1324,26 @@ breaker meter) + **GF Load with the ground-floor AC** 0.7 kW · port = two 1.8 k
 essential-only R 1.9 / Y 4.1 / B 4.4 kW. The escalation's `circuit_phase` was
 updated the same afternoon (Utility → L2, GF Load → L3 sheddable; see the status note above). Full timeline: SHACK_CHANGELOG 2026-10-19.
 
+### Bosch dishwasher via Home Connect (added 2026-10-25)
+
+Bosch **SMS6HVI01I** dishwasher, integrated through HA's built-in **Home Connect** integration (Bosch's
+cloud; Manoj created the developer app at developer.home-connect.com, redirect URI
+`https://my.home-assistant.io/redirect/oauth`, and did the OAuth login himself). 26 entities, prefix
+`dishwasher_`: operation state, door, selected/active program (selects), progress, finish time, delayed
+start (`number.dishwasher_start_in_relative`, seconds), stop button, power / half load / VarioSpeed+ /
+child lock switches, connectivity / remote control / remote start, and 11 event sensors the integration
+ships disabled (salt and rinse aid low/empty, program finished/aborted/blocked by salt, four
+machine-care/filter reminders); all 11 enabled 2026-10-25. Starting a program from HA only works while
+**Remote Start** is on at the machine. No automations or Telegram alerts yet (not asked for).
+
+**Dashboard:** own storage dashboard **`/193-dishwasher`** ("Dishwasher", in the sidebar), built in the
+Utopia sub-page style (sections view, title heading, full-width Home button): status markdown, state /
+door / progress / finish tiles, program select, delayed start, stop; Options + Connection; Supplies &
+Care + Reminders + Program events; 48 h history graph and a 7-day logbook. Utopia 2.0's nav button grid
+gained a fifth **Dishwasher** button (grid 4 -> 5 columns). Backups in the private folder:
+`dashboard-193-dishwasher-v1-20261025.json`, `dashboard-193-utopia-2-{pre,post}-dishwasher-20261025.json`.
+**Not yet eyeballed in a browser.**
+
 ### Synology DiskStation: DSM update entity disabled (2026-10-16)
 
 > **Superseded the same afternoon:** the NAS no longer runs DSM. Since 2026-10-16 it is Debian 13 +

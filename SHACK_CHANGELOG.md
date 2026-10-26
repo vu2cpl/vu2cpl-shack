@@ -10,6 +10,13 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-10-25
 
+### HA: Bosch dishwasher via Home Connect, with its own dashboard
+
+Bosch SMS6HVI01I added through the Home Connect integration (Manoj did the developer app and the
+OAuth login). The 11 sensors the integration ships disabled were enabled. New storage dashboard
+`/193-dishwasher` in the same style as the Utopia sub-pages, and a fifth nav button on Utopia 2.0.
+See CLAUDE.md "Bosch dishwasher via Home Connect".
+
 ### Overload levels raised: 5 kW per phase, 10 kW total
 
 Manoj checked with Deye: each phase of the 10 kW unit can take up to 5 kW as long as the
