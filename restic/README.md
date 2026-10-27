@@ -9,7 +9,7 @@ Set up 2026-10-14 to replace UrBackup, which was uninstalled the same day.
 | Box | Repository on the NAS | Nightly (IST) | What is in it |
 |---|---|---|---|
 | ubersdr (192.168.1.109) | `/volume1/Backups/restic/ubersdr` | 01:30 | whole root + `/boot/efi`; Wavelog DB dump |
-| macmini-server | `/volume1/Backups/restic/macmini-server` | 03:00 | whole root, `/boot`, `/boot/efi`, Immich library (`/mnt/immich`); ALPA-replica DB dump |
+| macmini-server | `/volume1/Backups/restic/macmini-server` | 03:30 | whole root, `/boot`, `/boot/efi`, Immich library (`/mnt/immich`); ALPA-replica DB dump |
 | Mac (maintenance only) | — | Sun 10:30 | `forget --prune` + a rotating `check` of every repository |
 | Mac → ubersdr HDD (second copy) | `/mnt/backups/restic/<host>` on `.109`'s 1 TB disk | 05:30 | `restic copy` of both repositories; Sundays also prune + check |
 | Mac → Google Drive (off-site copy) | `shack-restic/<host>` in Manoj's Google Drive (rclone remote `gdrive-restic`) | 06:30 | `restic copy` of both repositories; Sundays check, first Sunday of the month prune + 1/12 data check |
@@ -104,7 +104,7 @@ and GPG-verified against restic's release key `CF8F18F2844575973F79D4E191A6868BD
 1. **Database dumps.** It dumps each MariaDB container in `DB_DUMPS` to `/var/backups/restic-dumps/`,
    using the container's own `MARIADB_*` env. Live data directories are excluded.
    On macmini-server, Immich writes its own DB dump to `/mnt/immich/backups` at 07:30 IST (02:00 UTC),
-   so the 03:00 run carries a dump from about 19.5 h earlier. The script warns if the newest is more
+   so the 03:30 run carries a dump from about 19.5 h earlier. The script warns if the newest is more
    than 26 h old.
 2. **Backup.** `restic backup` of `BACKUP_PATHS` with `--one-file-system`, using `exclude-common.txt`
    plus `hosts/<host>.exclude`.
@@ -185,7 +185,7 @@ on 2026-10-15. Restore to a scratch target, never in place:
 ~/.local/bin/restic-copy macmini-server -- restore latest --target /tmp/restore --include /etc/fstab
 ```
 
-Immich writes its own DB dump at 02:00 UTC = **07:32 IST**, after the 03:00 restic run, so each night's
+Immich writes its own DB dump at 02:00 UTC = **07:32 IST**, after the 03:30 restic run, so each night's
 snapshot holds the previous morning's dump (about 20 h old). The ALPA dump is made just before the backup.
 
 **Snapshot IDs differ in the copy.** `restic copy` writes new snapshot IDs and records the source ID in the
