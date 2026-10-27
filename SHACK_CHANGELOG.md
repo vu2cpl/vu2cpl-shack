@@ -8,6 +8,18 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+
+## 2026-10-27
+
+### Power scripts moved to the private repo vu2cpl/power-management
+
+The house-supply code was spread over this public repo, a private records folder kept beside it, and the new
+mains-monitor project. Manoj asked for one repo for all of it. Moved with history (`git filter-repo`): the Deye
+inverter scripts (`solar_inverter_mqtt.py`, `solar_phases_mqtt.py` + service), the load monitor, the stabiliser
+watchdog, the grid-voltage and Solarman-history report scripts, and the grid-voltage / load-shedding doc sections.
+The Pis run standalone copies, so nothing deployed changed; `rebuild_pi.sh` now takes `solar_inverter_mqtt.py` from a
+`power-management` checkout beside this one and warns if it's missing. Dashboard tiles, Tasmota power control and
+the SPE power-on helper stay here.
 ## 2026-10-25
 
 ### HA: Bosch dishwasher via Home Connect, with its own dashboard

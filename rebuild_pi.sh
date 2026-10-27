@@ -1037,13 +1037,25 @@ stage_09_pi_scripts() {
     cd "$REPO_DIR"
 
     # User-space scripts
-    for f in as3935_mqtt.py as3935_tune.py rpi_agent.py monitor.sh power_spe_on.py solar_inverter_mqtt.py; do
+    for f in as3935_mqtt.py as3935_tune.py rpi_agent.py monitor.sh power_spe_on.py; do
         step "Deploy $f"
         sudo cp "$f" "/home/$ACTUAL_USER/$f"
         sudo chown "$ACTUAL_USER":"$ACTUAL_USER" "/home/$ACTUAL_USER/$f"
     done
-    sudo chmod +x "/home/$ACTUAL_USER/monitor.sh" "/home/$ACTUAL_USER/as3935_tune.py" \
-                  "/home/$ACTUAL_USER/solar_inverter_mqtt.py"
+    sudo chmod +x "/home/$ACTUAL_USER/monitor.sh" "/home/$ACTUAL_USER/as3935_tune.py"
+    # The Deye inverter scripts moved to the private repo vu2cpl/power-management on 2026-10-27.
+    # Deploy them from a checkout beside this one if present; otherwise scp them over by hand later
+    # (power-management/inverter/solar_inverter_mqtt.py → ~/ on the Pi). The cron line below is still
+    # installed; it does nothing until the file is there.
+    PM_INV="$REPO_DIR/../power-management/inverter"
+    if [ -f "$PM_INV/solar_inverter_mqtt.py" ]; then
+        step "Deploy solar_inverter_mqtt.py (from power-management)"
+        sudo cp "$PM_INV/solar_inverter_mqtt.py" "/home/$ACTUAL_USER/solar_inverter_mqtt.py"
+        sudo chown "$ACTUAL_USER":"$ACTUAL_USER" "/home/$ACTUAL_USER/solar_inverter_mqtt.py"
+        sudo chmod +x "/home/$ACTUAL_USER/solar_inverter_mqtt.py"
+    else
+        warn "solar_inverter_mqtt.py not found ($PM_INV) — it lives in vu2cpl/power-management now; scp it to ~/ by hand"
+    fi
     # solar_inverter_mqtt.py needs the Solarman V5 library (fork note: edit the
     # INVERTER_IP / LOGGER_SERIAL constants in the script for your own inverter,
     # or skip the cron line below if you have no Deye/Solarman inverter).

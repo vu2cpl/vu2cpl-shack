@@ -71,7 +71,7 @@ A full `restart` is only needed for listener/`conf.d` changes.
 | **Home Assistant** | `ha` | HA → Settings → Devices → MQTT integration → reconfigure |
 | **Node-RED** | `nodered` | The `mqtt-broker` config node's *Security* tab. Stored in the project's `flows_cred.json` (**encrypted** — see below). |
 | **`monitor.sh`** (rpi metrics) | `svc` | `MQTT_USER`/`MQTT_PASS` in `/etc/default/vu2cpl-shack` **or** the per-user `~/.config/vu2cpl-shack.env` (no-sudo fallback, `chmod 600`). `rebuild_pi.sh` writes the `/etc/default` one. |
-| **`solar_inverter_mqtt.py`** (Deye inverter → `shack/solar/inverter`) | `svc` | Same two credential files as `monitor.sh` (parsed, not sourced — it's Python). |
+| **`solar_inverter_mqtt.py`** (Deye inverter → `shack/solar/inverter`; source in the private `vu2cpl/power-management`) | `svc` | Same two credential files as `monitor.sh` (parsed, not sourced — it's Python). |
 | **`gpsntp-mqtt-publish.sh`** (chrony) | `svc` | `MQTT_USER`/`MQTT_PASS` env lines in `/etc/cron.d/gpsntp-mqtt` (runs as root). `install.sh` in `pi-gps-ntp-server` writes them. |
 | **ubersdr** | `svc` | ubersdr's own web UI |
 | **AetherSDR** | `display` | MQTT applet settings (host/user/pass + `aether/*` topics). Reads the humanized status tree only. See [`nodered/aether-display/`](nodered/aether-display/). |

@@ -434,8 +434,10 @@ sudo cp as3935_tune.py    /home/vu2cpl/as3935_tune.py
 sudo cp rpi_agent.py      /home/vu2cpl/rpi_agent.py
 sudo cp monitor.sh        /home/vu2cpl/monitor.sh
 sudo cp power_spe_on.py   /home/vu2cpl/power_spe_on.py
-sudo cp solar_inverter_mqtt.py /home/vu2cpl/solar_inverter_mqtt.py
-sudo cp stabiliser_watch.py /home/vu2cpl/stabiliser_watch.py
+# The Deye inverter scripts live in the private repo vu2cpl/power-management (since 2026-10-27),
+# under inverter/. With that repo checked out beside this one:
+sudo cp ../power-management/inverter/solar_inverter_mqtt.py /home/vu2cpl/solar_inverter_mqtt.py
+sudo cp ../power-management/inverter/stabiliser_watch.py /home/vu2cpl/stabiliser_watch.py
 # The 2026-05-07 quirk: sudo cp leaves files root-owned; reset:
 sudo chown vu2cpl:vu2cpl  /home/vu2cpl/as3935_mqtt.py \
                           /home/vu2cpl/as3935_tune.py \
@@ -825,10 +827,10 @@ If 15 fails but other cards are fine: not a noderedpi4 problem — it's gpsntp.l
 | `rpi_agent.py` | `/home/vu2cpl/rpi_agent.py` |
 | `rpi-agent.service` | `/etc/systemd/system/rpi-agent.service` |
 | `monitor.sh` | `/home/vu2cpl/monitor.sh` (+ user crontab `* * * * *`) |
-| `solar_inverter_mqtt.py` | `/home/vu2cpl/solar_inverter_mqtt.py` (+ user crontab `* * * * *`; needs `pip3 install --user pysolarmanv5`). Appends `~/grid_voltage.csv` — back that file up before wiping, it is the only copy |
-| `stabiliser_watch.py` | `/home/vu2cpl/stabiliser_watch.py` (+ user crontab `* * * * *` `--cron`). Telegram alert on supply outage / stabiliser dropout / stalled log. Needs `~/.config/vu2cpl-shack.env` (hand-written, mode 600 — **not in the repo, not created by `rebuild_pi.sh`**) or a running Node-RED for its credential lookup |
-| `grid_voltage_report.py` | run in-place from the repo (no install) |
-| `deye_history_report.py` | run in-place from the repo (no install; Mac-side analysis of Solarman cloud exports) |
+| `solar_inverter_mqtt.py` (in `vu2cpl/power-management`) | `/home/vu2cpl/solar_inverter_mqtt.py` (+ user crontab `* * * * *`; needs `pip3 install --user pysolarmanv5`). Appends `~/grid_voltage.csv` — back that file up before wiping, it is the only copy |
+| `stabiliser_watch.py` (in `vu2cpl/power-management`) | `/home/vu2cpl/stabiliser_watch.py` (+ user crontab `* * * * *` `--cron`). Telegram alert on supply outage / stabiliser dropout / stalled log. Needs `~/.config/vu2cpl-shack.env` (hand-written, mode 600 — **not in the repo, not created by `rebuild_pi.sh`**) or a running Node-RED for its credential lookup |
+| `grid_voltage_report.py` (in `vu2cpl/power-management`) | run in place from that repo (no install) |
+| `deye_history_report.py` (in `vu2cpl/power-management`) | run in place from that repo (no install; Mac-side analysis of Solarman cloud exports) |
 | `flows_guard.py` | run in-place from the repo (user crontab `* * * * *` `--cron` + `.git/hooks/pre-commit`) |
 | `flows_guard_middleware.js` | required in-place from the repo by `httpAdminMiddleware` in `~/.node-red/settings.js` (Stage 5) |
 | `power_spe_on.py` | `/home/vu2cpl/power_spe_on.py` |

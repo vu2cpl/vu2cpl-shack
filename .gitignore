@@ -37,7 +37,7 @@ ha_automations*.json
 automations-*.json
 
 # Runtime grid-voltage log (append-only, one row per minute from
-# solar_inverter_mqtt.py). Lives in ~/ on the Pi, not here — this entry
+# solar_inverter_mqtt.py, now in vu2cpl/power-management). Lives in ~/ on the Pi, not here — this entry
 # just stops a stray copy being committed. It is evidence data, not source.
 grid_voltage.csv
 

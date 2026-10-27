@@ -211,167 +211,23 @@ tiles — **Grid** (ON/OFF plus the three input phase voltages) and
 — read directly from the Deye hybrid inverter's Solarman logger by
 `solar_inverter_mqtt.py` (1-min cron → retained
 `shack/solar/inverter`, and since 2026-08-25 an append-only
-`~/grid_voltage.csv` — see *Grid voltage log* below) — and a **house-loads row** showing the four
+`~/grid_voltage.csv` — see *Grid voltage log* below; both scripts live in the private
+`vu2cpl/power-management` repo since 2026-10-27) — and a **house-loads row** showing the four
 house Tasmota circuits (FF Load, GF Load, Dryer Kit, Utility): relay
 ON/OFF, live watts, and today's kWh. Each house tile is also the
 switch — click, confirm, and it toggles the relay via
 `POST /power/house-toggle`. The relays belong to Home Assistant's
 load-shedding automations (battery-SOC; the grid-loss overload shedding
 of Utility and Dryer Kitchen added 2026-10-19 is all off since 2026-10-25,
-see the shack CLAUDE.md "Grid-loss load shedding"), which may override a manual
+see `docs/load-shedding.md` in `vu2cpl/power-management`), which may override a manual
 toggle on their next threshold rule.
 
-#### Grid voltage log
+#### Grid voltage log, stabiliser watchdog, supply-interruption history
 
-`solar_inverter_mqtt.py` also appends every reading to
-`~/grid_voltage.csv` (`ts_iso, ts_epoch, status, l1_v, l2_v, l3_v,
-grid_on, batt_soc, batt_p_w`). Nothing else in the shack stores a
-voltage time series — the MQTT message is retained, i.e. last value
-only — so this file is the sole record, and it is not regenerable.
-Added 2026-08-25 to evidence nightly over-voltage to the supply
-utility. Failed reads are logged as `status=read_fail` rather than
-left as a bare gap, so "the logger was busy" stays distinguishable
-from "the site lost power".
-
-[`grid_voltage_report.py`](grid_voltage_report.py) renders it into a
-Markdown report plus an SVG chart — daily per-phase min/mean/max, a
-night-window section, over-voltage episodes, and supply interruptions.
-The chart uses a fixed 200–300 V scale with the night window shaded
-and supply interruptions drawn as red "BESCOM off" bands (the phase
-traces break across them rather than plunging to the inverter's 0 V
-reading). Pure stdlib, runs on the Mac or the Pi:
-
-```bash
-python3 grid_voltage_report.py --csv ~/grid_voltage.csv --out report.md --svg chart.svg
-```
-
-Two caveats the report states on its own front page, because both
-change what the numbers prove: the inverter's grid input is
-**downstream of the servo stabiliser** (so readings are true incoming
-mains only while the stabiliser is in bypass), and a hybrid inverter
-exporting PV lifts the voltage at its own terminals (so daytime
-figures are arguable, while the night window has neither PV nor
-export).
-
-#### Stabiliser watchdog
-
-> **Currently disabled** (2026-08-30, operator request). The cron entry
-> was removed once the overnight experiment concluded; the script,
-> its state file and the env-file credentials are all still in place.
-> Re-enable with one line:
-> `* * * * * /usr/bin/python3 /home/vu2cpl/stabiliser_watch.py --cron`
->
-> It ran correctly for its ~34 hours: 7 outage alerts + 7 recoveries,
-> all real, no false positives.
-
-[`stabiliser_watch.py`](stabiliser_watch.py) tails the same CSV once a
-minute from cron and pushes a Telegram alert when the supply state
-changes. It exists because the question the log is answering — do the
-nightly outages resume now the stabiliser is back in circuit? — comes
-due while the operator is asleep. Three conditions are separated,
-because they implicate different things:
-
-| State | Meaning | Signature |
-|-------|---------|-----------|
-| 🔴 `outage` | Grid absent — the nightly-cut pattern under test | `grid_on=0` or logger unreachable, 2+ samples |
-| 🟠 `dropout` | Stabiliser no longer in circuit (tripped to bypass or switched out) | vmax above 245 V for 5+ consecutive samples |
-| ⚪ `stale` | CSV stopped growing — the watchdog is blind | no new row for 6 min |
-
-A ✅ recovery alert follows when it returns to regulating. State lives
-in `~/.stabiliser_watch.state` so each transition alerts once rather
-than every minute.
-
-**Why voltage and not phase spread.** Spread looks like the obvious
-discriminator and is not: across the bypass window it ranged 0.6–22 V
-and overlapped the regulated range completely. Absolute voltage
-separates them better — regulated output sits near 230 V while raw
-mains ran 250–264 V — so the threshold keys on vmax.
-
-**Why the confirmation count does the real work.** The first hour of
-regulated output peaked at **242.2 V**, leaving only 3.9 V of margin
-under the 245 V threshold across a 3-sample run — too thin to stake a
-3 a.m. alert on. Measured against the real data, requiring **5**
-consecutive samples lifts the worst sustained regulated reading to
-238.0 V (+7.0 V margin) while costing almost no detection: night
-coverage over the bypass window falls 96.7% → 95.5%, because genuine
-dropouts lasted many minutes. Raising the *threshold* instead would
-have been far more expensive — 250 V drops night coverage to 75.9%.
-
-**Settled 2026-08-30.** Across the full regulated era (1966 live
-samples, including a night with no PV export) vmax peaked at **242.7 V**
-and nothing crossed 245 V, so no false 🟠 fired — and none would have
-at the old 3-sample setting either. The retune was precautionary
-rather than necessary, but the ceiling is now measured rather than
-guessed: **regulated output tops out around 243 V**. Re-measure both
-constants only if the stabiliser is reconfigured to regulate higher.
-
-**Credentials.** Token and chat-id resolve in three steps: the process
-environment, then the shack env files (`/etc/default/vu2cpl-shack`,
-then `~/.config/vu2cpl-shack.env`, which wins — the same precedence
-`monitor.sh` uses), then the running Node-RED process as a fallback.
-The env-file step was added 2026-08-29 on the operator's instruction:
-before it, alerting depended on Node-RED being alive, so the watchdog
-went silent exactly when the shack was least healthy. `flows_guard.py`
-got the same treatment in the same pass.
-
-The cost is a bot token at rest in a mode-600 file inside a 700 home
-directory. **Neither env file is in the repo, and this repo is public
-— keep it that way.** The env file is created by hand on a rebuild;
-see REBUILD_PI.md.
-
-```bash
-python3 stabiliser_watch.py --status   # current state, no alert
-python3 stabiliser_watch.py --test     # verify the Telegram path
-```
-
-**The bypass window is closed.** The stabiliser was in bypass from
-**2026-08-25 13:11 IST** (when logging began) to **2026-08-29 10:09
-IST**, when the operator brought it back online. Only that slice of
-`grid_voltage.csv` is true incoming mains; every row from 10:10 on
-2026-08-29 onward is the stabiliser's regulated output (~232 V,
-all three phases within ~1 V of each other — the tight convergence is
-how you spot the boundary in the raw file, which carries no
-stabiliser-state column). Pass `--bypass` to label the window in the
-report, and filter the CSV to it before quoting any over-voltage
-figure to the utility.
-
-**What the sealed window showed, and what the follow-up experiment
-did.** Across 25–29 Aug on true mains: 24.5% of samples above 253 V,
-peak 264.2 V, nothing near the 270 V stabiliser trip, and eight
-interruptions **none of which fell overnight** — against a Solarman
-cloud export that put 89% of 49 interruptions between 22:00 and 06:00
-in the preceding month. That made the stabiliser look like the thing
-tripping. Putting it back in circuit on 29 Aug was the test, and the
-night of 29→30 Aug ran **480/480 samples with zero interruptions** —
-the pattern did not resume. Restoring the suspected cause did not
-restore the effect, so **the nightly-trip hypothesis is substantially
-weakened**; the cuts appear to have stopped around 25 Aug for reasons
-outside the shack. The claims that still hold are chronic over-voltage
-and frequent interruptions *by day* (six across 29–30 Aug), and those
-are what a utility case should rest on.
-
-#### Historic supply interruptions
-
-For the period *before* local logging began, the only record is what the
-inverter had already uploaded to the manufacturer's cloud.
-[`deye_history_report.py`](deye_history_report.py) parses Solarman's
-"PlantsDetails-History" `.xlsx` exports (5-minute telemetry, one file
-per day) into a supply-interruption report, a day-by-day timeline SVG,
-and a CSV:
-
-```bash
-python3 deye_history_report.py --dir "~/Downloads/deye data" \
-    --out outages.md --svg outages.svg --csv outages.csv
-```
-
-That export carries **no voltage channel**, so it evidences outages
-rather than over-voltage. An interruption is only counted where grid
-power is zero *and* the battery is discharging to carry the house (or
-there is no solar to do so) — a full battery with PV covering the load
-also draws nothing from the grid and would otherwise be miscounted. The
-battery's state of charge falling is independent confirmation that
-supply was genuinely absent, which is the first thing a utility will
-question.
+Moved on 2026-10-27 to [`vu2cpl/power-management`](https://github.com/vu2cpl/power-management) (private), with the scripts: the 1-min `~/grid_voltage.csv` log written by
+`solar_inverter_mqtt.py`, `grid_voltage_report.py`, the stabiliser watchdog `stabiliser_watch.py`, the sealed
+August bypass window, and `deye_history_report.py` for the Solarman cloud history. See its `docs/grid-voltage.md`.
+The Pi still runs its own copies in `~/`; the dashboard tiles above stay here.
 
 ### Solar Conditions
 
@@ -492,15 +348,7 @@ comes from VU2PTT's Skimmer Calibration tracker.
 ├── rpi_agent.py                     HTTP reboot/shutdown agent (→ rpi-agent.service)
 ├── rpi-agent.service                systemd unit for rpi_agent
 ├── monitor.sh                       MQTT telemetry cron (every minute)
-├── solar_inverter_mqtt.py           Deye inverter → retained shack/solar/inverter + ~/grid_voltage.csv (1-min cron)
-├── solar_phases_mqtt.py             Deye per-phase load → retained shack/solar/phases every 5 s (daemon, feeds the Vue Phase-loads tile)
-├── solar-phases.service             systemd unit for it on noderedpi4
-├── grid_voltage_report.py           grid_voltage.csv → Markdown + SVG evidence report (pure stdlib)
-├── stabiliser_watch.py              Stabiliser trip / outage / dropout → Telegram (1-min cron, pure stdlib)
-├── deye_history_report.py           Solarman xlsx cloud exports → supply-interruption report + timeline (pure stdlib)
-├── load_monitor.py                  live R/Y/B per-phase inverter load page on :8765, from HA (pure stdlib) — runs on meridianpi5
-├── load_monitor.service             systemd unit for it on a Pi (deployed on meridianpi5, http://192.168.1.164:8765/)
-├── load_monitor.plist               launchd user agent, the Mac alternative (not installed since 2026-10-19 14:35)
+├── (moved 2026-10-27)              Deye inverter / grid-voltage / load-monitor scripts → vu2cpl/power-management (private)
 ├── monitor_redpitaya.sh             Fleet telemetry variant for the Red Pitaya (Alpine/BusyBox, Zynq XADC temp)
 ├── flows_guard.py                   Stale-tab wipe tripwire (git pre-commit hook + 1-min cron w/ Telegram alert)
 ├── flows_guard_middleware.js        Server-side deploy rejection (httpAdminMiddleware in settings.js)
