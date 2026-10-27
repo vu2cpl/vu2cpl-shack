@@ -126,11 +126,11 @@ Updated:
   `~/.platformio/penv` (plus its ESP-IDF 5.5.5 env), `~/.pio-venv313`, the AetherSDR aqt venv, Homebrew
   python3.9 and osxphotos' venv. The two PlatformIO venvs pointed at the deleted Cellar
   python 3.13.15. They are now relinked to `/opt/homebrew/opt/python@3.13`, so a brew upgrade doesn't break them again.
-- **Still open:** the system `/etc/ssl/cert.pem`, which macOS curl and `/usr/bin/python3` use, needs Manoj's
-  sudo. The awk one-liner is on emudhra.we-have-a-problem.com. The Keychain is already covered by
-  Apple's 22 Oct block.
-- **Rust:** dxca `webpki-roots` 1.0.10 is merged (dxca#12), but it isn't in a release yet. meridian#116 waits
-  for Basil. rbn-client#11 is open.
+- **Mac system bundle, done by Manoj:** `/etc/ssl/cert.pem` was edited with the awk one-liner from
+  emudhra.we-have-a-problem.com. Both roots are gone (checked 2026-10-27). The Keychain is covered
+  by Apple's 22 Oct block.
+- **Rust:** dxca `webpki-roots` 1.0.10 is merged (dxca#12), but it isn't in a release yet. meridian#116 was merged
+  by Basil on 2026-10-25. rbn-client#11 is still open.
 
 ### rbnclient uninstalled from the Pi 5
 
