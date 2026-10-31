@@ -9,6 +9,20 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 ---
 
 
+## 2026-10-31
+
+### spe-remote refuses cross-origin WebSocket connections
+
+Until today, any web page open in a browser on the LAN could open `ws://192.168.1.169:8888/ws` and send
+`power_on`, `oper` or `tune` to the SPE amplifier. Vinod VU3ESV's spe-remote PR #5 removes the `check_origin`
+override, so a browser upgrade whose `Origin` differs from the server's own address now gets 403. Merged and
+deployed on noderedpi4 at 08:49 IST, with the amp in standby. Node-RED's `SPE (WS)` tab is unaffected: its
+`websocket-client` connects from the Pi and sends no Origin, and it reconnected within 2 s. So are MacExpert and
+spe-remote's own page on `:8888`. Probed live from the Mac: no Origin → 101, same origin → 101,
+`https://evil.example` → 403, `http://192.168.1.169:1880` → 403. Any future browser page that wants the amp
+directly must go through Node-RED, not open `:8888` itself. The optional Caddy TLS + login guide from the same
+batch (spe-remote PR #6) is not applied here; spe-remote still listens on `0.0.0.0:8888`.
+
 ## 2026-10-27
 
 ### Power scripts moved to the private repo vu2cpl/power-management
