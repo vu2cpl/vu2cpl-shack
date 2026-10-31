@@ -23,6 +23,10 @@ spe-remote's own page on `:8888`. Probed live from the Mac: no Origin → 101, s
 directly must go through Node-RED, not open `:8888` itself. The optional Caddy TLS + login guide from the same
 batch (spe-remote PR #6) is not applied here; spe-remote still listens on `0.0.0.0:8888`.
 
+Released as **spe-remote v3.0.2** the same morning. The Pi was moved to the tag at 09:05 IST, again with the amp
+confirmed in standby first. The log says `spe-remote 3.0.2`, and `/api/update` reports `current 3.0.2`, no update.
+MacExpert v2.0.12, which adds the radio picker, was released the same day.
+
 ## 2026-10-27
 
 ### Power scripts moved to the private repo vu2cpl/power-management
