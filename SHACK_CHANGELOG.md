@@ -11,6 +11,20 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-11-07
 
+### WAN Data in Home Assistant (Radio dashboard, Fleet view)
+
+Manoj: "yes add to 193 dashboard". `ha_discovery_publish.py` gains a **WAN Data** device with 16 entities read
+straight from the retained `shack/wan/wan1` / `wan2`: per WAN `sensor.wan_data_wanN_used` (%, the whole payload
+as attributes), `_used_gb`, `_download`, `_upload`, `_today`, `_projected` (GB, `data_size`), `_days_left` and
+`_keep_under` (GB/day). Each has `expire_after` 2 h, so they go unavailable when `wan-usage` on the Mac stops,
+matching the Node-RED stale rule. All 129 configs were republished; the new entities came up with live values
+(WAN1 129.2 %, WAN2 29.1 %). The `193-radio` dashboard's **Fleet** view gets a "WAN Data" section after Network:
+two gauges (green 0 / yellow 70 / red 90 %), a markdown summary per WAN (used/cap, down/up, today, average,
+cycle, days left, projection, over-by or keep-under), and a 30-day history of % used. The markdown template was
+rendered on HA's `/api/template` with the live data before saving; the save read back fine, and HA's log has no
+new errors. The page itself was not viewed (HA login). Backup:
+`~/Documents/Tech/vu2cpl-ha-backups/dashboard-193-radio-pre-wan-20261107.json`.
+
 ### WAN Data tile on /ui and /shack (v53)
 
 Manoj asked for a WAN usage tile on both dashboards (`33628a0`). Both WANs are capped by their ISPs:

@@ -1,7 +1,7 @@
 """Publish MQTT-discovery configs for the shack sensors via HA's mqtt.publish service.
 
 Creates HA entities for: AS3935 lightning sensor, GPS NTP chrony, RPi fleet
-telemetry, UberSDR sessions. All configs are retained on homeassistant/# so
+telemetry, UberSDR sessions, … and WAN data usage (shack/wan/wan1, wan2). All configs are retained on homeassistant/# so
 they survive broker/HA restarts. Idempotent — re-running overwrites in place.
 """
 import json, os, sys, urllib.request
@@ -347,6 +347,32 @@ binary('mains_supply', 'Raw supply', DEV_MAINS, MT,
        tpl="{{ 'ON' if value_json.supply == 'ok' else 'OFF' }}", icon='mdi:transmission-tower',
        expire=120)
 configs[-1][1]['device_class'] = 'power'
+
+# ---------- WAN data usage vs the ISP caps ----------
+# Retained shack/wan/wan1 + wan2, published hourly by wan-usage on the Mac (private
+# vu2cpl/vlan-setup, scripts/wan-usage/) from the UDM's daily WAN totals. WAN1 3 TB per
+# cycle 11th → 10th, WAN2 1 TB per cycle 26th → 25th, download + upload, decimal GB.
+# expire_after 2 h = two missed hourly runs → unavailable (the dashboards' "stale" rule).
+# The pct sensor carries the whole payload as attributes (cycle dates, limit, etc.).
+# Added 2026-11-07.
+DEV_WAN = {'identifiers': ['shack_wan'], 'name': 'WAN Data',
+           'manufacturer': 'VU2CPL shack', 'model': 'UDM daily WAN totals (wan-usage)'}
+for n in (1, 2):
+    WT = f'shack/wan/wan{n}'
+    sensor(f'wan{n}_used_pct', f'WAN{n} used', DEV_WAN, WT, tpl='{{ value_json.pct }}', unit='%',
+           state_class='measurement', icon='mdi:gauge', expire=7200, attrs_topic=WT)
+    for key, label, icon in (('used_gb', 'used GB', 'mdi:database'),
+                             ('down_gb', 'download', 'mdi:download'),
+                             ('up_gb', 'upload', 'mdi:upload'),
+                             ('today_gb', 'today', 'mdi:calendar-today'),
+                             ('projected_gb', 'projected', 'mdi:chart-line')):
+        sensor(f'wan{n}_{key}', f'WAN{n} {label}', DEV_WAN, WT, tpl=f'{{{{ value_json.{key} }}}}',
+               unit='GB', dev_class='data_size', state_class='measurement', icon=icon, expire=7200)
+    sensor(f'wan{n}_days_left', f'WAN{n} days left', DEV_WAN, WT, tpl='{{ value_json.days_left }}',
+           unit='d', dev_class='duration', state_class='measurement', expire=7200)
+    sensor(f'wan{n}_budget_gb_day', f'WAN{n} keep under', DEV_WAN, WT,
+           tpl='{{ value_json.budget_gb_day }}', unit='GB/d', state_class='measurement',
+           icon='mdi:speedometer-slow', expire=7200)
 
 if __name__ == '__main__':
     if '--dry' in sys.argv:

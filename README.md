@@ -333,7 +333,8 @@ totals hourly, sends Telegram alerts through HA at 70/90/100 % and on a projecte
 overrun, and publishes retained `shack/wan/wan1` and `shack/wan/wan2`. The
 *Internet and network monitor* flow tab turns those into a **WAN Data** group on
 `/ui` (Shack Monitoring tools tab, next to Network Monitor) and a **WAN Data**
-card on `/shack` (v53). Each WAN gets a usage bar (amber from 70 %, red from 90 %),
+card on `/shack` (v53). Home Assistant has the same data as 16 "WAN Data" entities, shown
+in the Radio dashboard's **Fleet** view (gauges, a summary per WAN, 30-day history). Each WAN gets a usage bar (amber from 70 %, red from 90 %),
 down/up, today, daily average, days left, the projected total, and the GB/day that
 keeps it under the cap (or how far over it is). Both show *stale* after 2 h
 without an update. Added 2026-11-07.
