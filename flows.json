@@ -5624,7 +5624,7 @@
         "type": "function",
         "z": "b05f8c028b368ae9",
         "name": "Build WAN state for Vue",
-        "func": "// Same state object the /ui panel gets, tagged for the Vue app's onTopic('wanusage') handler.\nreturn { topic: 'wanusage', payload: msg.payload };\n",
+        "func": "// Same state object the /ui panel gets, tagged for the Vue app's onTopic('wanusage') handler.\n// wan-usage publishes only hourly, so a 10 s tick (wan_vue_tick) re-sends the last state from\n// flow context; without it a /shack page opened between publishes showed \"Waiting\" for up to\n// an hour (fixed 2026-11-07, same pattern as the DXCA feed).\nconst s = msg.topic === 'tick' ? flow.get('wan_state') : msg.payload;\nif (!s || !s.wans || !Object.keys(s.wans).length) return null;\nreturn { topic: 'wanusage', payload: s };",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -12214,5 +12214,29 @@
         "x": 625,
         "y": 100,
         "wires": []
+    },
+    {
+        "id": "wan_vue_tick",
+        "type": "inject",
+        "z": "b05f8c028b368ae9",
+        "name": "every 10 s \u2192 Vue",
+        "props": [
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "10",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "5",
+        "topic": "tick",
+        "x": 420,
+        "y": 1140,
+        "wires": [
+            [
+                "wan_vue_bridge"
+            ]
+        ]
     }
 ]
