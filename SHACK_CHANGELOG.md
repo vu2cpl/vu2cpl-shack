@@ -112,6 +112,14 @@ the hard-coded `/4`, alerts with DXCC name, level and age. Backup:
 `~/Documents/Tech/vu2cpl-ha-backups/radio-dashboard-2026-11-07-pre-dxca.json`.
 Verified live: 320 entities, 4357 slots (4108 confirmed), 6/8 clusters.
 
+### Mains monitor CTs in: current, kW, kWh and PF live (2026-11-07 evening)
+
+The meter's CTs (Yokins RT-30 100/5) are fitted and its CT primary is set to 100. The nine HA entities that were
+created disabled (`sensor.mains_monitor_current_r/y/b`, `_power_r/y/b`, `_power_total`, `_energy`, `_power_factor`)
+are enabled in HA's entity registry, and `ha_discovery_publish.py` no longer creates them disabled. The meter reads
+2.0 kW against the inverter's 1.97 kW grid draw. Open (HANDOVER #56): meter R and Y look swapped against the
+inverter's L1 and L2, so two of the dials pair the wrong phases for now.
+
 ### Mains V: raw incomer voltage against stabilised voltage, on Vue, D1 and HA
 
 The mains-monitor (ESP32 + Selec MFM384 at the incomer, before the servo stabiliser; code in the private

@@ -308,8 +308,8 @@ sensor('rbn_vu24dx_h1', 'VU24DX-1 spots (1h)', DEV_RBN, BT,
 # ---------- Mains monitor (raw mains at the incomer, before the servo stabiliser) ----------
 # ESP32 + Selec MFM384 in the private vu2cpl/power-management repo (mains-monitor/), added
 # 2026-11-07. The stabilised side is the inverter's grid input (sensor.inverter_grid_l1..l3_voltage).
-# Current / power / energy read 0 until the CTs are fitted, so those entities are created
-# disabled: enable them in HA (device page) once the CTs are in.
+# Current / power / energy: CTs (Yokins RT-30 100/5) fitted 2026-11-07 and the entities enabled in
+# HA's registry the same day (they were created disabled while I/kW read 0).
 DEV_MAINS = {'identifiers': ['shack_mains_monitor'], 'name': 'Mains Monitor',
              'manufacturer': 'VU2CPL shack', 'model': 'ESP32 + Selec MFM384 (incomer)'}
 MT = 'shack/mains-monitor/state'
@@ -322,10 +322,10 @@ for i, ph in enumerate('RYB'):
            state_class='measurement', expire=120)
     sensor(f'mains_i_{ph.lower()}', f'Current {ph}', DEV_MAINS, MT,
            tpl=f'{{{{ value_json.i[{i}] }}}}', unit='A', dev_class='current',
-           state_class='measurement', expire=120, enabled=False)
+           state_class='measurement', expire=120)
     sensor(f'mains_kw_{ph.lower()}', f'Power {ph}', DEV_MAINS, MT,
            tpl=f'{{{{ value_json.kw[{i}] }}}}', unit='kW', dev_class='power',
-           state_class='measurement', expire=120, enabled=False)
+           state_class='measurement', expire=120)
 sensor('mains_hz', 'Frequency', DEV_MAINS, MT, tpl='{{ value_json.hz }}', unit='Hz',
        dev_class='frequency', state_class='measurement', expire=120)
 sensor('mains_overvoltage', 'Over-voltage', DEV_MAINS, MT,
@@ -334,11 +334,11 @@ sensor('mains_overvoltage', 'Over-voltage', DEV_MAINS, MT,
        icon='mdi:flash-triangle', expire=120, attrs_topic=MT,
        attrs_tpl="{{ {'R': value_json.ov[0], 'Y': value_json.ov[1], 'B': value_json.ov[2]} | tojson }}")
 sensor('mains_kw_total', 'Power total', DEV_MAINS, MT, tpl='{{ value_json.kw_total }}',
-       unit='kW', dev_class='power', state_class='measurement', expire=120, enabled=False)
+       unit='kW', dev_class='power', state_class='measurement', expire=120)
 sensor('mains_kwh', 'Energy', DEV_MAINS, MT, tpl='{{ value_json.kwh }}', unit='kWh',
-       dev_class='energy', state_class='total_increasing', enabled=False)
+       dev_class='energy', state_class='total_increasing')
 sensor('mains_pf', 'Power factor', DEV_MAINS, MT, tpl='{{ value_json.pf_total }}',
-       dev_class='power_factor', state_class='measurement', expire=120, enabled=False)
+       dev_class='power_factor', state_class='measurement', expire=120)
 sensor('mains_meter', 'Meter link', DEV_MAINS, 'shack/mains-monitor/status',
        tpl=("{% if value_json.event == 'heartbeat' %}{{ value_json.meter }}"
             "{% else %}{{ value_json.event }}{% endif %}"),

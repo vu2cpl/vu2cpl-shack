@@ -208,8 +208,8 @@ within 207–253 V and amber or red outside. A thin light needle and a small "ra
 **raw** mains at the incomer, before the servo stabiliser (`shack/mains-monitor/state`, the ESP32 +
 Selec MFM384 in [`vu2cpl/power-management`](https://github.com/vu2cpl/power-management), 10 s).
 Bands: green 207–253 V, amber 253–265 V, red above 265 V (inverter trip; the servo cuts out at 270 V).
-Below the dials is a 10-minute sparkline, zoomed to the data: stabilised bold, raw faint. Each dial will also show
-per-phase kW once the meter's CTs are fitted. While the dials are present, the Grid tile shows only ON/OFF.
+Below the dials is a 10-minute sparkline, zoomed to the data: stabilised bold, raw faint. Each Vue dial also shows
+per-phase kW from the meter's CTs (fitted 2026-11-07). While the dials are present, the Grid tile shows only ON/OFF.
 
 Below the 16 A voltage/current/power/today line, both dashboards carry
 a **Phase loads** graph tile (added 2026-10-19): inverter L1 / L2 / L3 = R / Y / B
