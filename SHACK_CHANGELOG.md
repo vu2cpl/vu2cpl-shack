@@ -117,8 +117,8 @@ Verified live: 320 entities, 4357 slots (4108 confirmed), 6/8 clusters.
 The meter's CTs (Yokins RT-30 100/5) are fitted and its CT primary is set to 100. The nine HA entities that were
 created disabled (`sensor.mains_monitor_current_r/y/b`, `_power_r/y/b`, `_power_total`, `_energy`, `_power_factor`)
 are enabled in HA's entity registry, and `ha_discovery_publish.py` no longer creates them disabled. The meter reads
-2.0 kW against the inverter's 1.97 kW grid draw. Open (HANDOVER #56): meter R and Y look swapped against the
-inverter's L1 and L2, so two of the dials pair the wrong phases for now.
+2.0 kW against the inverter's 1.97 kW grid draw. Meter R and Y first read swapped against the
+inverter's L1 and L2; Manoj found a wiring swap and fixed it the same evening, and all three phases now match.
 
 ### Mains V: raw incomer voltage against stabilised voltage, on Vue, D1 and HA
 
