@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, watch, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v50 · 2026-11-07 Power: Mains V dials highlight the stabilised needle and number';
+window.__shackBuild = 'v51 · 2026-11-07 Power: Mains V compact swatch legend';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -2238,7 +2238,13 @@ const PowerCard = {
               <polyline v-for="(pts, k) in mainsSpark.stab" :key="'s' + k" :points="pts" fill="none"
                         :stroke="PH_COLORS[k]" stroke-width="2" vector-effect="non-scaling-stroke"/>
             </svg>
-            <div class="phase-foot">big number &amp; bold needle: stabilised (inverter in) · small &amp; thin: raw (incomer) · 10-min trend, bold stabilised, faint raw</div>
+            <div class="mains-legend">
+              <span>10 min</span>
+              <span><i class="mains-lg"></i>stabilised</span>
+              <span><i class="mains-lg mains-lg--raw"></i>raw</span>
+              <span><i class="mains-lg mains-lg--warn"></i>255 V</span>
+              <span><i class="mains-lg mains-lg--trip"></i>265 V trip</span>
+            </div>
           </div>
         </div>
 

@@ -1169,6 +1169,12 @@ html, body {
 .mains-num { font-size: 15px; font-weight: 700; text-anchor: middle; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .mains-raw { font-size: 8px; text-anchor: middle; fill: var(--text-dim); font-family: var(--font-mono); }
 .mains-spark { height: 50px; }
+.mains-legend { display: flex; justify-content: center; flex-wrap: wrap; gap: 4px 14px; margin-top: 4px; font-size: var(--fs-xs); color: var(--text-dim); }
+.mains-legend span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.mains-lg { display: inline-block; width: 16px; border-top: 2px solid var(--text); }
+.mains-lg--raw { border-top-width: 1px; opacity: 0.5; }
+.mains-lg--warn { border-top: 1px dashed var(--amber); }
+.mains-lg--trip { border-top: 1px solid var(--red); }
 .energy-tile {
   text-align: center;
   background: var(--bg);
