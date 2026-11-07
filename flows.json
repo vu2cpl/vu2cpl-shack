@@ -673,7 +673,8 @@
             "vue_lo_spe_ws_t",
             "vue_lo_4590ed80",
             "vue_lo_ubersdr_",
-            "vue_lo_dxca"
+            "vue_lo_dxca",
+            "vue_lo_wan"
         ],
         "x": 100,
         "y": 100,
@@ -5553,6 +5554,102 @@
         ],
         "x": 705,
         "y": 1000,
+        "wires": []
+    },
+    {
+        "id": "wan_mqtt_in",
+        "type": "mqtt in",
+        "z": "b05f8c028b368ae9",
+        "name": "shack/wan/+ (wan-usage)",
+        "topic": "shack/wan/+",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "f4785be9863eab08",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 190,
+        "y": 1080,
+        "wires": [
+            [
+                "wan_agg"
+            ]
+        ]
+    },
+    {
+        "id": "wan_agg",
+        "type": "function",
+        "z": "b05f8c028b368ae9",
+        "name": "Aggregate WAN usage",
+        "func": "// Aggregate the retained shack/wan/wan1 + shack/wan/wan2 topics, published hourly by wan-usage\n// on the Mac (vu2cpl/vlan-setup scripts/wan-usage): per WAN used/limit/pct, down/up, cycle,\n// today, average and projection, decimal GB. Staleness is judged by the renderers from w.ts,\n// because a dead publisher sends nothing that would re-run this node.\nconst key = String(msg.topic || '').split('/').pop();\nconst p = (msg.payload && typeof msg.payload === 'object') ? msg.payload : null;\nconst s = flow.get('wan_state') || { wans: {} };\nif (p && (key === 'wan1' || key === 'wan2')) s.wans[key] = p;\nelse return null;   // the cleared first-version topic shack/wan/usage, or junk\nflow.set('wan_state', s);\nreturn { payload: s };\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 450,
+        "y": 1080,
+        "wires": [
+            [
+                "wan_panel",
+                "wan_vue_bridge"
+            ]
+        ]
+    },
+    {
+        "id": "wan_panel",
+        "type": "ui_template",
+        "z": "b05f8c028b368ae9",
+        "group": "wan_grp",
+        "name": "WAN Data Panel",
+        "order": 1,
+        "width": 8,
+        "height": 0,
+        "format": "<style>\n.wanu{--bg:#0d1117;--card:#161b22;--bd:#30363d;--tx:#c9d1d9;--mu:#8b949e;--gn:#3fb950;--am:#e3b341;--rd:#f85149;\n background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:12px 14px;color:var(--tx);font-family:var(--gh-font,-apple-system,sans-serif);}\n.wanu .hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}\n.wanu .ti{font-size:14px;font-weight:700;}\n.wanu .ti small{color:var(--mu);font-weight:500;}\n.wanu .live{font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;}\n.wanu .on{color:var(--gn);background:rgba(63,185,80,.12);border:1px solid rgba(63,185,80,.35);}\n.wanu .warn{color:var(--am);background:rgba(227,179,65,.12);border:1px solid rgba(227,179,65,.35);}\n.wanu .bad{color:var(--rd);background:rgba(248,81,73,.12);border:1px solid rgba(248,81,73,.35);}\n.wanu .off{color:var(--mu);background:rgba(139,148,158,.1);border:1px solid var(--bd);}\n.wanu .w{background:var(--card);border:1px solid var(--bd);border-radius:7px;padding:8px 10px;margin-bottom:7px;}\n.wanu .r1{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;}\n.wanu .nm{font-size:13px;font-weight:700;}\n.wanu .pc{font-size:20px;font-weight:700;line-height:1;}\n.wanu .bar{height:8px;background:#21262d;border-radius:4px;overflow:hidden;margin-bottom:5px;}\n.wanu .bar i{display:block;height:100%;}\n.wanu .ln{font-size:11px;color:var(--mu);line-height:1.5;}\n.wanu .ln b{color:var(--tx);font-weight:600;}\n.wanu .ft{font-size:9.5px;color:var(--mu);margin-top:4px;text-align:right;}\n</style>\n<div class=\"wanu\">\n  <div class=\"hd\"><span class=\"ti\">\ud83c\udf10 WAN Data <small>\u2014 usage vs ISP cap</small></span><span class=\"live off\" id=\"wanu-live\">\u25cb no data</span></div>\n  <div id=\"wanu-wans\"><div class=\"w ln\">Waiting for shack/wan/wan1 and wan2\u2026</div></div>\n  <div class=\"ft\" id=\"wanu-ft\">&nbsp;</div>\n</div>\n<script>\n(function(scope){\n  var STALE = 7200;   // wan-usage publishes hourly; nothing for 2 h = the Mac job is not running\n  function gb(x){ x = Number(x)||0; return Math.abs(x) >= 1000 ? (x/1000).toFixed(2)+' TB' : Math.round(x)+' GB'; }\n  function col(p){ return p >= 90 ? 'var(--rd)' : (p >= 70 ? 'var(--am)' : 'var(--gn)'); }\n  function md(s){ return String(s||'').slice(5); }\n  function render(d){\n    var ws = (d && d.wans) || {}, now = Date.now()/1000, keys = ['wan1','wan2'].filter(function(k){ return ws[k]; });\n    var box = document.getElementById('wanu-wans'), live = document.getElementById('wanu-live'), ft = document.getElementById('wanu-ft');\n    if(!box) return;\n    if(!keys.length){ return; }\n    var worst = 0, stale = false, newest = 0;\n    box.innerHTML = keys.map(function(k){\n      var w = ws[k], p = w.pct, capped = p != null, st = !w.ts || (now - w.ts) > STALE;\n      if(st) stale = true; if(w.ts > newest) newest = w.ts; if(capped && p > worst) worst = p;\n      var c = capped ? col(p) : 'var(--mu)';\n      var head = capped ? gb(w.used_gb)+' / '+gb(w.limit_gb) : gb(w.used_gb)+' (no cap)';\n      var tail = capped ? (w.pct >= 100 ? '<b style=\"color:var(--rd)\">over by '+gb(-w.left_gb)+'</b>'\n                                        : 'keep under <b>'+Math.round(w.budget_gb_day)+' GB/day</b>') : '';\n      return '<div class=\"w\"><div class=\"r1\"><span class=\"nm\">'+(w.wan||k.toUpperCase())+' <span class=\"ln\">'+head+'</span></span>'\n        + '<span class=\"pc\" style=\"color:'+c+'\">'+(capped ? Math.round(p)+'%' : '\u2014')+'</span></div>'\n        + '<div class=\"bar\"><i style=\"width:'+Math.min(100, capped ? p : 0)+'%;background:'+c+'\"></i></div>'\n        + '<div class=\"ln\">\u2193 <b>'+gb(w.down_gb)+'</b> &nbsp;\u2191 <b>'+gb(w.up_gb)+'</b> \u00b7 today <b>'+gb(w.today_gb)+'</b> \u00b7 avg <b>'+Math.round(w.avg_gb_day)+' GB/day</b></div>'\n        + '<div class=\"ln\">cycle '+md(w.cycle_start)+' \u2192 '+md(w.cycle_end)+' \u00b7 '+Number(w.days_left).toFixed(1)+' d left \u00b7 heading for <b>'+gb(w.projected_gb)+'</b>'+(tail ? ' \u00b7 '+tail : '')+'</div>'\n        + (st ? '<div class=\"ln\" style=\"color:var(--rd)\">stale \u2014 last update '+(w.ts ? new Date(w.ts*1000).toLocaleString() : 'never')+'</div>' : '')\n        + '</div>';\n    }).join('');\n    if(live){\n      if(stale){ live.textContent='\u25cb stale'; live.className='live bad'; }\n      else if(worst >= 100){ live.textContent='\u26a0 over cap'; live.className='live bad'; }\n      else if(worst >= 70){ live.textContent='\u25cf '+Math.round(worst)+'% used'; live.className='live warn'; }\n      else { live.textContent='\u25cf ok'; live.className='live on'; }\n    }\n    if(ft) ft.textContent = newest ? 'updated '+new Date(newest*1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+' \u00b7 from the UDM daily totals, hourly' : ' ';\n  }\n  scope.$watch('msg', function(m){ if(m && m.payload) render(m.payload); });\n  setInterval(function(){ var m=scope.msg; if(m && m.payload) render(m.payload); }, 60000);\n})(scope);\n</script>",
+        "storeOutMessages": true,
+        "fwdInMessages": false,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "className": "",
+        "x": 700,
+        "y": 1080,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "wan_vue_bridge",
+        "type": "function",
+        "z": "b05f8c028b368ae9",
+        "name": "Build WAN state for Vue",
+        "func": "// Same state object the /ui panel gets, tagged for the Vue app's onTopic('wanusage') handler.\nreturn { topic: 'wanusage', payload: msg.payload };\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 720,
+        "y": 1130,
+        "wires": [
+            [
+                "vue_lo_wan"
+            ]
+        ]
+    },
+    {
+        "id": "vue_lo_wan",
+        "type": "link out",
+        "z": "b05f8c028b368ae9",
+        "name": "\u2192 Shack Vue",
+        "mode": "link",
+        "links": [
+            "vue_link_in_builders"
+        ],
+        "x": 905,
+        "y": 1130,
         "wires": []
     },
     {
@@ -11909,6 +12006,17 @@
         "order": 31,
         "disp": false,
         "width": 12,
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "wan_grp",
+        "type": "ui_group",
+        "name": "WAN Data",
+        "tab": "bcce4e07ac31b882",
+        "order": 22,
+        "disp": false,
+        "width": 8,
         "collapse": false,
         "className": ""
     },

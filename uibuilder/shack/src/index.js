@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, watch, onMounted, onUnmounted } = Vu
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v52 · 2026-11-07 DXCA card (read-only, MQTT status)';
+window.__shackBuild = 'v53 · 2026-11-07 WAN Data card (WAN1/WAN2 vs ISP caps)';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -40,6 +40,7 @@ const CARDS = {
   rbn:       true,
   rpi:       true,
   network:   true,
+  wan:       true,   // 2026-11-07: WAN1/WAN2 data usage vs the ISP caps (shack/wan/*)
   gpsntp:    true,
   ubersdr:   true,
   openwebrx: true,
@@ -3542,9 +3543,93 @@ const OpenWebRxCard = {
   }
 };
 
+// === WAN Data card (2026-11-07) — WAN1/WAN2 usage vs the ISP caps ===
+// Data: uibuilder topic 'wanusage' = { wans: { wan1: {...}, wan2: {...} } } from the
+// "Aggregate WAN usage" node on the Internet and network monitor tab, which reads the retained
+// shack/wan/wan1 + wan2 published hourly by wan-usage on the Mac (vu2cpl/vlan-setup
+// scripts/wan-usage). Decimal GB; pct/limit_gb are null for a WAN with no cap.
+const WanUsageCard = {
+  template: `
+    <div class="card" :style="{opacity: allStale ? 0.55 : 1}">
+      <div class="card__header" @click="expanded = !expanded">
+        <span class="chev">{{ expanded ? '▼' : '▶' }}</span>
+        <span>WAN Data</span>
+        <span v-if="!expanded" class="summary">
+          <span v-if="!wans.length" style="color:var(--muted)">no data</span>
+          <template v-for="(w, i) in wans" :key="w.key">
+            <span v-if="i">·</span>
+            <span :style="{color: color(w), fontWeight:700}">{{ w.wan }} {{ w.pct != null ? Math.round(w.pct) + '%' : gb(w.used_gb) }}</span>
+          </template>
+          <span v-if="anyStale" style="color:var(--red);font-weight:600">· stale</span>
+        </span>
+      </div>
+
+      <div class="card__body" :class="{ 'is-collapsed': !expanded }">
+        <div v-if="!wans.length" class="empty-row">Waiting for shack/wan/wan1 and wan2</div>
+        <div v-for="w in wans" :key="w.key" class="tile" style="padding:10px 12px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+            <span style="font-weight:700">{{ w.wan }}
+              <span style="color:var(--muted);font-weight:400;font-size:var(--fs-sm)">
+                {{ w.pct != null ? gb(w.used_gb) + ' / ' + gb(w.limit_gb) : gb(w.used_gb) + ' (no cap)' }}
+              </span>
+            </span>
+            <span :style="{color: color(w), fontWeight:700, fontSize:'22px'}">{{ w.pct != null ? Math.round(w.pct) + '%' : '—' }}</span>
+          </div>
+          <div style="height:8px;background:var(--border-2);border-radius:4px;overflow:hidden;margin-bottom:6px">
+            <div :style="{width: Math.min(100, w.pct || 0) + '%', height:'100%', background: color(w)}"></div>
+          </div>
+          <div style="font-size:var(--fs-xs);color:var(--muted);line-height:1.6">
+            ↓ <b style="color:var(--text)">{{ gb(w.down_gb) }}</b> &nbsp;↑ <b style="color:var(--text)">{{ gb(w.up_gb) }}</b>
+            · today <b style="color:var(--text)">{{ gb(w.today_gb) }}</b>
+            · avg <b style="color:var(--text)">{{ Math.round(w.avg_gb_day) }} GB/day</b><br>
+            cycle {{ md(w.cycle_start) }} → {{ md(w.cycle_end) }} · {{ Number(w.days_left).toFixed(1) }} d left
+            · heading for <b style="color:var(--text)">{{ gb(w.projected_gb) }}</b>
+            <template v-if="w.pct != null">
+              <span v-if="w.pct >= 100"> · <b style="color:var(--red)">over by {{ gb(-w.left_gb) }}</b></span>
+              <span v-else> · keep under <b style="color:var(--text)">{{ Math.round(w.budget_gb_day) }} GB/day</b></span>
+            </template>
+            <div v-if="w.stale" style="color:var(--red)">stale — last update {{ w.ts ? new Date(w.ts * 1000).toLocaleString() : 'never' }}</div>
+          </div>
+        </div>
+        <div v-if="wans.length" style="font-size:var(--fs-xs);color:var(--muted);text-align:right">
+          updated {{ updated }} · UDM daily totals, hourly
+        </div>
+      </div>
+    </div>
+  `,
+  setup() {
+    const STALE = 7200;   // wan-usage publishes hourly; nothing for 2 h = the Mac job is not running
+    const expanded = ref(false);
+    const state = reactive({ wans: {} });
+    const now = ref(Date.now() / 1000);
+    let timer = null;
+    const wans = computed(() => ['wan1', 'wan2'].filter(k => state.wans[k]).map(k => {
+      const w = state.wans[k];
+      return Object.assign({ key: k, wan: k.toUpperCase() }, w, { stale: !w.ts || (now.value - w.ts) > STALE });
+    }));
+    const anyStale = computed(() => wans.value.some(w => w.stale));
+    const allStale = computed(() => wans.value.length > 0 && wans.value.every(w => w.stale));
+    const updated = computed(() => {
+      const t = Math.max(0, ...wans.value.map(w => w.ts || 0));
+      return t ? new Date(t * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
+    });
+    const color = (w) => w.pct == null ? 'var(--muted)' : (w.pct >= 90 ? 'var(--red)' : (w.pct >= 70 ? 'var(--amber)' : 'var(--green)'));
+    const gb = (x) => { x = Number(x) || 0; return Math.abs(x) >= 1000 ? (x / 1000).toFixed(2) + ' TB' : Math.round(x) + ' GB'; };
+    const md = (s) => String(s || '').slice(5);
+    onMounted(() => {
+      uibuilder.onTopic('wanusage', (msg) => {
+        if (msg && msg.payload && msg.payload.wans) state.wans = Object.assign({}, msg.payload.wans);
+      });
+      timer = setInterval(() => { now.value = Date.now() / 1000; }, 60000);
+    });
+    onUnmounted(() => { if (timer) clearInterval(timer); });
+    return { expanded, wans, anyStale, allStale, updated, color, gb, md };
+  }
+};
+
 // === Root app ===
 const App = {
-  components: { TopBar, LightningCard, DXCCCard, DXCACard, NetworkCard, RPiCard, PowerCard, SolarCard, FlexCard, SPECard, LP700Card, RotatorCard, GpsNtpCard, RBNCard, UberSdrCard, OpenWebRxCard },
+  components: { TopBar, LightningCard, DXCCCard, DXCACard, NetworkCard, RPiCard, PowerCard, SolarCard, FlexCard, SPECard, LP700Card, RotatorCard, GpsNtpCard, RBNCard, UberSdrCard, OpenWebRxCard, WanUsageCard },
   template: `
     <TopBar />
     <div class="dash-grid">
@@ -3562,6 +3647,7 @@ const App = {
       <OpenWebRxCard v-if="CARDS.openwebrx" />
       <RPiCard       v-if="CARDS.rpi" />
       <NetworkCard   v-if="CARDS.network" />
+      <WanUsageCard  v-if="CARDS.wan" />
       <GpsNtpCard    v-if="CARDS.gpsntp" />
     </div>
   `,
