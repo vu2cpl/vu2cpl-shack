@@ -11,6 +11,30 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-11-07
 
+### Vue: read-only DXCA card (v52)
+
+The `/shack` dashboard gets the same DXCA data as HA's card (`b9a9919`). New
+flow tab **DXCA**: `mqtt in shack/dxca/spots/status/#` → `Build DXCA state for
+Vue` (both payloads kept in flow context; a 10 s tick re-emits so a fresh page
+fills within 10 s) → link out into `Builders → Shack Vue` (14 feeders, 599
+nodes). `DXCACard` (`CARDS.dxca`) shows entities and slots confirmed/worked,
+WAS/WAZ/IOTA/Triple Play, the last five alerts with DXCC name and level, a pill
+per cluster node, log size, ClubLog age, DXCA version and an "Open DXCA" link;
+it dims after 3 min without a DXCA update. The old Node-RED `DXCCCard` stays
+hidden. Rendered with real DXCA data in a local harness (the page is behind
+login); deployed to noderedpi4 with a clean Node-RED restart. Revert tag
+`pre-dxca-vue-20261107`.
+
+### Telegram audit: ham and power alerts are already separate
+
+Checked every sender on 2026-11-07. **HA's Telegram** carries only power:
+`mains_alert.py` (noderedpi4, deployed copy too), `stabiliser_watch.py` (cron
+off), and HA's own grid/battery/over- and under-voltage/load-shedding
+automations. The **shack bot** carries no power alert: Node-RED's Lightning
+and UberSDR alerts, `openwebrx-watch` / `rx888-watch` on the UberSDR box, plus
+infrastructure alerts (restic backups, `flows_guard` cron). meridianpi5 sends
+nothing. `wan_usage.py` (WAN data caps) goes through HA.
+
 ### HA DXCC card: reads DXCA's MQTT status instead of the disabled Node-RED tab
 
 The Radio dashboard's DXCC Tracker card had shown *unavailable* since the

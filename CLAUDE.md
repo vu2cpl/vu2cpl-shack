@@ -133,6 +133,7 @@ git push
 | Lightning Antenna Protector | `75e2cac8ab96f556` | 92 | `8b723cd03854ac2c` |
 | All Power Strips | `b76a5310767803b4` | 60 | `vu2cpl_grp_power` |
 | DXCC Tracker | `d110d176c0aad308` | 77 | `grp_dxcc_stats` — **tab `disabled` since 2026-08-27** (operator choice; Vue card hidden via `CARDS.dxcc:false` in the same commit). Clusters, Club Log refresh, `/dxcc/*` endpoints, Telegram alerts, and the HA bridge all stop while disabled; nothing deleted |
+| DXCA | `dxca_status_tab` | 4 | — (no Dashboard 1 group). Added 2026-11-07: `mqtt in shack/dxca/spots/status/#` → `Build DXCA state for Vue` (flow ctx `dxca_server`/`dxca_user`; 10 s tick re-emits) → link out `vue_lo_dxca` → Vue topic `dxca` (`DXCACard`, `CARDS.dxca`). Read-only; DXCA itself (.109, ≥ v2.24.1) publishes the topics. |
 | UberSDR | `ubersdr_tab` | 13 | `ubersdr_grp` (on Shack Monitoring tools) |
 | AetherSDR Display | `aetherdisp_tab_01` | 9 | — (no UI — humanizes shack MQTT topics onto `aether/*` for the external AetherSDR panadapter display; see `nodered/aether-display/README.md`) |
 
@@ -1364,6 +1365,9 @@ root template is gated with `v-if="CARDS.<key>"`. Flip a flag to
 `false` to hide a card (nothing deleted — the component + its
 builder/cmd-router nodes stay, just unrendered; flip back to restore).
 This is how a forker tailors the dashboard to their hardware.
+Since 2026-11-07 `CARDS.dxca` (true) shows the read-only `DXCACard` fed by
+DXCA's MQTT status; `CARDS.dxcc` (the Node-RED tracker's control card) stays
+`false`.
 `rebuild_pi.sh` Stage 13 sets these from a "which subsystems do you
 have?" Y/n round, with dependency rules (Power forced on if any of
 Lightning/Rotator/Flex stay; warn if Flex dropped while Lightning

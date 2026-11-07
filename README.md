@@ -276,6 +276,14 @@ frame.
 > **Disabled since 2026-08-27** (operator choice): the flow tab is
 > `disabled` in flows.json and the Vue card hidden via `CARDS.dxcc`.
 > Nothing is deleted — flip both flags back to re-enable.
+>
+> **Replaced by DXCA** ([vu2cpl/dxca](https://github.com/vu2cpl/dxca), the
+> .109 container). Since 2026-11-07 the `/shack` dashboard shows a read-only
+> **DXCA** card (Vue v52, flow tab "DXCA") and HA's Radio dashboard a DXCC
+> Tracker card, both from DXCA's retained MQTT status
+> (`shack/dxca/spots/status[/VU2CPL]`): entities and slots confirmed/worked,
+> WAS/WAZ/IOTA, cluster nodes, the last five alerts. Controls live in DXCA's
+> own web UI.
 
 DX cluster spot monitoring with real-time alerts for new entities,
 bands, and modes against Club Log worked/confirmed data. Subscribes
