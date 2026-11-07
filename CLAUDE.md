@@ -679,7 +679,8 @@ House Loads", `height` 2→6; Vue PowerCard build `v25`):
   **Same evening, both dashboards: the six gauges became three two-needle dials** (Manoj), using **Gauge Card Pro
   v2.5.0** (`benjamin-dcs/gauge-card-pro`, Apache-2.0). Each dial has `entity` = stabilised (white arrow) and
   `entity2` = raw (`inner.mode: on_main`, blue bar). The stabilised number sits inside the arc, big and in the status
-  colour. Under the dial are "R · L1" and then "raw NNN V" in blue, amber from 255 V and red from 265 V. Manoj tried
+  colour. Under the dial are "R · L1" (in the phase colour: R `#ff7b72`, Y `#e3c93a`,
+  B `#58a6ff`) and then "raw NNN V" in blue, amber from 255 V and red from 265 V. Manoj tried
   both readings under the dial and preferred this. The `shapes` overrides make both needles big enough to read. Backups:
   `dashboard-193-{utopia-2,radio}-pre-gaugecardpro-20261107.json`.
   The whole row dims when the payload `ts` is >5 min stale (publisher
