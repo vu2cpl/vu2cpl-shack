@@ -124,6 +124,14 @@
         "info": "VU2CPL Club Log DXCC Tracker with DX Cluster alerting"
     },
     {
+        "id": "dxca_status_tab",
+        "type": "tab",
+        "label": "DXCA",
+        "disabled": false,
+        "info": "DXCA's retained MQTT status (shack/dxca/spots/status[/CALL]) \u2192 the Vue DXCA card. Read-only; added 2026-11-07. Replaces the disabled DXCC Tracker tab's Vue feed.",
+        "env": []
+    },
+    {
         "id": "spe_ws_tab_01",
         "type": "tab",
         "label": "SPE (WS)",
@@ -664,7 +672,8 @@
             "vue_lo_d110d176",
             "vue_lo_spe_ws_t",
             "vue_lo_4590ed80",
-            "vue_lo_ubersdr_"
+            "vue_lo_ubersdr_",
+            "vue_lo_dxca"
         ],
         "x": 100,
         "y": 100,
@@ -12018,6 +12027,84 @@
         ],
         "x": 1010,
         "y": 490,
+        "wires": []
+    },
+    {
+        "id": "dxca_status_mqtt_in",
+        "type": "mqtt in",
+        "z": "dxca_status_tab",
+        "name": "shack/dxca/spots/status/#",
+        "topic": "shack/dxca/spots/status/#",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "f4785be9863eab08",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 170,
+        "y": 80,
+        "wires": [
+            [
+                "dxca_status_vue_fn"
+            ]
+        ]
+    },
+    {
+        "id": "dxca_status_tick",
+        "type": "inject",
+        "z": "dxca_status_tab",
+        "name": "every 10 s",
+        "props": [
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "10",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "5",
+        "topic": "tick",
+        "x": 150,
+        "y": 140,
+        "wires": [
+            [
+                "dxca_status_vue_fn"
+            ]
+        ]
+    },
+    {
+        "id": "dxca_status_vue_fn",
+        "type": "function",
+        "z": "dxca_status_tab",
+        "name": "Build DXCA state for Vue",
+        "func": "// DXCA's retained MQTT status \u2192 the Vue DXCA card. Added 2026-11-07.\n// DXCA (\u2265 v2.24.1, the .109 container) publishes once a minute, retained,\n// from its MQTT destination `shack` with Status ticked:\n//   shack/dxca/spots/status         clusters online/total + per-node state\n//   shack/dxca/spots/status/VU2CPL  DXCC/slot totals, award counts, QSO count,\n//                                   ClubLog refresh time, last 5 alerts\n// Both are kept in flow context; every message (MQTT or the 10 s tick) emits\n// the combined state, so a freshly opened dashboard fills within 10 s rather\n// than waiting for DXCA's next minute. Read-only: the controls live in DXCA's\n// own web UI. Replaces the Node-RED DXCC Tracker tab (disabled 2026-08-27).\nvar t = msg.topic || '';\nif (t === 'shack/dxca/spots/status') {\n    var p = msg.payload;\n    if (typeof p === 'string') { try { p = JSON.parse(p); } catch (e) { return null; } }\n    if (!p || typeof p !== 'object') return null;\n    var nodes = {};\n    Object.keys(p.clusters || {}).forEach(function (k) {\n        var c = p.clusters[k] || {};\n        nodes[k] = { connected: !!c.connected, state: c.state || '', spots: c.spot_count || 0, last: c.last_spot_unix || null };\n    });\n    flow.set('dxca_server', { ts: p.ts, version: p.version, online: p.clusters_online, total: p.clusters_total, nodes: nodes });\n} else if (t.indexOf('shack/dxca/spots/status/') === 0) {\n    var u = msg.payload;\n    if (typeof u === 'string') { try { u = JSON.parse(u); } catch (e) { return null; } }\n    if (!u || typeof u !== 'object') return null;\n    flow.set('dxca_user', u);\n} else if (t !== 'tick') {\n    return null;\n}\nvar s = flow.get('dxca_server'), us = flow.get('dxca_user');\nif (!s && !us) return null;\nreturn { topic: 'dxca', payload: { server: s || null, user: us || null } };",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 430,
+        "y": 100,
+        "wires": [
+            [
+                "vue_lo_dxca"
+            ]
+        ]
+    },
+    {
+        "id": "vue_lo_dxca",
+        "type": "link out",
+        "z": "dxca_status_tab",
+        "name": "\u2192 Shack Vue",
+        "mode": "link",
+        "links": [
+            "vue_link_in_builders"
+        ],
+        "x": 625,
+        "y": 100,
         "wires": []
     }
 ]

@@ -5,14 +5,14 @@
    - Responsive via CSS Grid auto-fit (in index.css)
 */
 
-const { createApp, ref, reactive, computed, watch, onMounted } = Vue;
+const { createApp, ref, reactive, computed, watch, onMounted, onUnmounted } = Vue;
 
 // =====================================================================
 // Build version stamp (visible in TopBar — distinguishes "code didn't
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v51 · 2026-11-07 Power: Mains V compact swatch legend';
+window.__shackBuild = 'v52 · 2026-11-07 DXCA card (read-only, MQTT status)';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -36,6 +36,7 @@ const CARDS = {
   power:     true,
   solar:     true,
   dxcc:      false,  // disabled 2026-08-27 with the DXCC Tracker flow tab
+  dxca:      true,   // 2026-11-07: DXCA's MQTT status (flow tab "DXCA"); read-only
   rbn:       true,
   rpi:       true,
   network:   true,
@@ -2695,6 +2696,137 @@ const RPiCard = {
 };
 
 // === RBN Skimmer Monitor card ===
+// ── DXCA card (2026-11-07) ─────────────────────────────────────────────────
+// Read-only view of DXCA's retained MQTT status (flow tab "DXCA" → topic
+// 'dxca'): DXCC/slot totals, award counts, cluster nodes, the last five
+// alerts. Replaces the Node-RED DXCC Tracker card (hidden since 2026-08-27).
+// Controls (filters, blacklist, refresh) live in DXCA's own web UI.
+const DXCA_URL = 'http://192.168.1.109:7580/';
+const DXCACard = {
+  template: `
+    <div class="card" :style="{opacity: stale ? 0.55 : 1}">
+      <div class="card__header" @click="expanded = !expanded">
+        <span class="chev">{{ expanded ? '▼' : '▶' }}</span>
+        <span>DXCA</span>
+        <span v-if="!expanded" class="summary">
+          <span :style="{fontWeight:700, color:'var(--accent)'}">{{ st.dxcc_worked ?? '—' }} entities</span>
+          <span>·</span>
+          <span :style="{color: clusterColor, fontWeight:600}">{{ online ?? '—' }}/{{ total ?? '—' }} clusters</span>
+          <template v-if="alerts.length">
+            <span>·</span>
+            <span style="color:var(--text)">🔔 {{ alerts[0].callsign }} {{ ago(alerts[0].time_unix) }}</span>
+          </template>
+        </span>
+      </div>
+
+      <div class="card__body" :class="{ 'is-collapsed': !expanded }">
+        <div v-if="!user" class="statusline"><span style="color:var(--muted)">No status from DXCA yet</span></div>
+
+        <template v-else>
+          <div class="statusline" style="flex-wrap:wrap; gap:var(--sp-3);">
+            <span title="confirmed / worked">Entities <strong style="color:var(--accent)">{{ st.dxcc_confirmed ?? '—' }}</strong>
+              <span style="color:var(--muted)">/ {{ st.dxcc_worked ?? '—' }} ✓</span></span>
+            <span title="confirmed / worked">Slots <strong style="color:var(--green)">{{ st.slots_confirmed ?? '—' }}</strong>
+              <span style="color:var(--muted)">/ {{ st.slots_worked ?? '—' }} ✓</span></span>
+            <span v-if="st.challenge_worked != null">Challenge <strong>{{ st.challenge_worked }}</strong></span>
+          </div>
+          <div v-if="aw" class="statusline" style="flex-wrap:wrap; gap:var(--sp-3);">
+            <span>WAS <strong>{{ aw.was_confirmed }}</strong><span style="color:var(--muted)">/{{ aw.was_worked }}</span></span>
+            <span>WAZ <strong>{{ aw.waz_confirmed }}</strong><span style="color:var(--muted)">/{{ aw.waz_worked }}</span></span>
+            <span>IOTA <strong>{{ aw.iota_confirmed }}</strong><span style="color:var(--muted)">/{{ aw.iota_worked }}</span></span>
+            <span v-if="aw.triple_play">Triple Play <strong>{{ aw.triple_play }}</strong></span>
+          </div>
+
+          <div class="dxcc-alerts">
+            <div class="dxcc-alerts__title">LAST ALERTS · {{ alerts.length }}</div>
+            <div class="dxcc-alerts__list" v-if="alerts.length">
+              <div v-for="(a, i) in alerts" :key="i" class="dxcc-alert" :class="'dxcc-alert--' + sev(a.level)">
+                <span class="dxcc-alert__time">{{ ago(a.time_unix) }}</span>
+                <span class="dxcc-alert__freq">{{ a.band || '—' }}</span>
+                <span class="dxcc-alert__mode">{{ a.mode || '—' }}</span>
+                <span class="dxcc-alert__call">{{ a.callsign || '?' }}</span>
+                <span class="dxcc-alert__entity">{{ a.dxcc_name || '' }}</span>
+                <span class="dxcc-alert__type" :style="{color: levelColor(a.level)}">{{ levelLabel(a.level) }}</span>
+              </div>
+            </div>
+            <div v-else class="dxcc-alerts__empty">No alerts yet</div>
+          </div>
+        </template>
+
+        <div v-if="nodeNames.length" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:var(--sp-2);">
+          <span v-for="n in nodeNames" :key="n" class="cluster-pill" style="cursor:default;"
+                :class="srv.nodes[n].connected ? 'cluster-pill--ok' : 'cluster-pill--off'"
+                :title="srv.nodes[n].state + ' · ' + srv.nodes[n].spots + ' spots'">
+            <span class="dot"></span>{{ n }}
+          </span>
+        </div>
+
+        <div class="statusline" style="margin-top:var(--sp-2); flex-wrap:wrap; gap:var(--sp-3);">
+          <span v-if="user && user.qso_count != null">Log <strong>{{ user.qso_count.toLocaleString() }}</strong> QSOs</span>
+          <span v-if="user && user.last_refresh_unix">ClubLog <strong>{{ ago(user.last_refresh_unix) }}</strong></span>
+          <span v-if="srv && srv.version" style="color:var(--muted)">v{{ srv.version }}</span>
+          <a :href="url" target="_blank" rel="noopener" style="color:var(--accent); margin-left:auto;" @click.stop>Open DXCA ↗</a>
+        </div>
+      </div>
+    </div>
+  `,
+  setup() {
+    let init = true;
+    try { init = localStorage.getItem('dxcaOpen') !== '0'; } catch (e) {}
+    const expanded = ref(init);
+    watch(expanded, v => { try { localStorage.setItem('dxcaOpen', v ? '1' : '0'); } catch (e) {} });
+    const state = reactive({ server: null, user: null });
+    const now = ref(Math.floor(Date.now() / 1000));
+    let timer = null;
+
+    const srv = computed(() => state.server || {});
+    const user = computed(() => state.user);
+    const st = computed(() => (state.user && state.user.stats) || {});
+    const aw = computed(() => state.user && state.user.award_stats);
+    const alerts = computed(() => (state.user && state.user.recent_alerts) || []);
+    const online = computed(() => state.server ? state.server.online : null);
+    const total = computed(() => state.server ? state.server.total : null);
+    const nodeNames = computed(() => Object.keys(srv.value.nodes || {}).sort());
+    const clusterColor = computed(() => online.value == null ? 'var(--muted)'
+      : online.value === total.value ? 'var(--green)' : online.value === 0 ? 'var(--red)' : 'var(--amber)');
+    // DXCA publishes every 60 s; three missed ticks means DXCA or its MQTT
+    // destination is down, so the card dims rather than showing old numbers as live.
+    const stale = computed(() => {
+      const ts = Math.max(state.server?.ts || 0, state.user?.ts || 0);
+      return !ts || now.value - ts > 180;
+    });
+
+    function ago(t) {
+      if (!t) return '—';
+      const s = Math.max(0, now.value - t);
+      if (s < 60) return 'now';
+      if (s < 3600) return Math.floor(s / 60) + 'm';
+      if (s < 86400) return Math.floor(s / 3600) + 'h';
+      return Math.floor(s / 86400) + 'd';
+    }
+    const LABEL = { newDXCC: 'NEW!', newBand: 'NEW BAND', newMode: 'NEW MODE', newSlot: 'NEW SLOT',
+                    newZone: 'NEW ZONE', newState: 'NEW STATE', newIOTA: 'NEW IOTA', newGrid: 'NEW GRID' };
+    function levelLabel(l) { return LABEL[l] || l || ''; }
+    function levelColor(l) {
+      return ({ newDXCC: 'var(--red)', newBand: 'var(--accent)', newMode: 'var(--amber)',
+                newSlot: 'var(--accent)' })[l] || '#bc8cff';
+    }
+    function sev(l) { return l === 'newDXCC' ? 'red' : (l === 'newBand' || l === 'newSlot') ? 'blue' : 'amber'; }
+
+    onMounted(() => {
+      timer = setInterval(() => { now.value = Math.floor(Date.now() / 1000); }, 15000);
+      uibuilder.onTopic('dxca', (msg) => {
+        if (msg && msg.payload && typeof msg.payload === 'object') Object.assign(state, msg.payload);
+        now.value = Math.floor(Date.now() / 1000);
+      });
+    });
+    onUnmounted(() => { if (timer) clearInterval(timer); });
+
+    return { expanded, srv, user, st, aw, alerts, online, total, nodeNames, clusterColor, stale,
+             ago, levelLabel, levelColor, sev, url: DXCA_URL };
+  }
+};
+
 const RBNCard = {
   template: `
     <div class="card">
@@ -3412,7 +3544,7 @@ const OpenWebRxCard = {
 
 // === Root app ===
 const App = {
-  components: { TopBar, LightningCard, DXCCCard, NetworkCard, RPiCard, PowerCard, SolarCard, FlexCard, SPECard, LP700Card, RotatorCard, GpsNtpCard, RBNCard, UberSdrCard, OpenWebRxCard },
+  components: { TopBar, LightningCard, DXCCCard, DXCACard, NetworkCard, RPiCard, PowerCard, SolarCard, FlexCard, SPECard, LP700Card, RotatorCard, GpsNtpCard, RBNCard, UberSdrCard, OpenWebRxCard },
   template: `
     <TopBar />
     <div class="dash-grid">
@@ -3424,6 +3556,7 @@ const App = {
       <PowerCard     v-if="CARDS.power" />
       <SolarCard     v-if="CARDS.solar" />
       <DXCCCard      v-if="CARDS.dxcc" />
+      <DXCACard      v-if="CARDS.dxca" />
       <RBNCard       v-if="CARDS.rbn" />
       <UberSdrCard   v-if="CARDS.ubersdr" />
       <OpenWebRxCard v-if="CARDS.openwebrx" />
