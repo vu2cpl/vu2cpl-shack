@@ -36,7 +36,7 @@ dashboard. Hardware talks to Node-RED via:
 
 - **`/ui`** — Dashboard 1 (legacy Angular). Dark-themed
   (base `#097479`, bg `#111111`). Original, all features intact.
-- **`/shack`** — Vue 3 SPA served via uibuilder. 14 cards, all
+- **`/shack`** — Vue 3 SPA served via uibuilder. 15 cards (the old DXCC Tracker card is hidden), all
   collapsed by default with live summary headers, true responsive
   layout (CSS column masonry), PWA-installable on iPad / iPhone
   ("Add to Home Screen"). The primary dashboard going forward.
@@ -323,6 +323,20 @@ Pings local infrastructure (router, AP, key servers) and the broader
 internet (DNS, well-known anycast hosts) at intervals; surfaces
 latency + reachability on a status grid. Used to diagnose whether a
 station-wide problem is local network or upstream.
+
+### WAN Data (usage vs the ISP caps)
+
+Both WANs are capped by their ISPs, download + upload: **WAN1 3 TB** per cycle
+11th → 10th, **WAN2 1 TB** per cycle 26th → 25th. The `wan-usage` job on the Mac
+(private repo `vu2cpl/vlan-setup`, `scripts/wan-usage/`) reads the UDM's daily WAN
+totals hourly, sends Telegram alerts through HA at 70/90/100 % and on a projected
+overrun, and publishes retained `shack/wan/wan1` and `shack/wan/wan2`. The
+*Internet and network monitor* flow tab turns those into a **WAN Data** group on
+`/ui` (Shack Monitoring tools tab, next to Network Monitor) and a **WAN Data**
+card on `/shack` (v53). Each WAN gets a usage bar (amber from 70 %, red from 90 %),
+down/up, today, daily average, days left, the projected total, and the GB/day that
+keeps it under the cap (or how far over it is). Both show *stale* after 2 h
+without an update. Added 2026-11-07.
 
 ### RBN Skimmer Monitor
 

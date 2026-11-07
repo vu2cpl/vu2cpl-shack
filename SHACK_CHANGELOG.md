@@ -11,6 +11,26 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-11-07
 
+### WAN Data tile on /ui and /shack (v53)
+
+Manoj asked for a WAN usage tile on both dashboards (`33628a0`). Both WANs are capped by their ISPs:
+**WAN1 3 TB** (11th → 10th) and **WAN2 1 TB** (26th → 25th), download + upload. The data comes from
+`wan-usage`, a new hourly launchd job on the Mac (private `vu2cpl/vlan-setup`, `scripts/wan-usage/`). It reads
+the UDM's own daily WAN totals with the UniFi API key, alerts through HA's Telegram at 70/90/100 % and on a
+projected overrun, and publishes retained `shack/wan/wan1` and `shack/wan/wan2`. New nodes on the *Internet
+and network monitor* tab: `mqtt in shack/wan/+` → `Aggregate WAN usage` → a `WAN Data Panel` in the new `/ui`
+group "WAN Data" (Shack Monitoring tools, next to Network Monitor) and `Build WAN state for Vue` → link out
+into `Builders → Shack Vue` (15 feeders, 605 nodes; flows guard OK on the Mac and the Pi). The Vue
+`WanUsageCard` (`CARDS.wan`, after Network) folds to "WAN1 129% · WAN2 29%". Each WAN shows a bar (amber from
+70 %, red from 90 %), used/cap, down/up, today, the average, days left, the projection, and the GB/day that keeps
+it under the cap (or how far over it is). It dims or shows *stale* after 2 h without an update. Both renderers
+were checked with the live payloads in a local harness (the pages are behind login). Deployed to noderedpi4
+with a clean Node-RED restart at 18:08.
+
+At install WAN1 was at **3,876 GB = 129 %** for 11 Oct → 10 Nov: the 22 Oct restic off-site seed to Google
+Drive (631 GB up) plus ~680 GB downloaded on 24–25 Oct, not yet identified, on top of a ~3 TB baseline. The
+same day UberSDR `max_sessions` went 50 → 20 (ubersdr-box). Details in the vlan-setup HANDOVER.
+
 ### Vue: read-only DXCA card (v52)
 
 The `/shack` dashboard gets the same DXCA data as HA's card (`b9a9919`). New

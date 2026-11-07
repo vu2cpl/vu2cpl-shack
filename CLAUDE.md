@@ -1083,6 +1083,25 @@ written **`%%eth0`** — a bare `%e` is an ssh percent-token and fails with
 `UBERSDR` is a new tile added the same day, for
 the ubersdr box also running `meridian` (`192.168.1.109`).
 
+### WAN Data (2026-11-07, on the Internet and network monitor tab)
+
+WAN1 (3 TB, cycle 11th → 10th) and WAN2 (1 TB, cycle 26th → 25th) usage, download + upload. The publisher is
+**not** on the Pi: the `wan-usage` launchd job on the Mac (`vu2cpl/vlan-setup` `scripts/wan-usage/`, hourly)
+reads the UDM's `stat/report/daily.site` with the UniFi API key (which stays on the Mac only), alerts through HA's
+Telegram, and publishes retained `shack/wan/wan1` and `shack/wan/wan2` (`{wan, ts, cycle_start, cycle_end,
+days_elapsed, days_left, used_gb, down_gb, up_gb, today_gb, avg_gb_day, projected_gb, limit_gb, pct, left_gb,
+budget_gb_day}`, decimal GB).
+
+| Node | id | Notes |
+|---|---|---|
+| `mqtt in` shack/wan/+ (wan-usage) | `wan_mqtt_in` | retained; Tasmota MQTT Broker config |
+| Aggregate WAN usage | `wan_agg` | keeps `flow.wan_state = {wans:{wan1,wan2}}`; drops other topics (the cleared first-version `shack/wan/usage`) |
+| WAN Data Panel (`ui_template`) | `wan_panel` | group `wan_grp` "WAN Data", `/ui` tab Shack Monitoring tools, order 22, width 8 |
+| Build WAN state for Vue | `wan_vue_bridge` | topic `wanusage` → `vue_lo_wan` → `Builders → Shack Vue` (15th feeder) |
+
+Staleness (no update for 2 h) is judged by the renderers from `ts`, not the function, because a dead publisher
+sends nothing that would re-run it. Vue: `WanUsageCard`, `CARDS.wan`, after `NetworkCard`.
+
 ### HA state bridges (2026-08-25, operator-approved)
 
 Every subsystem the HA Radio dashboard mirrors gets its state from a
