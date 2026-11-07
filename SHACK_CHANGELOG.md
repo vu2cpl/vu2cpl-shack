@@ -11,6 +11,20 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-11-07
 
+### HA Radio › Fleet: tidier layout, RPi table without gridlines
+
+The Fleet view was a single tall RPi Fleet section (seven full-size glance
+cards) beside short ones, and HA's sections view lines sections up in rows,
+so it left large gaps. Now two balanced columns: RPi Fleet as one compact
+table + UberSDR + a one-line Home link | GPS NTP + Network; then WAN Data |
+WAN usage history. The RPi table is HTML inside a markdown card (coloured
+icons, temp red at 70°, "offline" for hosts that are not reporting). HA draws
+gridlines on markdown tables; a new theme `shack-borderless-tables` (only
+`markdown-table-border-color: transparent` plus padding) is set on this view
+alone. Tried first and dropped: a markdown table with a header row
+("schoolish"), and heading cards with badges (did not align). Backup:
+`~/Documents/Tech/vu2cpl-ha-backups/radio-dashboard-2026-11-07-pre-fleet-layout.json`.
+
 ### WAN Data in Home Assistant (Radio dashboard, Fleet view)
 
 Manoj: "yes add to 193 dashboard". `ha_discovery_publish.py` gains a **WAN Data** device with 16 entities read

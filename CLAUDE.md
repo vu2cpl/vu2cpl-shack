@@ -1103,8 +1103,18 @@ budget_gb_day}`, decimal GB).
 Staleness (no update for 2 h) is judged by the renderers from `ts`, not the function, because a dead publisher
 sends nothing that would re-run it. Vue: `WanUsageCard`, `CARDS.wan`, after `NetworkCard`. **HA** reads the same topics
 directly: 16 discovery entities (`ha_discovery_publish.py`, device "WAN Data"). They appear in the `193-radio`
-dashboard's **Fleet** view as a "WAN Data" section after Network: two gauges (green/yellow/red at 0/70/90 %), a
-markdown summary per WAN, and a 30-day history of % used.
+dashboard's **Fleet** view: two gauges (green/yellow/red at 0/70/90 %) and a markdown summary per WAN in the
+"WAN Data" section, and the 30-day history of % used in "WAN usage history" beside it.
+
+**Fleet view layout (2026-11-07).** Four sections in two columns, so no tall section leaves gaps: left = RPi
+Fleet (one markdown HTML table: host · CPU · temp · mem · disk, coloured `ha-icon`s, temp red ≥ 70°, "offline"
+for a host whose `_cpu` is unavailable; replaced 7 glance cards), UberSDR, and a one-line "Home" heading that
+navigates to `/193-utopia-2`; right = GPS NTP + Network; then WAN Data | WAN usage history. The view sets
+`theme: shack-borderless-tables` (`/config/themes/shack-borderless-tables.yaml` on HassPi, via the Samba share):
+it only sets `markdown-table-border-color: transparent` and the table padding, so the default dark colours
+stay. Those `--markdown-table-*` variables are the only way to restyle a markdown table without card-mod
+(not installed; inline `style` is stripped). Backup of the previous layout:
+`~/Documents/Tech/vu2cpl-ha-backups/radio-dashboard-2026-11-07-pre-fleet-layout.json`.
 
 ### HA state bridges (2026-08-25, operator-approved)
 
