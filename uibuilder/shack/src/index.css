@@ -1157,6 +1157,18 @@ html, body {
 .phase-limit { stroke: var(--red); stroke-width: 1; vector-effect: non-scaling-stroke; opacity: 0.8; }
 .phase-shed  { stroke: var(--amber); stroke-width: 1; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; opacity: 0.8; }
 .phase-foot { color: var(--text-dim); font-size: var(--fs-xs); margin-top: 2px; }
+/* Mains V dials (v49): three dual-needle semicircle gauges, raw thick / stabilised thin dashed. */
+.mains-dials { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-2); margin-top: var(--sp-1); }
+.mains-dial { display: block; width: 100%; height: auto; }
+.mains-band { fill: none; stroke-width: 5; opacity: 0.55; }
+.mains-tick { stroke: var(--text-dim); stroke-width: 0.8; }
+.mains-needle--raw { stroke-width: 2.8; stroke-linecap: round; }
+.mains-needle--stab { stroke: var(--text); stroke-width: 1.3; stroke-dasharray: 3 2; stroke-linecap: round; opacity: 0.85; }
+.mains-ph { font-size: 10px; font-weight: 600; font-family: var(--font-sans); }
+.mains-kw { font-size: 8px; text-anchor: end; fill: var(--text-dim); font-family: var(--font-mono); }
+.mains-num { font-size: 11px; font-weight: 600; text-anchor: middle; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.mains-num--stab { font-weight: 400; fill: var(--text-dim); }
+.mains-spark { height: 50px; }
 .energy-tile {
   text-align: center;
   background: var(--bg);
