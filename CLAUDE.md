@@ -677,9 +677,9 @@ House Loads", `height` 2→6; Vue PowerCard build `v25`):
   The default dashboard **Utopia 2.0** (`193-utopia-2`, Power section) got the same Raw R/Y/B gauges ahead of its
   grid gauges, which are now named "Stab R · L1" etc. Backups: `dashboard-193-utopia-2-pre/post-mainsvolt-20261107.json`.
   **Same evening, both dashboards: the six gauges became three two-needle dials** (Manoj), using **Gauge Card Pro
-  v2.5.0** (`benjamin-dcs/gauge-card-pro`, Apache-2.0). Each dial has `entity` = stabilised (white arrow, big
-  status-coloured number) and `entity2` = raw (`inner.mode: on_main`, blue bar, "raw NNN V" title line, amber at
-  255 V and red at 265 V). The `shapes` overrides make both needles big enough to read. Backups:
+  v2.5.0** (`benjamin-dcs/gauge-card-pro`, Apache-2.0). Each dial has `entity` = stabilised (white arrow) and
+  `entity2` = raw (`inner.mode: on_main`, blue bar). Both readings sit under the dial (Manoj): "R · stab NNN V" in
+  the status colour, then "raw NNN V" in blue, amber from 255 V and red from 265 V. The text inside the dial is off. The `shapes` overrides make both needles big enough to read. Backups:
   `dashboard-193-{utopia-2,radio}-pre-gaugecardpro-20261107.json`.
   The whole row dims when the payload `ts` is >5 min stale (publisher
   dead or logger unreachable); the retained message means the last
