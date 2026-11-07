@@ -25,7 +25,9 @@ meter's CTs are fitted.
 HA: `ha_discovery_publish.py` adds the Mains Monitor device: raw V and 10-s peak per phase, Hz, over-voltage,
 meter link and raw supply. Current, kW, kWh and PF are created disabled until the CTs are fitted. On the Radio
 dashboard there are Raw R/Y/B gauges next to the existing ones, which are now named Stab R/Y/B, and a 24 h
-raw-vs-stabilised history graph. First readings: raw 255/251/251 V, stabilised 232–235 V.
+raw-vs-stabilised history graph. First readings: raw 255/251/251 V, stabilised 232–235 V. The default
+dashboard, Utopia 2.0, has the same Raw R/Y/B gauges in its Power section, and its grid gauges are renamed
+Stab (backup `dashboard-193-utopia-2-pre-mainsvolt-20261107.json`).
 
 Revert: `git checkout pre-mainsvolt-20261107 -- flows.json uibuilder/shack/src` and restart Node-RED. For HA,
 restore `dashboard-193-radio-pre-mainsvolt-20261107.json` from `~/Documents/Tech/vu2cpl-ha-backups/`.
