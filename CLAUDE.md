@@ -664,6 +664,15 @@ House Loads", `height` 2→6; Vue PowerCard build `v25`):
   `ts`). HA's Radio dashboard got the equivalent the same day as a native `history-graph` card
   ("Phase loads — R · Y · B", `sensor.inverter_load_l1/l2/l3_power`, 6 h) in the Solar · Grid · Battery
   section, right after the three grid gauges (backup `dashboard-193-radio-pre-phaseloads-20261019.json`).
+- **Mains V dials (2026-11-07, Vue v49 + D1 16A Energy Monitor):** `mains_monitor_mqtt_in`
+  (`shack/mains-monitor/state`) → `Parse Mains Monitor` → `energy/mains` → Energy Aggregator →
+  `energy.mains`. Three dual-needle SVG dials: raw (thick, phase colour) from `mains.v`, stabilised
+  (thin dashed) from `phases.grid_v`, falling back to `solar.grid_v`. A 10-min sparkline sits beneath
+  (raw and stab histories kept client-side, de-duplicated on `ts`). The tile greys when `mains.ts` is
+  more than 60 s old and shows RAW SUPPLY LOST when `supply` is `"lost"`. The D1 template's height
+  went from 7 to 10. HA Radio dashboard, same day: Raw R/Y/B gauges (`sensor.mains_monitor_raw_*`),
+  the old gauges renamed "Stab R · L1" etc., and a 24 h raw-vs-stab `history-graph`. Backups:
+  `dashboard-193-radio-pre/post-mainsvolt-20261107.json`. The flows revert tag is `pre-mainsvolt-20261107`.
   The whole row dims when the payload `ts` is >5 min stale (publisher
   dead or logger unreachable); the retained message means the last
   reading survives Node-RED restarts.
@@ -1073,7 +1082,7 @@ retained, broker `f4785be9863eab08`) publishing JSON on
 SPE one is the only stream tap (SPE keeps no context — its function
 `spe_state_pub_01` hangs off `ws_format_state`'s output with a 5 s
 internal throttle). HA consumes them via the retained MQTT-discovery
-configs in `ha_discovery_publish.py` (90 configs total).
+configs in `ha_discovery_publish.py` (112 configs total since 2026-11-07).
 
 | Topic | Nodes | Tab | Source | Tick |
 |---|---|---|---|---|
@@ -1534,7 +1543,7 @@ Pi-side scripts already in this repo (canonical paths shown):
 | `load_monitor.py` (in `vu2cpl/power-management` since 2026-10-27) | `/home/vu2cpl/bin/load_monitor.py` on **meridianpi5** (`load-monitor.service`) | Live three-phase load page for the inverter at **`http://192.168.1.164:8765/`** (`--open`, `--port`, `--bind 0.0.0.0`): polls HA every 5 s, draws R / Y / B as lines with the 5 kW per-phase limit and the 4.5 kW shedding threshold (3.3 / 2.8 until 2026-10-25), shades grid-off spells, lists geysers that are on; total / essential / SmartLoad series selectable; windows 6 h / 12 h / 24 h / 3 days, server-side thinning to ≤ 1500 points per series (bucket max, peaks survive), history cap 4320 min. Pure stdlib, `HA_URL`/`HA_TOKEN` from `~/.config/vu2cpl-shack.env`; the `PHASES` map encodes the 2026-10-19 input re-landing (R = L1, Y = L2, B = L3). HA history is fetched with an explicit `end_time` (HA otherwise defaults to start + 1 day, which hid everything but one day of the longer windows) and a 180 s request timeout (a real 3-day fetch takes ~10 s). **Runs on meridianpi5 as `load-monitor.service`** (`load_monitor.service`: User `vu2cpl`, `--bind 0.0.0.0 --port 8765`, Restart=always; install steps in its header; `journalctl -u load-monitor -f`) since 2026-10-19 14:35 on Manoj's request ("can we run it from pi? can use pi5 which is idle"). The Mac launchd agent (`load_monitor.plist`) ran 15:06 → 14:35 the same day and is booted out and removed from `~/Library/LaunchAgents`; the repo copy stays as the Mac alternative. **The script reads `HA_URL`/`HA_TOKEN` from `/home/vu2cpl/.config/vu2cpl-shack.env` on that Pi (mode 600), so meridianpi5 is now the second holder of the HA token besides the Mac.** Added 2026-10-19 for the phase-rebalancing work (HANDOVER #55) |
 | `deye_history_report.py` (in `vu2cpl/power-management` since 2026-10-27) | run in-place (Mac) | Parses Solarman "PlantsDetails-History" `.xlsx` exports (5-min cloud telemetry, one file per day) into a supply-interruption report + day-by-day timeline SVG + CSV. **No voltage channel exists in that export** — it evidences outages, not over-voltage. Pure stdlib xlsx reader (values are inline, no sharedStrings) |
 | `ha_compass_svgs.py` | run in-place (Mac, Samba `config` share mounted) | Regenerates the HA rotator-compass artwork — `rose.svg` + 16 pre-rotated `needle_*.svg` — into HassPi's `config/www/rotator/` (served at `/local/rotator/`). GitHub-dark palette. The compass card's conditional overlays (keyed on `sensor.rotator_sector`) reference these files |
-| `ha_discovery_publish.py` | run in-place (Mac) | Publishes the 61 retained MQTT-discovery configs (`homeassistant/sensor/#`) that create HA's shack entities — AS3935, gpsntp chrony, RPi fleet ×7, UberSDR — **via HA's own `mqtt.publish` REST service** (no broker creds needed; HA's `ha` account writes `#`). Needs `HA_URL`/`HA_TOKEN` in `~/.config/vu2cpl-shack.env`. Idempotent — re-run to recreate or adjust entities. Feeds the HA Radio dashboard (`/193-radio`), the Vue-equivalent phase 1 since 2026-08-25 |
+| `ha_discovery_publish.py` | run in-place (Mac) | Publishes the retained MQTT-discovery configs (112 as of 2026-11-07) that create HA's shack entities — AS3935, gpsntp chrony, RPi fleet ×7, UberSDR, Mains Monitor (19 since 2026-11-07: raw V and 10-s peak per phase, Hz, over-voltage, meter link, raw supply; current/kW/kWh/PF are created **disabled** until the CTs are fitted) — **via HA's own `mqtt.publish` REST service** (no broker creds needed; HA's `ha` account writes `#`). Needs `HA_URL`/`HA_TOKEN` in `~/.config/vu2cpl-shack.env`. Idempotent — re-run to recreate or adjust entities. Feeds the HA Radio dashboard (`/193-radio`), the Vue-equivalent phase 1 since 2026-08-25 |
 | `ha_ws_client.py` | run in-place (Mac) | Minimal stdlib HA **WebSocket** client — takes a JSON list of WS commands on argv, runs them authenticated, prints results. The tool behind Radio-dashboard saves (`lovelace/config` / `lovelace/config/save`), `system_log/list`, entity-registry reads. Needs `HA_URL`/`HA_TOKEN` exported (e.g. from `~/.config/vu2cpl-shack.env`); token never printed. Written 2026-08-25, committed 2026-09-08 |
 | `monitor_redpitaya.sh` | `/root/monitor_redpitaya.sh` on the Red Pitaya (`rp-f02054.local` — by name only, the IP drifts) | Fleet telemetry for the Alpine/BusyBox Red Pitaya (Zynq XADC temp) — remember `lbu commit -d` after any change there |
 | `power_spe_on.py` | `/home/vu2cpl/power_spe_on.py` | SPE Expert 1.5 KFA power-on via FTDI DTR/RTS toggle |

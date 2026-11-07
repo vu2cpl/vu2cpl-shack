@@ -200,6 +200,15 @@ The 16 A master switch publishes energy data every 30 s for shack-wide
 consumption monitoring. The rotator outlet has a 5 min auto-off timer
 with idempotent retrigger guard + 10 s cooldown to prevent reset loops.
 
+Under the Grid / Battery row, both dashboards carry a **Mains V** tile (added
+2026-11-07, Vue v49): one dual-needle dial per phase, 180–290 V. The thick needle is the
+**raw** mains at the incomer, before the servo stabiliser (`shack/mains-monitor/state`, the
+ESP32 + Selec MFM384 in [`vu2cpl/power-management`](https://github.com/vu2cpl/power-management),
+10 s). The thin dashed needle is the **stabilised** voltage at the inverter input (`phases.grid_v`).
+Bands: green 207–253 V, amber 253–265 V, red above 265 V (inverter trip; the servo cuts out at 270 V).
+Below the dials is a 10-minute sparkline, raw solid and stabilised dashed. Each dial will also show
+per-phase kW once the meter's CTs are fitted. While the dials are present, the Grid tile shows only ON/OFF.
+
 Below the 16 A voltage/current/power/today line, both dashboards carry
 a **Phase loads** graph tile (added 2026-10-19): inverter L1 / L2 / L3 = R / Y / B
 load over the last ten minutes with the 5 kW per-phase off-grid limit and the

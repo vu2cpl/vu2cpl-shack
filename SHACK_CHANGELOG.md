@@ -9,6 +9,27 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 ---
 
 
+## 2026-11-07
+
+### Mains V: raw incomer voltage against stabilised voltage, on Vue, D1 and HA
+
+The mains-monitor (ESP32 + Selec MFM384 at the incomer, before the servo stabiliser; code in the private
+`vu2cpl/power-management`) now feeds every dashboard. Node-RED gains `shack/mains-monitor/state` →
+`Parse Mains Monitor` → `energy/mains` on the Power tab. The Vue Power card (v49) and the D1 16A Energy Monitor
+each draw three dual-needle dials, one per phase, scaled 180–290 V. The thick needle is raw mains and the thin
+dashed one is the stabilised inverter input. Bands are green 207–253 V, amber 253–265 V and red above 265 V,
+the inverter trip; the servo cuts out at 270 V. Below the dials is a 10-minute raw-vs-stabilised sparkline.
+The Grid tile is back to plain ON/OFF while the dials show. Per-phase kW will appear on each dial once the
+meter's CTs are fitted.
+
+HA: `ha_discovery_publish.py` adds the Mains Monitor device: raw V and 10-s peak per phase, Hz, over-voltage,
+meter link and raw supply. Current, kW, kWh and PF are created disabled until the CTs are fitted. On the Radio
+dashboard there are Raw R/Y/B gauges next to the existing ones, which are now named Stab R/Y/B, and a 24 h
+raw-vs-stabilised history graph. First readings: raw 255/251/251 V, stabilised 232–235 V.
+
+Revert: `git checkout pre-mainsvolt-20261107 -- flows.json uibuilder/shack/src` and restart Node-RED. For HA,
+restore `dashboard-193-radio-pre-mainsvolt-20261107.json` from `~/Documents/Tech/vu2cpl-ha-backups/`.
+
 ## 2026-10-31
 
 ### spe-remote refuses cross-origin WebSocket connections

@@ -28,7 +28,7 @@ def mqtt_publish(topic, payload, retain=True):
 configs = []  # (discovery_topic, config)
 
 def sensor(uid, name, device, state_topic, *, tpl=None, unit=None, dev_class=None,
-           state_class=None, icon=None, expire=None, attrs_topic=None, attrs_tpl=None):
+           state_class=None, icon=None, expire=None, attrs_topic=None, attrs_tpl=None, enabled=True):
     c = {
         'name': name,
         'unique_id': uid,
@@ -42,6 +42,7 @@ def sensor(uid, name, device, state_topic, *, tpl=None, unit=None, dev_class=Non
     if state_class: c['state_class'] = state_class
     if icon: c['icon'] = icon
     if expire: c['expire_after'] = expire
+    if not enabled: c['enabled_by_default'] = False
     if attrs_topic:
         c['json_attributes_topic'] = attrs_topic
         if attrs_tpl: c['json_attributes_template'] = attrs_tpl
@@ -292,6 +293,49 @@ sensor('rbn_vu2oy_h1', 'VU2OY-9 spots (1h)', DEV_RBN, BT,
 sensor('rbn_vu24dx_h1', 'VU24DX-1 spots (1h)', DEV_RBN, BT,
        tpl="{{ value_json.skimmers['VU24DX-1'].h1_total }}",
        state_class='measurement', icon='mdi:counter', expire=60)
+
+# ---------- Mains monitor (raw mains at the incomer, before the servo stabiliser) ----------
+# ESP32 + Selec MFM384 in the private vu2cpl/power-management repo (mains-monitor/), added
+# 2026-11-07. The stabilised side is the inverter's grid input (sensor.inverter_grid_l1..l3_voltage).
+# Current / power / energy read 0 until the CTs are fitted, so those entities are created
+# disabled: enable them in HA (device page) once the CTs are in.
+DEV_MAINS = {'identifiers': ['shack_mains_monitor'], 'name': 'Mains Monitor',
+             'manufacturer': 'VU2CPL shack', 'model': 'ESP32 + Selec MFM384 (incomer)'}
+MT = 'shack/mains-monitor/state'
+for i, ph in enumerate('RYB'):
+    sensor(f'mains_v_{ph.lower()}', f'Raw {ph}', DEV_MAINS, MT,
+           tpl=f'{{{{ value_json.v[{i}] }}}}', unit='V', dev_class='voltage',
+           state_class='measurement', expire=120)
+    sensor(f'mains_vmax_{ph.lower()}', f'Raw {ph} peak (10 s)', DEV_MAINS, MT,
+           tpl=f'{{{{ value_json.vmax[{i}] }}}}', unit='V', dev_class='voltage',
+           state_class='measurement', expire=120)
+    sensor(f'mains_i_{ph.lower()}', f'Current {ph}', DEV_MAINS, MT,
+           tpl=f'{{{{ value_json.i[{i}] }}}}', unit='A', dev_class='current',
+           state_class='measurement', expire=120, enabled=False)
+    sensor(f'mains_kw_{ph.lower()}', f'Power {ph}', DEV_MAINS, MT,
+           tpl=f'{{{{ value_json.kw[{i}] }}}}', unit='kW', dev_class='power',
+           state_class='measurement', expire=120, enabled=False)
+sensor('mains_hz', 'Frequency', DEV_MAINS, MT, tpl='{{ value_json.hz }}', unit='Hz',
+       dev_class='frequency', state_class='measurement', expire=120)
+sensor('mains_overvoltage', 'Over-voltage', DEV_MAINS, MT,
+       tpl=("{{ 'alarm' if 'alarm' in value_json.ov else "
+            "('warn' if 'warn' in value_json.ov else 'ok') }}"),
+       icon='mdi:flash-triangle', expire=120, attrs_topic=MT,
+       attrs_tpl="{{ {'R': value_json.ov[0], 'Y': value_json.ov[1], 'B': value_json.ov[2]} | tojson }}")
+sensor('mains_kw_total', 'Power total', DEV_MAINS, MT, tpl='{{ value_json.kw_total }}',
+       unit='kW', dev_class='power', state_class='measurement', expire=120, enabled=False)
+sensor('mains_kwh', 'Energy', DEV_MAINS, MT, tpl='{{ value_json.kwh }}', unit='kWh',
+       dev_class='energy', state_class='total_increasing', enabled=False)
+sensor('mains_pf', 'Power factor', DEV_MAINS, MT, tpl='{{ value_json.pf_total }}',
+       dev_class='power_factor', state_class='measurement', expire=120, enabled=False)
+sensor('mains_meter', 'Meter link', DEV_MAINS, 'shack/mains-monitor/status',
+       tpl=("{% if value_json.event == 'heartbeat' %}{{ value_json.meter }}"
+            "{% else %}{{ value_json.event }}{% endif %}"),
+       icon='mdi:meter-electric', attrs_topic='shack/mains-monitor/status')
+binary('mains_supply', 'Raw supply', DEV_MAINS, MT,
+       tpl="{{ 'ON' if value_json.supply == 'ok' else 'OFF' }}", icon='mdi:transmission-tower',
+       expire=120)
+configs[-1][1]['device_class'] = 'power'
 
 if __name__ == '__main__':
     if '--dry' in sys.argv:
