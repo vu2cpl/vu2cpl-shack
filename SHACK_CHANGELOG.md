@@ -27,7 +27,10 @@ meter link and raw supply. Current, kW, kWh and PF are created disabled until th
 dashboard there are Raw R/Y/B gauges next to the existing ones, which are now named Stab R/Y/B, and a 24 h
 raw-vs-stabilised history graph. First readings: raw 255/251/251 V, stabilised 232–235 V. The default
 dashboard, Utopia 2.0, has the same Raw R/Y/B gauges in its Power section, and its grid gauges are renamed
-Stab (backup `dashboard-193-utopia-2-pre-mainsvolt-20261107.json`).
+Stab (backup `dashboard-193-utopia-2-pre-mainsvolt-20261107.json`). Later the same evening, on both dashboards,
+each Raw/Stab pair became a single two-needle dial (Gauge Card Pro v2.5.0, installed by hand into `www/community`
+because HACS isn't loaded). The white arrow and big number show stabilised voltage; the blue bar and the
+"raw NNN V" line show raw.
 
 Revert: `git checkout pre-mainsvolt-20261107 -- flows.json uibuilder/shack/src` and restart Node-RED. For HA,
 restore `dashboard-193-radio-pre-mainsvolt-20261107.json` from `~/Documents/Tech/vu2cpl-ha-backups/`.

@@ -676,6 +676,11 @@ House Loads", `height` 2→6; Vue PowerCard build `v25`):
   `dashboard-193-radio-pre/post-mainsvolt-20261107.json`. The flows revert tag is `pre-mainsvolt-20261107`.
   The default dashboard **Utopia 2.0** (`193-utopia-2`, Power section) got the same Raw R/Y/B gauges ahead of its
   grid gauges, which are now named "Stab R · L1" etc. Backups: `dashboard-193-utopia-2-pre/post-mainsvolt-20261107.json`.
+  **Same evening, both dashboards: the six gauges became three two-needle dials** (Manoj), using **Gauge Card Pro
+  v2.5.0** (`benjamin-dcs/gauge-card-pro`, Apache-2.0). Each dial has `entity` = stabilised (white arrow, big
+  status-coloured number) and `entity2` = raw (`inner.mode: on_main`, blue bar, "raw NNN V" title line, amber at
+  255 V and red at 265 V). The `shapes` overrides make both needles big enough to read. Backups:
+  `dashboard-193-{utopia-2,radio}-pre-gaugecardpro-20261107.json`.
   The whole row dims when the payload `ts` is >5 min stale (publisher
   dead or logger unreachable); the retained message means the last
   reading survives Node-RED restarts.
@@ -1186,6 +1191,12 @@ mounts the Samba `config` share (`smb://192.168.1.36/config` →
 that box is closed (22/22222), so Samba + the REST API
 (`HA_TOKEN` in `~/.config/vu2cpl-shack.env`) are the only two ways in.
 **Anything changed there is untracked** — record it here or it is lost.
+
+- **Gauge Card Pro v2.5.0 (installed by hand 2026-11-07).** The HACS integration is not loaded on HA 2026.11.0:
+  its websocket commands are unknown, and it is missing from `components`. So the release file was copied to
+  `config/www/community/gauge-card-pro/gauge-card-pro.js` (sha256 `dd35bbfb…180f0`) and registered as a module
+  resource, `/local/community/gauge-card-pro/gauge-card-pro.js?v=2.5.0`. To update it, copy the new release file
+  over the old one and bump `?v=`. HACS will not track it.
 
 Reading the box without the share: HA's REST API has no `/api/error_log`
 on 2026.8.x, but the **WebSocket** command `system_log/list` works and is
