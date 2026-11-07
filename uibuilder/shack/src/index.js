@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, watch, onMounted } = Vue;
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v49 · 2026-11-07 Power: Mains V dials (raw incomer vs stabilised inverter input) + 10-min sparkline';
+window.__shackBuild = 'v50 · 2026-11-07 Power: Mains V dials highlight the stabilised needle and number';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -2205,39 +2205,40 @@ const PowerCard = {
           </div>
         </div>
 
-        <!-- Mains V (added 2026-11-07, v49): one dual-needle dial per phase. Thick needle = raw
-             mains at the incomer, before the servo stabiliser (shack/mains-monitor/state, ESP32 +
-             Selec MFM384, 10 s); thin dashed needle = stabilised voltage at the inverter input
-             (phases.grid_v). Scale 180-290 V: green 207-253, amber 253-265, red above 265 (inverter
+        <!-- Mains V (added 2026-11-07, v49): one dual-needle dial per phase. Bold needle and big
+             number = stabilised voltage at the inverter input (phases.grid_v), green 207-253 V, amber /
+             red outside; thin grey needle and small "raw" line = raw mains at the incomer, before the
+             servo stabiliser (shack/mains-monitor/state, ESP32 + Selec MFM384, 10 s). Scale 180-290 V: green 207-253, amber 253-265, red above 265 (inverter
              trip; the servo cuts out at 270). Per-phase kW appears once the meter's CTs are fitted.
              Under the dials, a 10-min sparkline: raw solid, stabilised dashed. -->
         <div v-if="mains" class="energy-row energy-row--graph">
           <div class="energy-tile energy-tile--graph" :class="{ 'is-stale': mainsStale }">
             <div class="phase-head">
-              <span class="energy-tile__lbl">Mains V · raw / stabilised</span>
+              <span class="energy-tile__lbl">Mains V · stabilised / raw</span>
               <span class="phase-val" :style="{color: mains.supply === 'lost' || mains.supply === false ? 'var(--red)' : 'var(--text-dim)'}">{{ mainsSupplyText }}</span>
             </div>
             <div class="mains-dials">
-              <svg v-for="g in mainsDials" :key="g.k" class="mains-dial" viewBox="0 0 100 66">
+              <svg v-for="g in mainsDials" :key="g.k" class="mains-dial" viewBox="0 0 100 76">
                 <path v-for="b in MAINS_BANDS" :key="b.c" :d="b.d" :stroke="b.c" class="mains-band"/>
                 <line v-for="t in MAINS_TICKS" :key="t.v" :x1="t.x1" :y1="t.y1" :x2="t.x2" :y2="t.y2" class="mains-tick"/>
-                <line v-if="g.stabP" x1="50" y1="50" :x2="g.stabP[0]" :y2="g.stabP[1]" class="mains-needle--stab"/>
-                <line v-if="g.rawP" x1="50" y1="50" :x2="g.rawP[0]" :y2="g.rawP[1]" :stroke="g.color" class="mains-needle--raw"/>
-                <circle cx="50" cy="50" r="2.6" :fill="g.color"/>
+                <line v-if="g.rawP" x1="50" y1="50" :x2="g.rawP[0]" :y2="g.rawP[1]" class="mains-needle--raw"/>
+                <line v-if="g.stabP" x1="50" y1="50" :x2="g.stabP[0]" :y2="g.stabP[1]" :stroke="g.stabColor" class="mains-needle--stab"/>
+                <circle cx="50" cy="50" r="3.2" :fill="g.stabColor"/>
                 <text x="6" y="12" class="mains-ph" :fill="g.color">{{ g.name }}</text>
-                <text x="50" y="62" class="mains-num"><tspan :fill="g.rawColor">{{ g.raw }}</tspan><tspan class="mains-num--stab"> / {{ g.stab }}</tspan></text>
+                <text x="50" y="65" class="mains-num" :fill="g.stabColor">{{ g.stab }}</text>
+                <text x="50" y="74" class="mains-raw">raw <tspan :fill="g.rawColor">{{ g.raw }}</tspan></text>
                 <text v-if="g.kw" x="94" y="12" class="mains-kw">{{ g.kw }}</text>
               </svg>
             </div>
             <svg class="phase-svg mains-spark" :viewBox="'0 0 ' + mainsSpark.W + ' ' + mainsSpark.H" preserveAspectRatio="none">
-              <line x1="0" :y1="mainsSpark.y265" :x2="mainsSpark.W" :y2="mainsSpark.y265" class="phase-limit"/>
-              <line x1="0" :y1="mainsSpark.y255" :x2="mainsSpark.W" :y2="mainsSpark.y255" class="phase-shed"/>
-              <polyline v-for="(pts, k) in mainsSpark.stab" :key="'s' + k" :points="pts" fill="none"
-                        :stroke="PH_COLORS[k]" stroke-width="1" stroke-dasharray="3 2" vector-effect="non-scaling-stroke" opacity="0.8"/>
+              <line v-if="mainsSpark.y265" x1="0" :y1="mainsSpark.y265" :x2="mainsSpark.W" :y2="mainsSpark.y265" class="phase-limit"/>
+              <line v-if="mainsSpark.y255" x1="0" :y1="mainsSpark.y255" :x2="mainsSpark.W" :y2="mainsSpark.y255" class="phase-shed"/>
               <polyline v-for="(pts, k) in mainsSpark.raw" :key="'r' + k" :points="pts" fill="none"
-                        :stroke="PH_COLORS[k]" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+                        :stroke="PH_COLORS[k]" stroke-width="1" vector-effect="non-scaling-stroke" opacity="0.45"/>
+              <polyline v-for="(pts, k) in mainsSpark.stab" :key="'s' + k" :points="pts" fill="none"
+                        :stroke="PH_COLORS[k]" stroke-width="2" vector-effect="non-scaling-stroke"/>
             </svg>
-            <div class="phase-foot">last 10 min · solid raw (incomer) · dashed stabilised (inverter in) · amber 255 V warn · red 265 V inverter trip</div>
+            <div class="phase-foot">big number &amp; bold needle: stabilised (inverter in) · small &amp; thin: raw (incomer) · 10-min trend, bold stabilised, faint raw</div>
           </div>
         </div>
 
@@ -2493,7 +2494,9 @@ const PowerCard = {
         k, name: PH_NAMES[k], color: PH_COLORS[k],
         raw: live ? Math.round(r) : '—', stab: st != null && st >= 50 ? Math.round(st) : '—',
         rawColor: !live ? 'var(--text-dim)' : r >= 265 ? 'var(--red)' : r >= 255 ? 'var(--amber)' : 'var(--text)',
-        rawP: live ? mvPt(r, 34) : null, stabP: st != null && st >= 50 ? mvPt(st, 29) : null,
+        // the stabilised voltage is what the house gets, so it is the highlighted needle and number
+        stabColor: !(st >= 50) ? 'var(--text-dim)' : st >= 265 || st < 180 ? 'var(--red)' : st > 253 || st < 207 ? 'var(--amber)' : 'var(--green)',
+        rawP: live ? mvPt(r, 30) : null, stabP: st != null && st >= 50 ? mvPt(st, 36) : null,
         kw: kw ? kw.toFixed(1) + ' kW' : ''
       };
     }));
@@ -2514,12 +2517,16 @@ const PowerCard = {
     watch(mains, m => m && mvPush(mainsHist.raw, m.ts, m.v), { immediate: true });
     watch(phases, p => p && mvPush(mainsHist.stab, p.ts, p.grid_v), { immediate: true });
     const mainsSpark = computed(() => {
-      const W = 300, H = 50, lo = 215, hi = 275;
+      const W = 300, H = 50;
       const now = Math.max(mainsHist.raw.at(-1)?.ts || 0, mainsHist.stab.at(-1)?.ts || 0);
+      let lo = 225, hi = 260;                                           // zoom to the data so the gap shows
+      for (const a of [mainsHist.raw, mainsHist.stab]) for (const smp of a) for (const v of smp.v)
+        if (v != null && v >= 50) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+      lo = Math.floor(lo - 3); hi = Math.ceil(hi + 3);
       const x = t => ((t - (now - MV_KEEP_S)) / MV_KEEP_S * W).toFixed(1);
       const y = v => (H - (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo) * H).toFixed(1);
       const pts = (arr, k) => arr.filter(s => s.v[k] != null && s.v[k] >= 50).map(s => x(s.ts) + ',' + y(s.v[k])).join(' ');
-      return { W, H, y255: y(255), y265: y(265),
+      return { W, H, y255: hi >= 255 ? y(255) : null, y265: hi >= 265 ? y(265) : null,
                raw: [0, 1, 2].map(k => pts(mainsHist.raw, k)), stab: [0, 1, 2].map(k => pts(mainsHist.stab, k)) };
     });
     const phaseGrid = computed(() =>

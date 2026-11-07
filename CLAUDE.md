@@ -666,9 +666,10 @@ House Loads", `height` 2→6; Vue PowerCard build `v25`):
   section, right after the three grid gauges (backup `dashboard-193-radio-pre-phaseloads-20261019.json`).
 - **Mains V dials (2026-11-07, Vue v49 + D1 16A Energy Monitor):** `mains_monitor_mqtt_in`
   (`shack/mains-monitor/state`) → `Parse Mains Monitor` → `energy/mains` → Energy Aggregator →
-  `energy.mains`. Three dual-needle SVG dials: raw (thick, phase colour) from `mains.v`, stabilised
-  (thin dashed) from `phases.grid_v`, falling back to `solar.grid_v`. A 10-min sparkline sits beneath
-  (raw and stab histories kept client-side, de-duplicated on `ts`). The tile greys when `mains.ts` is
+  `energy.mains`. Three dual-needle SVG dials. Since v50 the stabilised reading is highlighted (Manoj):
+  it has a bold status-coloured needle and a big number, from `phases.grid_v` with `solar.grid_v` as fallback.
+  Raw (`mains.v`) has a thin light needle and a small "raw NNN" line. The bands are at 0.9 opacity. A 10-min sparkline sits beneath
+  (raw and stab histories kept client-side, de-duplicated on `ts`; zoomed to the data, stabilised bold). The tile greys when `mains.ts` is
   more than 60 s old and shows RAW SUPPLY LOST when `supply` is `"lost"`. The D1 template's height
   went from 7 to 10. HA Radio dashboard, same day: Raw R/Y/B gauges (`sensor.mains_monitor_raw_*`),
   the old gauges renamed "Stab R · L1" etc., and a 24 h raw-vs-stab `history-graph`. Backups:
