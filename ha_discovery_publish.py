@@ -259,18 +259,29 @@ binary2('rotator_overlap', 'Overlap', DEV_ROT, RT,
         icon='mdi:rotate-360', expire=30)
 
 DEV_DXCC = {'identifiers': ['shack_dxcc'], 'name': 'DXCC Tracker',
-            'manufacturer': 'VU2CPL shack', 'model': 'Club Log / cluster alerts'}
-DT = 'shack/dxcc/state'
-sensor('dxcc_entities', 'Entities worked', DEV_DXCC, DT,
-       tpl='{{ value_json.stats.entities }}', icon='mdi:earth',
-       expire=120, attrs_topic=DT)
-sensor('dxcc_confirmed', 'Confirmed slots', DEV_DXCC, DT,
-       tpl='{{ value_json.stats.confirmed }}', icon='mdi:check-decagram', expire=120)
-sensor('dxcc_band_slots', 'Band slots', DEV_DXCC, DT,
-       tpl='{{ value_json.stats.bandSlots }}', icon='mdi:view-grid', expire=120)
-sensor('dxcc_clusters_online', 'Clusters online', DEV_DXCC, DT,
-       tpl="{{ value_json.clusters.values() | selectattr('connected') | list | length }}",
-       icon='mdi:server-network', expire=120)
+            'manufacturer': 'VU2CPL shack', 'model': 'DXCA MQTT status (ClubLog / clusters)'}
+# Since 2026-11-07 these read DXCA's retained status topics (dxca v2.24.0, the
+# "Status" tick on its shack MQTT destination). Before that they read
+# shack/dxcc/state, from the Node-RED DXCC tab that DXCA replaced and that has
+# been disabled since 2026-08-27, which is why the card sat "unavailable".
+# The unique_ids are unchanged, so the entity ids, and the card, stay the same.
+DXCA_BASE = 'shack/dxca/spots'
+DS = DXCA_BASE + '/status'            # cluster health
+DU = DXCA_BASE + '/status/VU2CPL'     # this account's totals + recent alerts
+sensor('dxcc_entities', 'Entities worked', DEV_DXCC, DU,
+       tpl='{{ value_json.stats.dxcc_worked }}', icon='mdi:earth',
+       expire=180, attrs_topic=DU,
+       attrs_tpl='{{ {"recent_alerts": value_json.recent_alerts, "qso_count": value_json.qso_count, '
+                 '"last_refresh_unix": value_json.last_refresh_unix} | tojson }}')
+sensor('dxcc_confirmed', 'Entities confirmed', DEV_DXCC, DU,
+       tpl='{{ value_json.stats.dxcc_confirmed }}', icon='mdi:check-decagram', expire=180)
+sensor('dxcc_band_slots', 'Slots worked', DEV_DXCC, DU,
+       tpl='{{ value_json.stats.slots_worked }}', icon='mdi:view-grid', expire=180)
+sensor('dxcc_slots_confirmed', 'Slots confirmed', DEV_DXCC, DU,
+       tpl='{{ value_json.stats.slots_confirmed }}', icon='mdi:view-grid-outline', expire=180)
+sensor('dxcc_clusters_online', 'Clusters online', DEV_DXCC, DS,
+       tpl='{{ value_json.clusters_online }}', icon='mdi:server-network', expire=180,
+       attrs_topic=DS, attrs_tpl='{{ {"clusters_total": value_json.clusters_total} | tojson }}')
 
 DEV_RBN = {'identifiers': ['shack_rbn'], 'name': 'RBN Skimmers',
            'manufacturer': 'VU2CPL shack', 'model': 'CW/RTTY skimmer monitor'}

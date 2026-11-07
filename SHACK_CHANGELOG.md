@@ -11,6 +11,29 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-11-07
 
+### HA DXCC card: reads DXCA's MQTT status instead of the disabled Node-RED tab
+
+The Radio dashboard's DXCC Tracker card had shown *unavailable* since the
+Node-RED DXCC tab was disabled (2026-08-27): its `shack/dxcc/state` bridge
+stopped with it. DXCA gained retained status topics (v2.24.0, fixed in
+v2.24.1 — the account topic overran rumqttc's 10 KB packet cap). On .109 an
+MQTT destination `shack` (`svc`, base `shack/dxca/spots`, **Status** ticked)
+now publishes once a minute:
+
+- `shack/dxca/spots/status` — clusters online/total, spots per source
+- `shack/dxca/spots/status/VU2CPL` — DXCC/slot totals, award counts, QSO
+  count, last 5 alerts
+
+`ha_discovery_publish.py`'s DXCC device now reads those (113 configs):
+entities worked/confirmed, slots worked/confirmed (new), clusters online
+(with `clusters_total` attr), `recent_alerts` attr; `expire_after: 180`.
+`sensor.dxcc_tracker_confirmed_slots` was renamed
+`sensor.dxcc_tracker_entities_confirmed` in HA's registry (same unique id,
+now holds entities confirmed). Card rewritten: real cluster total instead of
+the hard-coded `/4`, alerts with DXCC name, level and age. Backup:
+`~/Documents/Tech/vu2cpl-ha-backups/radio-dashboard-2026-11-07-pre-dxca.json`.
+Verified live: 320 entities, 4357 slots (4108 confirmed), 6/8 clusters.
+
 ### Mains V: raw incomer voltage against stabilised voltage, on Vue, D1 and HA
 
 The mains-monitor (ESP32 + Selec MFM384 at the incomer, before the servo stabiliser; code in the private

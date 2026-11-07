@@ -1092,7 +1092,7 @@ retained, broker `f4785be9863eab08`) publishing JSON on
 SPE one is the only stream tap (SPE keeps no context — its function
 `spe_state_pub_01` hangs off `ws_format_state`'s output with a 5 s
 internal throttle). HA consumes them via the retained MQTT-discovery
-configs in `ha_discovery_publish.py` (112 configs total since 2026-11-07).
+configs in `ha_discovery_publish.py` (113 configs total since 2026-11-07).
 
 | Topic | Nodes | Tab | Source | Tick |
 |---|---|---|---|---|
@@ -1101,7 +1101,8 @@ configs in `ha_discovery_publish.py` (112 configs total since 2026-11-07).
 | `shack/spe/state` | `spe_state_{pub,mqtt}_01` | SPE (WS) | `ws_format_state` output (whole flat panel payload) | ≥5 s |
 | `shack/lp700/state` | `lp700_state_{tick,fn,mqtt}_01` | LP-700-HID ws | `global.lpState` (avg/peak/swr/range) | 5 s |
 | `shack/rotator/state` | `rot_state_{tick,fn,mqtt}_01` | Rotator | `flow.rotator_heading` + `flow.target_hdg` + `global.rotator_power` (since 2026-09-01; `null` until first known) + `flow.rotator_overlap` (since 2026-09-08; HA `binary_sensor.rotator_overlap` landed the same evening) | 5 s |
-| `shack/dxcc/state` | `dxcc_state_{tick,fn,mqtt}_01` | DXCC Tracker | `workedStats` + last-5 `alertList` + `clusterStatus` | 30 s |
+| `shack/dxcc/state` | `dxcc_state_{tick,fn,mqtt}_01` | DXCC Tracker | **Retired for HA 2026-11-07** (tab disabled since 2026-08-27). Was `workedStats` + last-5 `alertList` + `clusterStatus` | 30 s |
+| `shack/dxca/spots/status`, `…/status/VU2CPL` | — (published by **DXCA** itself, not Node-RED) | — | DXCA ≥ v2.24.1, MQTT destination `shack` (`svc`) with **Status** ticked: cluster nodes online/total; DXCC + slot totals, award counts, QSO count, last 5 alerts. HA's DXCC Tracker device reads these (`expire_after: 180`) | 60 s |
 | `shack/rbn/state` | `rbn_state_{tick,fn,mqtt}_01` | RBN Skimmer | `flow.rbn_dash` (**file scope**, arrays trimmed to 5); `skimmers` only, so per-skimmer `skewDate`/`skewAge` ride along but `skewTable` doesn't | 10 s |
 
 HA sensors carry `expire_after` ≈ 3× the tick, so a dead bridge (or

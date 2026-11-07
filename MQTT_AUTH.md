@@ -75,6 +75,7 @@ A full `restart` is only needed for listener/`conf.d` changes.
 | **`solar_inverter_mqtt.py`** (Deye inverter → `shack/solar/inverter`; source in the private `vu2cpl/power-management`) | `svc` | Same two credential files as `monitor.sh` (parsed, not sourced — it's Python). |
 | **`gpsntp-mqtt-publish.sh`** (chrony) | `svc` | `MQTT_USER`/`MQTT_PASS` env lines in `/etc/cron.d/gpsntp-mqtt` (runs as root). `install.sh` in `pi-gps-ntp-server` writes them. |
 | **ubersdr** | `svc` | ubersdr's own web UI |
+| **DXCA** (the .109 container, ≥ v2.24.1) | `svc` | DXCA web UI → Settings › MQTT, destination `shack` (stored in DXCA's own database). Publishes spots to `shack/dxca/spots/{json,cluster}` and, with **Status** ticked, retained `shack/dxca/spots/status` + `status/VU2CPL` once a minute for HA's DXCC card. Added 2026-11-07. |
 | **AetherSDR** | `display` | MQTT applet settings (host/user/pass + `aether/*` topics). Reads the humanized status tree only. See [`nodered/aether-display/`](nodered/aether-display/). |
 
 ### Non-MQTT secrets in the same env files

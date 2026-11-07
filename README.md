@@ -64,9 +64,10 @@ Node-RED → MQTT state bridges**: per tab, an inject tick → a function
 reading that tab's existing context → a retained
 `shack/<subsystem>/state`, touching no flow behaviour. Lightning and
 the rotator also carry controls, via HA `rest_command`s onto the same
-HTTP endpoints the dashboards use. One caveat: the DXCC card goes
-blank while the DXCC Tracker flow tab is disabled — it has been since
-2026-08-27 — because that tab's bridge stops with it.
+HTTP endpoints the dashboards use. The DXCC card is the exception: since
+2026-11-07 it reads DXCA's own retained MQTT status
+(`shack/dxca/spots/status[/VU2CPL]`, DXCA ≥ v2.24.1), not a Node-RED
+bridge, because the DXCC Tracker tab has been disabled since 2026-08-27.
 
 ---
 

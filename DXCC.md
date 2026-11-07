@@ -9,6 +9,8 @@ automation. For the umbrella overview of all subsystems see
 
 ## Overview
 
+> **Status (2026-11-07):** this Node-RED tracker has been disabled since 2026-08-27; [DXCA](https://github.com/vu2cpl/dxca) replaced it. HA's DXCC Tracker card on the Radio dashboard now reads DXCA's retained MQTT status topics (`shack/dxca/spots/status`, `…/status/VU2CPL`) instead of this tab's `shack/dxcc/state`.
+
 The DXCC Tracker monitors DX cluster spots in real-time against Club Log worked data and fires alerts for new DXCC entities, new bands, and new modes. All processing runs inside Node-RED on a Raspberry Pi — no external Python scripts required.
 
 The flow connects to DX clusters via TCP, parses spots, resolves DXCC prefix via cty.xml, classifies against worked/confirmed data from Club Log, and sends alerts to the Node-RED dashboard, MQTT, FlexRadio, and Telegram.
