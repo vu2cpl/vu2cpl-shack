@@ -42,8 +42,14 @@ were checked with the live payloads in a local harness (the pages are behind log
 with a clean Node-RED restart at 18:08.
 
 At install WAN1 was at **3,876 GB = 129 %** for 11 Oct → 10 Nov: the 22 Oct restic off-site seed to Google
-Drive (631 GB up) plus ~680 GB downloaded on 24–25 Oct, not yet identified, on top of a ~3 TB baseline. The
+Drive (631 GB up) plus ~680 GB downloaded to the Mac mini on 24–25 Oct (cause not found, investigation dropped), on top of a ~3 TB baseline. The
 same day UberSDR `max_sessions` went 50 → 20 (ubersdr-box). Details in the vlan-setup HANDOVER.
+
+Two follow-up fixes the same evening, both after Manoj reported the card missing on `/shack`:
+`918ff81` bumped `index.html` to `index.js?v=53` (33628a0 had bumped `__shackBuild` only, so browsers kept the
+cached v52 script — always bump the two together), and `909631e` added `wan_vue_tick` (inject, 10 s, topic
+`tick`) so `wan_vue_bridge` re-sends the last `flow.wan_state`. Before it, a page opened between the hourly
+publishes showed "Waiting for shack/wan/wan1 and wan2" for up to an hour. 606 nodes.
 
 ### Vue: read-only DXCA card (v52)
 

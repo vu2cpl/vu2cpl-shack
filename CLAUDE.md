@@ -1098,6 +1098,7 @@ budget_gb_day}`, decimal GB).
 | Aggregate WAN usage | `wan_agg` | keeps `flow.wan_state = {wans:{wan1,wan2}}`; drops other topics (the cleared first-version `shack/wan/usage`) |
 | WAN Data Panel (`ui_template`) | `wan_panel` | group `wan_grp` "WAN Data", `/ui` tab Shack Monitoring tools, order 22, width 8 |
 | Build WAN state for Vue | `wan_vue_bridge` | topic `wanusage` → `vue_lo_wan` → `Builders → Shack Vue` (15th feeder) |
+| every 10 s → Vue (`inject`) | `wan_vue_tick` | topic `tick`, once after 5 s; `wan_vue_bridge` re-sends `flow.wan_state` on it, so a `/shack` page opened between the hourly publishes is filled within 10 s (`909631e`, same pattern as the DXCA feed) |
 
 Staleness (no update for 2 h) is judged by the renderers from `ts`, not the function, because a dead publisher
 sends nothing that would re-run it. Vue: `WanUsageCard`, `CARDS.wan`, after `NetworkCard`. **HA** reads the same topics
