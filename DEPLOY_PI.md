@@ -253,8 +253,9 @@ is historical — the Red Pitaya was onboarded first):
 - **Red Pitaya skimmer** `rp-f02054` (`rp-f02054.local`; Zynq-7010,
   2020-era Alpine, OpenSSH 8.3; `mosquitto_pub` already on the image).
   MAC `00:26:32:f0:20:54`
-- **Web-888 receiver** `web-888` (`192.168.1.235`; recent Alpine,
-  OpenSSH 9.7; needed `apk add mosquitto-clients`). Presents the bogus
+- **Web-888 receiver** `web-888` (`192.168.1.235`; Alpine 3.20,
+  OpenSSH 9.7 — patched to `9.7_p1-r6` and **key-only SSH** since
+  2026-11-08, HANDOVER #57; needed `apk add mosquitto-clients`). Presents the bogus
   hardwired MAC `64:69:73:74:72:6f` (ASCII "distro")
 
 **Addressing.** Use the mDNS names, `rp-f02054.local` and `web-888.local`,

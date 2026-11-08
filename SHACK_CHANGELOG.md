@@ -9,6 +9,40 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 ---
 
 
+## 2026-11-08
+
+### Web-888: back off the Trusted VLAN, OpenSSH patched, key-only SSH (HANDOVER #57)
+
+The Web-888 (retired from the station on 2026-10-01 and excluded from
+shack-health) was found powered on at `192.168.10.185`, i.e. on the
+**Trusted VLAN** beside the Mac, instead of its reserved Radio address
+`192.168.1.235`. Identity confirmed by its fixed MAC `64:69:73:74:72:6f` and
+the ED25519 host key on file for `.235`. Manoj moved its switch port off
+Trusted; it came straight back on `.235`.
+
+Security state found: Alpine 3.20.3 (out of regular support), image = Pavel
+Demin red-pitaya-notes HPSDR port built 2024-12-09, `openssh-server
+9.7_p1-r4`, `PermitRootLogin yes`, password auth on, root has a password.
+Alpine's 2026-11-05 OpenSSH password-bypass advisory covers 3.20, but the
+board was not exploitable as configured (no `*` account). Open services: TCP
+22, TCP 80 (Red Pitaya apps page), UDP 1024 (HPSDR, no auth).
+
+Changes (all on the board, persisted with `lbu commit -d`, reboot-verified):
+
+- `openssh*` upgraded to `9.7_p1-r6`, Alpine's fixed 3.20 package. The card
+  (`mmcblk0p1`, holds the apk cache) was remounted rw for this and put back
+  to ro.
+- `/etc/ssh/sshd_config.d/00-key-only.conf`: `PasswordAuthentication no`,
+  `KbdInteractiveAuthentication no`, `PermitRootLogin prohibit-password`.
+  The server now offers only `publickey`; the Mac's key still logs in.
+
+Not done: the other ~37 outdated 3.20 packages; moving to a supported
+Alpine needs a new image. Upstream options seen 2026-11-08: Pavel Demin
+red-pitaya-notes 20251012 (Alpine 3.22, Red Pitaya builds only), RaspSDR
+stock Web-888 firmware 20261106 (KiwiSDR-style, not HPSDR), jeskko
+web888-ng v0.7.0 (pre-release), SteamedFish web888-debian (experimental).
+The Red Pitaya half of #57 is still open (board offline).
+
 ## 2026-11-07
 
 ### HA Radio › Fleet: tidier layout, RPi table without gridlines
