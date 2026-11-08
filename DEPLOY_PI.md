@@ -251,7 +251,8 @@ boxes running **the same `monitor_redpitaya.sh` unchanged** (the name
 is historical — the Red Pitaya was onboarded first):
 
 - **Red Pitaya skimmer** `rp-f02054` (`rp-f02054.local`; Zynq-7010,
-  2020-era Alpine, OpenSSH 8.3; `mosquitto_pub` already on the image).
+  2020-era Alpine 3.12, OpenSSH 8.3 — **key-only SSH** since
+  2026-11-08, HANDOVER #57; `mosquitto_pub` already on the image).
   MAC `00:26:32:f0:20:54`
 - **Web-888 receiver** `web-888` (`192.168.1.235`; Alpine 3.20,
   OpenSSH 9.7 — patched to `9.7_p1-r6` and **key-only SSH** since

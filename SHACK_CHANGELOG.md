@@ -11,6 +11,26 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-11-08
 
+### Red Pitaya: key-only SSH (closes HANDOVER #57)
+
+Swapped in for the Web-888 the same evening; came up on its reserved
+`192.168.1.241` (Radio VLAN). Found: Alpine 3.12.0, kernel 5.4.49-xilinx,
+`openssh-server 8.3_p1-r0`, OpenSSL 1.1.1g, `PermitRootLogin yes`, password
+and keyboard-interactive auth on, root the only login account (`$6$` hash,
+no `*` account, so the bypass did not apply). Alpine's advisory has no fixed
+package for 3.12, so the fix is configuration only:
+
+- `/etc/ssh/sshd_config`: removed `PermitRootLogin yes`, added at the top
+  `PasswordAuthentication no`, `ChallengeResponseAuthentication no`,
+  `PermitRootLogin prohibit-password`. Backup `sshd_config.bak-20261108`.
+- `sshd -t`, restart with a session held open, fresh key login ok, a
+  key-less login gets `Permission denied (publickey)`.
+- `lbu commit -d`, rebooted: settings held, `.241` + `rp-f02054.local` ok,
+  HPSDR receiver back on UDP 1024.
+
+Left as is: TCP 80 (Red Pitaya apps) and HPSDR UDP 1024 have no auth (LAN
+only); the 2020 OS and OpenSSL 1.1.1 are out of support (new image needed).
+
 ### Web-888: back off the Trusted VLAN, OpenSSH patched, key-only SSH (HANDOVER #57)
 
 The Web-888 (retired from the station on 2026-10-01 and excluded from
