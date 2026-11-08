@@ -1,7 +1,7 @@
 # CLAUDE.md — VU2CPL Shack Automation
 **Operator:** Manoj (VU2CPL) | MK83TE | Bengaluru, India
 **Repo:** github.com/vu2cpl/vu2cpl-shack (**public** — verified 2026-08-25 via `gh repo view`; this line previously said "private", which was wrong. Treat every file here as world-readable: no household names, schedules, tokens, or HA dumps)
-**Last updated:** October 2026
+**Last updated:** November 2026
 
 ---
 
@@ -1510,7 +1510,7 @@ historical context lives in `SHACK_CHANGELOG.md`, indexed by date.
 
 | # | Item | Status |
 |---|------|--------|
-| 57 | **Zynq boards: Alpine OpenSSH password-auth bypass** (opened 2026-11-08) | Alpine advisory 2026-11-05: non-PAM sshd + musl `crypt()` lets a >256-byte password log in to any `*`-password account. Web-888 (OpenSSH 9.7) and Red Pitaya (8.3) both run sshd as root. Fix = `PasswordAuthentication no` + `lbu commit -d` on each. Both boards were offline 2026-11-08, so not yet applied. Steps in HANDOVER #57 | **Open** |
+| 57 | ~~**Zynq boards: Alpine OpenSSH password-auth bypass**~~ (opened 2026-11-08) | **Closed 2026-11-08 same day.** Alpine advisory 2026-11-05: non-PAM sshd + musl `crypt()` lets a >256-byte password log in to any `*`-password account. Neither board was exploitable (root the only login account, real hash). Web-888: `openssh` → `9.7_p1-r6` + key-only drop-in; Red Pitaya (Alpine 3.12, no fixed package): key-only via `sshd_config`. Both `lbu commit -d`, reboot-verified. The Web-888 had been on the Trusted VLAN; moved back to `.235`. See HANDOVER #57 | **Closed** |
 | 55 | **Load rebalancing across phases + SmartLoad L1 (electrician)** (opened 2026-10-19) | **Electrician done 2026-10-19 15:16 IST** (inputs verified, SmartLoad output re-coloured to N R S T, 3 kW geyser moved to L1; final map in CLAUDE.md "Grid-loss load shedding" + SHACK_CHANGELOG). Remaining: escalation `circuit_phase` Utility → L2 (and GF Load sheddable for L3?) pending Manoj; washing-machine heater phase from the recorder; Raji's plug power-on (Smart Life app); `PowerOnState 0` unverified. Originally: All house circuits and the heavier geyser share sit on inverter L3 (5.5 kW on a ~3.3 kW per-phase off-grid limit tripped the Deye 2026-10-19 09:07). HA now sheds on grid loss (CLAUDE.md "Grid-loss load shedding"), but the fix is electrical: spread FF/GF/Utility/Dryer across L1/L2/L3 and move geysers from L3 to the unused L1 of the SmartLoad port. Also open: the fifth Tuya geyser plug's power-on behaviour (Smart Life app). See HANDOVER #55 | **Mostly done** |
 | 52 | ~~**RBN: spot lines split across TCP chunks are dropped**~~ (opened 2026-10-15) | **Closed 2026-10-16.** Fixed 2026-10-15 (`95d9f2a`): the three login handlers hold each chunk's unterminated tail per `_session.id` and prepend it to the next chunk. Confirmed: 0 `Unmatched: DX de` lines in the 9.1 h from the 17:03:27Z deploy to 2026-10-16 02:12Z (the old rate of ~19/h would have given ~175). See HANDOVER #52 | **Closed** |
 | 49 | **LP-700: Pi server and Mac app months behind; forks unsynced** (opened 2026-10-14) | Both update-check PRs merged upstream 2026-10-10 (Server #4, App #19); VU3ESV's follow-ups released **v0.2.3** and **0.1.17**. Here: the Pi runs a 2026-05-16 `lp700-server` build, the Mac runs App 0.1.7-display-autoscale (0.1.17 includes that auto-scale work). Forks are 11 / 43 commits behind, 0 ahead. App branch `feat/scope-spectrum-views` was never sent upstream. Waiting on Manoj: sync the forks, `redeploy.sh` v0.2.3 to the Pi, install App 0.1.17, decide what to do with the branch. Full notes in HANDOVER #49 | **Open** |
