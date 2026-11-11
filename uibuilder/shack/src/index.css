@@ -1175,6 +1175,10 @@ html, body {
 .mains-lg--raw { border-top-width: 1px; opacity: 0.5; }
 .mains-lg--warn { border-top: 1px dashed var(--amber); }
 .mains-lg--trip { border-top: 1px solid var(--red); }
+.rawkw-head { margin-top: var(--sp-2); }
+.rawkw-svg { height: 60px; }
+.rawkw-grid { stroke: rgba(255,255,255,0.08); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.rawkw-zero { stroke: var(--text-dim); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .energy-tile {
   text-align: center;
   background: var(--bg);

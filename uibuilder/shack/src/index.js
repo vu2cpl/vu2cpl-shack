@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, watch, onMounted, onUnmounted } = Vu
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v53 · 2026-11-07 WAN Data card (WAN1/WAN2 vs ISP caps)';
+window.__shackBuild = 'v54 · 2026-11-11 Raw kW graph, export below 0';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -2247,6 +2247,24 @@ const PowerCard = {
               <span><i class="mains-lg mains-lg--warn"></i>255 V</span>
               <span><i class="mains-lg mains-lg--trip"></i>265 V trip</span>
             </div>
+            <!-- Raw kW (added 2026-11-11, v54): per-phase power at the incomer meter's CTs, last 10 min.
+                 Everything drawn from the mains: house, geysers, battery charging. The meter's kW goes
+                 negative on export, so the scale extends below the brighter 0 kW line when a phase exports. -->
+            <template v-if="rawKw">
+              <div class="phase-head rawkw-head">
+                <span class="energy-tile__lbl">Raw kW · incomer</span>
+                <span v-for="t in rawKw.tiles" :key="t.k" class="phase-val" :style="{color: t.color}">
+                  {{ t.name }} <b>{{ t.kw }}</b><span class="unit">{{ t.unit }}</span>
+                </span>
+              </div>
+              <svg class="phase-svg rawkw-svg" :viewBox="'0 0 ' + rawKw.W + ' ' + rawKw.H" preserveAspectRatio="none">
+                <line v-for="g in rawKw.grid" :key="g.v" x1="0" :y1="g.y" :x2="rawKw.W" :y2="g.y"
+                      :class="g.v === 0 ? 'rawkw-zero' : 'rawkw-grid'"/>
+                <polyline v-for="(pts, k) in rawKw.lines" :key="k" :points="pts" fill="none"
+                          :stroke="PH_COLORS[k]" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+              </svg>
+              <div class="phase-foot">10 min · {{ rawKw.lo }} to {{ rawKw.hi }} kW · lines 1 kW apart{{ rawKw.lo < 0 ? ' · below the bright 0 line = export' : '' }}</div>
+            </template>
           </div>
         </div>
 
@@ -2505,7 +2523,7 @@ const PowerCard = {
         // the stabilised voltage is what the house gets, so it is the highlighted needle and number
         stabColor: !(st >= 50) ? 'var(--text-dim)' : st >= 265 || st < 180 ? 'var(--red)' : st > 253 || st < 207 ? 'var(--amber)' : 'var(--green)',
         rawP: live ? mvPt(r, 30) : null, stabP: st != null && st >= 50 ? mvPt(st, 36) : null,
-        kw: kw ? kw.toFixed(1) + ' kW' : ''
+        kw: !kw ? '' : kw < 0 ? (-kw).toFixed(1) + ' kW exp' : kw.toFixed(1) + ' kW'
       };
     }));
     const mainsSupplyText = computed(() => {
@@ -2514,7 +2532,7 @@ const PowerCard = {
       return m.hz ? m.hz.toFixed(1) + ' Hz' : '';
     });
     const MV_KEEP_S = 600;
-    const mainsHist = reactive({ raw: [], stab: [] });                  // [{ ts, v: [V, V, V] }]
+    const mainsHist = reactive({ raw: [], stab: [], kw: [] });          // [{ ts, v: [V, V, V] }] (kw: kW)
     function mvPush(arr, ts, v) {
       if (!ts || !Array.isArray(v) || v.length !== 3) return;
       const last = arr[arr.length - 1];
@@ -2522,7 +2540,7 @@ const PowerCard = {
       arr.push({ ts, v: v.map(x => x == null ? null : Number(x)) });
       while (arr.length && arr[0].ts < ts - MV_KEEP_S) arr.shift();
     }
-    watch(mains, m => m && mvPush(mainsHist.raw, m.ts, m.v), { immediate: true });
+    watch(mains, m => { if (m) { mvPush(mainsHist.raw, m.ts, m.v); mvPush(mainsHist.kw, m.ts, m.kw); } }, { immediate: true });
     watch(phases, p => p && mvPush(mainsHist.stab, p.ts, p.grid_v), { immediate: true });
     const mainsSpark = computed(() => {
       const W = 300, H = 50;
@@ -2537,13 +2555,32 @@ const PowerCard = {
       return { W, H, y255: hi >= 255 ? y(255) : null, y265: hi >= 265 ? y(265) : null,
                raw: [0, 1, 2].map(k => pts(mainsHist.raw, k)), stab: [0, 1, 2].map(k => pts(mainsHist.stab, k)) };
     });
+    // Raw kW at the incomer, 10 min: negative = export, so the scale reaches below 0 when a phase exports.
+    const rawKw = computed(() => {
+      const h = mainsHist.kw; if (!h.length) return null;
+      const W = 300, H = 60, now = h.at(-1).ts;
+      let lo = 0, hi = 1;
+      for (const smp of h) for (const v of smp.v) if (v != null) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+      lo = Math.floor(lo); hi = Math.ceil(hi);
+      const x = t => ((t - (now - MV_KEEP_S)) / MV_KEEP_S * W).toFixed(1);
+      const y = v => (H - (v - lo) / (hi - lo) * H).toFixed(1);
+      const grid = []; for (let v = lo; v <= hi; v++) grid.push({ v, y: y(v) });
+      const lines = [0, 1, 2].map(k => h.filter(s => s.v[k] != null).map(s => x(s.ts) + ',' + y(s.v[k])).join(' '));
+      const cur = h.at(-1).v;
+      const tiles = [0, 1, 2].map(k => {
+        const v = cur[k];
+        return { k, name: PH_NAMES[k], color: PH_COLORS[k],
+                 kw: v == null ? '—' : Math.abs(v).toFixed(1), unit: v != null && v < 0 ? 'kW exp' : 'kW' };
+      });
+      return { W, H, lo, hi, grid, lines, tiles };
+    });
     const phaseGrid = computed(() =>
       phases.value ? (phases.value.grid_on ? 'grid ON' : 'grid OFF') + (phases.value.soc != null ? ' · SOC ' + phases.value.soc + '%' : '') : '');
 
     return { expanded, state, plugs, plugRows, plugClass, plugIsOn, toggle, onCount, rotatorRemain,
              solar, solarColor, gridVText, socColor, battStateText, battStateColor, battSummary,
              phases, phaseStale, phaseSvg, phaseTiles, phaseGrid,
-             mains, mainsStale, mainsDials, mainsSpark, mainsSupplyText, MAINS_BANDS, MAINS_TICKS, PH_COLORS,
+             mains, mainsStale, mainsDials, mainsSpark, mainsSupplyText, rawKw, MAINS_BANDS, MAINS_TICKS, PH_COLORS,
              houseTiles, toggleHouse };
   }
 };
