@@ -205,11 +205,14 @@ Under the Grid / Battery row, both dashboards carry a **Mains V** tile (added
 2026-11-07, Vue v49/v50): one dual-needle dial per phase, 180–290 V. The **stabilised** voltage at the
 inverter input (`phases.grid_v`) is the highlighted reading: a bold needle and a big number, green
 within 207–253 V and amber or red outside. A thin light needle and a small "raw" line show the
-**raw** mains at the incomer, before the servo stabiliser (`shack/mains-monitor/state`, the ESP32 +
+**raw** BESCOM mains, before the servo stabiliser (`shack/mains-monitor/state`, the ESP32 +
 Selec MFM384 in [`vu2cpl/power-management`](https://github.com/vu2cpl/power-management), 10 s).
 Bands: green 207–253 V, amber 253–265 V, red above 265 V (inverter trip; the servo cuts out at 270 V).
 Below the dials is a 10-minute sparkline, zoomed to the data: stabilised bold, raw faint. Each Vue dial also shows
 per-phase kW from the meter's CTs (fitted 2026-11-07). While the dials are present, the Grid tile shows only ON/OFF.
+Below the sparkline, a **Raw kW · BESCOM** graph (2026-11-11, Vue v54) shows each phase's power at the BESCOM
+meter over the last ten minutes. The meter's kW goes negative on export, so the scale reaches below a brighter
+0 kW line when a phase exports, and the readings say "1.1 kW exp" instead of "-1.1 kW".
 
 Below the 16 A voltage/current/power/today line, both dashboards carry
 a **Phase loads** graph tile (added 2026-10-19): inverter L1 / L2 / L3 = R / Y / B

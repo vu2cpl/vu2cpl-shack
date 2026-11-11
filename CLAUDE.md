@@ -675,6 +675,9 @@ House Loads", `height` 2→6; Vue PowerCard build `v25`):
   went from 7 to 10. HA Radio dashboard, same day: Raw R/Y/B gauges (`sensor.mains_monitor_raw_*`),
   the old gauges renamed "Stab R · L1" etc., and a 24 h raw-vs-stab `history-graph`. Backups:
   `dashboard-193-radio-pre/post-mainsvolt-20261107.json`. The flows revert tag is `pre-mainsvolt-20261107`.
+  **Raw kW graph (2026-11-11, v54):** under the sparkline, a 10-min `energy.mains.kw` graph per phase ("Raw kW · BESCOM"),
+  scale min(0, lowest)…max(1, highest) kW with a brighter 0 line, because the meter's kW goes negative on export. Negative values
+  read "N kW exp" on the header and dials. D1 height 10 → 12. Revert tag `pre-rawkw-20261111`.
   The default dashboard **Utopia 2.0** (`193-utopia-2`, Power section) got the same Raw R/Y/B gauges ahead of its
   grid gauges, which are now named "Stab R · L1" etc. Backups: `dashboard-193-utopia-2-pre/post-mainsvolt-20261107.json`.
   **Same evening, both dashboards: the six gauges became three two-needle dials** (Manoj), using **Gauge Card Pro

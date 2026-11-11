@@ -2252,7 +2252,7 @@ const PowerCard = {
                  negative on export, so the scale extends below the brighter 0 kW line when a phase exports. -->
             <template v-if="rawKw">
               <div class="phase-head rawkw-head">
-                <span class="energy-tile__lbl">Raw kW · incomer</span>
+                <span class="energy-tile__lbl">Raw kW · BESCOM</span>
                 <span v-for="t in rawKw.tiles" :key="t.k" class="phase-val" :style="{color: t.color}">
                   {{ t.name }} <b>{{ t.kw }}</b><span class="unit">{{ t.unit }}</span>
                 </span>

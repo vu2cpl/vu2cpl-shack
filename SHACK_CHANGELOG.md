@@ -9,6 +9,24 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 ---
 
 
+
+## 2026-11-11
+
+### Raw kW graph per phase, export below 0 (Vue v54 + D1); "incomer" → BESCOM
+
+The BESCOM meter (mains-monitor) reports per-phase kW, negative on export (sign checked 2026-11-08).
+At midday R and Y were exporting about 1.1 kW each. The dashboards showed this only as small text on the
+Mains V dials, so Manoj asked for the same graph as the :8765 phase-loads page.
+
+- Vue and the D1 16A Energy Monitor: a 10-min "Raw kW · BESCOM" graph under the Mains V sparkline. The scale
+  runs from min(0, lowest) to max(1, highest) kW, with 1 kW gridlines and a brighter 0 kW line.
+- Negative kW reads "1.1 kW exp" on the header and on the dials.
+- D1 template height 10 → 12. `index.html` loads `index.js?v=54` and `index.css?v=15`.
+- Labels and docs say BESCOM instead of "incomer" (Manoj). "Main incomer" in older entries means the
+  physical main switch and is unchanged.
+- Checked in a local harness from the committed code, with fake export data. `/shack` and `/ui` need a login.
+  Revert: `git checkout pre-rawkw-20261111 -- flows.json uibuilder/shack/src`.
+
 ## 2026-11-08
 
 ### Red Pitaya: key-only SSH (closes HANDOVER #57)
@@ -174,9 +192,9 @@ are enabled in HA's entity registry, and `ha_discovery_publish.py` no longer cre
 2.0 kW against the inverter's 1.97 kW grid draw. Meter R and Y first read swapped against the
 inverter's L1 and L2; Manoj found a wiring swap and fixed it the same evening, and all three phases now match.
 
-### Mains V: raw incomer voltage against stabilised voltage, on Vue, D1 and HA
+### Mains V: raw BESCOM voltage against stabilised voltage, on Vue, D1 and HA
 
-The mains-monitor (ESP32 + Selec MFM384 at the incomer, before the servo stabiliser; code in the private
+The mains-monitor (ESP32 + Selec MFM384 on the BESCOM supply, before the servo stabiliser; code in the private
 `vu2cpl/power-management`) now feeds every dashboard. Node-RED gains `shack/mains-monitor/state` →
 `Parse Mains Monitor` → `energy/mains` on the Power tab. The Vue Power card (v49) and the D1 16A Energy Monitor
 each draw three dual-needle dials, one per phase, scaled 180–290 V. The thick needle is raw mains and the thin
