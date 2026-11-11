@@ -305,13 +305,13 @@ sensor('rbn_vu24dx_h1', 'VU24DX-1 spots (1h)', DEV_RBN, BT,
        tpl="{{ value_json.skimmers['VU24DX-1'].h1_total }}",
        state_class='measurement', icon='mdi:counter', expire=60)
 
-# ---------- Mains monitor (raw mains at the incomer, before the servo stabiliser) ----------
+# ---------- Mains monitor (raw BESCOM mains, before the servo stabiliser) ----------
 # ESP32 + Selec MFM384 in the private vu2cpl/power-management repo (mains-monitor/), added
 # 2026-11-07. The stabilised side is the inverter's grid input (sensor.inverter_grid_l1..l3_voltage).
 # Current / power / energy: CTs (Yokins RT-30 100/5) fitted 2026-11-07 and the entities enabled in
 # HA's registry the same day (they were created disabled while I/kW read 0).
 DEV_MAINS = {'identifiers': ['shack_mains_monitor'], 'name': 'Mains Monitor',
-             'manufacturer': 'VU2CPL shack', 'model': 'ESP32 + Selec MFM384 (incomer)'}
+             'manufacturer': 'VU2CPL shack', 'model': 'ESP32 + Selec MFM384 (BESCOM)'}
 MT = 'shack/mains-monitor/state'
 for i, ph in enumerate('RYB'):
     sensor(f'mains_v_{ph.lower()}', f'Raw {ph}', DEV_MAINS, MT,

@@ -22,7 +22,9 @@ Mains V dials, so Manoj asked for the same graph as the :8765 phase-loads page.
   runs from min(0, lowest) to max(1, highest) kW, with 1 kW gridlines and a brighter 0 kW line.
 - Negative kW reads "1.1 kW exp" on the header and on the dials.
 - D1 template height 10 → 12. `index.html` loads `index.js?v=54` and `index.css?v=15`.
-- Labels and docs say BESCOM instead of "incomer" (Manoj). "Main incomer" in older entries means the
+- Labels and docs say BESCOM instead of "incomer" (Manoj). In HA: the Radio dashboard's history graph is now "Mains voltage — raw
+  (BESCOM) vs stabilised (inverter input)" (backup `dashboard-193-radio-pre-bescom-20261111.json`), and
+  `ha_discovery_publish.py` gives the Mains Monitor device the model "ESP32 + Selec MFM384 (BESCOM)" (re-run, 129 configs). "Main incomer" in older entries means the
   physical main switch and is unchanged.
 - Checked in a local harness from the committed code, with fake export data. `/shack` and `/ui` need a login.
   Revert: `git checkout pre-rawkw-20261111 -- flows.json uibuilder/shack/src`.
