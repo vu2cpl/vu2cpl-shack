@@ -19,6 +19,16 @@ no rows since, history included. The Mac's `wan-usage` read that as 0 and publis
 from HA history as a carry-over, and on no data publishes nothing and sends a Telegram. Back at 22:54: WAN1 134 GB
 (4.5 %), WAN2 500 GB (50 %). The payload is unchanged, so no flow or dashboard change was needed.
 
+### Vue v56: month and year energy totals
+
+The Power card gains a row under Grid / Battery with two tiles, "Nov total" and "2026 total". Each shows solar
+production (☀ kWh), house load, and BESCOM import ↓ / export ↑ in kWh. The figures come from Home Assistant's
+long-term statistics, which hold the Deye Cloud history back to Oct 2024 (backfilled 2026-11-12/13). The 1-min
+`solar_inverter_mqtt.py` on noderedpi4 sums meridianpi5's `:8765/api/energy` into month and year at most every
+10 minutes, caches it in `~/.cache/solar_totals.json`, and adds it to the retained `shack/solar/inverter` as `totals`.
+`Parse Solar Inverter` already passes the payload whole, so `flows.json` is unchanged. The row dims when the totals
+are over 3 h old; a stale cache is dropped after 6 h. Build stamp v56; `index.js?v=56`, `index.css?v=17`.
+
 ### Vue v55: Y phase drawn in yellow
 
 The Y phase used the amber status colour (`--amber`, `#d29922`), so its lines read as orange and looked like a

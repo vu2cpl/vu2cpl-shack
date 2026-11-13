@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, watch, onMounted, onUnmounted } = Vu
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v55 · 2026-11-13 Y phase drawn in yellow';
+window.__shackBuild = 'v56 · 2026-11-13 month and year energy totals';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -2207,6 +2207,20 @@ const PowerCard = {
           </div>
         </div>
 
+        <!-- Month / year energy totals (added 2026-11-13, v56): solar, house load and BESCOM
+             import / export in kWh. From Home Assistant's long-term statistics (backfilled from
+             the Deye Cloud archive), summed by solar_inverter_mqtt.py from meridianpi5's
+             :8765/api/energy and carried in shack/solar/inverter as "totals" (refreshed every 10 min). -->
+        <div v-if="solar && solar.totals" class="energy-row energy-row--wide"
+             :class="{ 'is-stale': totalsStale }">
+          <div v-for="t in totalTiles" :key="t.k" class="energy-tile" :title="t.tip">
+            <div class="energy-tile__lbl">{{ t.lbl }}</div>
+            <div class="energy-tile__val" style="color: var(--amber)">☀ {{ t.pv }}<span class="unit">kWh</span></div>
+            <div class="energy-tile__sub energy-tile__sub--big">Load {{ t.load }}</div>
+            <div class="energy-tile__sub">Grid ↓{{ t.imp }} ↑{{ t.exp }}</div>
+          </div>
+        </div>
+
         <!-- Mains V (added 2026-11-07, v49): one dual-needle dial per phase. Bold needle and big
              number = stabilised voltage at the inverter input (phases.grid_v), green 207-253 V, amber /
              red outside; thin grey needle and small "raw" line = raw mains at the incomer, before the
@@ -2399,6 +2413,20 @@ const PowerCard = {
       return battStateText.value + ' ' + Math.abs(s.batt_p_w) + 'W';
     });
 
+    // --- Month / year totals (solar.totals, kWh; see the template comment) ---
+    const totalsStale = computed(() =>
+      !solar.value?.totals?.ts || (Date.now() / 1000 - solar.value.totals.ts) > 3 * 3600);
+    const totalTiles = computed(() => {
+      const t = solar.value?.totals;
+      if (!t) return [];
+      const now = new Date();
+      const tip = 'Solar production, house load, BESCOM import (↓) and export (↑) in kWh, from Home Assistant statistics.';
+      return [
+        { k: 'month', lbl: now.toLocaleString('en', { month: 'short' }) + ' total', tip, ...t.month },
+        { k: 'year',  lbl: now.getFullYear() + ' total', tip, ...t.year }
+      ];
+    });
+
     // --- House load circuits (state.energy.house, keyed by Tasmota topic) ---
     // FORK: match these keys/labels to your own Tasmota house-load devices.
     const HOUSE_ORDER = [
@@ -2579,7 +2607,7 @@ const PowerCard = {
       phases.value ? (phases.value.grid_on ? 'grid ON' : 'grid OFF') + (phases.value.soc != null ? ' · SOC ' + phases.value.soc + '%' : '') : '');
 
     return { expanded, state, plugs, plugRows, plugClass, plugIsOn, toggle, onCount, rotatorRemain,
-             solar, solarColor, gridVText, socColor, battStateText, battStateColor, battSummary,
+             solar, solarColor, gridVText, socColor, battStateText, battStateColor, battSummary, totalTiles, totalsStale,
              phases, phaseStale, phaseSvg, phaseTiles, phaseGrid,
              mains, mainsStale, mainsDials, mainsSpark, mainsSupplyText, rawKw, MAINS_BANDS, MAINS_TICKS, PH_COLORS,
              houseTiles, toggleHouse };

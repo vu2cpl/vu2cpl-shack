@@ -215,6 +215,11 @@ meter over the last ten minutes. The meter's kW goes negative on export, so the 
 0 kW line when a phase exports, and the readings say "1.1 kW exp" instead of "-1.1 kW". Phases are drawn R red,
 Y yellow (Vue v55 and D1, 2026-11-13; it was amber, which read as orange), B blue.
 
+Under the Grid and Battery tiles, the Vue Power card shows **month and year energy totals** (v56, 2026-11-13):
+solar production, house load, and BESCOM import / export in kWh for this month and this year. They come from Home
+Assistant's long-term statistics (with the Deye Cloud history backfilled to Oct 2024), carried as `totals` in
+`shack/solar/inverter`.
+
 Below the 16 A voltage/current/power/today line, both dashboards carry
 a **Phase loads** graph tile (added 2026-10-19): inverter L1 / L2 / L3 = R / Y / B
 load over the last ten minutes with the 5 kW per-phase off-grid limit and the

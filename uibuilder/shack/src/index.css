@@ -1151,7 +1151,7 @@ html, body {
    card is stretched), limit and shed lines, a one-line footer. */
 .energy-row--graph { grid-template-columns: 1fr; }
 .energy-tile--graph { text-align: left; }
-.energy-tile--graph.is-stale { opacity: 0.45; }
+.energy-tile--graph.is-stale, .energy-row.is-stale { opacity: 0.45; }
 .phase-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-2); flex-wrap: wrap; }
 .phase-val { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: var(--fs-sm); white-space: nowrap; }
 .phase-val b { font-weight: 600; }
