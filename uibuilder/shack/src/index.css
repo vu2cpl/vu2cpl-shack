@@ -30,6 +30,9 @@
   --red-bg:   #2d0808;
   --red-bd:   #a82020;
 
+  /* Y phase: yellow, distinct from the amber status colour */
+  --ph-y:     #ffdf2e;
+
   /* Fluid typography */
   --fs-xs:   clamp(12px, 0.9vw,  14px);
   --fs-sm:   clamp(13px, 1.05vw, 16px);

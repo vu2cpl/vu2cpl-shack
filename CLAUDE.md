@@ -658,7 +658,7 @@ House Loads", `height` 2→6; Vue PowerCard build `v25`):
 - **Phase-loads tile (Vue v47, 2026-10-19, #55):** one full-width tile under the solar row —
   R / Y / B (= inverter L1 / L2 / L3 since the 2026-10-19 input re-landing) over the last ~10 min as an
   SVG sparkline with the solid 5 kW per-phase off-grid limit and the dotted 4.5 kW shedding line (3.3 / 2.8 kW until v48, 2026-10-25),
-  the three live watts in the phase colours (`--red` / `--amber` / `--accent`), grid state + SOC in the
+  the three live watts in the phase colours (`--red` / `--ph-y` yellow `#ffdf2e` since v55, was `--amber` / `--accent`), grid state + SOC in the
   footer; greys to 45 % when `phases.ts` is older than 30 s. Fed by `state.energy.phases` ←
   `shack/solar/phases` (`solar_phases_mqtt.py`, 5 s, direct from the logger — **no HA in the path**, per
   the "read devices directly" rule); the Vue keeps 200 samples client-side (3-s pushes, de-duplicated on

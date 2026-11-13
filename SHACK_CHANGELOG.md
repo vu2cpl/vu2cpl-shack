@@ -8,6 +8,17 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-11-13
+
+### Vue v55: Y phase drawn in yellow
+
+The Y phase used the amber status colour (`--amber`, `#d29922`), so its lines read as orange and looked like a
+warning. A new token `--ph-y` (`#ffdf2e`) now colours the Y phase everywhere `PH_COLORS` is used: the per-phase load
+sparkline and its live watts, the Mains V dials and sparkline, and the Raw kW graph. Amber stays for warnings and the
+4.5 kW / 255 V lines. Build stamp v55; `index.js?v=55`, `index.css?v=16`. The D1 dashboard is unchanged.
+
+---
+
 
 
 ## 2026-11-11

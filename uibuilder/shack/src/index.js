@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, watch, onMounted, onUnmounted } = Vu
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v54 · 2026-11-11 Raw kW graph, export below 0';
+window.__shackBuild = 'v55 · 2026-11-13 Y phase drawn in yellow';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -2470,7 +2470,8 @@ const PowerCard = {
     const phaseStale = computed(() =>
       !phases.value?.ts || (Date.now() / 1000 - phases.value.ts) > 30);
     const PH_NAMES = ['R', 'Y', 'B'];                                   // inverter L1/L2/L3 (re-landed 2026-10-19)
-    const PH_COLORS = ['var(--red)', 'var(--amber)', 'var(--accent)'];
+    // Y phase has its own yellow so it is not mistaken for the amber warning colour (2026-11-13).
+    const PH_COLORS = ['var(--red)', 'var(--ph-y)', 'var(--accent)'];
     const PH_LIMIT = 5000, PH_SHED = 4500, PH_KEEP = 200;              // 200 × 3 s ≈ 10 min
     const phaseHist = reactive([]);                                     // [{ ts, l: [W, W, W] }]
     watch(phases, (p) => {

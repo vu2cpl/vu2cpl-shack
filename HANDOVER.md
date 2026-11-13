@@ -1,6 +1,6 @@
 # Session Handover — VU2CPL Shack
 
-**Period:** 2026-05-01 → 2026-11-11
+**Period:** 2026-05-01 → 2026-11-13
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
 **Last commit at handover:** **Raw kW graph per phase, export below 0 (2026-11-11, Vue v54 + D1).** The BESCOM meter's kW goes negative on export (sign checked 2026-11-08). Under the Mains V sparkline, both dashboards now draw a 10-min "Raw kW · BESCOM" graph whose scale reaches below a brighter 0 kW line, and the header and dial text read "1.1 kW exp". D1 template height 10 → 12. Manoj also asked for "incomer" to read **BESCOM** in labels and docs. Revert tag `pre-rawkw-20261111`. Verified in a local harness from the committed code (`/shack` and `/ui` need a login).
 
@@ -144,6 +144,7 @@ Prior handover tip: `98daacb` (Pi-committed) — VU2CPL cluster reverted to port
 
 | Day | Area | What changed |
 |-----|------|--------------|
+| 11-13 | **Vue v55: Y phase in yellow** | The Y phase used the amber warning colour and read as orange. New token `--ph-y` `#ffdf2e` for the Y phase in `PH_COLORS` (load sparkline, Mains V dials and sparkline, Raw kW graph); amber stays for warnings. `index.js?v=55`, `index.css?v=16`. D1 unchanged. |
 | 11-11 | **Raw kW graph, export below 0; "incomer" → BESCOM** | Vue v54 and the D1 16A Energy Monitor: a 10-min per-phase "Raw kW · BESCOM" graph from `energy.mains.kw` under the Mains V sparkline. Scale from min(0, lowest) to max(1, highest) kW, 1 kW gridlines, brighter 0 line, "below = export" note. Negative kW shows as "N kW exp" on the header and the dials. D1 height 10 → 12; `index.js?v=54`, `index.css?v=15`. No nodes added (594). Labels and docs say BESCOM, not incomer. Revert tag `pre-rawkw-20261111`. |
 | 11-07 | **Mains V dials: raw BESCOM vs stabilised inverter input** | Node-RED: `shack/mains-monitor/state` → `Parse Mains Monitor` → `energy/mains` (594 nodes). Vue v49 and the D1 Energy template draw three dual-needle dials (180–290 V; green 207–253, amber 253–265, red >265) plus a 10-min sparkline, and the Grid tile drops its volts line while they show. HA: `ha_discovery_publish.py` adds the Mains Monitor device (19 configs, 112 total; I/kW/kWh/PF disabled until the CTs), and the Radio dashboard gains Raw R/Y/B gauges, "Stab" renames and a 24 h raw-vs-stab graph. Verified: the HA gauges read live; both dashboards' dials were rendered from the deployed code in a local harness, because `/shack` is behind login. |
 | 10-25 | **HA: Bosch dishwasher (Home Connect) + its own dashboard** | Manoj set up the Home Connect developer app and added the integration; Bosch SMS6HVI01I, 26 entities. Enabled the 11 sensors the integration ships disabled (salt, rinse aid, finished/aborted, care reminders). New dashboard `/193-dishwasher` in the Utopia sub-page style, plus a Dishwasher nav button on Utopia 2.0 (grid now 5 columns). Not yet eyeballed. Details: CLAUDE.md "Bosch dishwasher via Home Connect". |
