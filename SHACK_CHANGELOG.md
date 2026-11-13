@@ -15,7 +15,10 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 The Y phase used the amber status colour (`--amber`, `#d29922`), so its lines read as orange and looked like a
 warning. A new token `--ph-y` (`#ffdf2e`) now colours the Y phase everywhere `PH_COLORS` is used: the per-phase load
 sparkline and its live watts, the Mains V dials and sparkline, and the Raw kW graph. Amber stays for warnings and the
-4.5 kW / 255 V lines. Build stamp v55; `index.js?v=55`, `index.css?v=16`. The D1 dashboard is unchanged.
+4.5 kW / 255 V lines. Build stamp v55; `index.js?v=55`, `index.css?v=16`.
+
+Same day, **D1** too: the 16A Energy Monitor template's `_MV_COL` (Mains V dials, sparkline and Raw kW graph) had Y as
+`#e3b341`, the same amber as its 255 V warn line; now `#ffdf2e`. One-line `flows.json` change, 606 nodes, no wiring touched.
 
 ---
 

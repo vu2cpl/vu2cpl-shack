@@ -213,7 +213,7 @@ per-phase kW from the meter's CTs (fitted 2026-11-07). While the dials are prese
 Below the sparkline, a **Raw kW · BESCOM** graph (2026-11-11, Vue v54) shows each phase's power at the BESCOM
 meter over the last ten minutes. The meter's kW goes negative on export, so the scale reaches below a brighter
 0 kW line when a phase exports, and the readings say "1.1 kW exp" instead of "-1.1 kW". Phases are drawn R red,
-Y yellow (since v55; it was amber, which read as orange), B blue.
+Y yellow (Vue v55 and D1, 2026-11-13; it was amber, which read as orange), B blue.
 
 Below the 16 A voltage/current/power/today line, both dashboards carry
 a **Phase loads** graph tile (added 2026-10-19): inverter L1 / L2 / L3 = R / Y / B
