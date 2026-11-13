@@ -660,7 +660,8 @@ House Loads", `height` 2→6; Vue PowerCard build `v25`):
   (`{month:{pv,load,imp,exp}, year:{…}, ts}`), added to `shack/solar/inverter` by `solar_inverter_mqtt.py`,
   which sums meridianpi5's `:8765/api/energy` (HA long-term statistics, Deye history backfilled) every 10 min
   with a disk cache (`~/.cache/solar_totals.json`, dropped after 6 h). Dims when `totals.ts` > 3 h old.
-  No flow change: `Parse Solar Inverter` passes the payload whole.
+  No flow change: `Parse Solar Inverter` passes the payload whole. D1 has the same row in the 16A Energy Monitor
+  template (`#en-totals`, hidden until totals arrive; template height 14 since this change).
 - **Phase-loads tile (Vue v47, 2026-10-19, #55):** one full-width tile under the solar row —
   R / Y / B (= inverter L1 / L2 / L3 since the 2026-10-19 input re-landing) over the last ~10 min as an
   SVG sparkline with the solid 5 kW per-phase off-grid limit and the dotted 4.5 kW shedding line (3.3 / 2.8 kW until v48, 2026-10-25),

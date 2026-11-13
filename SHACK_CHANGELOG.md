@@ -19,6 +19,13 @@ no rows since, history included. The Mac's `wan-usage` read that as 0 and publis
 from HA history as a carry-over, and on no data publishes nothing and sends a Telegram. Back at 22:54: WAN1 134 GB
 (4.5 %), WAN2 500 GB (50 %). The payload is unchanged, so no flow or dashboard change was needed.
 
+### D1: month and year energy totals
+
+Same day, the **D1** 16A Energy Monitor template gets the same two tiles under Grid / Battery: solar, house load, and
+BESCOM import ↓ / export ↑ for this month and this year, from `solar.totals`. The row stays hidden until the totals
+arrive and dims when they are over 3 h old. Template height 12 → 14. One-node `flows.json` change, 606 nodes, no
+wiring touched. Revert tag `pre-d1totals-20261113`.
+
 ### Vue v56: month and year energy totals
 
 The Power card gains a row under Grid / Battery with two tiles, "Nov total" and "2026 total". Each shows solar
