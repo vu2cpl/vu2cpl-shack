@@ -10,6 +10,15 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-11-13
 
+### WAN Data showed 0 GB from 11 Nov 14:15: UDM stats reset, publisher fixed
+
+The `/ui` WAN Data group, the `/shack` card and the HA entities showed 0 GB on both WANs for 2.4 days. Nothing in Node-RED
+was wrong. The UDM rebooted at 13:42 on 11 Nov (Network 11.0.99), and its classic `stat/report/*` API has returned
+no rows since, history included. The Mac's `wan-usage` read that as 0 and published it. Fixed in `vu2cpl/vlan-setup`
+(HANDOVER 2026-11-13). It now reads the v2 hourly WAN history into its own ledger, adds the pre-reset readings
+from HA history as a carry-over, and on no data publishes nothing and sends a Telegram. Back at 22:54: WAN1 134 GB
+(4.5 %), WAN2 500 GB (50 %). The payload is unchanged, so no flow or dashboard change was needed.
+
 ### Vue v55: Y phase drawn in yellow
 
 The Y phase used the amber status colour (`--amber`, `#d29922`), so its lines read as orange and looked like a

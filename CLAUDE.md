@@ -1090,10 +1090,12 @@ the ubersdr box also running `meridian` (`192.168.1.109`).
 
 WAN1 (3 TB, cycle 11th → 10th) and WAN2 (1 TB, cycle 26th → 25th) usage, download + upload. The publisher is
 **not** on the Pi: the `wan-usage` launchd job on the Mac (`vu2cpl/vlan-setup` `scripts/wan-usage/`, hourly)
-reads the UDM's `stat/report/daily.site` with the UniFi API key (which stays on the Mac only), alerts through HA's
-Telegram, and publishes retained `shack/wan/wan1` and `shack/wan/wan2` (`{wan, ts, cycle_start, cycle_end,
+reads the UDM's hourly WAN history (v2 `aggregated-dashboard` `wan_activity`, into its own ledger since 2026-11-13;
+the classic `stat/report/daily.site` went empty after the UDM's 2026-11-11 reboot) with the UniFi API key (which
+stays on the Mac only), alerts through HA's Telegram, and publishes retained `shack/wan/wan1` and `shack/wan/wan2` (`{wan, ts, cycle_start, cycle_end,
 days_elapsed, days_left, used_gb, down_gb, up_gb, today_gb, avg_gb_day, projected_gb, limit_gb, pct, left_gb,
-budget_gb_day}`, decimal GB).
+budget_gb_day}`, decimal GB). When the gateway has no data it now publishes nothing (HA sensors expire after 2 h)
+and sends a 🔴 Telegram, so a stale tile means "no data", never a false 0.
 
 | Node | id | Notes |
 |---|---|---|
