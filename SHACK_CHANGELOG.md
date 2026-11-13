@@ -20,6 +20,11 @@ sparkline and its live watts, the Mains V dials and sparkline, and the Raw kW gr
 Same day, **D1** too: the 16A Energy Monitor template's `_MV_COL` (Mains V dials, sparkline and Raw kW graph) had Y as
 `#e3b341`, the same amber as its 255 V warn line; now `#ffdf2e`. One-line `flows.json` change, 606 nodes, no wiring touched.
 
+Same day, **Home Assistant** too: the "Y · L2" title under the Y mains-voltage dial was `#e3c93a`; now `#ffdf2e`
+on both dashboards that carry the dials (Radio and "193, Utopia 2.0"), saved over the websocket. Backups
+`dashboard-193-radio-pre-yellow-20261113.json` and `dashboard-193-utopia-2-pre-yellow-20261113.json` in the usual HA
+backup folder. The amber warn colours on those dashboards are unchanged.
+
 ---
 
 
