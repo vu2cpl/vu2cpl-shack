@@ -214,6 +214,13 @@ Below the sparkline, a **Raw kW · BESCOM** graph (2026-11-11, Vue v54) shows ea
 meter over the last ten minutes. The meter's kW goes negative on export, so the scale reaches below a brighter
 0 kW line when a phase exports, and the readings say "1.1 kW exp" instead of "-1.1 kW". Phases are drawn R red,
 Y yellow (Vue v55 and D1, 2026-11-13; it was amber, which read as orange), B blue.
+Under the sparkline, **window pills** (Vue v57 and D1, 2026-11-15) switch both graphs between the live 10 minutes
+and 24 h, 3 days, 1 week, 1 month or 3 months. The longer windows are fetched by the browser from the `:8765`
+phase-loads page on meridianpi5 ([`vu2cpl/power-management`](https://github.com/vu2cpl/power-management)
+`inverter/load_monitor.py`), which reads Home Assistant history up to 24 h and its 5-minute and hourly statistics
+beyond, each bucket at its peak. A short gap in the readings (a meter or MQTT blip) is bridged; a real supply cut
+breaks the line. The choice is shared by `/ui` and `/shack` in the same browser. If `:8765` can't be reached, the
+legend says "history unavailable" and the pills still switch back to 10 min.
 
 Under the Grid and Battery tiles, the Vue Power card and the D1 16A Energy Monitor show **month and year energy totals** (Vue v56 and D1, 2026-11-13):
 solar production, house load, and BESCOM import / export in kWh for this month and this year. They come from Home

@@ -687,6 +687,11 @@ House Loads", `height` 2→6; Vue PowerCard build `v25`):
   **Raw kW graph (2026-11-11, v54):** under the sparkline, a 10-min `energy.mains.kw` graph per phase ("Raw kW · BESCOM"),
   scale min(0, lowest)…max(1, highest) kW with a brighter 0 line, because the meter's kW goes negative on export. Negative values
   read "N kW exp" on the header and dials. D1 height 10 → 12. Revert tag `pre-rawkw-20261111`.
+  **Window pills (2026-11-15, v57 + D1):** 10 min (live buffer) | 24 h | 3 d | 1 wk | 1 mo | 3 mo for both graphs. Longer
+  windows are a browser `fetch` of `http://192.168.1.164:8765/api/history?minutes=N` (power-management `load_monitor.py`,
+  which allows the Node-RED origins by CORS); no flow nodes involved. Lines are SVG paths: nulls bridged up to 10 min,
+  volts under 150 break the line. `localStorage` `mvWin` is shared by `/ui` and `/shack`. D1 height 14 → 15.
+  Revert tag `pre-mvwin-20261115`.
   The default dashboard **Utopia 2.0** (`193-utopia-2`, Power section) got the same Raw R/Y/B gauges ahead of its
   grid gauges, which are now named "Stab R · L1" etc. Backups: `dashboard-193-utopia-2-pre/post-mainsvolt-20261107.json`.
   **Same evening, both dashboards: the six gauges became three two-needle dials** (Manoj), using **Gauge Card Pro

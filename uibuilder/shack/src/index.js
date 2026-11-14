@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, watch, onMounted, onUnmounted } = Vu
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v56 · 2026-11-13 month and year energy totals';
+window.__shackBuild = 'v57 · 2026-11-15 Mains V / Raw kW window pills';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -2226,7 +2226,7 @@ const PowerCard = {
              red outside; thin grey needle and small "raw" line = raw mains at the incomer, before the
              servo stabiliser (shack/mains-monitor/state, ESP32 + Selec MFM384, 10 s). Scale 180-290 V: green 207-253, amber 253-265, red above 265 (inverter
              trip; the servo cuts out at 270). Per-phase kW appears once the meter's CTs are fitted.
-             Under the dials, a 10-min sparkline: raw solid, stabilised dashed. -->
+             Under the dials, a sparkline (10 min live, or a longer window): raw thin, stabilised bold. -->
         <div v-if="mains" class="energy-row energy-row--graph">
           <div class="energy-tile energy-tile--graph" :class="{ 'is-stale': mainsStale }">
             <div class="phase-head">
@@ -2249,13 +2249,21 @@ const PowerCard = {
             <svg class="phase-svg mains-spark" :viewBox="'0 0 ' + mainsSpark.W + ' ' + mainsSpark.H" preserveAspectRatio="none">
               <line v-if="mainsSpark.y265" x1="0" :y1="mainsSpark.y265" :x2="mainsSpark.W" :y2="mainsSpark.y265" class="phase-limit"/>
               <line v-if="mainsSpark.y255" x1="0" :y1="mainsSpark.y255" :x2="mainsSpark.W" :y2="mainsSpark.y255" class="phase-shed"/>
-              <polyline v-for="(pts, k) in mainsSpark.raw" :key="'r' + k" :points="pts" fill="none"
-                        :stroke="PH_COLORS[k]" stroke-width="1" vector-effect="non-scaling-stroke" opacity="0.45"/>
-              <polyline v-for="(pts, k) in mainsSpark.stab" :key="'s' + k" :points="pts" fill="none"
-                        :stroke="PH_COLORS[k]" stroke-width="2" vector-effect="non-scaling-stroke"/>
+              <line v-for="gx in mainsSpark.vgrid" :key="'g' + gx" :x1="gx" y1="0" :x2="gx" :y2="mainsSpark.H" class="rawkw-grid"/>
+              <path v-for="(d, k) in mainsSpark.raw" :key="'r' + k" :d="d" fill="none"
+                    :stroke="PH_COLORS[k]" stroke-width="1" vector-effect="non-scaling-stroke" opacity="0.45"/>
+              <path v-for="(d, k) in mainsSpark.stab" :key="'s' + k" :d="d" fill="none"
+                    :stroke="PH_COLORS[k]" stroke-width="2" vector-effect="non-scaling-stroke"/>
             </svg>
+            <!-- Window (added 2026-11-15, v57): 10 min is the live MQTT buffer; longer windows fetch
+                 raw / stabilised volts and BESCOM kW from the :8765 phase-loads page on meridianpi5
+                 (HA history up to 24 h, HA statistics beyond). Applies to the Raw kW graph too. -->
+            <div class="pill-group mains-wins">
+              <button v-for="w in MV_WINS" :key="w[0]" type="button" class="pill"
+                      :class="{'pill--active': mvWin === w[0]}" @click="setMvWin(w[0])">{{ w[1] }}</button>
+            </div>
             <div class="mains-legend">
-              <span>10 min</span>
+              <span>{{ mainsSpark.label }}</span>
               <span><i class="mains-lg"></i>stabilised</span>
               <span><i class="mains-lg mains-lg--raw"></i>raw</span>
               <span><i class="mains-lg mains-lg--warn"></i>255 V</span>
@@ -2274,10 +2282,11 @@ const PowerCard = {
               <svg class="phase-svg rawkw-svg" :viewBox="'0 0 ' + rawKw.W + ' ' + rawKw.H" preserveAspectRatio="none">
                 <line v-for="g in rawKw.grid" :key="g.v" x1="0" :y1="g.y" :x2="rawKw.W" :y2="g.y"
                       :class="g.v === 0 ? 'rawkw-zero' : 'rawkw-grid'"/>
-                <polyline v-for="(pts, k) in rawKw.lines" :key="k" :points="pts" fill="none"
-                          :stroke="PH_COLORS[k]" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+                <line v-for="gx in rawKw.vgrid" :key="'g' + gx" :x1="gx" y1="0" :x2="gx" :y2="rawKw.H" class="rawkw-grid"/>
+                <path v-for="(d, k) in rawKw.lines" :key="k" :d="d" fill="none"
+                      :stroke="PH_COLORS[k]" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
               </svg>
-              <div class="phase-foot">10 min · {{ rawKw.lo }} to {{ rawKw.hi }} kW · lines 1 kW apart{{ rawKw.lo < 0 ? ' · below the bright 0 line = export' : '' }}</div>
+              <div class="phase-foot">{{ rawKw.label }} · {{ rawKw.lo }} to {{ rawKw.hi }} kW · lines 1 kW apart{{ rawKw.lo < 0 ? ' · below the bright 0 line = export' : '' }}</div>
             </template>
           </div>
         </div>
@@ -2571,37 +2580,92 @@ const PowerCard = {
     }
     watch(mains, m => { if (m) { mvPush(mainsHist.raw, m.ts, m.v); mvPush(mainsHist.kw, m.ts, m.kw); } }, { immediate: true });
     watch(phases, p => p && mvPush(mainsHist.stab, p.ts, p.grid_v), { immediate: true });
+    // Window for the Mains V sparkline and the Raw kW graph. 10 min = the live MQTT buffer above; longer
+    // windows come from the :8765 phase-loads page (power-management load_monitor.py on meridianpi5), which
+    // reads HA history up to 24 h and HA statistics (5-min / hourly peaks) beyond.
+    const MV_WINS = [[10, '10 min'], [1440, '24 h'], [4320, '3 d'], [10080, '1 wk'], [43200, '1 mo'], [129600, '3 mo']];
+    const MV_API = 'http://192.168.1.164:8765/api/history';
+    const MV_GRID = { 1440: [21600, '6 h'], 4320: [86400, '1 day'], 10080: [86400, '1 day'], 43200: [7 * 86400, '7 days'], 129600: [14 * 86400, '14 days'] };
+    let mvSaved = 10; try { mvSaved = +localStorage.getItem('mvWin') || 10; } catch (e) {}
+    const mvWin = ref(MV_WINS.some(w => w[0] === mvSaved) ? mvSaved : 10);
+    const mvHist = ref(null);                                           // { win, now, raw, stab, kw }: [[ts, v], ...] per phase
+    const mvErr = ref('');
+    async function mvLoad() {
+      const w = mvWin.value;
+      if (w === 10) { mvHist.value = null; mvErr.value = ''; return; }
+      try {
+        const h = await (await fetch(MV_API + '?minutes=' + w)).json();
+        if (w !== mvWin.value) return;                                  // another pill was picked meanwhile
+        if (!h.raw) throw new Error(h.error || 'no data');
+        mvHist.value = { win: w, now: Date.now() / 1000, raw: h.raw, stab: h.stab,
+                         kw: h.incomer.map(a => a.map(p => [p[0], p[1] == null ? null : p[1] / 1000])) };
+        mvErr.value = '';
+      } catch (e) { if (w === mvWin.value) mvErr.value = 'history unavailable'; }
+    }
+    function setMvWin(w) { mvWin.value = w; try { localStorage.setItem('mvWin', w); } catch (e) {} mvLoad(); }
+    mvLoad(); setInterval(mvLoad, 300000);
+    // One series per phase as [[ts, v], ...] plus the span, from the live buffer or the fetched window.
+    function mvSeries(key, liveArr) {
+      const h = mvHist.value;
+      if (mvWin.value !== 10 && h && h.win === mvWin.value) return h[key];
+      return [0, 1, 2].map(k => liveArr.map(s => [s.ts, s.v[k]]));
+    }
+    function mvFrame(live) {
+      const h = mvHist.value, hist = mvWin.value !== 10 && h && h.win === mvWin.value;
+      const span = hist ? h.win * 60 : MV_KEEP_S, now = hist ? h.now : live;
+      const name = MV_WINS.find(w => w[0] === mvWin.value)[1], g = hist ? MV_GRID[h.win] : null;
+      const vt = [];
+      if (g) { const tz = -new Date().getTimezoneOffset() * 60;         // gridlines on local midnight
+        for (let t = Math.ceil((now - span + tz) / g[0]) * g[0] - tz; t < now; t += g[0]) vt.push(t); }
+      const label = mvWin.value === 10 ? '10 min' : mvErr.value ? name + ' · ' + mvErr.value
+                  : hist ? name + ' · lines ' + g[1] + ' apart' : name + ' · loading';
+      return { span, now, vt, label };
+    }
+    // A missing reading (meter or MQTT blip) is bridged unless it lasts over 10 min; below `cut`
+    // (a real supply cut) the line breaks. Same rule as the :8765 page.
+    function mvPath(a, t0, x, y, cut) {
+      let d = '', pen = false, pt = null, miss = false;
+      for (const [t, v] of a) {
+        if (t < t0) continue;
+        if (v == null) { miss = true; continue; }
+        if (cut != null && v < cut) { pen = false; miss = false; continue; }
+        if (miss && pt != null && t - pt > 600) pen = false;
+        miss = false; pt = t;
+        d += (pen ? 'L' : 'M') + x(t) + ' ' + y(v); pen = true;
+      }
+      return d;
+    }
     const mainsSpark = computed(() => {
       const W = 300, H = 50;
-      const now = Math.max(mainsHist.raw.at(-1)?.ts || 0, mainsHist.stab.at(-1)?.ts || 0);
+      const f = mvFrame(Math.max(mainsHist.raw.at(-1)?.ts || 0, mainsHist.stab.at(-1)?.ts || 0));
+      const t0 = f.now - f.span, raw = mvSeries('raw', mainsHist.raw), stab = mvSeries('stab', mainsHist.stab);
       let lo = 225, hi = 260;                                           // zoom to the data so the gap shows
-      for (const a of [mainsHist.raw, mainsHist.stab]) for (const smp of a) for (const v of smp.v)
-        if (v != null && v >= 50) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+      for (const set of [raw, stab]) for (const a of set) for (const [t, v] of a)
+        if (t >= t0 && v != null && v >= 150) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
       lo = Math.floor(lo - 3); hi = Math.ceil(hi + 3);
-      const x = t => ((t - (now - MV_KEEP_S)) / MV_KEEP_S * W).toFixed(1);
+      const x = t => ((t - t0) / f.span * W).toFixed(1);
       const y = v => (H - (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo) * H).toFixed(1);
-      const pts = (arr, k) => arr.filter(s => s.v[k] != null && s.v[k] >= 50).map(s => x(s.ts) + ',' + y(s.v[k])).join(' ');
-      return { W, H, y255: hi >= 255 ? y(255) : null, y265: hi >= 265 ? y(265) : null,
-               raw: [0, 1, 2].map(k => pts(mainsHist.raw, k)), stab: [0, 1, 2].map(k => pts(mainsHist.stab, k)) };
+      return { W, H, label: f.label, vgrid: f.vt.map(x), y255: hi >= 255 ? y(255) : null, y265: hi >= 265 ? y(265) : null,
+               raw: raw.map(a => mvPath(a, t0, x, y, 150)), stab: stab.map(a => mvPath(a, t0, x, y, 150)) };
     });
-    // Raw kW at the incomer, 10 min: negative = export, so the scale reaches below 0 when a phase exports.
+    // Raw kW at the incomer: negative = export, so the scale reaches below 0 when a phase exports.
     const rawKw = computed(() => {
       const h = mainsHist.kw; if (!h.length) return null;
-      const W = 300, H = 60, now = h.at(-1).ts;
+      const W = 300, H = 60, f = mvFrame(h.at(-1).ts), t0 = f.now - f.span, ser = mvSeries('kw', h);
       let lo = 0, hi = 1;
-      for (const smp of h) for (const v of smp.v) if (v != null) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+      for (const a of ser) for (const [t, v] of a) if (t >= t0 && v != null) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
       lo = Math.floor(lo); hi = Math.ceil(hi);
-      const x = t => ((t - (now - MV_KEEP_S)) / MV_KEEP_S * W).toFixed(1);
+      const x = t => ((t - t0) / f.span * W).toFixed(1);
       const y = v => (H - (v - lo) / (hi - lo) * H).toFixed(1);
       const grid = []; for (let v = lo; v <= hi; v++) grid.push({ v, y: y(v) });
-      const lines = [0, 1, 2].map(k => h.filter(s => s.v[k] != null).map(s => x(s.ts) + ',' + y(s.v[k])).join(' '));
+      const lines = ser.map(a => mvPath(a, t0, x, y, null));
       const cur = h.at(-1).v;
       const tiles = [0, 1, 2].map(k => {
         const v = cur[k];
         return { k, name: PH_NAMES[k], color: PH_COLORS[k],
                  kw: v == null ? '—' : Math.abs(v).toFixed(1), unit: v != null && v < 0 ? 'kW exp' : 'kW' };
       });
-      return { W, H, lo, hi, grid, lines, tiles };
+      return { W, H, lo, hi, grid, lines, tiles, label: f.label, vgrid: f.vt.map(x) };
     });
     const phaseGrid = computed(() =>
       phases.value ? (phases.value.grid_on ? 'grid ON' : 'grid OFF') + (phases.value.soc != null ? ' · SOC ' + phases.value.soc + '%' : '') : '');
@@ -2609,7 +2673,7 @@ const PowerCard = {
     return { expanded, state, plugs, plugRows, plugClass, plugIsOn, toggle, onCount, rotatorRemain,
              solar, solarColor, gridVText, socColor, battStateText, battStateColor, battSummary, totalTiles, totalsStale,
              phases, phaseStale, phaseSvg, phaseTiles, phaseGrid,
-             mains, mainsStale, mainsDials, mainsSpark, mainsSupplyText, rawKw, MAINS_BANDS, MAINS_TICKS, PH_COLORS,
+             mains, mainsStale, mainsDials, mainsSpark, mainsSupplyText, rawKw, MV_WINS, mvWin, setMvWin, MAINS_BANDS, MAINS_TICKS, PH_COLORS,
              houseTiles, toggleHouse };
   }
 };

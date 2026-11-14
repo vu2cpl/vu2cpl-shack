@@ -8,6 +8,33 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-11-15
+
+### Vue v57 + D1: window pills on the Mains V and Raw kW graphs
+
+Both graphs on the Power card and the D1 16A Energy Monitor showed only the last ten minutes, from the live MQTT
+feed. Manoj asked for the longer windows the `:8765` phase-loads page has. Under the Mains V sparkline there are now
+pills: **10 min** (the live buffer, as before), **24 h**, **3 d**, **1 wk**, **1 mo**, **3 mo**. They set the window
+for the Mains V sparkline and the Raw kW graph together.
+
+The longer windows are fetched by the browser from `http://192.168.1.164:8765/api/history?minutes=N`, the
+phase-loads page on meridianpi5 (`vu2cpl/power-management`, `inverter/load_monitor.py`). It reads Home Assistant
+history up to 24 h and HA's 5-minute (3 d, 1 wk) and hourly (1 mo, 3 mo) statistics beyond, each bucket at its
+peak. It now answers the Node-RED origins with CORS headers. No Node-RED nodes are involved. Raw mains data starts
+2026-11-07, when the meter went in. Faint vertical lines mark 6 h, days, 7 days or 14 days, as the legend says. The
+history refreshes every 5 min. If `:8765` can't be reached (or the dashboard is opened over HTTPS, where the browser
+blocks the plain-HTTP fetch), the legend says "history unavailable".
+
+The lines are now SVG paths, not polylines: a short gap in the readings (the meter's MQTT link blipping) is bridged
+up to 10 min, and a real supply cut (under 150 V) breaks the line. The live 10-min view used to bridge cuts too.
+
+The choice is kept in `localStorage` `mvWin`, shared by `/ui` and `/shack`. `index.js?v=57`, `index.css?v=18`. D1
+template height 14 → 15; one-node `flows.json` change, 606 nodes, no wiring touched. Revert tag `pre-mvwin-20261115`.
+Verified by rendering the real `index.js` and the D1 template in a local harness against saved `:8765` responses;
+`/shack` and `/ui` need a login, so they were not checked live.
+
+---
+
 ## 2026-11-13
 
 ### WAN Data showed 0 GB from 11 Nov 14:15: UDM stats reset, publisher fixed
