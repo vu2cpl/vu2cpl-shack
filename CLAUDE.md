@@ -428,6 +428,8 @@ window._myAction = function(val) {
 ### Telegram HTTP request node
 URL field must be **blank**. Set `msg.url` in the upstream function node.
 Newer Node-RED blocks `msg.url` override if URL field is populated.
+Every sender goes to one chat (`TELEGRAM_CHAT_ID`). For alerts to several recipients, see
+[`TELEGRAM_BROADCAST.md`](TELEGRAM_BROADCAST.md) (design only, HANDOVER #58).
 
 ### Power State → Dashboard
 The `rotatorTimerEnd` check must come **BEFORE** the payload guard:

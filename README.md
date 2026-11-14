@@ -413,6 +413,7 @@ comes from VU2PTT's Skimmer Calibration tracker.
 ├── FORK_GUIDE.md                    Customisation runbook for forking to a different station
 ├── HANDOVER.md                      Session pickup notes
 ├── SHACK_CHANGELOG.md               Dated changelog of non-DXCC tab changes
+├── TELEGRAM_BROADCAST.md            Design (not deployed): Telegram alerts to more than one recipient
 └── LICENSE                          MIT
 ```
 
@@ -430,6 +431,7 @@ comes from VU2PTT's Skimmer Calibration tracker.
 | [DXCC.md](DXCC.md) | Operator | Working on the DXCC tab specifically |
 | [SHACK_CHANGELOG.md](SHACK_CHANGELOG.md) | Future-self | "What did I change on day X" |
 | [HANDOVER.md](HANDOVER.md) | New session pickup | "What was I in the middle of" |
+| [TELEGRAM_BROADCAST.md](TELEGRAM_BROADCAST.md) | Operator | Sending alerts to more than one Telegram chat: group chat, HA, or Node-RED fan-out (design only, HANDOVER #58) |
 | [restic/README.md](restic/README.md) | Operator | Backups of the Linux boxes: what is covered, the NAS / .109 / Google Drive copies, where the password lives, how to restore |
 
 ---
