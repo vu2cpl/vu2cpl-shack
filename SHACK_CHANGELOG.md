@@ -8,6 +8,17 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-11-16
+
+### HA: Jaguar F-Pace dashboard (admin-only) and a Car button on Utopia 2.0
+
+Manoj added his Jaguar F-Pace to HA (JLR InControl integration, 53 read-only entities plus a refresh
+button) and asked for a separate dashboard, locked with a password. HA has no per-dashboard password, so
+the new `/193-car` dashboard is admin-only, and Manoj is the only admin. Same style as the Dishwasher page;
+Utopia 2.0 has a sixth Car nav button that only Manoj's user sees (grid 5 -> 6 columns). Built and saved over
+the websocket API; templates test-rendered against live data, page not eyeballed yet. See CLAUDE.md
+"Jaguar F-Pace via JLR InControl".
+
 ## 2026-11-15
 
 ### Vue v58 + D1: mains history through Node-RED

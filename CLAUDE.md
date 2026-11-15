@@ -1352,6 +1352,29 @@ gained a fifth **Dishwasher** button (grid 4 -> 5 columns). Backups in the priva
 `dashboard-193-dishwasher-v1-20261025.json`, `dashboard-193-utopia-2-{pre,post}-dishwasher-20261025.json`.
 **Not yet eyeballed in a browser.**
 
+### Jaguar F-Pace via JLR InControl (added 2026-11-16)
+
+Manoj added the car with the **Jaguar Land Rover InControl** integration (cloud). One device "F Pace",
+53 entities, prefix `f_pace_`: vehicle state, fuel level / range, odometer, distance to service, AdBlue
+range / to refill, 12 V battery, coolant temp, 4 tyre pressures (kPa), door / boot / bonnet / window /
+sunroof binaries, central locking (`binary_sensor.f_pace_central_locking`, device class lock: **on =
+unlocked**), alarm, immobiliser, 6 warning binaries plus 4 tyre warnings, climate / timers / fuel-fired
+heater, Data Hub stream, `device_tracker.f_pace_location` and `button.f_pace_refresh`. **Read-only:** no
+lock or climate controls are exposed, only the refresh button. The car reports through the cloud, so values
+can be days old when it is parked; the dashboard shows the last report time.
+
+**Dashboard:** storage dashboard **`/193-car`** ("Jaguar F-Pace", `mdi:car-estate`), **admin-only**
+(`require_admin: true`): Manoj is the only admin, so the family and `kindle` users cannot see or open it.
+HA has no per-dashboard password; admin-only is the substitute Manoj accepted. Utopia sub-page style: title,
+Home button, Refresh button, status markdown (state, lock, open doors/windows, fuel, warnings, last
+report), then Fuel & service, Doors & windows, Tyres (psi with kPa, markdown), Warnings, Security & climate,
+Location map + 7-day fuel and 12 V history, Connection. Utopia 2.0 gained a sixth **Car** nav button with a
+`user` visibility condition (Manoj only) and the nav grid went 5 -> 6 columns, so other users see five
+buttons and an empty slot. Backups in the private folder: `dashboard-193-car-v1-20261116.json`,
+`dashboard-193-utopia-2-{pre,post}-car-20261116.json`; generator `build_car_dashboard.py` (writes
+`car_config.json`, saved with `lovelace/config/save`). **Not yet eyeballed in a browser**; the car was at
+the service centre at build time (last report 2026-11-13), to be checked by Manoj once it is back.
+
 ### Synology DiskStation: DSM update entity disabled (2026-10-16)
 
 > **Superseded the same afternoon:** the NAS no longer runs DSM. Since 2026-10-16 it is Debian 13 +
