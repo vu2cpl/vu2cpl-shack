@@ -24,8 +24,8 @@ tab: `mains_hist_http_in` (`GET /mains/history`, behind `httpNodeAuth` like ever
 `/mains/history?minutes=N`, with a 30 s abort so a dead `:8765` shows "history unavailable" instead of hanging. This
 also works over HTTPS and from any device that can open the dashboard. `:8765` no longer sends CORS headers.
 
-`index.js?v=58`; `flows.json` 606 → 609 nodes, no existing wiring touched, `flows_guard` OK. The relay is behind the
-login, so it was not exercised live; Manoj to confirm in the Dock app.
+`index.js?v=58`; `flows.json` 606 → 609 nodes, no existing wiring touched, `flows_guard` OK. Manoj confirmed
+the long windows draw in the Dock app.
 
 ### Vue v57 + D1: window pills on the Mains V and Raw kW graphs
 
