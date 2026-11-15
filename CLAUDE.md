@@ -1372,8 +1372,8 @@ Location map + 7-day fuel and 12 V history, Connection. Utopia 2.0 gained a sixt
 `user` visibility condition (Manoj only) and the nav grid went 5 -> 6 columns, so other users see five
 buttons and an empty slot. Backups in the private folder: `dashboard-193-car-v1-20261116.json`,
 `dashboard-193-utopia-2-{pre,post}-car-20261116.json`; generator `build_car_dashboard.py` (writes
-`car_config.json`, saved with `lovelace/config/save`). **Not yet eyeballed in a browser**; the car was at
-the service centre at build time (last report 2026-11-13), to be checked by Manoj once it is back.
+`car_config.json`, saved with `lovelace/config/save`). **Checked by Manoj on the dashboard 2026-11-16: all OK.**
+The car was at the service centre at build time (last report 2026-11-13).
 
 ### Synology DiskStation: DSM update entity disabled (2026-10-16)
 

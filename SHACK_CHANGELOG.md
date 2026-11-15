@@ -16,7 +16,7 @@ Manoj added his Jaguar F-Pace to HA (JLR InControl integration, 53 read-only ent
 button) and asked for a separate dashboard, locked with a password. HA has no per-dashboard password, so
 the new `/193-car` dashboard is admin-only, and Manoj is the only admin. Same style as the Dishwasher page;
 Utopia 2.0 has a sixth Car nav button that only Manoj's user sees (grid 5 -> 6 columns). Built and saved over
-the websocket API; templates test-rendered against live data, page not eyeballed yet. See CLAUDE.md
+the websocket API; templates test-rendered against live data. Manoj checked the page: all OK. See CLAUDE.md
 "Jaguar F-Pace via JLR InControl".
 
 ## 2026-11-15
