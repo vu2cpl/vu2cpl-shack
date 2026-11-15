@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, watch, onMounted, onUnmounted } = Vu
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v57 · 2026-11-15 Mains V / Raw kW window pills';
+window.__shackBuild = 'v58 · 2026-11-15 Mains history via Node-RED /mains/history';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -2584,7 +2584,7 @@ const PowerCard = {
     // windows come from the :8765 phase-loads page (power-management load_monitor.py on meridianpi5), which
     // reads HA history up to 24 h and HA statistics (5-min / hourly peaks) beyond.
     const MV_WINS = [[10, '10 min'], [1440, '24 h'], [4320, '3 d'], [10080, '1 wk'], [43200, '1 mo'], [129600, '3 mo']];
-    const MV_API = 'http://192.168.1.164:8765/api/history';
+    const MV_API = '/mains/history';                                    // Node-RED relays to meridianpi5 :8765 (a Dock web app cannot fetch another host)
     const MV_GRID = { 1440: [21600, '6 h'], 4320: [86400, '1 day'], 10080: [86400, '1 day'], 43200: [7 * 86400, '7 days'], 129600: [14 * 86400, '14 days'] };
     let mvSaved = 10; try { mvSaved = +localStorage.getItem('mvWin') || 10; } catch (e) {}
     const mvWin = ref(MV_WINS.some(w => w[0] === mvSaved) ? mvSaved : 10);
@@ -2594,7 +2594,8 @@ const PowerCard = {
       const w = mvWin.value;
       if (w === 10) { mvHist.value = null; mvErr.value = ''; return; }
       try {
-        const h = await (await fetch(MV_API + '?minutes=' + w)).json();
+        const ac = new AbortController(); setTimeout(() => ac.abort(), 30000);
+        const h = await (await fetch(MV_API + '?minutes=' + w, { signal: ac.signal })).json();
         if (w !== mvWin.value) return;                                  // another pill was picked meanwhile
         if (!h.raw) throw new Error(h.error || 'no data');
         mvHist.value = { win: w, now: Date.now() / 1000, raw: h.raw, stab: h.stab,

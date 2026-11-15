@@ -688,8 +688,10 @@ House Loads", `height` 2→6; Vue PowerCard build `v25`):
   scale min(0, lowest)…max(1, highest) kW with a brighter 0 line, because the meter's kW goes negative on export. Negative values
   read "N kW exp" on the header and dials. D1 height 10 → 12. Revert tag `pre-rawkw-20261111`.
   **Window pills (2026-11-15, v57 + D1):** 10 min (live buffer) | 24 h | 3 d | 1 wk | 1 mo | 3 mo for both graphs. Longer
-  windows are a browser `fetch` of `http://192.168.1.164:8765/api/history?minutes=N` (power-management `load_monitor.py`,
-  which allows the Node-RED origins by CORS); no flow nodes involved. Lines are SVG paths: nulls bridged up to 10 min,
+  windows are a browser `fetch` of same-origin `/mains/history?minutes=N`, which three nodes on the All Power Strips tab
+  (`mains_hist_http_in` → `mains_hist_http_req` → `mains_hist_http_resp`, since v58 the same day) relay to
+  `http://192.168.1.164:8765/api/history` (power-management `load_monitor.py`). v57 fetched `:8765` straight from the
+  browser; that worked in a Safari tab but the Shack Dock web app never sent the request. Lines are SVG paths: nulls bridged up to 10 min,
   volts under 150 break the line. `localStorage` `mvWin` is shared by `/ui` and `/shack`. D1 height 14 → 15.
   Revert tag `pre-mvwin-20261115`.
   The default dashboard **Utopia 2.0** (`193-utopia-2`, Power section) got the same Raw R/Y/B gauges ahead of its

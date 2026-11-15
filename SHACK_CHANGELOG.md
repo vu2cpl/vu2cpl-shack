@@ -10,6 +10,23 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-11-15
 
+### Vue v58 + D1: mains history through Node-RED
+
+v57's long windows showed "history unavailable" in Manoj's Shack app (a Safari "Add to Dock" web app at
+`http://192.168.1.169:1880/shack/`). The same fetch of `http://192.168.1.164:8765/api/history` worked from a normal
+Safari tab on the same Mac, but the web app never sent it: a request log on meridianpi5 saw nothing from it. The
+reason was not found (the Mac's system log shows no block).
+
+Fix, with Manoj's go-ahead for the new nodes: Node-RED relays the request. Three nodes on the **All Power Strips**
+tab: `mains_hist_http_in` (`GET /mains/history`, behind `httpNodeAuth` like every endpoint) → `mains_hist_http_req`
+(`http://192.168.1.164:8765/api/history?minutes={{req.query.minutes}}`, text pass-through) →
+`mains_hist_http_resp` (JSON content type, upstream status code). Both dashboards now fetch same-origin
+`/mains/history?minutes=N`, with a 30 s abort so a dead `:8765` shows "history unavailable" instead of hanging. This
+also works over HTTPS and from any device that can open the dashboard. `:8765` no longer sends CORS headers.
+
+`index.js?v=58`; `flows.json` 606 → 609 nodes, no existing wiring touched, `flows_guard` OK. The relay is behind the
+login, so it was not exercised live; Manoj to confirm in the Dock app.
+
 ### Vue v57 + D1: window pills on the Mains V and Raw kW graphs
 
 Both graphs on the Power card and the D1 16A Energy Monitor showed only the last ten minutes, from the live MQTT
