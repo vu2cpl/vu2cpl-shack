@@ -53,6 +53,10 @@ replying. A heartbeat itself publishes nothing. After a Node-RED restart, frames
 heartbeat (at most 5 s). While the amp is off nothing is published and the HA entities expire as before.
 609 nodes; flows_guard OK; the function was tested against message sequences in Node before the deploy.
 
+Deployed 04:37:43 IST with the amp in Operate: HA was back on live `Operate` at 04:38:02 (payload 1.4 s
+old), and spe-remote logged no command and no state change. The amp-off case is covered by the function
+test only; it has not been seen live yet.
+
 Not done:
 
 - The retained `shack/spe/state` message is not cleared when the amp goes off, so an HA restart with the
