@@ -70,6 +70,8 @@ connect the server sends the state only while the amp is replying, and always a 
 a heartbeat `serial=up` at connect. The amp-off case has not been seen on the Pi yet. With it, the Vue
 point above goes away; the retained-message point (HA restart with the amp off) stays.
 
+Released as spe-remote **v3.0.4** the same day; the Pi is on the tag since 05:03:25 IST.
+
 ## 2026-11-16
 
 ### HA: F-Pace location was never shown (JLR Data Hub refuses position)
