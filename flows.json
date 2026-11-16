@@ -10911,7 +10911,8 @@
         "wires": [
             [
                 "ws_panel_node",
-                "vue_spe_bridge_01"
+                "vue_spe_bridge_01",
+                "spe_state_pub_01"
             ]
         ]
     },
@@ -11068,7 +11069,7 @@
         "type": "function",
         "z": "spe_ws_tab_01",
         "name": "SPE state \u2192 MQTT (5s throttle)",
-        "func": "// Publishes retained SPE state for Home Assistant (shack/spe/state).\n// Tapped off ws_format_state's output; rate-limited to one publish per 5 s.\n// Read-only \u2014 forwards the flat panel payload untouched (+ ts).\nvar now = Date.now();\nvar last = context.get('lastPub') || 0;\nif (now - last < 5000) return null;\ncontext.set('lastPub', now);\nvar p = (typeof msg.payload === 'object' && msg.payload) ? msg.payload : {};\nvar out = {};\nObject.keys(p).forEach(function (k) { out[k] = p[k]; });\nout.ts = now;\nreturn { payload: out };\n",
+        "func": "// Publishes retained SPE state for Home Assistant (shack/spe/state).\n// Tapped off ws_format_state's output; rate-limited to one publish per 5 s.\n// Read-only \u2014 forwards the flat panel payload untouched (+ ts).\n//\n// Also fed by 'WS heartbeat \u2192 usb chip' (partial {usb, sync}, no mode),\n// every 5 s. State frames are forwarded only while the last heartbeat\n// said the amp is replying (usb true). spe-remote replays its last\n// cached frame to every new client, so without this gate a Node-RED\n// restart with the amp off showed a stale Standby/Operate in HA for\n// 30 s (seen 2026-11-17). Nothing is published while the amp is off:\n// the HA entities go unavailable through expire_after.\nvar p = (typeof msg.payload === 'object' && msg.payload) ? msg.payload : {};\nif (p.mode === undefined) {\n    if (p.usb !== undefined) context.set('ampUp', !!p.usb);\n    return null;\n}\nif (context.get('ampUp') !== true) return null;\nvar now = Date.now();\nvar last = context.get('lastPub') || 0;\nif (now - last < 5000) return null;\ncontext.set('lastPub', now);\nvar out = {};\nObject.keys(p).forEach(function (k) { out[k] = p[k]; });\nout.ts = now;\nreturn { payload: out };",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,

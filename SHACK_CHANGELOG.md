@@ -37,7 +37,29 @@ Confirmed live: Node-RED restarted with the wire at 04:28:49 IST. At 04:29:17 th
 `power_on` from Node-RED (the first in 4 days), `Amp replying again` at 04:29:19, and `oper` at 04:29:25
 (Stby → Oper).
 
-Still open: `shack/spe/state` (retained, for HA) is fed by state frames only, so its `usb` is always true.
+### HA: no stale SPE state after a Node-RED restart with the amp off
+
+Checked whether HA had the same false ON. It did not: HA never reads `usb`. Its SPE sensors have
+`expire_after: 30`, and HA history shows `sensor.spe_amplifier_mode` went `unavailable` at 22:24:05, 30 s
+after the amp went off, so the Radio card read "SPE — off / bridge silent" all night.
+
+One false reading was real. At 04:28:49 (the Node-RED restart for the fix above, amp still off) HA showed
+**Standby** for 30 s. spe-remote replays its last cached state frame to every new client, and
+`SPE state → MQTT (5s throttle)` published it.
+
+Fix: `WS heartbeat → usb chip` now also feeds `SPE state → MQTT (5s throttle)`. The function stores the
+heartbeat's flag (`ampUp`) and forwards a state frame only while the last heartbeat said the amp is
+replying. A heartbeat itself publishes nothing. After a Node-RED restart, frames wait for the first
+heartbeat (at most 5 s). While the amp is off nothing is published and the HA entities expire as before.
+609 nodes; flows_guard OK; the function was tested against message sequences in Node before the deploy.
+
+Not done:
+
+- The retained `shack/spe/state` message is not cleared when the amp goes off, so an HA restart with the
+  amp off can still show the old state for 30 s. Clearing it would send an empty payload to eight
+  templated entities.
+- spe-remote still replays the cached frame, so the Vue card can read ON for up to 5 s after a reconnect,
+  until the next heartbeat. The clean fix is in spe-remote (do not replay while the amp is silent).
 
 ## 2026-11-16
 

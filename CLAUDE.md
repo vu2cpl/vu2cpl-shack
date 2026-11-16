@@ -1153,7 +1153,7 @@ configs in `ha_discovery_publish.py` (113 configs total since 2026-11-07).
 |---|---|---|---|---|
 | `shack/lightning/state` | `light_state_{tick,fn,mqtt}_01` | Lightning | flow ctx (bypass/manual/om/threshold) | 10 s |
 | `shack/flex/state` | `flex_state_{tick,fn,mqtt}_01` | FlexRadio | `flow.flexState` (trimmed: model/txstate/slices/PA) | 5 s |
-| `shack/spe/state` | `spe_state_{pub,mqtt}_01` | SPE (WS) | `ws_format_state` output (whole flat panel payload) | ≥5 s |
+| `shack/spe/state` | `spe_state_{pub,mqtt}_01` | SPE (WS) | `ws_format_state` output (whole flat panel payload), gated by the spe-remote heartbeat since 2026-11-17: `ws_format_hb` also feeds the function, which forwards frames only while the last heartbeat said the amp is replying (a replayed cached frame is dropped; nothing is published while the amp is off) | ≥5 s |
 | `shack/lp700/state` | `lp700_state_{tick,fn,mqtt}_01` | LP-700-HID ws | `global.lpState` (avg/peak/swr/range) | 5 s |
 | `shack/rotator/state` | `rot_state_{tick,fn,mqtt}_01` | Rotator | `flow.rotator_heading` + `flow.target_hdg` + `global.rotator_power` (since 2026-09-01; `null` until first known) + `flow.rotator_overlap` (since 2026-09-08; HA `binary_sensor.rotator_overlap` landed the same evening) | 5 s |
 | `shack/dxcc/state` | `dxcc_state_{tick,fn,mqtt}_01` | DXCC Tracker | **Retired for HA 2026-11-07** (tab disabled since 2026-08-27). Was `workedStats` + last-5 `alertList` + `clusterStatus` | 30 s |
