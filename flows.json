@@ -10910,7 +10910,8 @@
         "y": 100,
         "wires": [
             [
-                "ws_panel_node"
+                "ws_panel_node",
+                "vue_spe_bridge_01"
             ]
         ]
     },

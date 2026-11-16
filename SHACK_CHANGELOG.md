@@ -8,6 +8,33 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-11-17
+
+### Vue SPE card: power ON never sent while the amp was off
+
+Manoj: the SPE amp would not power on, although the WebSocket looked fine. The spe-remote log on the Pi had
+no `power_on` command in 4 days. From 04:19 to 04:22 IST it got `power_off` five times and `oper` once, all
+from Node-RED. The server itself was healthy and reported `serial: "down"` (amp off).
+
+Cause: the Vue SPE card takes its ON/OFF state from `state.usb` (`powerOn = !!state.usb`). Two nodes set
+`usb`:
+
+- `WS state → Dashboard payload` sets `usb: true` on every state frame. spe-remote sends its last cached
+  state (here STBY from the evening before) to every new client, so a reconnect sets `usb` true even with
+  the amp off.
+- `WS heartbeat → usb chip` sets `usb` to `serial === 'up'`, but it was wired only to the D1
+  `SPE Panel (WS)`, not to `Build SPE state for Vue`.
+
+So the Vue card stayed at ● ON and "✓ WS Connected" after the amp went off. Its power button is a toggle,
+so it asked "Power OFF the SPE amplifier?" and sent `OFF_SPE`. MODE and the other buttons stayed enabled,
+which is where the `oper` came from. The D1 `/ui` panel and spe-remote's own page at `:8888` were correct.
+
+Fix: one extra wire from `WS heartbeat → usb chip` to `Build SPE state for Vue`. Both nodes are on the
+SPE (WS) tab, so the wire is editor-legal (rule #7). The Vue `spe` handler merges partial payloads, so the
+`{usb, sync}` heartbeat updates only those fields. No Vue change; 609 nodes; flows_guard OK.
+
+Still open: `shack/spe/state` (retained, for HA) is fed by state frames only, so its `usb` is always true.
+
 ## 2026-11-16
 
 ### HA: F-Pace location was never shown (JLR Data Hub refuses position)
