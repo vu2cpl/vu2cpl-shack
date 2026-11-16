@@ -65,6 +65,11 @@ Not done:
 - spe-remote still replays the cached frame, so the Vue card can read ON for up to 5 s after a reconnect,
   until the next heartbeat. The clean fix is in spe-remote (do not replay while the amp is silent).
 
+Follow-up, same day: that spe-remote fix is committed (`vu2cpl/spe-remote` `a83d017`, unreleased). At
+connect the server sends the state only while the amp is replying, and always a heartbeat. It is **not
+deployed** on the Pi yet (the amp was in OPERATE; a spe-remote restart needs STANDBY or off). Once it is,
+both points above go away for Node-RED reconnects.
+
 ## 2026-11-16
 
 ### HA: F-Pace location was never shown (JLR Data Hub refuses position)
