@@ -33,6 +33,10 @@ Fix: one extra wire from `WS heartbeat → usb chip` to `Build SPE state for Vue
 SPE (WS) tab, so the wire is editor-legal (rule #7). The Vue `spe` handler merges partial payloads, so the
 `{usb, sync}` heartbeat updates only those fields. No Vue change; 609 nodes; flows_guard OK.
 
+Confirmed live: Node-RED restarted with the wire at 04:28:49 IST. At 04:29:17 the spe-remote log shows
+`power_on` from Node-RED (the first in 4 days), `Amp replying again` at 04:29:19, and `oper` at 04:29:25
+(Stby → Oper).
+
 Still open: `shack/spe/state` (retained, for HA) is fed by state frames only, so its `usb` is always true.
 
 ## 2026-11-16
