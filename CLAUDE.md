@@ -1354,7 +1354,10 @@ gained a fifth **Dishwasher** button (grid 4 -> 5 columns). Backups in the priva
 
 ### Jaguar F-Pace via JLR InControl (added 2026-11-16)
 
-Manoj added the car with the **Jaguar Land Rover InControl** integration (cloud). One device "F Pace",
+Manoj added the car with the **Jaguar Land Rover InControl** integration (cloud). It is a custom
+integration, not a built-in one: domain `jlr_incontrol`,
+[willbeeching/ha-jlr-incontrol](https://github.com/willbeeching/ha-jlr-incontrol) by willbeeching, v2.1.3
+on 2026-11-16, set up on the **JLR Data Hub** (config entry title "JLR Data Hub"). One device "F Pace",
 53 entities, prefix `f_pace_`: vehicle state, fuel level / range, odometer, distance to service, AdBlue
 range / to refill, 12 V battery, coolant temp, 4 tyre pressures (kPa), door / boot / bonnet / window /
 sunroof binaries, central locking (`binary_sensor.f_pace_central_locking`, device class lock: **on =
@@ -1374,6 +1377,34 @@ buttons and an empty slot. Backups in the private folder: `dashboard-193-car-v1-
 `dashboard-193-utopia-2-{pre,post}-car-20261116.json`; generator `build_car_dashboard.py` (writes
 `car_config.json`, saved with `lovelace/config/save`). **Checked by Manoj on the dashboard 2026-11-16: all OK.**
 The car was at the service centre at build time (last report 2026-11-13).
+
+**Location (fixed 2026-11-16 evening).** The map card was empty from the day the car was added:
+`device_tracker.f_pace_location` was `unknown` with no coordinates on every update. The "all OK" check
+above missed it. Cause: the Data Hub refuses a car's location until the car is *declared* at
+data.jlr.com (diagnostics `datahub` -> `location`: `refused: Scope does not permit access to category:
+position`). Status data is not affected. The integration has two fixes, and both need Manoj's JLR sign-in:
+
+1. Declare the car at data.jlr.com (vehicle list, sole user or shared user).
+2. Integration **Configure** -> **InControl sign-in for location**. The location then comes from JLR's
+   owner web portal.
+
+Manoj fixed it himself between 20:30 and 20:49 IST. Afterwards the tracker had coordinates (`not_home`,
+`trusted: true`, fix time 15:03 UTC) and the diagnostics showed a portal `trail` (162 points of that
+day's drive), while the Data Hub still said `refused` for position. So the fix in use is the owner
+portal (2), not the declaration. What follows from that:
+
+- **It is not live tracking.** The portal gives where the last *completed* journey ended, and JLR can
+  take hours to process a journey. The tracker's `timestamp` attribute is the time of the fix.
+- **`unknown` is deliberate.** When the integration cannot refresh the fix (for example the portal
+  session ended), the tracker gives no coordinates instead of an old position, and HA asks for a new
+  sign-in. Use the integration's three-dot menu -> **Reconfigure**. Do not delete and re-add the
+  integration: that loses the entity ids the dashboard uses.
+- **How to check:** download diagnostics for the config entry (`/api/diagnostics/config_entry/<entry_id>`)
+  and read `datahub` -> `location` and `vehicles` -> `trail`. HA also raises a Repairs warning
+  (`datahub_location_refused`). It was marked *ignored* on 2026-11-16, so Settings -> Repairs does not
+  show it unless ignored repairs are shown.
+- EV data and journeys are also refused on the Data Hub for this car (`ev`, `journeys`). The car is a
+  diesel, so only journeys is a loss, and those need the declaration.
 
 ### Synology DiskStation: DSM update entity disabled (2026-10-16)
 

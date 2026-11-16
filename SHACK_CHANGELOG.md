@@ -10,6 +10,19 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-11-16
 
+### HA: F-Pace location was never shown (JLR Data Hub refuses position)
+
+Manoj saw no car location on the `/193-car` map. `device_tracker.f_pace_location` had been `unknown`, with
+no coordinates, on every update since the car was added on 11-15. The integration (custom `jlr_incontrol`,
+willbeeching/ha-jlr-incontrol v2.1.3, set up on the JLR Data Hub) showed the reason in its diagnostics:
+`location: refused: Scope does not permit access to category: position`. JLR gives a car's location on the
+Data Hub only after the car is declared at data.jlr.com. HA had a Repairs warning for this, marked ignored.
+The dashboard was not at fault and was not changed. Manoj fixed it himself: the tracker then had a
+trusted fix (15:03 UTC) and the diagnostics showed a trail from JLR's owner portal, while the Data Hub
+still refused position. So the location comes from the **InControl sign-in for location** option. That is
+the end of the last completed journey, not a live position, and it goes to `unknown` when the portal
+session ends (fix: Reconfigure, never delete and re-add). See CLAUDE.md "Jaguar F-Pace via JLR InControl".
+
 ### HA: Jaguar F-Pace dashboard (admin-only) and a Car button on Utopia 2.0
 
 Manoj added his Jaguar F-Pace to HA (JLR InControl integration, 53 read-only entities plus a refresh
