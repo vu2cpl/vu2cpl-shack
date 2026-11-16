@@ -66,9 +66,9 @@ Not done:
   until the next heartbeat. The clean fix is in spe-remote (do not replay while the amp is silent).
 
 Follow-up, same day: that spe-remote fix is committed (`vu2cpl/spe-remote` `a83d017`, unreleased). At
-connect the server sends the state only while the amp is replying, and always a heartbeat. It is **not
-deployed** on the Pi yet (the amp was in OPERATE; a spe-remote restart needs STANDBY or off). Once it is,
-both points above go away for Node-RED reconnects.
+connect the server sends the state only while the amp is replying, and always a heartbeat. Manoj deployed it on the Pi at 04:44:43 IST. A listen-only read at 04:44:55 (amp in Oper) got the state and
+a heartbeat `serial=up` at connect. The amp-off case has not been seen on the Pi yet. With it, the Vue
+point above goes away; the retained-message point (HA restart with the amp off) stays.
 
 ## 2026-11-16
 
