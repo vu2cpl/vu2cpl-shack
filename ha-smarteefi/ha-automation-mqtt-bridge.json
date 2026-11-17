@@ -1,0 +1,48 @@
+{
+  "id": "smarteefi_shack_mqtt_bridge",
+  "alias": "Smarteefi shack outlets <-> MQTT",
+  "description": "Bridge for the Node-RED /ui and Vue /shack 'Outlets' tabs (vu2cpl-shack repo, 2026-11-17). Publishes the 9 shack outlets as retained JSON on shack/smarteefi/state (on change, every minute, at start) and switches them on commands from shack/smarteefi/set {\"entity_id\":..., \"action\":\"on|off|toggle\"}. Only the outlets listed in the variables can be switched. Keep the trigger entity list and the variables list the same.",
+  "mode": "queued",
+  "max": 20,
+  "triggers": [
+    {"trigger": "state", "id": "state", "entity_id": [
+      "switch.always_on", "switch.unifi_8_port_router", "switch.mini_rack", "switch.monitor",
+      "switch.usb", "switch.empty", "switch.empty_2", "switch.empty_3", "switch.empty_4"]},
+    {"trigger": "homeassistant", "id": "state", "event": "start"},
+    {"trigger": "time_pattern", "id": "state", "minutes": "/1"},
+    {"trigger": "mqtt", "id": "cmd", "topic": "shack/smarteefi/set"}
+  ],
+  "conditions": [],
+  "variables": {
+    "outlets": [
+      {"id": "switch.always_on", "name": "Always on", "group": "Shack wall outlet"},
+      {"id": "switch.unifi_8_port_router", "name": "UniFi router", "group": "Shack wall outlet"},
+      {"id": "switch.mini_rack", "name": "Mini Rack", "group": "Shack wall outlet"},
+      {"id": "switch.monitor", "name": "Monitor", "group": "Shack wall outlet"},
+      {"id": "switch.usb", "name": "USB", "group": "Shack power board"},
+      {"id": "switch.empty", "name": "Empty 1", "group": "Shack power board"},
+      {"id": "switch.empty_2", "name": "Empty 2", "group": "Shack power board"},
+      {"id": "switch.empty_3", "name": "Empty 3", "group": "Shack power board"},
+      {"id": "switch.empty_4", "name": "Empty 4", "group": "Shack power board"}
+    ]
+  },
+  "actions": [
+    {"if": [{"condition": "trigger", "id": "cmd"}],
+     "then": [
+       {"variables": {
+          "eid": "{{ (trigger.payload_json.entity_id if trigger.payload_json is defined and trigger.payload_json is mapping else '') | string }}",
+          "act": "{{ (trigger.payload_json.action if trigger.payload_json is defined and trigger.payload_json is mapping else '') | string | lower }}"}},
+       {"condition": "template",
+        "value_template": "{{ eid in (outlets | map(attribute='id') | list) and act in ['on', 'off', 'toggle'] }}"},
+       {"action": "{{ 'switch.toggle' if act == 'toggle' else 'switch.turn_' ~ act }}",
+        "target": {"entity_id": "{{ eid }}"},
+        "continue_on_error": true}
+     ]},
+    {"action": "mqtt.publish",
+     "data": {
+       "topic": "shack/smarteefi/state",
+       "retain": true,
+       "payload": "{%- set ns = namespace(l=[]) -%}{%- for o in outlets -%}{%- set ns.l = ns.l + [{'id': o.id, 'name': o.name, 'group': o.group, 'state': states(o.id)}] -%}{%- endfor -%}{{ {'ts': now().timestamp() | int, 'outlets': ns.l} | to_json }}"
+     }}
+  ]
+}

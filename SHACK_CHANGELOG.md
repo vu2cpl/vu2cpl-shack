@@ -10,6 +10,36 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-11-17
 
+### Smarteefi shack outlets on their own tab, on both dashboards (Vue v59)
+
+Manoj wanted the shack Smarteefi outlets on the Node-RED dashboard and the Vue dashboard: "only the shack wall
+and power board", and "keep it in separate tab to avoid accidental off/ons". That is 9 outlets: Always on,
+UniFi router, Mini Rack, Monitor (shack wall outlet) and USB, Empty 1–4 (shack power board).
+
+Smarteefi exists only in Home Assistant and Node-RED has no HA token, so the bridge is MQTT, on the broker
+both already use:
+
+- **HA automation `smarteefi_shack_mqtt_bridge`** (created over the config API; source copy in
+  `ha-smarteefi/ha-automation-mqtt-bridge.json`). It publishes retained `shack/smarteefi/state`,
+  `{ts, outlets:[{id, name, group, state}]}`, on any change of the 9, every minute and at HA start. It switches
+  on `shack/smarteefi/set` `{entity_id, action}`, only for its own 9 outlets and only on/off/toggle. Tested
+  before any dashboard work: an unknown entity, a non-JSON message and a bad action were all ignored; Empty 4
+  (nothing connected) went on and off.
+- **Flow tab "Smarteefi Outlets"** (`smf_tab`, 10 nodes): `mqtt in` → `Smarteefi state` (flow ctx) → the D1
+  panel and `Build Smarteefi state for Vue` (10 s re-send, link out `vue_lo_smf`) → Vue topic `smarteefi`.
+  `POST /power/smarteefi-toggle {entity, action}` accepts only an entity in HA's last published state and only
+  on/off, then publishes the command. The dashboards always send the opposite of the state they showed, never
+  a toggle, so a double tap cannot flip an outlet twice.
+- **D1:** a new dashboard tab **Shack Outlets** (order 2), one panel with the two groups.
+- **Vue v59:** a **Shack | Outlets** tab bar under the top bar and an `OutletsCard`. Both views are `v-show`,
+  so every card stays subscribed while hidden. The page opens on Shack every time; the choice is not stored.
+
+On both dashboards every switch asks "Turn X ON/OFF?", a board that does not answer greys its buttons out,
+and the whole panel greys out and refuses to switch when the state is more than 3 minutes old.
+
+Deployed with `git pull` + a Node-RED restart; flows started clean, the guard passed. The HTTP endpoint sits
+behind the dashboard login, so the click test from the browser was left to Manoj.
+
 ### HA: two shack power board outlets are spares now
 
 Manoj: nothing is connected to the outlets called DIAMOND GSV3000 and NETWORK SW. They are now "Empty 3" and

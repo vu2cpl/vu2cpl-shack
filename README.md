@@ -249,6 +249,15 @@ of Utility and Dryer Kitchen added 2026-10-19 is all off since 2026-10-25,
 see `docs/load-shedding.md` in `vu2cpl/power-management`), which may override a manual
 toggle on their next threshold rule.
 
+**Shack outlets (Smarteefi, 2026-11-17)** — the shack wall outlet (Always on, UniFi router, Mini Rack,
+Monitor) and the shack power board (USB, Empty 1–4) are Smarteefi Wi-Fi switches that only Home Assistant
+can reach. They are on **their own tab** on both dashboards, not on the Power card, so a stray tap cannot
+cut the router: the D1 tab **Shack Outlets** and the **Outlets** tab of `/shack` (the page always opens on
+Shack). Every switch asks first. HA publishes their state on `shack/smarteefi/state` and switches them from
+`shack/smarteefi/set` (automation `smarteefi_shack_mqtt_bridge`); the Node-RED flow tab *Smarteefi
+Outlets* carries both to the dashboards. The HA-side patch that makes Smarteefi work across the IoT VLAN is in
+[`ha-smarteefi/`](ha-smarteefi/README.md).
+
 #### Grid voltage log, stabiliser watchdog, supply-interruption history
 
 Moved on 2026-10-27 to [`vu2cpl/power-management`](https://github.com/vu2cpl/power-management) (private), with the scripts: the 1-min `~/grid_voltage.csv` log written by

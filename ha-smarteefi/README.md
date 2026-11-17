@@ -79,5 +79,14 @@ name". With the board devices, `light.porch` is called "Foyer Porch" (boards ren
 2026-11-17; they were "Foyer & Porch" etc.). The `light.*` helpers do not strip a repeated prefix, so
 `light.foyer_light` reads "Foyer Foyer light" unless its entity name is overridden in HA.
 
+## On the shack dashboards (since 2026-11-17)
+
+The 9 shack outlets (not the lights) are also on the Node-RED `/ui` tab **Shack Outlets** and the Vue
+`/shack` **Outlets** tab. HA automation `smarteefi_shack_mqtt_bridge` is the bridge: retained
+`shack/smarteefi/state` out, `shack/smarteefi/set` in (its own 9 outlets only). Source copy:
+[`ha-automation-mqtt-bridge.json`](ha-automation-mqtt-bridge.json). To recreate or change it, edit that file
+and POST it to `/api/config/automation/config/smarteefi_shack_mqtt_bridge` with the HA token. Keep the
+trigger entity list and `variables.outlets` the same.
+
 If a board gets a new IP or name, edit `smarteefi_hosts.json` here, run `./apply.sh`, reload the Smarteefi
 integration (the map is read at setup, so a reload is enough), and commit.

@@ -118,7 +118,7 @@ git push
 
 ---
 
-## FLOW TABS (13 total)
+## FLOW TABS (17 total)
 
 | Tab Label | Tab ID | Nodes | Dashboard Group |
 |-----------|--------|-------|-----------------|
@@ -135,6 +135,7 @@ git push
 | DXCC Tracker | `d110d176c0aad308` | 77 | `grp_dxcc_stats` — **tab `disabled` since 2026-08-27** (operator choice; Vue card hidden via `CARDS.dxcc:false` in the same commit). Clusters, Club Log refresh, `/dxcc/*` endpoints, Telegram alerts, and the HA bridge all stop while disabled; nothing deleted |
 | DXCA | `dxca_status_tab` | 4 | — (no Dashboard 1 group). Added 2026-11-07: `mqtt in shack/dxca/spots/status/#` → `Build DXCA state for Vue` (flow ctx `dxca_server`/`dxca_user`; 10 s tick re-emits) → link out `vue_lo_dxca` → Vue topic `dxca` (`DXCACard`, `CARDS.dxca`). Read-only; DXCA itself (.109, ≥ v2.24.1) publishes the topics. |
 | UberSDR | `ubersdr_tab` | 13 | `ubersdr_grp` (on Shack Monitoring tools) |
+| Smarteefi Outlets | `smf_tab` | 10 | `smf_grp` (on its own D1 tab **Shack Outlets**). Added 2026-11-17: the 9 shack Smarteefi outlets, kept off the main pages so they are not switched by accident. `mqtt in shack/smarteefi/state` (retained, from HA automation `smarteefi_shack_mqtt_bridge`) → `Smarteefi state` (flow ctx `smf_state`) → `Shack Outlets Panel` + `Build Smarteefi state for Vue` (10 s re-send) → link out `vue_lo_smf` → Vue topic `smarteefi`. `POST /power/smarteefi-toggle` → `Smarteefi Toggle HTTP` (allow = ids in the last state, action on/off only) → `mqtt out shack/smarteefi/set`. See "Smarteefi shack outlets on the dashboards" under HOUSEHOLD HA INTEGRATIONS |
 | AetherSDR Display | `aetherdisp_tab_01` | 9 | — (no UI — humanizes shack MQTT topics onto `aether/*` for the external AetherSDR panadapter display; see `nodered/aether-display/README.md`) |
 
 > Node counts drift as flows evolve — treat as approximate; re-count against
@@ -144,13 +145,14 @@ git push
 
 ### Dashboard tabs
 
-Only two `ui_tab`s remain — the Lightning-detect and DXCC dashboard tabs were
+Three `ui_tab`s since 2026-11-17 (Shack Outlets added). The Lightning-detect and DXCC dashboard tabs were
 folded into the main **VU2CPL Shack** tab (2026-05-08 and the DXCC merge), so
 their old IDs (`dd11372f9c492be8`, `tab_ui_dxcc`) no longer exist.
 
 | Name | ID | Order |
 |------|----|-------|
 | VU2CPL Shack | `vu2cpl_ui_tab_shack` | 1 |
+| Shack Outlets | `smf_ui_tab` | 2 |
 | Shack Monitoring tools | `bcce4e07ac31b882` | 4 |
 
 ---
@@ -405,6 +407,7 @@ Agent endpoints: `POST /reboot`, `POST /shutdown`
 | POST | `/dxcc/blacklist-add` | DXCC | Add callsign to blacklist |
 | POST | `/dxcc/blacklist-remove` | DXCC | Remove from blacklist |
 | POST | `/power/house-toggle` | All Power Strips | `{dev}` → toggle a house-load relay (FF_LOAD / GF_LOAD / GF_Dryer_Kit / GF_UTILITY only; 400 otherwise) |
+| POST | `/power/smarteefi-toggle` | Smarteefi Outlets | `{entity, action:'on'\|'off'}` → `shack/smarteefi/set` → HA. Entity must be in HA's last published state (the 9 shack outlets); no `toggle` action, so a double tap can't flip twice; 400 otherwise |
 
 ---
 
@@ -1312,6 +1315,23 @@ toggling (one powers the UniFi router). On the shack power board, `switch.empty_
 `diamond_gsv3000` / `network_sw` until 2026-11-17: nothing is connected to them any more (Manoj); the
 registry names "Empty 3" / "Empty 4" override the cloud names. The Utopia home button reads "Lights &
 Outlets". Pre-edit configs are in `/config/lovelace-backups/`.
+
+### Smarteefi shack outlets on the dashboards (added 2026-11-17)
+
+The 9 shack outlets (shack wall outlet: Always on, UniFi router, Mini Rack, Monitor; shack power board: USB,
+Empty 1–4) are on **their own tab** on both dashboards, not the main pages (Manoj: "to avoid accidental
+off/ons"): D1 `/ui` tab **Shack Outlets**, Vue `/shack` **Shack | Outlets** tab bar (v59; Shack is the default
+on every load, deliberately not remembered). Every switch asks for confirmation and sends an explicit on/off.
+The house lights stay in HA only.
+
+Bridge = **HA automation `smarteefi_shack_mqtt_bridge`** ("Smarteefi shack outlets <-> MQTT", created over
+the API, lives in HassPi's `automations.yaml`; source copy `ha-smarteefi/ha-automation-mqtt-bridge.json`):
+- publishes retained `shack/smarteefi/state` = `{ts, outlets:[{id, name, group, state}]}` on any change of
+  the 9, every minute and at HA start (dashboards grey out after 3 min without one);
+- switches on `shack/smarteefi/set` `{entity_id, action: on|off|toggle}`, **only** for the outlets in its
+  `variables.outlets` list. The trigger entity list and that list must stay the same.
+Node-RED has no HA token; it only talks MQTT. To add or rename an outlet, edit the automation (both lists)
+and re-POST it; the dashboards build themselves from the published list.
 
 ### TP-Link camera reload automation (added 2026-10-14)
 
