@@ -61,9 +61,9 @@ Device push updates (UDP :8890 broadcast from the boards) still cannot cross the
 |---|---|---|---|
 | `se5110002011` | 192.168.30.112 | Shack power board | USB, Empty, Empty, DIAMOND GSV3000, NETWORK SW |
 | `ns4110003532` | 192.168.30.120 | Shack wall outlet | Always on, UNIFi 8 port router, Mini Rack, Monitor |
-| `ns2110001047` | 192.168.30.149 | Foyer & Porch | Foyer light, Porch (as lights) |
-| `ns2110001071` | 192.168.30.206 | Living & Pooja | Living, Pooja (as lights) |
-| `ns4110003068` | 192.168.30.249 | Gate & outer wall | Gate1, Gate2, Ext Wall1, Ext wall2 (as lights) |
+| `ns2110001047` | 192.168.30.149 | Foyer | Foyer light, Porch (as lights) |
+| `ns2110001071` | 192.168.30.206 | Living | Living, Pooja (as lights) |
+| `ns4110003068` | 192.168.30.249 | Gate | Gate1, Gate2, Ext Wall1, Ext wall2 (as lights) |
 
 ## Lights (since 2026-11-17)
 
@@ -74,7 +74,9 @@ deleted. Use the `light.*` entities in dashboards and automations. Deleting a he
 The helpers live in HA's config entries, not in this repo, and a HACS update does not touch them.
 
 **Friendly names:** since HA 2026.x the friendly name of any entity on a device is "device name + entity
-name". So with the board devices, `light.porch` is called "Foyer & Porch Porch". To shorten it, rename the
-device in HA (Settings → Devices) or set the device `name` in `smarteefi_hosts.json`.
+name". With the board devices, `light.porch` is called "Foyer Porch" (boards renamed Foyer / Living / Gate on
+2026-11-17; they were "Foyer & Porch" etc.). The `light.*` helpers do not strip a repeated prefix, so
+`light.foyer_light` reads "Foyer Foyer light" unless its entity name is overridden in HA.
 
-If a board gets a new IP, edit `smarteefi_hosts.json` here, run `./apply.sh --restart`, and commit.
+If a board gets a new IP or name, edit `smarteefi_hosts.json` here, run `./apply.sh`, reload the Smarteefi
+integration (the map is read at setup, so a reload is enough), and commit.

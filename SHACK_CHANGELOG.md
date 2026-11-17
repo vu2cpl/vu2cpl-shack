@@ -10,6 +10,22 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-11-17
 
+### HA Smarteefi: boards renamed Foyer / Living / Gate; shack power board back
+
+Manoj asked to rename the devices to Foyer, Living and Gate. The names live in
+`ha-smarteefi/smarteefi_hosts.json`, so they were changed there, copied with `apply.sh`, and the integration
+reloaded. The map is read in `async_setup_entry`, so a reload re-registers the devices with the new names;
+only code changes need a full restart. `apply.sh` used to say "restart" either way; it now says "reload"
+when only the map changed.
+
+Resulting friendly names: "Foyer Porch", "Living Pooja", "Gate Gate1", "Gate Ext Wall1". The lights are
+`switch_as_x` entities with `has_entity_name`, and HA strips a repeated device prefix only from legacy
+(non-`has_entity_name`) names, so `light.foyer_light` reads "Foyer Foyer light" and `light.living` "Living
+Living". An entity-name override in HA would fix those two; not done.
+
+The shack power board (`.112`, HANDOVER #59) came back on the network the same morning, after Manoj saw to
+it. HA needed nothing: the next poll got an answer and its 5 switches went from `unavailable` to on.
+
 ### HA: the 8 Smarteefi light circuits are lights now
 
 Manoj: "all 8 are light switches. convert them". Each of Foyer light, Porch, Living, Pooja, Gate1, Gate2,

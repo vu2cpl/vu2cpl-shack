@@ -56,7 +56,9 @@ if [ "$patched" = 0 ]; then
   rm -rf "$COMP/__pycache__"
 fi
 
+map_changed=0
 if ! cmp -s "$HERE/smarteefi_hosts.json" "$CONFIG/smarteefi_hosts.json"; then
+  map_changed=1
   if [ -f "$CONFIG/smarteefi_hosts.json" ]; then
     cp -p "$CONFIG/smarteefi_hosts.json" "$CONFIG/smarteefi_hosts.json.bak-$(date +%Y%m%d-%H%M%S)"
   fi
@@ -69,6 +71,8 @@ if [ "$RESTART" = 1 ]; then
   curl -fsS -m 30 -X POST -H "Authorization: Bearer $HA_TOKEN" \
     http://192.168.1.36:8123/api/services/homeassistant/restart >/dev/null
   echo "HA restart requested (takes ~1-2 min)."
-else
+elif [ "$patched" = 0 ]; then
   echo "Now restart HA (a config-entry reload is NOT enough - Python caches the module)."
+elif [ "$map_changed" = 1 ]; then
+  echo "Map changed only: reload the Smarteefi integration (Settings > Devices & services > Smarteefi > Reload); no restart needed."
 fi

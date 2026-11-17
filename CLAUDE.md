@@ -1291,8 +1291,9 @@ What the patch does (detail in the README):
 | Options flow without `__init__`; `async_unload_platforms`; UDP listener as a real `DatagramProtocol`, reuse flags set before `bind()` | HA 2026 breakages: Configure 500s, reload throws, "Address in use" after every reload |
 
 `smarteefi_hosts.json` values are `{"ip": ..., "name": ...}` since 2026-11-17 (a bare IP string still
-works). The IPs are **UniFi static reservations** (pinned 2026-09-02). If a board is re-addressed, edit
-the repo copy, run `apply.sh --restart`, commit.
+works). The IPs are **UniFi static reservations** (pinned 2026-09-02). If a board is re-addressed or renamed,
+edit the repo copy, run `apply.sh`, then reload the integration (the map is read at setup; only code
+changes need a restart), commit.
 
 **Applying any change needs a full HA restart.** A config-entry reload does not re-import the module.
 Device push updates (UDP :8890 broadcast) still cannot cross the VLAN; state comes from the 5 s poll.
@@ -1303,7 +1304,7 @@ entries): `light.foyer_light`, `light.porch`, `light.living`, `light.pooja`, `li
 `light.ext_wall1`, `light.ext_wall2`. Their `switch.*` are hidden by the helper. The shack boards (shack
 power board, shack wall outlet) stay switches. Entity IDs were renamed from the helper's default
 `light.<device>_<name>`. Deleting a `switch_as_x` entry un-hides the switch it wraps. Friendly names are
-"device + entity" on HA 2026.x (registry 1.24 computes them), so they read e.g. "Foyer & Porch Porch".
+"device + entity" on HA 2026.x (registry 1.24 computes them), so they read e.g. "Foyer Porch" (boards renamed Foyer / Living / Gate 2026-11-17 via the host map).
 All 8 are on the **Lights dashboard** (`/193-lights`, button cards with short `name:` overrides) since
 2026-11-17; the pre-edit config is in `/config/lovelace-backups/`.
 
