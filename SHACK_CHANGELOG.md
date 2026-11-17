@@ -31,6 +31,9 @@ existing ones, placed after them and before the scenes, with a `name:` on each c
 rather than the long friendly name. Saved over the WebSocket `lovelace/config/save`; the previous config
 is in `/config/lovelace-backups/193_lights-20261117-062922.json`.
 
+Manoj then toggled Porch from the dashboard and the light switched: the re-ported `set-status` path
+(unicast through `cli_target()`, wrapped by `switch_as_x`) works end to end.
+
 ### HA Smarteefi: a HACS update had wiped the patches; fixed again, now kept in git
 
 Manoj: "smarteefi devices are not listed in home assistant?" Two faults:
