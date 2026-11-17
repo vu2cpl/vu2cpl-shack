@@ -1,0 +1,395 @@
+diff --git a/custom_components/smarteefi/__init__.py b/custom_components/smarteefi/__init__.py
+index 4358ebf..19e0397 100644
+--- a/custom_components/smarteefi/__init__.py
++++ b/custom_components/smarteefi/__init__.py
+@@ -4,6 +4,7 @@ import psutil
+ import socket
+ import os
+ import stat
++import json
+ import asyncio
+ from datetime import timedelta
+ from homeassistant.config_entries import ConfigEntry
+@@ -18,6 +19,43 @@ _LOGGER = logging.getLogger(__name__)
+ 
+ API_URL = "https://www.smarteefi.com/api/homeassistant_v1/user/devices"
+ 
++# --- vu2cpl patch: unicast host map ----------------------------------------
++# The bundled CLI aims at ip | ~netmask, i.e. the subnet broadcast of HA's own
++# interface, which cannot reach devices on another VLAN. For a serial listed in
++# /config/smarteefi_hosts.json we hand the CLI the device's own IP with a /32
++# mask, so the same arithmetic yields plain routed unicast. Unlisted serials
++# keep the stock broadcast. The map lives outside the component so a HACS
++# update does not delete it. Values: "ip" or {"ip": ..., "name": ...}.
++HOSTS_FILE = "smarteefi_hosts.json"
++OFFLINE_AFTER = 3  # consecutive failed polls before a device is unavailable
++
++
++def _read_host_map(path):
++    if not os.path.exists(path):
++        return {}
++    with open(path) as f:
++        raw = json.load(f)
++    hosts = {}
++    for serial, val in raw.items():
++        if serial.startswith("_"):  # "_comment" keys
++            continue
++        hosts[serial] = {"ip": val} if isinstance(val, str) else dict(val)
++    return hosts
++
++
++def host_info(hass, serial):
++    """Host-map entry for a device serial ({} if unmapped)."""
++    return hass.data.get(DOMAIN, {}).get("hosts", {}).get(serial, {})
++
++
++def cli_target(hass, unique_id, ip_address, netmask):
++    """(ip, netmask) to pass the CLI for this entity/device id."""
++    ip = host_info(hass, unique_id.split(":")[0]).get("ip")
++    if ip:
++        return ip, "255.255.255.255"
++    return ip_address, netmask
++# ---------------------------------------------------------------------------
++
+ async def async_setup(hass: HomeAssistant, config: dict):
+     """Set up the Smarteefi integration."""
+     _LOGGER.debug("Setting up Smarteefi integration")
+@@ -66,6 +104,11 @@ class SmarteefiDataUpdateCoordinator:
+         self.ip_address = entry.data.get("ip_address")
+         self.netmask = entry.data.get("netmask")
+         self._is_initial_load = True  # Track initial load state
++        # vu2cpl: upstream polls every 5 s and a sweep (5 devices + 1 s gaps)
++        # takes longer than that, so sweeps must not stack up.
++        self._sync_lock = asyncio.Lock()
++        self._fails = {}       # serial -> consecutive failed polls
++        self._offline = set()  # serials currently reported unavailable
+ 
+     async def async_init(self):
+         """Initialize the coordinator without blocking startup."""
+@@ -112,9 +155,32 @@ class SmarteefiDataUpdateCoordinator:
+             self._is_initial_sync = False
+             self._setup_interval(SYNC_INTERVAL)        
+            
+-        _LOGGER.debug("Performing periodic state sync for all Smarteefi devices")
+-        await self.async_sync_states()
+-                
++        if self._sync_lock.locked():
++            _LOGGER.debug("Previous Smarteefi sync still running, skipping this tick")
++            return
++        async with self._sync_lock:
++            _LOGGER.debug("Performing periodic state sync for all Smarteefi devices")
++            await self.async_sync_states()
++
++    def _report(self, serial, ok, detail=""):
++        """vu2cpl: track reachability; flip entities unavailable/available."""
++        if ok:
++            self._fails[serial] = 0
++            if serial in self._offline:
++                self._offline.discard(serial)
++                _LOGGER.warning("Smarteefi %s is answering again", serial)
++                async_dispatcher_send(self.hass, f"{DOMAIN}_available_{serial}", True)
++            return
++        self._fails[serial] = self._fails.get(serial, 0) + 1
++        if self._fails[serial] >= OFFLINE_AFTER and serial not in self._offline:
++            self._offline.add(serial)
++            _LOGGER.warning(
++                "Smarteefi %s not answering (%s) - its entities are unavailable until it does",
++                serial, detail)
++            async_dispatcher_send(self.hass, f"{DOMAIN}_available_{serial}", False)
++        else:
++            _LOGGER.debug("Smarteefi %s poll failed (%s)", serial, detail)
++
+ 
+     async def async_sync_states(self, entity_id=None):
+         """Sync states for all devices or a specific entity."""
+@@ -153,15 +219,17 @@ class SmarteefiDataUpdateCoordinator:
+ 
+     async def _sync_device_state(self, device, devices):
+         """Sync state for a single device."""
++        serial = device["id"].split(":")[0]
++        ip, netmask = cli_target(self.hass, device["id"], self.ip_address, self.netmask)
+         command = [
+-            self.ip_address,
+-            self.netmask,
++            ip,
++            netmask,
+             "get-status",
+             device["id"],
+             str(device.get("cloudid", ""))
+         ]
+ 
+-        _LOGGER.debug(f"Syncing state for device {device['id']}")
++        _LOGGER.debug(f"Syncing state for device {device['id']} via {ip}/{netmask}")
+ 
+         try:
+             process = await asyncio.create_subprocess_exec(
+@@ -169,7 +237,13 @@ class SmarteefiDataUpdateCoordinator:
+                 stdout=asyncio.subprocess.PIPE,
+                 stderr=asyncio.subprocess.PIPE
+             )
+-            stdout, stderr = await process.communicate()
++            try:
++                stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=15)
++            except asyncio.TimeoutError:
++                process.kill()
++                await process.wait()
++                self._report(serial, False, "CLI timed out")
++                return
+ 
+             if process.returncode == 0:
+                 output = stdout.decode().strip()
+@@ -177,6 +251,7 @@ class SmarteefiDataUpdateCoordinator:
+                 
+                 try:
+                     status = int(output)
++                    self._report(serial, True)
+                     parts = device["id"].split(':')
+                     prefix = ':'.join(parts[:2])
+ 
+@@ -195,11 +270,13 @@ class SmarteefiDataUpdateCoordinator:
+                                     {"smap": int(dev_parts[2]), "status": status}
+                                 )
+                 except ValueError:
+-                    _LOGGER.error(f"Invalid status output for {device['id']}: {output}")
++                    # The CLI exits 0 and prints "Device Offline" on a receive timeout
++                    self._report(serial, False, output or "no output")
+             else:
+-                _LOGGER.error(f"State sync failed for {device['id']}: {stderr.decode().strip()}")
++                self._report(serial, False, stderr.decode().strip() or f"exit {process.returncode}")
+         except Exception as e:
+             _LOGGER.error(f"Error syncing state for {device['id']}: {e}")
++            self._report(serial, False, str(e))
+ 
+     async def async_unload(self):
+         """Unload the coordinator."""
+@@ -211,25 +288,25 @@ class SmarteefiDataUpdateCoordinator:
+ 
+ async def start_udp_server(hass: HomeAssistant, ip_address: str, port: int):
+     """Start UDP server to listen for device updates."""
+-    loop = asyncio.get_event_loop()
+-    
+-    class SmarteefiUDPProtocol:
++    loop = asyncio.get_running_loop()
++
++    # vu2cpl: a real DatagramProtocol (the bare class had no connection_lost,
++    # so close() raised), and the socket options moved to before bind() - set
++    # in connection_made they came after asyncio had already bound the port,
++    # so every reload failed with "Address in use".
++    class SmarteefiUDPProtocol(asyncio.DatagramProtocol):
+         def __init__(self):
+             self.transport = None
+-            
++
+         def connection_made(self, transport):
+             self.transport = transport
+-            sock = transport.get_extra_info('socket')
+-            try:
+-                # Enable broadcast and reuse address
+-                sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+-                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+-                if os.name != 'nt':  # Not available on Windows
+-                    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+-                _LOGGER.debug("UDP socket configured for broadcast")
+-            except Exception as e:
+-                _LOGGER.error(f"Error configuring socket: {e}")
+-            
++
++        def connection_lost(self, exc):
++            self.transport = None
++
++        def error_received(self, exc):
++            _LOGGER.debug(f"UDP error: {exc}")
++
+         def datagram_received(self, data, addr):
+             """Handle incoming UDP packets with custom binary format."""
+             try:
+@@ -274,9 +351,16 @@ async def start_udp_server(hass: HomeAssistant, ip_address: str, port: int):
+                 _LOGGER.error(f"Error processing UDP packet: {e}")
+ 
+     try:
++        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
++        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
++        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
++        if hasattr(socket, "SO_REUSEPORT"):
++            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
++        sock.bind(('0.0.0.0', port))
++        sock.setblocking(False)
+         transport, protocol = await loop.create_datagram_endpoint(
+             lambda: SmarteefiUDPProtocol(),
+-            local_addr=('0.0.0.0', port))
++            sock=sock)
+         
+         _LOGGER.info(f"Started UDP server on {ip_address}:{port}")
+         return transport
+@@ -315,6 +399,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
+     
+     hass.data[DOMAIN]["udp_transport"] = udp_transport
+ 
++    # vu2cpl: load the unicast host map (file I/O off the event loop)
++    try:
++        hass.data[DOMAIN]["hosts"] = await hass.async_add_executor_job(
++            _read_host_map, hass.config.path(HOSTS_FILE))
++    except Exception as e:
++        _LOGGER.error(f"Cannot read {HOSTS_FILE}: {e} - using broadcast for every device")
++        hass.data[DOMAIN]["hosts"] = {}
++    _LOGGER.info(f"Smarteefi unicast host map: {len(hass.data[DOMAIN]['hosts'])} device(s)")
++
+     # Initialize data coordinator
+     coordinator = SmarteefiDataUpdateCoordinator(hass, entry)
+     await coordinator.async_init()
+@@ -356,15 +449,16 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+     """Unload a config entry."""
+     if "udp_transport" in hass.data[DOMAIN] and hass.data[DOMAIN]["udp_transport"]:
+         hass.data[DOMAIN]["udp_transport"].close()
++        hass.data[DOMAIN]["udp_transport"] = None
++        await asyncio.sleep(0)  # let the loop finish closing the socket
+         _LOGGER.info("Stopped UDP server")
+-    
++
+     if "coordinator" in hass.data[DOMAIN]:
+         coordinator = hass.data[DOMAIN]["coordinator"]
+         await coordinator.async_unload()
+-    
+-    # Unload all platforms
+-    await hass.config_entries.async_forward_entry_unload(entry, ["switch", "fan", "light", "cover"])
+-    return True
++
++    # Unload all platforms (vu2cpl: async_forward_entry_unload takes ONE domain)
++    return await hass.config_entries.async_unload_platforms(entry, ["switch", "fan", "light", "cover"])
+ 
+ def _get_interface_ip_and_netmask(interface):
+     """Get the IP address and netmask for the specified interface."""
+@@ -462,7 +556,7 @@ async def async_refresh_devices(hass: HomeAssistant, entry: ConfigEntry):
+         _LOGGER.info("Smarteefi devices refreshed: %s", devices)
+ 
+         # Reload platforms to reflect new devices
+-        await hass.config_entries.async_forward_entry_unload(entry, ["switch", "fan", "light", "cover"])
++        await hass.config_entries.async_unload_platforms(entry, ["switch", "fan", "light", "cover"])
+         await hass.config_entries.async_forward_entry_setups(entry, ["switch", "fan", "light", "cover"])
+ 
+     except Exception as e:
+diff --git a/custom_components/smarteefi/config_flow.py b/custom_components/smarteefi/config_flow.py
+index d515024..b1d1870 100644
+--- a/custom_components/smarteefi/config_flow.py
++++ b/custom_components/smarteefi/config_flow.py
+@@ -103,16 +103,14 @@ class SmarteefiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+     @callback
+     def async_get_options_flow(config_entry):
+         """Return the options flow handler."""
+-        return SmarteefiOptionsFlowHandler(config_entry)
++        # vu2cpl: HA sets OptionsFlow.config_entry itself (read-only property
++        # since 2024.11, setter removed 2025.12) - passing/assigning it 500s.
++        return SmarteefiOptionsFlowHandler()
+ 
+ 
+ class SmarteefiOptionsFlowHandler(config_entries.OptionsFlow):
+     """Handle options flow for editing apitoken."""
+ 
+-    def __init__(self, config_entry):
+-        """Initialize options flow."""
+-        self.config_entry = config_entry
+-
+     async def async_step_init(self, user_input=None):
+         """Allow user to update apitoken."""
+         errors = {}  # Reinitialize errors dictionary
+diff --git a/custom_components/smarteefi/switch.py b/custom_components/smarteefi/switch.py
+index f788bf5..6f79b50 100644
+--- a/custom_components/smarteefi/switch.py
++++ b/custom_components/smarteefi/switch.py
+@@ -2,8 +2,12 @@ import logging
+ import os
+ import asyncio
+ from homeassistant.components.switch import SwitchEntity
++from homeassistant.core import callback
++from homeassistant.exceptions import HomeAssistantError
++from homeassistant.helpers.device_registry import DeviceInfo
+ from homeassistant.helpers.dispatcher import async_dispatcher_connect
+ from .const import DOMAIN, ARCH, OS
++from . import cli_target, host_info
+ 
+ _LOGGER = logging.getLogger(__name__)
+ 
+@@ -45,6 +49,17 @@ async def async_setup_entry(hass, entry, async_add_entities):
+ 
+     # Pass network_interface to SmarteefiSwitch constructor
+     switches = [SmarteefiSwitch(device, HACLI, ip_address, netmask) for device in devices if device["type"] == "switch"]
++    # vu2cpl: one HA device per physical board (serial), named from the host map
++    for sw in switches:
++        serial = sw._unique_id.split(':')[0]
++        name = host_info(hass, serial).get("name") or f"Smarteefi {serial}"
++        sw._attr_device_info = DeviceInfo(
++            identifiers={(DOMAIN, serial)},
++            name=name,
++            manufacturer="Smarteefi",
++            model=serial[:3].upper(),
++            serial_number=serial,
++        )
+     async_add_entities(switches, True)
+ 
+ class SmarteefiSwitch(SwitchEntity):
+@@ -78,11 +93,25 @@ class SmarteefiSwitch(SwitchEntity):
+                 f"{DOMAIN}_device_update_{self._entity_match_id}",
+                 self._handle_device_update
+             )
++        # vu2cpl: the coordinator reports when the board stops/starts answering
++        self._avail_unsub = async_dispatcher_connect(
++            self.hass,
++            f"{DOMAIN}_available_{self._unique_id.split(':')[0]}",
++            self._handle_available
++        )
+ 
+     async def async_will_remove_from_hass(self):
+         """Unregister update dispatcher."""
+         if self._update_unsub:
+             self._update_unsub()
++        if getattr(self, "_avail_unsub", None):
++            self._avail_unsub()
++
++    @callback
++    def _handle_available(self, available):
++        if self._attr_available != available:
++            self._attr_available = available
++            self.async_write_ha_state()
+ 
+     def _handle_device_update(self, data):
+         """Update state from UDP message."""
+@@ -134,8 +163,13 @@ class SmarteefiSwitch(SwitchEntity):
+             )
+             stdout, stderr = await process.communicate()
+ 
++            output = stdout.decode().strip()
++            # vu2cpl: the CLI exits 0 even when the device never answered
++            if process.returncode == 0 and "offline" in output.lower():
++                _LOGGER.warning(f"Command not acknowledged: {' '.join(full_command)}, Output: {output}")
++                return False
+             if process.returncode == 0:
+-                _LOGGER.debug(f"Command succeeded: {' '.join(full_command)}, Output: {stdout.decode().strip()}")
++                _LOGGER.debug(f"Command succeeded: {' '.join(full_command)}, Output: {output}")
+                 return True
+             else:
+                 _LOGGER.error(f"Command failed: {' '.join(full_command)}, Error: {stderr.decode().strip()}")
+@@ -150,13 +184,19 @@ class SmarteefiSwitch(SwitchEntity):
+     async def async_turn_on(self, **kwargs):
+         """Turn the switch on."""
+         _LOGGER.info("Turning on Smarteefi switch: %s", self._name)
+-        if await self._execute_cli([self.ip_address, self.netmask, "set-status", self._unique_id, str(self._cloud_id), "1"]):
++        ip, netmask = cli_target(self.hass, self._unique_id, self.ip_address, self.netmask)
++        if await self._execute_cli([ip, netmask, "set-status", self._unique_id, str(self._cloud_id), "1"]):
+             self._state = True
+             self.schedule_update_ha_state()
++        else:
++            raise HomeAssistantError(f"Smarteefi {self._name}: device did not answer")
+ 
+     async def async_turn_off(self, **kwargs):
+         """Turn the switch off."""
+         _LOGGER.info("Turning off Smarteefi switch: %s", self._name)
+-        if await self._execute_cli([self.ip_address, self.netmask, "set-status", self._unique_id, str(self._cloud_id), "0"]):
++        ip, netmask = cli_target(self.hass, self._unique_id, self.ip_address, self.netmask)
++        if await self._execute_cli([ip, netmask, "set-status", self._unique_id, str(self._cloud_id), "0"]):
+             self._state = False
+-            self.schedule_update_ha_state()
+\ No newline at end of file
++            self.schedule_update_ha_state()
++        else:
++            raise HomeAssistantError(f"Smarteefi {self._name}: device did not answer")
+\ No newline at end of file

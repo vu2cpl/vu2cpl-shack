@@ -1,0 +1,8 @@
+{
+  "_comment": "Smarteefi serial -> device IP (UniFi static reservation on the IoT VLAN) + HA device name. Copied to /config/smarteefi_hosts.json on HassPi by apply.sh. After editing, re-run apply.sh and restart HA.",
+  "se5110002011": {"ip": "192.168.30.112", "name": "Shack power board"},
+  "ns4110003532": {"ip": "192.168.30.120", "name": "Shack wall outlet"},
+  "ns2110001047": {"ip": "192.168.30.149", "name": "Foyer & Porch"},
+  "ns2110001071": {"ip": "192.168.30.206", "name": "Living & Pooja"},
+  "ns4110003068": {"ip": "192.168.30.249", "name": "Gate & outer wall"}
+}

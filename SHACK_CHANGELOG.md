@@ -10,6 +10,41 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-11-17
 
+### HA Smarteefi: a HACS update had wiped the patches; fixed again, now kept in git
+
+Manoj: "smarteefi devices are not listed in home assistant?" Two faults:
+
+1. **No devices.** The integration creates 17 `switch.*` entities but no devices, so the integration page
+   showed 0 devices and the switches had no area. This was true since install.
+2. **The September fix was gone.** Every file in `custom_components/smarteefi` was dated 2026-10-02 12:27,
+   identical to upstream HEAD. Upstream was not dead after all: `cb9e4c5` (2026-09-26) fixed `fan.py` and
+   cut the poll interval from 300 s to 5 s. HACS installed it and replaced the folder, with the patches and
+   all `.bak` files. Result for 6 weeks: all 17 switches "off" with no state change except at HA restarts
+   (the shack wall outlet's 4 relays are really on), and about 42,000 `Device Offline` ERRORs in the 17 h
+   since the last restart (5 boards every 5 s, all broadcasts into the wrong VLAN).
+
+The patch was re-ported onto `cb9e4c5` (the September changes applied cleanly; upstream only touched
+`fan.py` and `const.py`) and extended:
+
+- one HA device per board (`DeviceInfo`, name from the host map, model `SE5`/`NS2`/`NS4`);
+- after 3 failed polls in a row the board's entities go `unavailable` with one warning, instead of an
+  ERROR per poll and a stale state;
+- a switch command that the board does not answer raises `HomeAssistantError` (the CLI exits 0 after
+  printing `Device Offline`, so upstream showed a change that never happened);
+- a lock so 5 s timer ticks do not stack up sweeps (one sweep takes longer than 5 s), and a 15 s CLI
+  timeout.
+
+To stop a repeat, the patch is now in this repo: `ha-smarteefi/` holds the patch file, the host map
+(now with board names) and `apply.sh`. The script reports whether the patch is live (`--check`), dry-runs,
+backs up the stock files to `/config/smarteefi-backups/` (outside the component, where HACS cannot reach
+them), patches, copies the host map and can restart HA (`--restart`).
+
+Verified after the restart: 5 devices, each with its switches; the shack wall outlet reads all 4 on;
+Configure opens a form (the old 500 is fixed); two config-entry reloads gave no "Address in use"; the
+smarteefi ERROR lines are gone. One board does not answer: the **shack power board** `se5110002011` at
+`.112`, which UniFi does not list as a client, so it is off the network. Its 5 switches show
+`unavailable` (HANDOVER #59).
+
 ### Vue SPE card: power ON never sent while the amp was off
 
 Manoj: the SPE amp would not power on, although the WebSocket looked fine. The spe-remote log on the Pi had

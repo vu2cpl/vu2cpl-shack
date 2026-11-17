@@ -409,6 +409,7 @@ comes from VU2PTT's Skimmer Calibration tracker.
 ├── reclaim-disk.sh                  Frees it: gitignored build trees under ~/projects + named caches. Dry-run unless --apply
 ├── restic/                          Nightly restic backups of the Linux boxes (.109, macmini-server) to the NAS (DS710+, Debian + OMV), copied to .109's HDD and off-site to Google Drive
 ├── nas-debian/                      DS710+ front panel under Debian: status/power/eSATA LEDs + power/copy buttons (microcontroller), disk 1 bay LED (GPIO), RAID state on the LEDs, temperature-driven fan
+├── ha-smarteefi/                    Patch + apply.sh for HA's Smarteefi integration (unicast across the VLAN, devices, availability); re-run after every HACS update
 │
 ├── as3935.service                   systemd unit for as3935_mqtt.py (installed but disabled; re-enable as fallback if ESP32 fails)
 │
@@ -440,6 +441,7 @@ comes from VU2PTT's Skimmer Calibration tracker.
 | [HANDOVER.md](HANDOVER.md) | New session pickup | "What was I in the middle of" |
 | [TELEGRAM_BROADCAST.md](TELEGRAM_BROADCAST.md) | Operator | Sending alerts to more than one Telegram chat: group chat, HA, or Node-RED fan-out (design only, HANDOVER #58) |
 | [restic/README.md](restic/README.md) | Operator | Backups of the Linux boxes: what is covered, the NAS / .109 / Google Drive copies, where the password lives, how to restore |
+| [ha-smarteefi/README.md](ha-smarteefi/README.md) | Operator | Smarteefi switches in HA stuck "off" / unavailable, or after a HACS update of Smarteefi: what the patch does, how to re-apply it |
 
 ---
 

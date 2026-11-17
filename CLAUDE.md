@@ -242,7 +242,7 @@ persists across reboots. Verify with empty-payload read:
 | `openwebrxplus` | `vu2cpl` | Agent running |
 | (2 more Pis) | — | Pending |
 | UniFi gateway (`192.168.1.1`) | — | **Local integration API, read-only use (added 2026-10-21).** `UNIFI_HOST` / `UNIFI_API_KEY` in `~/.config/vu2cpl-shack.env` on the Mac (mode 600, never committed, never pasted into chat — Manoj entered it with `read -rs`). `curl -sk -H "X-API-KEY: $UNIFI_API_KEY" https://$UNIFI_HOST/proxy/network/integration/v1/sites/<site>/clients?limit=200` (site **Default** = `88f7af54-98f8-306a-a1c7-c9349722b1f6`); client fields `name, ipAddress, macAddress, type, connectedAt, uplinkDeviceId`. Use it to map MAC/name → IP/VLAN for IoT devices the Mac can't ARP (it sits on VLAN 1). **Read only** — no UniFi setting is changed from scripts without Manoj asking. |
-| Home Assistant Pi (`HassPi`, `192.168.1.36:8123`, HA 2026.9.3) | — | **Telemetry live** (HA's own `Publish RPi stats to MQTT (HassPi)` automation → `rpi/HassPi/*`). **REST API access added 2026-08-25** — long-lived token in `~/.config/vu2cpl-shack.env` as `HA_TOKEN` (mode 600, never committed; **holders: the Mac, and since 2026-10-19 meridianpi5** for `load-monitor.service` — see the scripts table). Full automation CRUD via `/api/config/automation/config/<id>`; no SSH to the box (22/22222 closed). No control agent needed. **HA's Radio dashboard (`/193-radio`) is the Vue-dashboard equivalent (phase 1) since 2026-08-25** — shack entities created by `ha_discovery_publish.py` (see the scripts table); HA's MQTT integration is on the shack broker, which is what makes the whole thing possible. (HA's own Mosquitto add-on, unused, was stopped and set to manual start on 2026-10-02, so `.36:1883` no longer listens.) **Custom components on this box are patched in place and invisible to git** — see the Smarteefi note under "Household HA integrations" below |
+| Home Assistant Pi (`HassPi`, `192.168.1.36:8123`, HA 2026.11.1) | — | **Telemetry live** (HA's own `Publish RPi stats to MQTT (HassPi)` automation → `rpi/HassPi/*`). **REST API access added 2026-08-25** — long-lived token in `~/.config/vu2cpl-shack.env` as `HA_TOKEN` (mode 600, never committed; **holders: the Mac, and since 2026-10-19 meridianpi5** for `load-monitor.service` — see the scripts table). Full automation CRUD via `/api/config/automation/config/<id>`; no SSH to the box (22/22222 closed). No control agent needed. **HA's Radio dashboard (`/193-radio`) is the Vue-dashboard equivalent (phase 1) since 2026-08-25** — shack entities created by `ha_discovery_publish.py` (see the scripts table); HA's MQTT integration is on the shack broker, which is what makes the whole thing possible. (HA's own Mosquitto add-on, unused, was stopped and set to manual start on 2026-10-02, so `.36:1883` no longer listens.) **Custom components on this box are patched in place** — HACS updates silently undo it; the Smarteefi patch is kept in git at `ha-smarteefi/` (re-apply with its `apply.sh`), see "Household HA integrations" below |
 | Red Pitaya `rp-f02054` (`rp-f02054.local` — **address by mDNS name, NOT by IP, since 2026-09-24**; DHCP `192.168.1.241`, sat on the shared fallback `.100` 2026-09-24, back on `.241` after the 2026-09-25 reboot; **the `RBN_SDR` network-monitor tile's target** again since 2026-08-25) | `root` | Telemetry live via `monitor_redpitaya.sh` (Alpine/BusyBox, Zynq XADC temp; no control agent) — see DEPLOY_PI.md special cases. MAC `00:26:32:f0:20:54`. **SSH key-only since 2026-11-08** (password logins off; Alpine 3.12 has no fixed OpenSSH, HANDOVER #57). |
 | Web-888 receiver `web-888` (`192.168.1.235` — was on `.100` 2026-09-24, back on `.235` after the 2026-09-25 reboot; `web-888.local` resolves and survives reboots since the 2026-09-25 avahi fix, see the `RBN_SDR` note) | `root` | Telemetry live via the same `monitor_redpitaya.sh` (also Zynq/Alpine — script runs unchanged; no control agent). Added 2026-08-22. **SSH is key-only since 2026-11-08** (`root` by the Mac's key; password logins off, `openssh-server 9.7_p1-r6`, HANDOVER #57). It was found on the Trusted VLAN (`192.168.10.185`) that day and moved back to `.235`. Held the `RBN_SDR` ping tile 08-21 → 08-25; still fleet-monitored via `rpi/web-888/*`, but no longer has a network-monitor tile. **Presents the bogus hardwired MAC `64:69:73:74:72:6f` (ASCII "distro") — see the IP-conflict note under the `RBN_SDR` tile** |
 
@@ -1265,48 +1265,38 @@ to their owning platform. Config-entry **data** (tokens, discovered
 device lists) is never exposed over either API — that needs
 `/config/.storage/core.config_entries` via the share.
 
-### Smarteefi (custom component, patched 2026-09-01)
+### Smarteefi (custom component, patched; patch in git since 2026-11-17)
 
 `custom_components/smarteefi`, installed via HACS from
-[`coreembedded/smarteefi-homeassistant`](https://github.com/coreembedded/smarteefi-homeassistant)
-at commit `3a8ae3f` — which is also upstream HEAD, last pushed June 2025.
-It is unmaintained, and three of its bugs are fatal or noisy on HA
-2026.8.3. All three are now **patched directly on the share**, with the
-originals kept beside them:
+[`coreembedded/smarteefi-homeassistant`](https://github.com/coreembedded/smarteefi-homeassistant).
+Upstream is **not** dead: `cb9e4c5` (2026-09-26) changed `fan.py` and cut the poll interval from 300 s to
+5 s. **HACS installed that update on 2026-10-02 and silently wiped every local patch and every `.bak`
+file.** For 6 weeks, all 17 switches read "off" and HA logged about 40 `Device Offline` errors a minute.
 
-| Bug | Symptom | Fix |
-|---|---|---|
-| `SmarteefiOptionsFlowHandler.__init__` assigns `self.config_entry` | Clicking **Configure** 500s — `AttributeError: property 'config_entry' … has no setter`. `OptionsFlow.config_entry` is a read-only property since HA 2024.11; the setter went in 2025.12 | Delete the `__init__`; `async_get_options_flow` returns `SmarteefiOptionsFlowHandler()` and HA populates the entry itself |
-| `async_forward_entry_unload(entry, [4 platforms])` (×2) | **Reload** throws — that API takes a single domain, not a list | `async_unload_platforms(entry, [...])` |
-| UDP listener: bare protocol class, and `SO_REUSEADDR`/`SO_REUSEPORT` set inside `connection_made` | Close raises `AttributeError: … has no attribute 'connection_lost'`; re-bind fails `[Errno 98] Address in use`, so after **any** reload the push listener is dead until a full HA restart. The flags are set *after* asyncio has already bound | Subclass `asyncio.DatagramProtocol` (adds `connection_lost` / `error_received`); build the socket by hand, set the flags **before** `bind()`, hand it over as `sock=`; null the transport and `await asyncio.sleep(0)` on unload |
-| Broadcast-only addressing — the CLI is aimed at `ip \| ~netmask` of HA's own interface, which cannot cross the VLAN to the devices on `192.168.30.x` | Every poll times out (`Device Offline` ×765), all 17 entities frozen; `turn_on/off` still "succeeds" (exit code 0) | **Unicast host map** (patched 2026-09-01): `/config/smarteefi_hosts.json` maps serial → device IP; a mapped serial gets the CLI called with that IP + netmask `255.255.255.255`, making `ip \| ~netmask` collapse to plain routed unicast (verified: the devices answer it). Unmapped serials keep broadcast. Map file lives **outside** the component so a HACS reinstall keeps it |
+The patch now lives in git: **[`ha-smarteefi/`](ha-smarteefi/README.md)** (patch file against `cb9e4c5`,
+`smarteefi_hosts.json`, `apply.sh`). **After any HACS action on Smarteefi, mount the share and run
+`ha-smarteefi/apply.sh --check`; if it says MISSING, run `apply.sh --restart`.** The script does a dry
+run first and stops without changes if upstream moved the same lines. It backs up stock files to
+`/config/smarteefi-backups/<date>-stock/`.
 
-Backups on the share, oldest first:
-`config_flow.py.bak-3a8ae3f`, `__init__.py.bak-3a8ae3f`,
-`__init__.py.bak-pre-udpfix`, `__init__.py.bak-pre-unicast`,
-`switch.py.bak-pre-unicast`. To revert, copy a `.bak-3a8ae3f` back and
-restart HA.
+What the patch does (detail in the README):
 
-**Applying any change here needs a full HA restart** —
-`POST /api/services/homeassistant/restart`. A config-entry reload will
-*not* pick it up: custom-component Python is cached in `sys.modules`.
+| Change | Why |
+|---|---|
+| Unicast host map: a serial in `/config/smarteefi_hosts.json` gets the CLI called with the device IP + `255.255.255.255` | The CLI broadcasts to `ip \| ~netmask` of HA's own subnet, which cannot cross to `192.168.30.x`; with a /32 mask it becomes routed unicast (the boards answer it). Polls and switch commands both use it |
+| One HA device per board (`DeviceInfo`, name from the host map) | Upstream creates entities only: 0 devices on the integration page, no areas |
+| 3 failed polls in a row → that board's entities `unavailable`, one warning | Upstream logged an ERROR every poll and kept a stale state |
+| A switch command the board does not answer raises `HomeAssistantError` | The CLI exits 0 even after printing `Device Offline`, so upstream showed a switch change that never happened |
+| Poll overlap lock + 15 s CLI timeout | Upstream's 5 s timer is shorter than one sweep |
+| Options flow without `__init__`; `async_unload_platforms`; UDP listener as a real `DatagramProtocol`, reuse flags set before `bind()` | HA 2026 breakages: Configure 500s, reload throws, "Address in use" after every reload |
 
-**HACS will silently revert all of this** if the integration is ever
-reinstalled or "repaired". Upstream is dead so no update will arrive on
-its own, but re-check the three fixes after any HACS action on it.
+`smarteefi_hosts.json` values are `{"ip": ..., "name": ...}` since 2026-11-17 (a bare IP string still
+works). The IPs are **UniFi static reservations** (pinned 2026-09-02). If a board is re-addressed, edit
+the repo copy, run `apply.sh --restart`, commit.
 
-**Working since 2026-09-01** via the unicast map — states verified
-against live probes on all 5 devices, and actuation confirmed
-2026-09-02 (operator toggled a relay from HA; the device switched); the IoT-VLAN isolation is
-untouched (routed unicast, the same path HA uses to poll the Deye).
-The device IPs are **pinned as UniFi static reservations** at the
-mapped addresses since 2026-09-02 (DHCP leases until then) — if one is
-ever re-addressed, edit `smarteefi_hosts.json` to match and fully
-restart HA. Only `switch.py` got the unicast
-treatment on the command path (`fan`/`light`/`cover` platforms have no
-devices here and still broadcast). Device push updates (UDP :8890
-broadcast) still cannot cross the VLAN — state freshness is the 5-min
-poll, which is also how it behaves for everyone else.
+**Applying any change needs a full HA restart.** A config-entry reload does not re-import the module.
+Device push updates (UDP :8890 broadcast) still cannot cross the VLAN; state comes from the 5 s poll.
+Only `switch.py` is patched; `fan`/`light`/`cover` have no devices here and still broadcast.
 
 ### TP-Link camera reload automation (added 2026-10-14)
 
