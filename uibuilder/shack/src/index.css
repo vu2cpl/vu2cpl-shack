@@ -1409,3 +1409,32 @@ html, body {
   .topbar .clk-val { font-size: var(--fs-sm); }
   .topbar .clk-lbl { font-size: 9px; letter-spacing: 0.5px; }
 }
+
+/* === View tabs: Shack | Outlets (2026-11-17) ===
+   The Smarteefi outlets live on their own view so a stray tap on the main grid
+   cannot switch the router. "Shack" is the default on every load. */
+.viewtabs {
+  display: flex;
+  gap: var(--sp-2);
+  margin: 0 0 var(--sp-3);
+}
+.viewtab {
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.viewtab.is-active { color: var(--accent); background: var(--accent-bg); border-color: var(--accent-bd); }
+/* Outlet buttons reuse .plug; a 3-across grid gives ~95px tiles in the 330px card */
+.outlet-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
+}
+.outlet-grid .plug:disabled { cursor: not-allowed; }

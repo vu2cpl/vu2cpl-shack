@@ -167,6 +167,14 @@
         "info": "Humanizes shack MQTT + LP-700 state into aether/* topics for the AetherSDR MQTT applet. Update-proof: AetherSDR only subscribes."
     },
     {
+        "id": "smf_tab",
+        "type": "tab",
+        "label": "Smarteefi Outlets",
+        "disabled": false,
+        "info": "The 9 shack Smarteefi outlets (shack wall outlet + shack power board) on their own dashboard tabs, kept off the main pages so they are not switched by accident (Manoj, 2026-11-17).\n\nState: HA automation `smarteefi_shack_mqtt_bridge` publishes retained `shack/smarteefi/state`. Commands: `POST /power/smarteefi-toggle {entity, action:on|off}` -> `shack/smarteefi/set` -> the same HA automation, which only switches its own 9 outlets. D1: dashboard tab \"Shack Outlets\". Vue: the \"Outlets\" tab in /shack (topic `smarteefi`).",
+        "env": []
+    },
+    {
         "id": "0916fc715057e741",
         "type": "group",
         "z": "a0a882f85c89cffc",
@@ -674,7 +682,8 @@
             "vue_lo_4590ed80",
             "vue_lo_ubersdr_",
             "vue_lo_dxca",
-            "vue_lo_wan"
+            "vue_lo_wan",
+            "vue_lo_smf"
         ],
         "x": 100,
         "y": 100,
@@ -12295,5 +12304,214 @@
                 "wan_vue_bridge"
             ]
         ]
+    },
+    {
+        "id": "smf_ui_tab",
+        "type": "ui_tab",
+        "name": "Shack Outlets",
+        "icon": "fa-plug",
+        "order": 2,
+        "disabled": false,
+        "hidden": false
+    },
+    {
+        "id": "smf_grp",
+        "type": "ui_group",
+        "name": "Shack Outlets",
+        "tab": "smf_ui_tab",
+        "order": 1,
+        "disp": false,
+        "width": 8,
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "smf_mqtt_in",
+        "type": "mqtt in",
+        "z": "smf_tab",
+        "name": "shack/smarteefi/state (HA)",
+        "topic": "shack/smarteefi/state",
+        "qos": "0",
+        "datatype": "json",
+        "broker": "f4785be9863eab08",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 170,
+        "y": 80,
+        "wires": [
+            [
+                "smf_state_fn"
+            ]
+        ]
+    },
+    {
+        "id": "smf_state_fn",
+        "type": "function",
+        "z": "smf_tab",
+        "name": "Smarteefi state",
+        "func": "// Retained shack/smarteefi/state from HA's automation \"Smarteefi shack outlets <-> MQTT\"\n// (id smarteefi_shack_mqtt_bridge): { ts, outlets: [{ id, name, group, state }] }, state =\n// on | off | unavailable. Published on every change, every minute and at HA start. The 9\n// shack outlets only (shack wall outlet + shack power board); the house lights stay in HA.\nconst p = msg.payload;\nif (!p || typeof p !== 'object' || !Array.isArray(p.outlets)) return null;\nflow.set('smf_state', p);\nreturn { payload: p };\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 410,
+        "y": 80,
+        "wires": [
+            [
+                "smf_panel",
+                "smf_vue_bridge"
+            ]
+        ]
+    },
+    {
+        "id": "smf_panel",
+        "type": "ui_template",
+        "z": "smf_tab",
+        "group": "smf_grp",
+        "name": "Shack Outlets Panel",
+        "order": 1,
+        "width": 8,
+        "height": 0,
+        "format": "<style>\n.smf{--bg:#0d1117;--card:#161b22;--bd:#30363d;--tx:#c9d1d9;--mu:#8b949e;--gn:#3fb950;--gbg:#0d2818;--gbd:#238636;--rd:#f85149;--am:#e3b341;\n background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:12px 14px;color:var(--tx);font-family:var(--gh-font,-apple-system,sans-serif);}\n.smf .hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}\n.smf .ti{font-size:14px;font-weight:700;}\n.smf .ti small{color:var(--mu);font-weight:500;}\n.smf .live{font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;}\n.smf .on{color:var(--gn);background:rgba(63,185,80,.12);border:1px solid rgba(63,185,80,.35);}\n.smf .bad{color:var(--rd);background:rgba(248,81,73,.12);border:1px solid rgba(248,81,73,.35);}\n.smf .off{color:var(--mu);background:rgba(139,148,158,.1);border:1px solid var(--bd);}\n.smf .gh{font-size:11px;color:var(--mu);text-transform:uppercase;letter-spacing:.6px;margin:10px 0 6px;}\n.smf .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:7px;}\n.smf button.o{display:flex;flex-direction:column;align-items:center;gap:4px;padding:9px 4px;border-radius:7px;cursor:pointer;\n font:inherit;font-size:12px;font-weight:600;border:1px solid var(--bd);background:var(--card);color:var(--mu);}\n.smf button.o i{width:10px;height:10px;border-radius:50%;background:currentColor;box-shadow:0 0 6px currentColor;}\n.smf button.o.is-on{color:var(--gn);background:var(--gbg);border-color:var(--gbd);}\n.smf button.o.is-na{opacity:.4;cursor:not-allowed;}\n.smf button.o span{color:var(--tx);}\n.smf .ft{font-size:9.5px;color:var(--mu);margin-top:8px;text-align:right;}\n.smf.stale .grid{opacity:.45;}\n</style>\n<div class=\"smf\" id=\"smf-root\">\n  <div class=\"hd\"><span class=\"ti\">\ud83d\udd0c Shack Outlets <small>\u2014 Smarteefi, via Home Assistant</small></span><span class=\"live off\" id=\"smf-live\">\u25cb no data</span></div>\n  <div id=\"smf-body\"><div class=\"gh\">Waiting for shack/smarteefi/state\u2026</div></div>\n  <div class=\"ft\" id=\"smf-ft\">&nbsp;</div>\n</div>\n<script>\n(function(scope){\n  var STALE = 180;   // HA republishes every minute; 3 min without = HA or its automation is down\n  var last = null;\n  function esc(s){ return String(s).replace(/[&<>\"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]; }); }\n  window._smfToggle = function(id){\n    if(!last) return;\n    var o = (last.outlets||[]).filter(function(x){ return x.id === id; })[0];\n    if(!o || (o.state !== 'on' && o.state !== 'off')) return;\n    if((Date.now()/1000 - (last.ts||0)) > STALE) { alert('Outlet state is stale - not switching.'); return; }\n    var act = o.state === 'on' ? 'off' : 'on';\n    if(!confirm('Turn ' + o.name + ' ' + act.toUpperCase() + '?')) return;\n    fetch('/power/smarteefi-toggle', { method:'POST', headers:{'Content-Type':'application/json'},\n      body: JSON.stringify({ entity: id, action: act }) });\n    // No optimistic flip: HA republishes when the board confirms (about 1-6 s).\n  };\n  function render(d){\n    last = d;\n    var root = document.getElementById('smf-root'), body = document.getElementById('smf-body');\n    var live = document.getElementById('smf-live'), ft = document.getElementById('smf-ft');\n    if(!body || !d || !d.outlets) return;\n    var stale = !d.ts || (Date.now()/1000 - d.ts) > STALE, groups = [], by = {}, na = 0;\n    d.outlets.forEach(function(o){ if(!by[o.group]){ by[o.group] = []; groups.push(o.group); } by[o.group].push(o); if(o.state !== 'on' && o.state !== 'off') na++; });\n    body.innerHTML = groups.map(function(g){\n      return '<div class=\"gh\">' + esc(g) + '</div><div class=\"grid\">' + by[g].map(function(o){\n        var cls = o.state === 'on' ? 'is-on' : (o.state === 'off' ? '' : 'is-na');\n        var lbl = o.state === 'on' ? 'ON' : (o.state === 'off' ? 'OFF' : 'offline');\n        return '<button class=\"o ' + cls + '\" onclick=\"window._smfToggle(\\'' + esc(o.id) + '\\')\" title=\"' + esc(o.id) + '\">'\n          + '<i></i><span>' + esc(o.name) + '</span>' + lbl + '</button>';\n      }).join('') + '</div>';\n    }).join('');\n    if(root) root.className = 'smf' + (stale ? ' stale' : '');\n    if(live){\n      if(stale){ live.textContent = '\u25cb stale'; live.className = 'live bad'; }\n      else if(na){ live.textContent = '\u25cf ' + na + ' offline'; live.className = 'live bad'; }\n      else { live.textContent = '\u25cf live'; live.className = 'live on'; }\n    }\n    if(ft) ft.textContent = d.ts ? 'updated ' + new Date(d.ts*1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'}) + ' \u00b7 each switch asks first' : ' ';\n  }\n  scope.$watch('msg', function(m){ if(m && m.payload) render(m.payload); });\n  setInterval(function(){ if(last) render(last); }, 30000);\n})(scope);\n</script>",
+        "storeOutMessages": true,
+        "fwdInMessages": false,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "className": "",
+        "x": 660,
+        "y": 60,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "smf_vue_tick",
+        "type": "inject",
+        "z": "smf_tab",
+        "name": "every 10 s \u2192 Vue",
+        "props": [
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "10",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "5",
+        "topic": "tick",
+        "x": 400,
+        "y": 140,
+        "wires": [
+            [
+                "smf_vue_bridge"
+            ]
+        ]
+    },
+    {
+        "id": "smf_vue_bridge",
+        "type": "function",
+        "z": "smf_tab",
+        "name": "Build Smarteefi state for Vue",
+        "func": "// Same state the /ui panel gets, tagged for the Vue Outlets tab's onTopic('smarteefi').\n// HA publishes on change and every minute; the 10 s tick re-sends the last state so a\n// freshly opened /shack page fills in at once (same pattern as the WAN feed).\nconst s = msg.topic === 'tick' ? flow.get('smf_state') : msg.payload;\nif (!s || !Array.isArray(s.outlets)) return null;\nreturn { topic: 'smarteefi', payload: s };\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 680,
+        "y": 120,
+        "wires": [
+            [
+                "vue_lo_smf"
+            ]
+        ]
+    },
+    {
+        "id": "vue_lo_smf",
+        "type": "link out",
+        "z": "smf_tab",
+        "name": "\u2192 Shack Vue",
+        "mode": "link",
+        "links": [
+            "vue_link_in_builders"
+        ],
+        "x": 885,
+        "y": 120,
+        "wires": []
+    },
+    {
+        "id": "smf_toggle_http_in",
+        "type": "http in",
+        "z": "smf_tab",
+        "name": "POST /power/smarteefi-toggle",
+        "url": "/power/smarteefi-toggle",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 190,
+        "y": 240,
+        "wires": [
+            [
+                "smf_toggle_fn"
+            ]
+        ]
+    },
+    {
+        "id": "smf_toggle_fn",
+        "type": "function",
+        "z": "smf_tab",
+        "name": "Smarteefi Toggle HTTP",
+        "func": "// POST /power/smarteefi-toggle { entity: 'switch.monitor', action: 'on'|'off' }\n// Both dashboards send an explicit on/off (the opposite of the state they showed), never a\n// blind toggle, so a double tap cannot flip an outlet twice. Allowed entities = the ones in\n// HA's last published state; HA's automation checks its own list again before switching.\n// out 0 -> mqtt out shack/smarteefi/set \u00b7 out 1 -> http response\nconst b = msg.payload || {};\nconst s = flow.get('smf_state');\nconst known = new Set(((s && s.outlets) || []).map(o => o.id));\nconst entity = String(b.entity || '');\nconst action = String(b.action || '').toLowerCase();\nif (!known.has(entity) || !['on', 'off'].includes(action)) {\n    return [null, { statusCode: 400, payload: { ok: false, error: 'unknown outlet or action' } }];\n}\nnode.log('Smarteefi ' + entity + ' -> ' + action);\nreturn [\n    { payload: { entity_id: entity, action: action } },\n    { payload: { ok: true, entity: entity, action: action } }\n];\n",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 440,
+        "y": 240,
+        "wires": [
+            [
+                "smf_mqtt_out"
+            ],
+            [
+                "smf_toggle_http_resp"
+            ]
+        ]
+    },
+    {
+        "id": "smf_mqtt_out",
+        "type": "mqtt out",
+        "z": "smf_tab",
+        "name": "shack/smarteefi/set",
+        "topic": "shack/smarteefi/set",
+        "qos": "1",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "f4785be9863eab08",
+        "x": 700,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "smf_toggle_http_resp",
+        "type": "http response",
+        "z": "smf_tab",
+        "name": "200/400",
+        "statusCode": "",
+        "headers": {},
+        "x": 680,
+        "y": 260,
+        "wires": []
     }
 ]

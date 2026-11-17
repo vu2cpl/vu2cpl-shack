@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, watch, onMounted, onUnmounted } = Vu
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v58 · 2026-11-15 Mains history via Node-RED /mains/history';
+window.__shackBuild = 'v59 · 2026-11-17 Outlets tab (Smarteefi shack outlets)';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -44,6 +44,7 @@ const CARDS = {
   gpsntp:    true,
   ubersdr:   true,
   openwebrx: true,
+  outlets:   true,   // 2026-11-17: Smarteefi shack outlets, on their own "Outlets" tab (not the main grid)
 };
 
 // =====================================================================
@@ -3758,12 +3759,103 @@ const WanUsageCard = {
   }
 };
 
+// === Shack Outlets card (2026-11-17) — the 9 Smarteefi shack outlets, on their own tab ===
+// Data: uibuilder topic 'smarteefi' = { ts, outlets: [{ id, name, group, state }] } from the
+// "Smarteefi Outlets" flow tab, which reads retained shack/smarteefi/state published by HA's
+// automation smarteefi_shack_mqtt_bridge (on change + every minute). Switching: confirm() →
+// POST /power/smarteefi-toggle { entity, action: on|off } → shack/smarteefi/set → HA. The
+// action is the opposite of the state on screen (never a blind toggle). Lives on the Outlets
+// tab, not the main grid, so a stray tap on the main page cannot cut the router (Manoj).
+const OutletsCard = {
+  template: `
+    <div class="card" :style="{opacity: stale ? 0.55 : 1}">
+      <div class="card__header" style="cursor:default">
+        <span>🔌 Shack Outlets</span>
+        <span class="summary">
+          <span v-if="!outlets.length" style="color:var(--muted)">no data</span>
+          <span v-else-if="stale" style="color:var(--red);font-weight:600">stale</span>
+          <span v-else-if="offline" style="color:var(--red);font-weight:600">{{ offline }} offline</span>
+          <span v-else style="color:var(--green);font-weight:600">● live</span>
+        </span>
+      </div>
+      <div class="card__body">
+        <div v-if="!outlets.length" class="empty-row">Waiting for shack/smarteefi/state</div>
+        <template v-for="g in groups" :key="g.name">
+          <div class="solar-sec-label">{{ g.name }}</div>
+          <div class="outlet-grid">
+            <button v-for="o in g.outlets" :key="o.id" class="plug"
+                    :class="o.state === 'on' ? 'plug--on' : 'plug--off'"
+                    :disabled="!switchable(o)" :style="{opacity: switchable(o) ? 1 : 0.4}"
+                    :title="o.id" @click="toggle(o)">
+              <span class="plug__dot"></span>
+              <span class="plug__lbl">{{ o.name }}</span>
+              <span style="font-size:var(--fs-xs)">{{ o.state === 'on' ? 'ON' : (o.state === 'off' ? 'OFF' : 'offline') }}</span>
+            </button>
+          </div>
+        </template>
+        <div v-if="outlets.length" style="font-size:var(--fs-xs);color:var(--muted);text-align:right;margin-top:var(--sp-2)">
+          updated {{ updated }} · via Home Assistant · each switch asks first
+        </div>
+      </div>
+    </div>
+  `,
+  setup() {
+    const STALE = 180;   // HA republishes every minute
+    const state = reactive({ ts: 0, outlets: [] });
+    const now = ref(Date.now() / 1000);
+    let timer = null;
+    const outlets = computed(() => state.outlets);
+    const groups = computed(() => {
+      const out = [], by = {};
+      for (const o of state.outlets) {
+        if (!by[o.group]) { by[o.group] = { name: o.group, outlets: [] }; out.push(by[o.group]); }
+        by[o.group].outlets.push(o);
+      }
+      return out;
+    });
+    const stale = computed(() => state.outlets.length > 0 && (!state.ts || (now.value - state.ts) > STALE));
+    const offline = computed(() => state.outlets.filter(o => o.state !== 'on' && o.state !== 'off').length);
+    const updated = computed(() => state.ts ? new Date(state.ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—');
+    const switchable = (o) => !stale.value && (o.state === 'on' || o.state === 'off');
+    function toggle(o) {
+      if (!switchable(o)) return;
+      const action = o.state === 'on' ? 'off' : 'on';
+      if (!confirm(`Turn ${o.name} ${action.toUpperCase()}?`)) return;
+      fetch('/power/smarteefi-toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entity: o.id, action })
+      });
+      // No optimistic flip: HA republishes when the board confirms (about 1-6 s).
+    }
+    onMounted(() => {
+      uibuilder.onTopic('smarteefi', (msg) => {
+        const p = msg && msg.payload;
+        if (p && Array.isArray(p.outlets)) { state.ts = p.ts || 0; state.outlets = p.outlets; }
+      });
+      timer = setInterval(() => { now.value = Date.now() / 1000; }, 5000);
+    });
+    onUnmounted(() => { if (timer) clearInterval(timer); });
+    return { outlets, groups, stale, offline, updated, switchable, toggle };
+  }
+};
+
 // === Root app ===
+// Two views (2026-11-17): "Shack" (every card, the default on every load) and "Outlets"
+// (the Smarteefi outlets only). v-show, not v-if, so both stay mounted and keep their
+// uibuilder.onTopic handlers and state while hidden.
 const App = {
-  components: { TopBar, LightningCard, DXCCCard, DXCACard, NetworkCard, RPiCard, PowerCard, SolarCard, FlexCard, SPECard, LP700Card, RotatorCard, GpsNtpCard, RBNCard, UberSdrCard, OpenWebRxCard, WanUsageCard },
+  components: { TopBar, LightningCard, DXCCCard, DXCACard, NetworkCard, RPiCard, PowerCard, SolarCard, FlexCard, SPECard, LP700Card, RotatorCard, GpsNtpCard, RBNCard, UberSdrCard, OpenWebRxCard, WanUsageCard, OutletsCard },
   template: `
     <TopBar />
-    <div class="dash-grid">
+    <div v-if="CARDS.outlets" class="viewtabs">
+      <button class="viewtab" :class="{ 'is-active': view === 'shack' }" @click="view = 'shack'">Shack</button>
+      <button class="viewtab" :class="{ 'is-active': view === 'outlets' }" @click="view = 'outlets'">🔌 Outlets</button>
+    </div>
+    <div v-if="CARDS.outlets" v-show="view === 'outlets'" class="dash-grid">
+      <OutletsCard />
+    </div>
+    <div v-show="view === 'shack'" class="dash-grid">
       <FlexCard      v-if="CARDS.flex" />
       <LP700Card     v-if="CARDS.lp700" />
       <SPECard       v-if="CARDS.spe" />
@@ -3783,12 +3875,13 @@ const App = {
     </div>
   `,
   setup() {
+    const view = ref('shack');   // deliberately not remembered: every load opens on Shack
     onMounted(() => {
       uibuilder.start();
       console.log('[shack] uibuilder started, version:', uibuilder.version || 'unknown',
                   '· ioConnected initial:', uibuilder.ioConnected);
     });
-    return { CARDS };
+    return { CARDS, view };
   }
 };
 
