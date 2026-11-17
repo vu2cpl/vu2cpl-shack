@@ -1308,7 +1308,9 @@ power board, shack wall outlet) stay switches. Entity IDs were renamed from the 
 All 8 are on the **Lights & Outlets dashboard** (`/193-lights`, renamed from "Lights" 2026-11-17; URL kept
 so links still work), button cards with short `name:` overrides. The 9 Smarteefi outlets (shack wall outlet
 + shack power board `.112`) are there too, under two sub-headings, and **ask for confirmation** before
-toggling (one powers the UniFi router, one the network switch). The Utopia home button reads "Lights &
+toggling (one powers the UniFi router). On the shack power board, `switch.empty_3` / `switch.empty_4` were
+`diamond_gsv3000` / `network_sw` until 2026-11-17: nothing is connected to them any more (Manoj); the
+registry names "Empty 3" / "Empty 4" override the cloud names. The Utopia home button reads "Lights &
 Outlets". Pre-edit configs are in `/config/lovelace-backups/`.
 
 ### TP-Link camera reload automation (added 2026-10-14)

@@ -59,7 +59,7 @@ Device push updates (UDP :8890 broadcast from the boards) still cannot cross the
 
 | Serial | IP (UniFi reservation) | HA device | Switches |
 |---|---|---|---|
-| `se5110002011` | 192.168.30.112 | Shack power board | USB, Empty, Empty, DIAMOND GSV3000, NETWORK SW |
+| `se5110002011` | 192.168.30.112 | Shack power board | USB, Empty, Empty, Empty 3, Empty 4 (`switch.empty_3` / `empty_4`, were DIAMOND GSV3000 / NETWORK SW; nothing connected, renamed 2026-11-17) |
 | `ns4110003532` | 192.168.30.120 | Shack wall outlet | Always on, UNIFi 8 port router, Mini Rack, Monitor |
 | `ns2110001047` | 192.168.30.149 | Foyer | Foyer light, Porch (as lights) |
 | `ns2110001071` | 192.168.30.206 | Living | Living, Pooja (as lights) |

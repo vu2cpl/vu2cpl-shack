@@ -10,6 +10,14 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-11-17
 
+### HA: two shack power board outlets are spares now
+
+Manoj: nothing is connected to the outlets called DIAMOND GSV3000 and NETWORK SW. They are now "Empty 3" and
+"Empty 4", as `switch.empty_3` and `switch.empty_4`, next to the existing `switch.empty` / `switch.empty_2`.
+Nothing but the Lights & Outlets dashboard used the old IDs (checked: HA YAML, every dashboard, this repo),
+and its two buttons were updated. The names are HA registry overrides; the Smarteefi cloud still has the
+old ones. A renamed entity starts at "off" until the next 5 s poll fills in the real state.
+
 ### HA: the Lights dashboard is "Lights & Outlets" and has every Smarteefi outlet
 
 Manoj: "change lights to lights and outlets? keep all wall outlets from smarteefi also there including 112".
