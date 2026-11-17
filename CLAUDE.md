@@ -1304,6 +1304,8 @@ entries): `light.foyer_light`, `light.porch`, `light.living`, `light.pooja`, `li
 power board, shack wall outlet) stay switches. Entity IDs were renamed from the helper's default
 `light.<device>_<name>`. Deleting a `switch_as_x` entry un-hides the switch it wraps. Friendly names are
 "device + entity" on HA 2026.x (registry 1.24 computes them), so they read e.g. "Foyer & Porch Porch".
+All 8 are on the **Lights dashboard** (`/193-lights`, button cards with short `name:` overrides) since
+2026-11-17; the pre-edit config is in `/config/lovelace-backups/`.
 
 ### TP-Link camera reload automation (added 2026-10-14)
 

@@ -26,6 +26,11 @@ Naming: HA 2026.x computes every friendly name as device name + entity name (ent
 the board devices added this morning, `light.porch` reads "Foyer & Porch Porch". Renaming the devices is
 the fix if it matters.
 
+Then, on request, all 8 went onto the Lights dashboard (`/193-lights`): button cards matching the
+existing ones, placed after them and before the scenes, with a `name:` on each card so they read "Porch"
+rather than the long friendly name. Saved over the WebSocket `lovelace/config/save`; the previous config
+is in `/config/lovelace-backups/193_lights-20261117-062922.json`.
+
 ### HA Smarteefi: a HACS update had wiped the patches; fixed again, now kept in git
 
 Manoj: "smarteefi devices are not listed in home assistant?" Two faults:
