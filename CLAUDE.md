@@ -1305,8 +1305,11 @@ entries): `light.foyer_light`, `light.porch`, `light.living`, `light.pooja`, `li
 power board, shack wall outlet) stay switches. Entity IDs were renamed from the helper's default
 `light.<device>_<name>`. Deleting a `switch_as_x` entry un-hides the switch it wraps. Friendly names are
 "device + entity" on HA 2026.x (registry 1.24 computes them), so they read e.g. "Foyer Porch" (boards renamed Foyer / Living / Gate 2026-11-17 via the host map).
-All 8 are on the **Lights dashboard** (`/193-lights`, button cards with short `name:` overrides) since
-2026-11-17; the pre-edit config is in `/config/lovelace-backups/`.
+All 8 are on the **Lights & Outlets dashboard** (`/193-lights`, renamed from "Lights" 2026-11-17; URL kept
+so links still work), button cards with short `name:` overrides. The 9 Smarteefi outlets (shack wall outlet
++ shack power board `.112`) are there too, under two sub-headings, and **ask for confirmation** before
+toggling (one powers the UniFi router, one the network switch). The Utopia home button reads "Lights &
+Outlets". Pre-edit configs are in `/config/lovelace-backups/`.
 
 ### TP-Link camera reload automation (added 2026-10-14)
 

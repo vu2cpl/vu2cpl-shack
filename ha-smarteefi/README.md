@@ -70,7 +70,8 @@ Device push updates (UDP :8890 broadcast from the boards) still cannot cross the
 The 8 light circuits are shown as lights with HA's **Show as → Light** helper (`switch_as_x`):
 `light.foyer_light`, `light.porch`, `light.living`, `light.pooja`, `light.gate1`, `light.gate2`,
 `light.ext_wall1`, `light.ext_wall2`. Each one wraps the `switch.*` of the same name, which is hidden, not
-deleted. Use the `light.*` entities in dashboards and automations. Deleting a helper un-hides its switch.
+deleted. Use the `light.*` entities in dashboards and automations. The lights and all 9 outlets are on the
+"Lights & Outlets" dashboard (`/193-lights`); the outlet buttons ask for confirmation. Deleting a helper un-hides its switch.
 The helpers live in HA's config entries, not in this repo, and a HACS update does not touch them.
 
 **Friendly names:** since HA 2026.x the friendly name of any entity on a device is "device name + entity

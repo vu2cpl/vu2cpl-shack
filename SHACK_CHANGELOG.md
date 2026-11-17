@@ -10,6 +10,16 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-11-17
 
+### HA: the Lights dashboard is "Lights & Outlets" and has every Smarteefi outlet
+
+Manoj: "change lights to lights and outlets? keep all wall outlets from smarteefi also there including 112".
+The dashboard's sidebar title, view title and page heading are now "Lights & Outlets". The URL stays
+`/193-lights`, so the Utopia home button and any bookmarks still work; that button's label was changed to
+match. The 9 Smarteefi outlets went in after the scenes under two sub-headings, "Shack wall outlet" and
+"Shack power board". Unlike the light buttons, each outlet asks for confirmation before it toggles: the
+UniFi router and NETWORK SW outlets would cut the network on a stray tap. The previous configs of both
+dashboards are in `/config/lovelace-backups/`.
+
 ### HA Smarteefi: boards renamed Foyer / Living / Gate; shack power board back
 
 Manoj asked to rename the devices to Foyer, Living and Gate. The names live in
