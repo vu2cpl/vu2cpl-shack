@@ -61,8 +61,20 @@ Device push updates (UDP :8890 broadcast from the boards) still cannot cross the
 |---|---|---|---|
 | `se5110002011` | 192.168.30.112 | Shack power board | USB, Empty, Empty, DIAMOND GSV3000, NETWORK SW |
 | `ns4110003532` | 192.168.30.120 | Shack wall outlet | Always on, UNIFi 8 port router, Mini Rack, Monitor |
-| `ns2110001047` | 192.168.30.149 | Foyer & Porch | Foyer light, Porch |
-| `ns2110001071` | 192.168.30.206 | Living & Pooja | Living, Pooja |
-| `ns4110003068` | 192.168.30.249 | Gate & outer wall | Gate1, Gate2, Ext Wall1, Ext wall2 |
+| `ns2110001047` | 192.168.30.149 | Foyer & Porch | Foyer light, Porch (as lights) |
+| `ns2110001071` | 192.168.30.206 | Living & Pooja | Living, Pooja (as lights) |
+| `ns4110003068` | 192.168.30.249 | Gate & outer wall | Gate1, Gate2, Ext Wall1, Ext wall2 (as lights) |
+
+## Lights (since 2026-11-17)
+
+The 8 light circuits are shown as lights with HA's **Show as → Light** helper (`switch_as_x`):
+`light.foyer_light`, `light.porch`, `light.living`, `light.pooja`, `light.gate1`, `light.gate2`,
+`light.ext_wall1`, `light.ext_wall2`. Each one wraps the `switch.*` of the same name, which is hidden, not
+deleted. Use the `light.*` entities in dashboards and automations. Deleting a helper un-hides its switch.
+The helpers live in HA's config entries, not in this repo, and a HACS update does not touch them.
+
+**Friendly names:** since HA 2026.x the friendly name of any entity on a device is "device name + entity
+name". So with the board devices, `light.porch` is called "Foyer & Porch Porch". To shorten it, rename the
+device in HA (Settings → Devices) or set the device `name` in `smarteefi_hosts.json`.
 
 If a board gets a new IP, edit `smarteefi_hosts.json` here, run `./apply.sh --restart`, and commit.

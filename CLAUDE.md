@@ -1298,6 +1298,13 @@ the repo copy, run `apply.sh --restart`, commit.
 Device push updates (UDP :8890 broadcast) still cannot cross the VLAN; state comes from the 5 s poll.
 Only `switch.py` is patched; `fan`/`light`/`cover` have no devices here and still broadcast.
 
+**The 8 light circuits are `light.*` since 2026-11-17** (HA's "Show as → Light", `switch_as_x` helper
+entries): `light.foyer_light`, `light.porch`, `light.living`, `light.pooja`, `light.gate1`, `light.gate2`,
+`light.ext_wall1`, `light.ext_wall2`. Their `switch.*` are hidden by the helper. The shack boards (shack
+power board, shack wall outlet) stay switches. Entity IDs were renamed from the helper's default
+`light.<device>_<name>`. Deleting a `switch_as_x` entry un-hides the switch it wraps. Friendly names are
+"device + entity" on HA 2026.x (registry 1.24 computes them), so they read e.g. "Foyer & Porch Porch".
+
 ### TP-Link camera reload automation (added 2026-10-14)
 
 `automation.reload_tp_link_camera_when_unavailable` (config id `tplink_camera_reload`, created through

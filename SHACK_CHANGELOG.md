@@ -10,6 +10,22 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-11-17
 
+### HA: the 8 Smarteefi light circuits are lights now
+
+Manoj: "all 8 are light switches. convert them". Each of Foyer light, Porch, Living, Pooja, Gate1, Gate2,
+Ext Wall1 and Ext wall2 now has a `switch_as_x` helper (HA's "Show as → Light"), created through the config
+flow API. The helper names the new entity `light.<device>_<name>` (e.g. `light.foyer_porch_porch`), so the
+IDs were renamed to `light.foyer_light` … `light.ext_wall2`. The wrapped switches are hidden. A search of
+`automations.yaml`, `scripts.yaml`, `scenes.yaml`, every dashboard in `.storage` and this repo's
+`flows.json` found no use of the old `switch.*` IDs.
+
+One slip on the way: a re-run created a second Porch helper. Deleting a `switch_as_x` entry un-hides the
+switch it wraps, so both Porch helpers were deleted and one recreated; `switch.porch` is hidden again.
+
+Naming: HA 2026.x computes every friendly name as device name + entity name (entity registry 1.24). With
+the board devices added this morning, `light.porch` reads "Foyer & Porch Porch". Renaming the devices is
+the fix if it matters.
+
 ### HA Smarteefi: a HACS update had wiped the patches; fixed again, now kept in git
 
 Manoj: "smarteefi devices are not listed in home assistant?" Two faults:
