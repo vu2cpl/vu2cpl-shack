@@ -1,6 +1,6 @@
 # Session Handover — VU2CPL Shack
 
-**Period:** 2026-05-01 → 2026-11-17
+**Period:** 2026-05-01 → 2026-11-19
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
 **Last commit at handover:** **Smarteefi shack outlets on their own dashboard tabs (2026-11-17, Vue v59).** Manoj: the 9 shack outlets (shack wall outlet + shack power board, not the lights) on the Node-RED and Vue dashboards, "in a separate tab to avoid accidental off/ons". HA automation `smarteefi_shack_mqtt_bridge` publishes retained `shack/smarteefi/state` and switches its own 9 outlets from `shack/smarteefi/set` (tested: bad commands ignored, Empty 4 on/off). New flow tab **Smarteefi Outlets** → D1 tab **Shack Outlets** + Vue **Shack | Outlets** tab bar (Shack default on every load); `POST /power/smarteefi-toggle {entity, action:on|off}`; every switch confirms. Deployed (`git pull` + Node-RED restart, flows started clean). **Click test from the dashboards is Manoj's** (endpoints are behind the dashboard login).
 
