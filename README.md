@@ -451,6 +451,7 @@ comes from VU2PTT's Skimmer Calibration tracker.
 | [TELEGRAM_BROADCAST.md](TELEGRAM_BROADCAST.md) | Operator | Sending alerts to more than one Telegram chat: group chat, HA, or Node-RED fan-out (design only, HANDOVER #58) |
 | [restic/README.md](restic/README.md) | Operator | Backups of the Linux boxes: what is covered, the NAS / .109 / Google Drive copies, where the password lives, how to restore |
 | [ha-smarteefi/README.md](ha-smarteefi/README.md) | Operator | Smarteefi switches in HA stuck "off" / unavailable, or after a HACS update of Smarteefi: what the patch does, how to re-apply it |
+| [PORTS.md](PORTS.md) | Operator | Which port a service is on, what the router forwards, VPN and RustDesk ports |
 
 ---
 
