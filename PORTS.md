@@ -2,8 +2,8 @@
 
 Every TCP/UDP port the shack uses, grouped by host.
 
-**Last checked:** 2026-11-20. Listening sockets were read live on noderedpi4 (`.169`) and the UberSDR box
-(`.109`), the FlexRadio ports were probed, and the UniFi port forwards were read from the gateway's API
+**Last checked:** 2026-11-20. Listening sockets (TCP and UDP) were read live on noderedpi4 (`.169`), the UberSDR
+box (`.109`) and the Mac mini, the FlexRadio ports were probed, and the UniFi port forwards were read from the gateway's API
 (read-only). Disabled forwards (ALPA, Jukebox, old RustDesk) were deleted by Manoj the same day. The rows for the other hosts come from the repo docs and the project repos named in each row.
 
 This repo is public, so the WAN address and the RustDesk server address and key are not in this file.
@@ -73,8 +73,8 @@ firewall rules: `vlan-setup` repo, `MIGRATION-PLAN.md` "VPN design".
 | 7551 | TCP | Meridian Local Users telnet |
 | 7575 | TCP | DXCA telnet cluster server |
 | 7580 | TCP | DXCA web GUI |
-| 8073 | TCP | UberSDR web (HF, RX888) |
-| 8080 | TCP | UberSDR web, redirects to `/v2/` |
+| 8073 | TCP | UberSDR web (HF, RX888), including its KiwiSDR emulation (`/kiwi/…`) |
+| 8080 | TCP | UberSDR web + API (redirects to `/v2/`). RX Hub's UberSDR source connects here |
 | 8901 | TCP | UberSDR public page "VU2CPL WebSDR" |
 | 1234 | TCP | UberSDR rtl_tcp server |
 | 8873 | TCP | OpenWebRX+ public HTTPS (`openwebrx-caddy`, host networking) |
@@ -85,13 +85,42 @@ firewall rules: `vlan-setup` repo, `MIGRATION-PLAN.md` "VPN design".
 | 2029 | TCP | `openwebrx-caddy` admin API, localhost only |
 | 24224 | TCP | fluent-bit, localhost only |
 | 61209 | TCP | glances, localhost only |
+| 2333 | UDP | DXCA decoder input: MSHV (from the Mac) |
+| 2334 | UDP | DXCA decoder input: JTDX (JTDX-VU on the Mac, relayed by RX Hub) |
+| 2335 | UDP | DXCA decoder input: WSJT-X |
+| 2336 | UDP | DXCA decoder input: UberSDR (from `.109` itself) |
+| 2337 | UDP | DXCA decoder input: SDR-Control (IC-705) |
+| 1024–1029 | UDP | UberSDR HPSDR bridge (`ubersdr-hpsdr-bridge`) |
+| 5353 | UDP | mDNS (avahi) |
+| 21119 | UDP | RustDesk client |
+| 323 | UDP | chrony command port, localhost only |
 
 Inside the Docker network only (not published on the host): hfdl 6090, lightning 6097, ubersdr-dsp 50051,
 ubersdr-gotty 9980, ka9q-radio 5004/5006 UDP, wavelog-db 3306.
 
 ---
 
-## 4. FlexRadio FLEX-6600 — `192.168.1.148`
+## 4. Mac mini `MiniM4-Pro` — `192.168.10.226`, Trusted VLAN (checked live)
+
+| Port | Proto | Service |
+|------|-------|---------|
+| 2242 | UDP | **RX Hub**, localhost only: JTDX-VU (profile `FLEX VITA49`) sends its WSJT-X UDP here. RX Hub follows the dial from it and relays everything to DXCA at `.109:2334` UDP. Private repo `vu2cpl/rx-hub`, LaunchAgent `com.vu2cpl.rx-hub` |
+| 8742 | TCP | **RX Hub** web page, localhost only on the Mac (`http://127.0.0.1:8742/`) |
+| 2237 | UDP | RUMlogNG, WSJT-X-style UDP (DXCA's passthrough → RUMlog) |
+| 2238 | UDP | RUMlogNG, ADIF UDP logging (qso-inbox bridge, WaveLogGate) |
+| 2233 | UDP | `mshv_rumlog_bridge.py` (qso-inbox), localhost only: MSHV "Logged QSO ADIF" |
+| 2239 | UDP | `sdrc_rumlog_proxy.py` (qso-inbox), localhost only: SDR-Control |
+| 50001 | TCP | AetherSDR TCI server |
+| 9007 | UDP | AetherSDR, Antenna Genius / ShackSwitch discovery |
+| 21119 | UDP | RustDesk client |
+
+RX Hub's sources connect out from the Mac: UberSDR `.109:8080`, the Kiwi emulation on `.109:8073`, OpenWebRX+
+(public receivers), and the FlexRadio, directly on `.148` or over SmartLink. While RX Hub is down, DXCA gets
+nothing from JTDX-VU (see the rx-hub HANDOVER).
+
+---
+
+## 5. FlexRadio FLEX-6600 — `192.168.1.148`
 
 | Port | Proto | Use |
 |------|-------|-----|
@@ -105,7 +134,7 @@ The WAN forward covers 4991–4995 TCP+UDP for SmartLink.
 
 ---
 
-## 5. Other LAN hosts (from the docs)
+## 6. Other LAN hosts (from the docs)
 
 | Host | Port | Proto | Service |
 |------|------|-------|---------|
@@ -125,7 +154,7 @@ The WAN forward covers 4991–4995 TCP+UDP for SmartLink.
 
 ---
 
-## 6. Outbound from the shack
+## 7. Outbound from the shack
 
 | Target | Port | Proto | Used by |
 |--------|------|-------|---------|
@@ -138,7 +167,7 @@ The WAN forward covers 4991–4995 TCP+UDP for SmartLink.
 
 ---
 
-## 7. RustDesk
+## 8. RustDesk
 
 Self-hosted `hbbs` + `hbbr` on an Oracle Cloud Always Free VM since 2026-10-06. Address, key and the Mac
 switch script are in `~/projects/oracle-rustdesk/HANDOVER.md` (not a repo; never put them here).
@@ -160,7 +189,10 @@ forward was deleted from UniFi on 2026-11-20.
 ```bash
 # Listening ports on a Linux box
 ssh vu2cpl@192.168.1.169 'sudo ss -tulnp'
-ssh vu2cpl@192.168.1.109 'sudo ss -tlnp; sudo docker ps --format "{{.Names}}\t{{.Ports}}"'
+ssh vu2cpl@192.168.1.109 'sudo ss -tulnp; sudo docker ps --format "{{.Names}}\t{{.Ports}}"'
+
+# The Mac
+lsof -nP -iTCP -sTCP:LISTEN; lsof -nP -iUDP
 
 # UniFi port forwards (read-only; key stays in ~/.config/vu2cpl-shack.env)
 set -a; . ~/.config/vu2cpl-shack.env; set +a
