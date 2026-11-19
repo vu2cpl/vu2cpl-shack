@@ -4,7 +4,7 @@ Every TCP/UDP port the shack uses, grouped by host.
 
 **Last checked:** 2026-11-20. Listening sockets were read live on noderedpi4 (`.169`) and the UberSDR box
 (`.109`), the FlexRadio ports were probed, and the UniFi port forwards were read from the gateway's API
-(read-only). The rows for the other hosts come from the repo docs and the project repos named in each row.
+(read-only). Disabled forwards (ALPA, Jukebox, old RustDesk) were deleted by Manoj the same day. The rows for the other hosts come from the repo docs and the project repos named in each row.
 
 This repo is public, so the WAN address and the RustDesk server address and key are not in this file.
 
@@ -25,20 +25,17 @@ firewall rules: `vlan-setup` repo, `MIGRATION-PLAN.md` "VPN design".
 
 ### UniFi port forwards
 
-| WAN port | Proto | Forwarded to | What | Enabled |
-|----------|-------|--------------|------|---------|
-| 80 | TCP | `.109:8880` | Caddy, Let's Encrypt HTTP challenge for the OpenWebRX+ certificate. `.109:8880` is open only while a certificate renews. Keep it (`ubersdr-box` README) | yes |
-| 4991–4995 | TCP+UDP | `.148:4991–4995` | FlexRadio SmartLink | yes |
-| 7374 | TCP+UDP | `.109:7374` | Meridian web UI | yes |
-| 7550 | TCP+UDP | `.109:7550` | Meridian DX-cluster telnet (`vu2cpl.ddns.net:7550`). Node-RED's RBN and DXCC tabs reach it this way by hairpin NAT | yes |
-| 7580 | TCP+UDP | `.169:7580` | DXCA web GUI. **Stale:** DXCA now runs on `.109:7580`, and `.169:7580` doesn't answer | yes |
-| 8073 | TCP+UDP | `.109:8073` | UberSDR (HF, RX888) | yes |
-| 8873 | TCP+UDP | `.109:8873` | OpenWebRX+ (VHF) over HTTPS | yes |
-| 8901 | TCP+UDP | `.109:8901` | UberSDR public page "VU2CPL WebSDR" | yes |
-| 50001 | TCP+UDP | `.237:50001` | Icom remote | yes |
-| 8098–8099 | TCP+UDP | `.213` | ALPA server | **no** |
-| 8770 | TCP+UDP | `.213:8770` | Jukebox | **no** |
-| 21115–21117 | TCP+UDP | `.109` | RustDesk (the old self-hosted server, retired 2026-10-06) | **no** |
+| WAN port | Proto | Forwarded to | What |
+|----------|-------|--------------|------|
+| 80 | TCP | `.109:8880` | Caddy, Let's Encrypt HTTP challenge for the OpenWebRX+ certificate. `.109:8880` is open only while a certificate renews. Keep it (`ubersdr-box` README) |
+| 4991–4995 | TCP+UDP | `.148:4991–4995` | FlexRadio SmartLink |
+| 7374 | TCP+UDP | `.109:7374` | Meridian web UI |
+| 7550 | TCP+UDP | `.109:7550` | Meridian DX-cluster telnet (`vu2cpl.ddns.net:7550`). Node-RED's RBN and DXCC tabs reach it this way by hairpin NAT |
+| 7580 | TCP+UDP | `.109:7580` | DXCA web GUI (pointed at `.169` until 2026-11-20, when Manoj fixed it) |
+| 8073 | TCP+UDP | `.109:8073` | UberSDR (HF, RX888) |
+| 8873 | TCP+UDP | `.109:8873` | OpenWebRX+ (VHF) over HTTPS |
+| 8901 | TCP+UDP | `.109:8901` | UberSDR public page "VU2CPL WebSDR" |
+| 50001 | TCP+UDP | `.237:50001` | Icom remote |
 
 ---
 
@@ -154,7 +151,7 @@ switch script are in `~/projects/oracle-rustdesk/HANDOVER.md` (not a repo; never
 | 21118–21119 | TCP | Web client only | no (not needed) |
 
 Clients connect outbound to these, so the shack needs no inbound forward. The old `.109` server's
-forward (21115–21117) is still in UniFi, disabled.
+forward was deleted from UniFi on 2026-11-20.
 
 ---
 
