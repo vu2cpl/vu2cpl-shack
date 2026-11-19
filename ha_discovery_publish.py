@@ -343,6 +343,11 @@ sensor('mains_meter', 'Meter link', DEV_MAINS, 'shack/mains-monitor/status',
        tpl=("{% if value_json.event == 'heartbeat' %}{{ value_json.meter }}"
             "{% else %}{{ value_json.event }}{% endif %}"),
        icon='mdi:meter-electric', attrs_topic='shack/mains-monitor/status')
+# WiFi RSSI from the 60 s heartbeat; online/offline events carry no rssi, an empty result is ignored by HA
+sensor('mains_rssi', 'WiFi RSSI', DEV_MAINS, 'shack/mains-monitor/status',
+       tpl='{% if value_json.rssi is defined %}{{ value_json.rssi }}{% endif %}', unit='dBm',
+       dev_class='signal_strength', state_class='measurement', expire=180)
+configs[-1][1]['entity_category'] = 'diagnostic'
 binary('mains_supply', 'Raw supply', DEV_MAINS, MT,
        tpl="{{ 'ON' if value_json.supply == 'ok' else 'OFF' }}", icon='mdi:transmission-tower',
        expire=120)

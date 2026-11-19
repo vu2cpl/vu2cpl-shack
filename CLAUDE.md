@@ -687,6 +687,8 @@ House Loads", `height` 2→6; Vue PowerCard build `v25`):
   went from 7 to 10. HA Radio dashboard, same day: Raw R/Y/B gauges (`sensor.mains_monitor_raw_*`),
   the old gauges renamed "Stab R · L1" etc., and a 24 h raw-vs-stab `history-graph`. Backups:
   `dashboard-193-radio-pre/post-mainsvolt-20261107.json`. The flows revert tag is `pre-mainsvolt-20261107`.
+  **WiFi RSSI (2026-11-19):** `sensor.mains_monitor_wifi_rssi` (`mains_rssi` in `ha_discovery_publish.py`), from the
+  heartbeat on `shack/mains-monitor/status`, diagnostic, expires after 180 s. Only that config was published.
   **Raw kW graph (2026-11-11, v54):** under the sparkline, a 10-min `energy.mains.kw` graph per phase ("Raw kW · BESCOM"),
   scale min(0, lowest)…max(1, highest) kW with a brighter 0 line, because the meter's kW goes negative on export. Negative values
   read "N kW exp" on the header and dials. D1 height 10 → 12. Revert tag `pre-rawkw-20261111`.
