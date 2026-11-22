@@ -8,6 +8,39 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-11-22
+
+### FlexRadio: connect to `192.168.1.148:4992` manually (the power cut broke automatic mode)
+
+The FlexRadio connection had been down since the 2026-11-17 power cut. The radio booted before the router
+served DHCP, gave itself `169.254.98.161`, and announced that address. The `flexradio-radio` config node
+(`94d0df28ae5cccfc`, node-red-contrib-flexradio 1.2.5) was in **automatic** mode. That mode connects to the
+first discovery announcement it hears, then stops listening and reconnects to the same address forever.
+`nickname` mode does the same. So Node-RED retried the dead address every ~2.5 min for 4.8 days, even after
+the radio was back on `192.168.1.148`. That caused 2,811 `connect ETIMEDOUT` errors plus 408 `radio not
+available` errors. The FlexRadio tab and the lightning **FlexRadio TX Inhibit** share this config node, so both
+were without the radio.
+
+Fix (`b76de6d`): `host_mode` `manual`, `host` `192.168.1.148`, `port` `4992` (fields from the node's own
+schema). `192.168.1.148` is the radio's fixed shack address (PORTS.md, vlan-setup). Deployed by `git pull` +
+`sudo systemctl restart nodered`. It logged `radio connected tcp` 1 s after the flows started, with no errors
+since. The discovery node still listens on UDP 4992 for `clientHandleMap`.
+
+### noderedpi4: avahi warnings and the network wait after a power cut (system config, not in git)
+
+- **avahi:** ~730 `Record [...] not fitting in legacy unicast packet, dropping.` warnings per hour (84,400
+  this boot) filled the RAM-only journal. Cause: the UniFi gateway's mDNS query is too large for any legacy
+  unicast reply. `publish-workstation=no` stops it (the Pi now advertises no services); `noderedpi4.local`
+  still resolves. Backup `/etc/avahi/avahi-daemon.conf.bak-2026-11-22`.
+- **NetworkManager-wait-online:** failed at the power-cut boot. DHCP got no answer for 45 s, the wait gave up
+  at 79 s, and the router first answered at 131 s. mosquitto waits for this unit, so it started at 79 s. The limit
+  is now 300 s (`/etc/systemd/system/NetworkManager-wait-online.service.d/timeout.conf`). Normal boots are
+  unchanged. After a power cut, mosquitto now starts when DHCP answers.
+
+Both are in REBUILD_PI.md Step 2. The same fixes went onto gpsntp the same day (Pi-GPS-NTP-Server HANDOVER).
+
+---
+
 ## 2026-11-17
 
 ### Smarteefi shack outlets on their own tab, on both dashboards (Vue v59)

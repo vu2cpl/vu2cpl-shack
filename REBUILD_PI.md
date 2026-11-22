@@ -212,6 +212,25 @@ sudo i2cdetect -y 1                        # AS3935 should appear at 0x03 (or 0x
 > and aborts cleanly with a reboot-recovery message when it detects
 > the post-dist-upgrade kernel-pending state.
 
+### avahi and the network wait (added 2026-11-22)
+
+`rebuild_pi.sh` does not do these yet. Run them by hand:
+
+```bash
+# avahi: stop advertising _workstation._tcp. The UniFi gateway sends an mDNS
+# query too large for any legacy-unicast reply, and avahi logs ~700 warnings
+# an hour about it. noderedpi4.local still resolves (host A/AAAA records).
+sudo sed -i 's/^publish-workstation=yes$/publish-workstation=no/' /etc/avahi/avahi-daemon.conf
+sudo systemctl restart avahi-daemon
+
+# NetworkManager-wait-online: wait up to 5 min. After a power cut the router
+# answers DHCP ~2 min after the Pi boots, and the default 60 s marks the unit
+# failed. mosquitto waits for this unit.
+sudo mkdir -p /etc/systemd/system/NetworkManager-wait-online.service.d
+printf '[Service]\nEnvironment=NM_ONLINE_TIMEOUT=300\n' | sudo tee /etc/systemd/system/NetworkManager-wait-online.service.d/timeout.conf
+sudo systemctl daemon-reload
+```
+
 ---
 
 ## Step 3 — Mosquitto broker
