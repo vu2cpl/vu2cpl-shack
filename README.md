@@ -352,7 +352,7 @@ station-wide problem is local network or upstream.
 ### WAN Data (usage vs the ISP caps)
 
 Both WANs are capped by their ISPs, download + upload: **WAN1 3 TB** per cycle
-11th → 10th, **WAN2 1 TB** per cycle 26th → 25th. The `wan-usage` job on the Mac
+11th → 10th, **WAN2 903 GB** (Jio AirFiber; 1 TB until 2026-11-22) per cycle 26th → 25th. The `wan-usage` job on the Mac
 (private repo `vu2cpl/vlan-setup`, `scripts/wan-usage/`) reads the UDM's hourly WAN
 history (Network app v2 API, into its own ledger since 2026-11-13) hourly, sends Telegram alerts through HA at 70/90/100 % and on a projected
 overrun, and publishes retained `shack/wan/wan1` and `shack/wan/wan2`. The

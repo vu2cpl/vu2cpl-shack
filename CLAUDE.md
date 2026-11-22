@@ -1110,7 +1110,7 @@ the ubersdr box also running `meridian` (`192.168.1.109`).
 
 ### WAN Data (2026-11-07, on the Internet and network monitor tab)
 
-WAN1 (3 TB, cycle 11th → 10th) and WAN2 (1 TB, cycle 26th → 25th) usage, download + upload. The publisher is
+WAN1 (3 TB, cycle 11th → 10th) and WAN2 (903 GB since 2026-11-22, Jio AirFiber's allowance; was 1 TB; cycle 26th → 25th) usage, download + upload. The publisher is
 **not** on the Pi: the `wan-usage` launchd job on the Mac (`vu2cpl/vlan-setup` `scripts/wan-usage/`, hourly)
 reads the UDM's hourly WAN history (v2 `aggregated-dashboard` `wan_activity`, into its own ledger since 2026-11-13;
 the classic `stat/report/daily.site` went empty after the UDM's 2026-11-11 reboot) with the UniFi API key (which
