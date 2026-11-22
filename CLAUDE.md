@@ -641,7 +641,8 @@ Sliding strike history lives in `flow.recent_as3935 = [{ts, km}, …]`. Pushed o
 ### All Power Strips (Rotator)
 - Rotator timer node (`05f0ddeb566a90fc`): set to `5 * 60 * 1000` (5 min) for production — done 2026-05-10 (`971f4b4`)
 - Timer does NOT survive Node-RED restart — acceptable for rotator use
-- **A rotator that does not answer is normal, not a fault.** The timer cuts its mains 5 min after it is switched on. After that, `rotator-remote` logs `No reply from the Rotor-EZ (11 s); reopening the serial port` and the rotator shows no heading. Don't report this in health checks (Manoj, 2026-11-22). The FTDI `urb stopped: -32` kernel errors on both serial adapters on 2026-11-21 23:10–23:14 came with no fault: amp and rotator both checked fine.
+- **A rotator that does not answer is normal, not a fault.** The timer cuts its mains 5 min after it is switched on. After that, `rotator-remote` logs `No reply from the Rotor-EZ (11 s); reopening the serial port` and the rotator shows no heading. Don't report this in health checks (Manoj, 2026-11-22).
+- **Rotator health = the USB side is fine** (Manoj, 2026-11-22). Report the rotator OK when all three hold, whether or not the Rotor-EZ answers: `/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_AL05J29R-if00-port0` exists, its tty is bound to the `ftdi_sio` driver, and `rotator-remote.service` is active with the port open. Report a fault only if one of these fails, or the kernel logs the adapter disconnecting. The FTDI `urb stopped: -32` kernel errors on both serial adapters on 2026-11-21 23:10–23:14 came with no fault: amp and rotator both checked fine.
 - Rotator **power** (this outlet) is the only rotator concern still in Node-RED; **heading control moved to `rotator-remote.service`** 2026-06-06 (see the Rotator section above).
 
 ### All Power Strips (Solar inverter + house loads, 2026-08-25)
