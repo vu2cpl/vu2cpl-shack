@@ -214,7 +214,7 @@ sudo i2cdetect -y 1                        # AS3935 should appear at 0x03 (or 0x
 
 ### avahi and the network wait (added 2026-11-22)
 
-`rebuild_pi.sh` does not do these yet. Run them by hand:
+`rebuild_pi.sh` Stage 1 does both (since 2026-11-22). By hand:
 
 ```bash
 # avahi: stop advertising _workstation._tcp. The UniFi gateway sends an mDNS

@@ -428,6 +428,37 @@ stage_01_apt_packages() {
         c_yellow "      Interface Options → I²C → Enable, then reboot."
     fi
 
+    # The UniFi gateway's mDNS query is too large for any legacy-unicast reply;
+    # with _workstation._tcp published, avahi logs ~700 warnings an hour about it
+    # into the RAM-only journal (SHACK_CHANGELOG 2026-11-22).
+    step "avahi: stop advertising _workstation._tcp"
+    local avahi_conf=/etc/avahi/avahi-daemon.conf
+    if [[ ! -f "$avahi_conf" ]]; then
+        warn "$avahi_conf not found (avahi not installed) — skipping"
+    elif grep -qx 'publish-workstation=yes' "$avahi_conf"; then
+        sudo sed -i 's/^publish-workstation=yes$/publish-workstation=no/' "$avahi_conf"
+        sudo systemctl restart avahi-daemon
+        ok "publish-workstation=no (avahi restarted)"
+    else
+        ok "publish-workstation already off"
+    fi
+
+    # After a power cut the router answers DHCP ~2 min after the Pi boots; the
+    # default 60 s marks the unit failed, and mosquitto waits for it.
+    step "NetworkManager-wait-online: wait up to 5 min"
+    if systemctl cat NetworkManager-wait-online.service >/dev/null 2>&1; then
+        sudo mkdir -p /etc/systemd/system/NetworkManager-wait-online.service.d
+        printf '%s\n' \
+            "# Router boots slower than the Pi after a power cut; 60 s was not enough (2026-11-17)." \
+            "[Service]" \
+            "Environment=NM_ONLINE_TIMEOUT=300" \
+            | sudo tee /etc/systemd/system/NetworkManager-wait-online.service.d/timeout.conf >/dev/null
+        sudo systemctl daemon-reload
+        ok "NM_ONLINE_TIMEOUT=300"
+    else
+        warn "NetworkManager-wait-online.service not present (not a NetworkManager system) — skipping"
+    fi
+
     mark_stage "01_apt_packages"
     ok "Stage 1 complete"
 }

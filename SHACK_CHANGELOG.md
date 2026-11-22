@@ -37,7 +37,9 @@ since. The discovery node still listens on UDP 4992 for `clientHandleMap`.
   is now 300 s (`/etc/systemd/system/NetworkManager-wait-online.service.d/timeout.conf`). Normal boots are
   unchanged. After a power cut, mosquitto now starts when DHCP answers.
 
-Both are in REBUILD_PI.md Step 2. The same fixes went onto gpsntp the same day (Pi-GPS-NTP-Server HANDOVER).
+Both are in REBUILD_PI.md Step 2 and in `rebuild_pi.sh` Stage 1. Each change is skipped if already in place,
+and skipped with a warning if avahi or NetworkManager is not installed. The same fixes went onto gpsntp the
+same day (Pi-GPS-NTP-Server HANDOVER).
 
 ---
 
