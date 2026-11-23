@@ -40,6 +40,9 @@ the old firmware reconnecting in the ~2 s before its restart, which the broker h
 connected, closing old connection`); cpl.2 keeps MQTT down after the goodbye, and a second OTA logged one clean
 disconnect and one new login. Nothing in Node-RED or HA uses the topics yet.
 
+`5.0.2-cpl.3` (21:28) keeps the last antenna and AUTO across reboots. VU2PTT's firmware came up on "ANT 1" with
+AUTO off and every relay off after any power cut. Tested with a reboot: back on antenna 6 with AUTO on.
+
 ## 2026-11-22
 
 ### FlexRadio: connect to `192.168.1.148:4992` manually (the power cut broke automatic mode)
