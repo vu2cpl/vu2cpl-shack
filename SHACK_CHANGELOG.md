@@ -10,6 +10,32 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-11-23
 
+### RX antenna switch: the radio's frequency over MQTT (firmware cpl.4), bigger knob number (Vue v62)
+
+**Firmware `5.0.2-cpl.4`** (repo `vu2cpl/vucg-antenna-switch`, `a71c849`, flashed over OTA). AUTO picks the
+antenna from the radio's frequency, which VU2PTT's firmware gets only from N1MM-style UDP `<RadioInfo>`
+packets, and nothing in the shack sends those. Manoj chose an MQTT topic instead: **`shack/rxswitch/set/freq`**,
+never retained. Payload: Hz (`14074000`), MHz below 1000 (`14.074`), or JSON `{"hz":…,"app":"FLEX"}`
+(`freq_hz` accepted; `{"ok":false}` ignored, so the RGO ONE bridge's `shack/rgo-spe-cat/rig` payload works
+unchanged); 100 kHz–1 GHz. It fills the same variables as a UDP packet, so it is also the radio heartbeat:
+`hb` stays true for 15 s after each message, so a sender must repeat it (every 5 s is good) and stop when the
+radio is off. No ACL change: `iot` already reads `shack/rxswitch/set/#`; `nodered`, `ha` and `svc` can send.
+Tested on the switch as `svc` with every payload form, including the RGO payload, an 8-character `app`
+limit, ignored `ok:false` and garbage, and `hb` dropping 15 s after the last message. **Nothing sends it yet**:
+the relay (Flex RX slice, RGO ONE, or a TCI server, and how one is chosen) waits for Manoj.
+
+The switch's band map (its own `/grid`): 160 m → RX ANT 1, 80 → 2, 60 → 3, 40 → 4, 30 → 5, 20 → 6; 17 m and
+up have no antenna. During the test the switch went to ports 4, 5 and 8 and AUTO off and on, which
+`set/freq` cannot do: those were clicks on a dashboard or the switch's page. AUTO happened to be off when
+160 m was sent, so no relay moved.
+
+PlatformIO note: `/opt/homebrew/bin/pio` now runs on Python 3.9 and refuses to build; use
+`~/.platformio/penv/bin/pio`.
+
+**Vue v62** (`4012904`): the antenna number in the centre of the knob, 13 px → 22 px (Manoj: "a bit
+bigger"), baseline moved so it stays centred and clear of the pointer at every angle. D1 unchanged.
+`index.js?v=62`, `index.css?v=22`.
+
 ### RX antenna switch: rotary dial instead of buttons (Vue v61)
 
 Manoj on the first version: "the rotary dial is best suited for these applications". After he approved a
