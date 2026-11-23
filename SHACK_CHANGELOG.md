@@ -10,6 +10,24 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-11-23
 
+### RX antenna switch: rotary dial instead of buttons (Vue v61)
+
+Manoj on the first version: "the rotary dial is best suited for these applications". After he approved a
+mockup, both dashboards now draw the switch's own **Rotary** view (VU2PTT's default page): the port names on a
+220° arc around a knob, the pointer turned to the antenna the switch reports, and the port number in the knob.
+A click on a name selects it. The name turns amber until the switch publishes its new state, then the pointer
+swings, so the pointer always shows what the switch has really selected, not the click. Band-mapped names are
+blue only while AUTO is on and a radio feeds the switch, the same rule as the switch's page. A relay test moves
+the pointer to the test relay. The 8 buttons are gone; the endpoint, flow wiring and commands are unchanged
+(commit `9d7e1f3`).
+
+It's an SVG with a `0 28 300 138` viewBox, so it scales: 12 px labels in the 330 px Vue card, a little larger in
+the `/ui` box (capped at 360 px wide). The PTT chip sits at the right end of the AUTO row and only takes space
+while PTT is keyed, so the AUTO button never moves. In the Vue header the title never wraps, and AUTO leaves the
+summary while PTT is keyed. Checked in a throwaway browser harness at 330, 380 and 430 px (Vue) and in the
+426 px `/ui` box, including a click round trip against a fake switch. Vue build v61, `index.js?v=61`,
+`index.css?v=21`.
+
 ### RX antenna switch on `/ui` and `/shack`, with port buttons and AUTO (Vue v60)
 
 Manoj asked for the RX antenna on both dashboards, with controls, and named the eight ports `RX ANT 1`–`RX ANT 8`

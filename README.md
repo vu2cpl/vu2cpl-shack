@@ -195,8 +195,9 @@ The receive antennas go through an RA0SMS 8:1 RX antenna switch (NodeMCU, `192.1
 It runs VU2PTT's VUCG WiFi Antenna Switch firmware with MQTT added (private repo
 `vu2cpl/vucg-antenna-switch`), and publishes retained `shack/rxswitch/state` and `shack/rxswitch/status`.
 The flow tab *RX Antenna Switch* shows it on both dashboards (D1 group **RX Antenna Switch** after the Flex,
-Vue card **📡 RX Antenna**): the current antenna, AUTO on/off, the radio's frequency when a radio feeds the
-switch, and one button per port. A click goes to `POST /rxswitch/set` and from there to
+Vue card **📡 RX Antenna**) as a rotary dial like the switch's own page: the port names on an arc around a
+knob whose pointer shows the antenna the switch reports, plus AUTO on/off and the radio's frequency when a
+radio feeds the switch. Click a name to select it. A click goes to `POST /rxswitch/set` and from there to
 `shack/rxswitch/set/port` or `set/auto`, never retained. The port names (`RX ANT 1`–`8`) come from the
 switch's own settings page. The buttons grey out while the radio's PTT is keyed, because the switch keeps
 its antenna then. Original firmware and web UI (VUCG WiFi Antenna Switch) by VU2PTT; the MQTT additions are
