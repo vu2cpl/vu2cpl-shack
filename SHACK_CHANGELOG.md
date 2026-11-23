@@ -28,8 +28,17 @@ topic read shack/rxswitch/set/#
 
 This is narrower than `readwrite shack/rxswitch/#`: the switch can publish its own state and receive
 commands, but another `iot` device cannot send it commands. `nodered`, `ha` and `svc` reach the tree through
-their existing grants. Not yet proven by a real login, because the switch is not flashed with the MQTT
-firmware yet. `MQTT_AUTH.md` lists the switch and the grants.
+their existing grants. `MQTT_AUTH.md` lists the switch and the grants.
+
+**Flashed and verified the same evening.** The switch got the MQTT firmware over Wi-Fi at 21:07 IST (config
+backed up first, identical afterwards), and `5.0.2-cpl.2` at 21:23. The first configuration hit an old trap in
+the Settings page: SAVE & REBOOT silently did nothing unless the page had been locked again. cpl.2 saves without
+re-locking, asks to confirm and shows a reboot countdown. On the broker: the `iot` login from `192.168.30.133`
+(client id `vucgswitch100-9e1a4a`), retained `shack/rxswitch/status` online (`fw 5.0.2-cpl.2`) and
+`shack/rxswitch/state`, and `set/port 1` sent as `svc` made the switch republish `state`. The first OTA showed
+the old firmware reconnecting in the ~2 s before its restart, which the broker had to take over (`already
+connected, closing old connection`); cpl.2 keeps MQTT down after the goodbye, and a second OTA logged one clean
+disconnect and one new login. Nothing in Node-RED or HA uses the topics yet.
 
 ## 2026-11-22
 
