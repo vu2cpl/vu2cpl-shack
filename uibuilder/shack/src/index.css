@@ -1439,16 +1439,30 @@ html, body {
 }
 .outlet-grid .plug:disabled { cursor: not-allowed; }
 
-/* === RX antenna switch (2026-11-23) ===
-   4-across port buttons. In the ~330 px card a tile has ~60 px inside, so the label is
-   sized against the card (cqw; the card is the container) with a px fallback, never
-   wraps, and ellipsizes a long custom name (the full name is in the tooltip). */
+/* === RX antenna switch (2026-11-23; rotary dial since v61) ===
+   SVG dial like the switch's own "Rotary" page: viewBox 300 x 170 scales to the card width
+   (~300 px in the 330 px card, so the 12-unit labels render at ~12 px). The viewBox starts at
+   y=28: nothing is drawn above the top labels. */
+.rxsw-dial { display: block; width: 100%; max-width: 360px; margin: 0 auto; }
+.rxsw-dial text { font-size: 12px; fill: var(--text-dim); font-family: var(--font-sans); }
+.rxsw-lb line { stroke: var(--border); }
+.rxsw-lb.is-cur line { stroke: var(--green); }
+.rxsw-lb.is-cur text { fill: var(--green); font-weight: 700; }
+.rxsw-lb.is-band text { fill: var(--accent); }
+.rxsw-lb.is-pend text { fill: var(--amber); }
+.rxsw-dial.is-ok .rxsw-lb { cursor: pointer; }
+.rxsw-dial.is-ok .rxsw-lb:not(.is-cur):not(.is-pend):hover text { fill: var(--text); }
+.rxsw-knob  { fill: var(--surface-2); stroke: var(--border); }
+.rxsw-knob2 { fill: var(--border-2); stroke: var(--border); }
+.rxsw-ptr { transform-origin: 150px 112px; transition: transform 0.5s ease; }
+.rxsw-ptr rect { fill: var(--green); }
+.rxsw-dial text.rxsw-knum { font-size: 13px; font-weight: 700; fill: var(--text); }
 .rxsw-row { display: flex; align-items: center; gap: var(--sp-3); min-height: 32px; }
+.rxsw-row .btn { flex-shrink: 0; white-space: nowrap; }
+.rxsw-row .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+/* Header: the title never wraps; the summary clips at its end, so its order is name, offline/stale, PTT, AUTO */
+.rxsw-title { white-space: nowrap; flex-shrink: 0; }
+.card__header .summary.rxsw-sum { white-space: nowrap; min-width: 0; overflow: hidden; }
 .rxsw-radio { font-size: var(--fs-xs); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.rxsw-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-2); }
-.rxsw-grid .plug { padding: var(--sp-2) 2px; min-width: 0; }
-.rxsw-grid .plug:disabled { cursor: not-allowed; opacity: 0.4; }
-.rxsw-grid .plug__lbl { font-size: 12px; font-size: clamp(11px, 3.8cqw, 14px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-.plug--band { border-color: var(--accent-bd); }
-.plug--pend { border-color: var(--amber-bd); color: var(--amber); }
+.rxsw-ptt { margin-left: auto; font-size: var(--fs-xs); font-weight: 700; padding: 1px 8px; border-radius: 20px; color: var(--red); border: 1px solid var(--red-bd); background: var(--red-bg); white-space: nowrap; }
 .rxsw-ft { font-size: var(--fs-xs); color: var(--muted); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, watch, onMounted, onUnmounted } = Vu
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v60 · 2026-11-23 RX antenna switch card';
+window.__shackBuild = 'v61 · 2026-11-23 RX antenna rotary dial';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -3848,47 +3848,51 @@ const OutletsCard = {
 //   ptt, test, validAnts[], rssi, host); ts = when Node-RED got it (s); online from /status.
 // Commands: POST /rxswitch/set { port: 1..n } or { auto: bool }. No confirm: the switch is
 // receive-only. Port names come from the switch's own settings page.
+// v61: rotary dial like the switch's own "Rotary" page (VU2PTT) — names on a 220° arc, the
+// pointer turns to the antenna the switch reports (not to the click), click a name to select.
 const RxSwitchCard = {
   template: `
     <div class="card" :style="{opacity: (stale || offline) ? 0.55 : 1}">
       <div class="card__header" @click="expanded = !expanded">
         <span class="chev">{{ expanded ? '▼' : '▶' }}</span>
-        <span>📡 RX Antenna</span>
-        <span class="summary">
+        <span class="rxsw-title">📡 RX Antenna</span>
+        <span class="summary rxsw-sum">
           <span v-if="!st" style="color:var(--muted)">no data</span>
           <template v-else>
             <span style="font-weight:700;color:var(--green)">{{ st.antName }}</span>
-            <span v-if="st.auto" style="color:var(--accent);font-weight:600">AUTO</span>
-            <span v-if="st.ptt" style="color:var(--red);font-weight:600">PTT</span>
             <span v-if="offline" style="color:var(--red);font-weight:600">offline</span>
             <span v-else-if="stale" style="color:var(--red);font-weight:600">stale</span>
+            <span v-if="st.ptt" style="color:var(--red);font-weight:600">PTT</span>
+            <span v-if="st.auto && !st.ptt" style="color:var(--accent);font-weight:600">AUTO</span>
           </template>
         </span>
       </div>
       <div class="card__body" :class="{ 'is-collapsed': !expanded }">
         <div v-if="!st" class="empty-row">Waiting for shack/rxswitch/state</div>
         <template v-else>
+          <svg class="rxsw-dial" :class="{ 'is-ok': usable }" viewBox="0 28 300 138" role="img" aria-label="RX antenna selector">
+            <g v-for="l in labels" :key="l.i" class="rxsw-lb" :class="l.cls" @click="setPort(l.i + 1)">
+              <title>{{ why || (l.name + ' — port ' + (l.i + 1) + (l.cls === 'is-band' ? ', mapped to this band' : '')) }}</title>
+              <rect :x="l.hx" :y="l.ty - 15" width="70" height="20" fill="transparent" />
+              <line :x1="l.x1" :y1="l.y1" :x2="l.x2" :y2="l.y2" stroke-width="2" />
+              <text :x="l.tx" :y="l.ty" :text-anchor="l.anchor">{{ l.name }}</text>
+            </g>
+            <circle cx="150" cy="112" r="50" class="rxsw-knob" stroke-width="2" />
+            <circle cx="150" cy="112" r="40" class="rxsw-knob2" stroke-width="1" />
+            <g class="rxsw-ptr" :style="{ transform: 'rotate(' + ptrAngle + 'deg)' }">
+              <rect x="147" y="66" width="6" height="22" rx="3" />
+            </g>
+            <text class="rxsw-knum" x="150" y="117" text-anchor="middle">{{ knum }}</text>
+          </svg>
           <div class="rxsw-row">
             <button class="btn" :class="st.auto ? 'btn--green' : 'btn--ghost'" :disabled="!usable"
-                    :title="autoTip"
-                    @click.stop="setAuto">AUTO {{ st.auto ? 'ON' : 'OFF' }}</button>
+                    :title="autoTip" @click.stop="setAuto">AUTO {{ st.auto ? 'ON' : 'OFF' }}</button>
             <span class="rxsw-radio">{{ radio }}</span>
-          </div>
-          <div class="rxsw-grid">
-            <button v-for="(nm, i) in names" :key="i" class="plug"
-                    :class="[i === st.ant ? 'plug--on' : 'plug--off',
-                             pend === i + 1 && i !== st.ant ? 'plug--pend' : '',
-                             band.includes(i) && i !== st.ant ? 'plug--band' : '']"
-                    :disabled="!usable" :title="why || (band.includes(i) ? nm + ' — mapped to this band' : nm)"
-                    @click="setPort(i + 1)">
-              <span class="plug__dot"></span>
-              <span class="plug__lbl">{{ nm }}</span>
-              <span style="font-size:var(--fs-xs)">Port {{ i + 1 }}</span>
-            </button>
+            <span v-if="st.ptt" class="rxsw-ptt"
+                  title="The radio is transmitting: the switch keeps its antenna until PTT drops">PTT · locked</span>
           </div>
           <div class="rxsw-ft">
             updated {{ updated }} · {{ st.host }}<template v-if="fw"> · fw {{ fw }}</template>
-            <template v-if="st.ptt"> · <span style="color:var(--red)">PTT keyed, antenna locked</span></template>
           </div>
         </template>
       </div>
@@ -3913,7 +3917,24 @@ const RxSwitchCard = {
       const n = Number(data.state.numAntennas) || data.state.antennas.length;
       return data.state.antennas.slice(0, n);
     });
-    const band = computed(() => (data.state && data.state.hb && data.state.validAnts) || []);
+    // Blue "mapped to this band" only while AUTO is on and the radio feeds the switch (as on its own page)
+    const band = computed(() => (data.state && data.state.auto && data.state.hb && data.state.validAnts) || []);
+    // A relay test drives the relays directly, so the pointer follows the test relay then
+    const act = computed(() => !data.state ? 0 : (data.state.test > -1 ? data.state.test : data.state.ant));
+    const CX = 150, CY = 112;
+    const angle = (i, n) => n < 2 ? 0 : -110 + i * 220 / (n - 1);
+    const labels = computed(() => {
+      const n = names.value.length;
+      return names.value.map((name, i) => {
+        const a = angle(i, n) * Math.PI / 180, s = Math.sin(a), c = Math.cos(a), left = s < 0;
+        const tx = CX + 72 * s, ty = CY - 72 * c + 4;
+        const cls = i === act.value ? 'is-cur' : (pend.value === i + 1 ? 'is-pend' : (band.value.includes(i) ? 'is-band' : ''));
+        return { i, name, cls, tx, ty, anchor: left ? 'end' : 'start', hx: left ? tx - 70 : tx,
+                 x1: CX + 56 * s, y1: CY - 56 * c, x2: CX + 64 * s, y2: CY - 64 * c };
+      });
+    });
+    const ptrAngle = computed(() => angle(act.value, names.value.length));
+    const knum = computed(() => !data.state ? '' : (data.state.test > -1 ? 'T' + (act.value + 1) : act.value + 1));
     const why = computed(() => {
       const s = data.state;
       if (!s) return 'No data';
@@ -3958,7 +3979,7 @@ const RxSwitchCard = {
       timer = setInterval(() => { now.value = Date.now() / 1000; }, 5000);
     });
     onUnmounted(() => { if (timer) clearInterval(timer); });
-    return { expanded, st, stale, offline, names, band, why, usable, autoTip, radio, updated, fw, pend, setPort, setAuto };
+    return { expanded, st, stale, offline, names, labels, ptrAngle, knum, why, usable, autoTip, radio, updated, fw, pend, setPort, setAuto };
   }
 };
 
