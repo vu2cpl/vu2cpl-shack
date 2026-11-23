@@ -175,6 +175,14 @@
         "env": []
     },
     {
+        "id": "rxsw_tab",
+        "type": "tab",
+        "label": "RX Antenna Switch",
+        "disabled": false,
+        "info": "RA0SMS 8:1 RX antenna switch (NodeMCU 192.168.30.133, IoT VLAN; firmware vu2cpl/vucg-antenna-switch, VU2PTT's VUCG 5.0.2 + MQTT). Retained shack/rxswitch/state + /status \u2192 RX switch state \u2192 /ui panel (group RX Antenna Switch on VU2CPL Shack) and the Vue RxSwitchCard (topic rxswitch, via link out \u2192 Shack Vue). POST /rxswitch/set {port:1..n} or {auto:bool} \u2192 shack/rxswitch/set/port|auto, never retained. Added 2026-11-23.",
+        "env": []
+    },
+    {
         "id": "0916fc715057e741",
         "type": "group",
         "z": "a0a882f85c89cffc",
@@ -683,7 +691,8 @@
             "vue_lo_ubersdr_",
             "vue_lo_dxca",
             "vue_lo_wan",
-            "vue_lo_smf"
+            "vue_lo_smf",
+            "vue_lo_rxsw"
         ],
         "x": 100,
         "y": 100,
@@ -12511,6 +12520,186 @@
         "statusCode": "",
         "headers": {},
         "x": 680,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "rxsw_grp",
+        "type": "ui_group",
+        "name": "RX Antenna Switch",
+        "tab": "vu2cpl_ui_tab_shack",
+        "order": 5,
+        "disp": false,
+        "width": 8,
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "rxsw_mqtt_in",
+        "type": "mqtt in",
+        "z": "rxsw_tab",
+        "name": "shack/rxswitch/+ (state, status)",
+        "topic": "shack/rxswitch/+",
+        "qos": "0",
+        "datatype": "json",
+        "broker": "f4785be9863eab08",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 180,
+        "y": 80,
+        "wires": [
+            [
+                "rxsw_state_fn"
+            ]
+        ]
+    },
+    {
+        "id": "rxsw_tick",
+        "type": "inject",
+        "z": "rxsw_tab",
+        "name": "every 10 s",
+        "props": [
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "10",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "5",
+        "topic": "tick",
+        "x": 150,
+        "y": 140,
+        "wires": [
+            [
+                "rxsw_state_fn"
+            ]
+        ]
+    },
+    {
+        "id": "rxsw_state_fn",
+        "type": "function",
+        "z": "rxsw_tab",
+        "name": "RX switch state",
+        "func": "// RA0SMS 8:1 RX antenna switch (NodeMCU 192.168.30.133, firmware vucg-antenna-switch\n// 5.0.2-cpl.x, repo vu2cpl/vucg-antenna-switch). Retained topics:\n//   shack/rxswitch/state  {swName, host, ant (0-based), port (1-based), antName, numAntennas,\n//                          antennas[], auto, freq, app, hb, test, ptt, validAnts[], rssi}\n//                         published on every change and every 60 s\n//   shack/rxswitch/status {\"event\":\"online\",host,ip,fw} / will {\"event\":\"offline\"}\n// Keeps the last of each (with the time Node-RED got it) and sends one payload to the /ui\n// panel and the Vue card, on every message and on the 10 s tick, so a page opened between\n// publishes fills in at once and both dashboards can judge staleness.\nconst t = msg.topic;\nif (t === 'shack/rxswitch/state') {\n    const p = msg.payload;\n    if (!p || typeof p !== 'object' || !Array.isArray(p.antennas)) return null;\n    flow.set('rxsw_state', p);\n    flow.set('rxsw_state_ts', Math.floor(Date.now() / 1000));\n} else if (t === 'shack/rxswitch/status') {\n    const p = msg.payload;\n    if (!p || typeof p !== 'object' || !p.event) return null;\n    flow.set('rxsw_status', p);\n} else if (t !== 'tick') {\n    return null;\n}\nconst state = flow.get('rxsw_state');\nif (!state) return null;\nconst status = flow.get('rxsw_status') || null;\nreturn {\n    topic: 'rxswitch',\n    payload: {\n        state: state,\n        ts: flow.get('rxsw_state_ts') || 0,\n        online: status ? status.event === 'online' : null,\n        fw: status && status.fw ? status.fw : '',\n        ip: status && status.ip ? status.ip : ''\n    }\n};\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 100,
+        "wires": [
+            [
+                "rxsw_panel",
+                "vue_lo_rxsw"
+            ]
+        ]
+    },
+    {
+        "id": "rxsw_panel",
+        "type": "ui_template",
+        "z": "rxsw_tab",
+        "group": "rxsw_grp",
+        "name": "RX Antenna Panel",
+        "order": 1,
+        "width": 8,
+        "height": 0,
+        "format": "<style>\n.rxs{--bg:#0d1117;--card:#161b22;--bd:#30363d;--tx:#c9d1d9;--mu:#8b949e;--gn:#3fb950;--gbg:#0d2818;--gbd:#238636;--rd:#f85149;--am:#e3b341;--bl:#58a6ff;\n background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:12px 14px;color:var(--tx);font-family:var(--gh-font,-apple-system,sans-serif);}\n.rxs .hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}\n.rxs .ti{font-size:14px;font-weight:700;}\n.rxs .ti small{color:var(--mu);font-weight:500;}\n.rxs .live{font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;}\n.rxs .live.on{color:var(--gn);background:rgba(63,185,80,.12);border:1px solid rgba(63,185,80,.35);}\n.rxs .live.bad{color:var(--rd);background:rgba(248,81,73,.12);border:1px solid rgba(248,81,73,.35);}\n.rxs .live.off{color:var(--mu);background:rgba(139,148,158,.1);border:1px solid var(--bd);}\n.rxs .cur{display:flex;align-items:center;gap:10px;height:32px;margin-bottom:8px;white-space:nowrap;}\n.rxs .cur b{font-size:22px;font-weight:700;color:var(--gn);}\n.rxs .cur .pt{font-size:12px;color:var(--mu);}\n.rxs .cur .ptt{margin-left:auto;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;color:var(--rd);border:1px solid rgba(248,81,73,.5);background:rgba(248,81,73,.12);}\n.rxs .row{display:flex;align-items:center;gap:10px;height:32px;margin-bottom:10px;font-size:12px;color:var(--mu);white-space:nowrap;overflow:hidden;}\n.rxs button.au{font:inherit;font-size:12px;font-weight:700;padding:5px 12px;border-radius:7px;cursor:pointer;border:1px solid var(--bd);background:var(--card);color:var(--mu);}\n.rxs button.au.is-on{color:var(--gn);background:var(--gbg);border-color:var(--gbd);}\n.rxs .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;}\n.rxs button.a{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 2px;border-radius:7px;cursor:pointer;min-width:0;\n font:inherit;font-size:12px;font-weight:600;border:1px solid var(--bd);background:var(--card);color:var(--tx);}\n.rxs button.a span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}\n.rxs button.a small{font-size:10px;color:var(--mu);font-weight:500;}\n.rxs button.a.is-band{border-color:var(--bl);}\n.rxs button.a.is-cur{color:var(--gn);background:var(--gbg);border-color:var(--gbd);}\n.rxs button.a.is-pend{border-color:var(--am);color:var(--am);}\n.rxs button:disabled{opacity:.4;cursor:not-allowed;}\n.rxs .ft{font-size:9.5px;color:var(--mu);margin-top:8px;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}\n.rxs.stale .cur,.rxs.stale .grid{opacity:.45;}\n</style>\n<div class=\"rxs\" id=\"rxs-root\">\n  <div class=\"hd\"><span class=\"ti\">\ud83d\udce1 RX Antenna <small>\u2014 RA0SMS switch</small></span><span class=\"live off\" id=\"rxs-live\">\u25cb no data</span></div>\n  <div class=\"cur\"><b id=\"rxs-name\">\u2014</b><span class=\"pt\" id=\"rxs-port\"></span><span class=\"ptt\" id=\"rxs-ptt\" style=\"visibility:hidden\" title=\"The radio is transmitting: the switch keeps its antenna until PTT drops\">PTT \u00b7 locked</span></div>\n  <div class=\"row\"><button class=\"au\" id=\"rxs-auto\" onclick=\"window._rxsAuto()\" disabled>AUTO</button><span id=\"rxs-radio\">&nbsp;</span></div>\n  <div class=\"grid\" id=\"rxs-grid\"></div>\n  <div class=\"ft\" id=\"rxs-ft\">&nbsp;</div>\n</div>\n<script>\n(function(scope){\n  var STALE = 180;   // the switch republishes its state every 60 s\n  var last = null, pend = null;\n  function esc(s){ return String(s).replace(/[&<>\"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]; }); }\n  function isStale(d){ return !d.ts || (Date.now()/1000 - d.ts) > STALE; }\n  function usable(d){ return !!(d && d.state && !isStale(d) && d.online !== false && !d.state.ptt && d.state.test === -1); }\n  function send(body){\n    fetch('/rxswitch/set', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) })\n      .then(function(r){ if(!r.ok) return r.json().then(function(j){ throw new Error(j.error || ('HTTP ' + r.status)); }); })\n      .catch(function(e){ pend = null; if(last) render(last); alert('RX antenna switch: ' + e.message); });\n  }\n  window._rxsPort = function(n){\n    if(!usable(last) || last.state.port === n) return;\n    pend = n; render(last);   // amber until the switch publishes its new state (well under 1 s)\n    send({ port: n });\n  };\n  window._rxsAuto = function(){\n    if(!usable(last)) return;\n    send({ auto: !last.state.auto });\n  };\n  function render(d){\n    last = d;\n    var st = d.state, root = document.getElementById('rxs-root');\n    if(!root || !st) return;\n    var stale = isStale(d), off = d.online === false, ok = usable(d);\n    var n = Number(st.numAntennas) || st.antennas.length, names = st.antennas.slice(0, n);\n    var valid = st.hb ? (st.validAnts || []) : [];\n    var why = off ? 'The switch is offline' : (stale ? 'No state from the switch for over 3 min'\n            : (st.ptt ? 'PTT is keyed: the switch keeps its antenna' : (st.test !== -1 ? 'Relay test running' : '')));\n    root.className = 'rxs' + (stale || off ? ' stale' : '');\n    document.getElementById('rxs-name').textContent = st.antName || names[st.ant] || '\u2014';\n    document.getElementById('rxs-port').textContent = 'Port ' + st.port + ' of ' + n;\n    document.getElementById('rxs-ptt').style.visibility = st.ptt ? 'visible' : 'hidden';\n    var au = document.getElementById('rxs-auto');\n    au.textContent = 'AUTO ' + (st.auto ? 'ON' : 'OFF');\n    au.className = 'au' + (st.auto ? ' is-on' : '');\n    au.disabled = !ok;\n    au.title = why || 'AUTO picks the antenna for the radio\\'s band. Picking an antenna not mapped to the band turns AUTO off.';\n    document.getElementById('rxs-radio').textContent = st.test !== -1 ? 'relay test running'\n      : (st.hb ? (st.app + ' \u00b7 ' + Number(st.freq).toFixed(3) + ' MHz') : 'no radio data (AUTO waits for the radio)');\n    document.getElementById('rxs-grid').innerHTML = names.map(function(nm, i){\n      var p = i + 1, cls = 'a' + (i === st.ant ? ' is-cur' : '') + (pend === p && i !== st.ant ? ' is-pend' : '')\n        + (valid.indexOf(i) >= 0 && i !== st.ant ? ' is-band' : '');\n      var tip = why || (valid.indexOf(i) >= 0 ? nm + ' \u2014 mapped to this band' : nm);\n      return '<button class=\"' + cls + '\"' + (ok ? '' : ' disabled') + ' onclick=\"window._rxsPort(' + p + ')\" title=\"' + esc(tip) + '\">'\n        + '<span>' + esc(nm) + '</span><small>Port ' + p + '</small></button>';\n    }).join('');\n    var live = document.getElementById('rxs-live');\n    if(off){ live.textContent = '\u25cb offline'; live.className = 'live bad'; }\n    else if(stale){ live.textContent = '\u25cb stale'; live.className = 'live bad'; }\n    else { live.textContent = '\u25cf live'; live.className = 'live on'; }\n    document.getElementById('rxs-ft').textContent = 'updated ' + new Date(d.ts*1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'})\n      + ' \u00b7 ' + (st.host || '') + (d.fw ? ' \u00b7 fw ' + d.fw : '') + (st.rssi != null ? ' \u00b7 Wi-Fi ' + st.rssi + ' dBm' : '');\n  }\n  scope.$watch('msg', function(m){ if(m && m.payload && m.payload.state){ pend = null; render(m.payload); } });\n  setInterval(function(){ if(last) render(last); }, 30000);\n})(scope);\n</script>",
+        "storeOutMessages": true,
+        "fwdInMessages": false,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "className": "",
+        "x": 660,
+        "y": 80,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "vue_lo_rxsw",
+        "type": "link out",
+        "z": "rxsw_tab",
+        "name": "\u2192 Shack Vue",
+        "mode": "link",
+        "links": [
+            "vue_link_in_builders"
+        ],
+        "x": 645,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "rxsw_set_http_in",
+        "type": "http in",
+        "z": "rxsw_tab",
+        "name": "POST /rxswitch/set",
+        "url": "/rxswitch/set",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 160,
+        "y": 240,
+        "wires": [
+            [
+                "rxsw_set_fn"
+            ]
+        ]
+    },
+    {
+        "id": "rxsw_set_fn",
+        "type": "function",
+        "z": "rxsw_tab",
+        "name": "RX switch set HTTP",
+        "func": "// POST /rxswitch/set  { port: 1..n }  or  { auto: true|false }\n// From the RX antenna panel (/ui) and card (/shack). Checked against the switch's last\n// state; refused while it is offline or its state is over 3 min old (it publishes every\n// 60 s). Sent WITHOUT retain: a retained command would replay at every switch reconnect.\n// The switch itself refuses a change while its PTT input is high, and turns AUTO off when\n// the chosen antenna is not mapped to the current band.\n// out 0 -> mqtt out (topic per message) \u00b7 out 1 -> http response\nconst b = msg.payload || {};\nconst st = flow.get('rxsw_state');\nconst status = flow.get('rxsw_status');\nconst age = Date.now() / 1000 - (flow.get('rxsw_state_ts') || 0);\nfunction reply(code, body) { msg.statusCode = code; msg.payload = body; return [null, msg]; }\nif (!st || (status && status.event !== 'online') || age > 180) {\n    return reply(409, { ok: false, error: 'switch offline or no recent state' });\n}\nif (b.port !== undefined) {\n    const max = Number(st.numAntennas) || st.antennas.length;\n    const n = Number(b.port);\n    if (!Number.isInteger(n) || n < 1 || n > max) return reply(400, { ok: false, error: 'port must be 1..' + max });\n    node.log('RX switch -> port ' + n);\n    const out = { topic: 'shack/rxswitch/set/port', payload: String(n) };\n    msg.statusCode = 200; msg.payload = { ok: true, port: n };\n    return [out, msg];\n}\nif (b.auto !== undefined) {\n    const on = b.auto === true || b.auto === 1 || ['1', 'on', 'true'].includes(String(b.auto).toLowerCase());\n    node.log('RX switch -> AUTO ' + (on ? 'on' : 'off'));\n    const out = { topic: 'shack/rxswitch/set/auto', payload: on ? '1' : '0' };\n    msg.statusCode = 200; msg.payload = { ok: true, auto: on };\n    return [out, msg];\n}\nreturn reply(400, { ok: false, error: 'send {port: n} or {auto: true|false}' });\n",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 240,
+        "wires": [
+            [
+                "rxsw_mqtt_out"
+            ],
+            [
+                "rxsw_set_http_resp"
+            ]
+        ]
+    },
+    {
+        "id": "rxsw_mqtt_out",
+        "type": "mqtt out",
+        "z": "rxsw_tab",
+        "name": "shack/rxswitch/set/* (no retain)",
+        "topic": "",
+        "qos": "1",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "f4785be9863eab08",
+        "x": 670,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "rxsw_set_http_resp",
+        "type": "http response",
+        "z": "rxsw_tab",
+        "name": "200/400/409",
+        "statusCode": "",
+        "headers": {},
+        "x": 640,
         "y": 260,
         "wires": []
     }

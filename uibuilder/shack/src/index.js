@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, watch, onMounted, onUnmounted } = Vu
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v59 · 2026-11-17 Outlets tab (Smarteefi shack outlets)';
+window.__shackBuild = 'v60 · 2026-11-23 RX antenna switch card';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -45,6 +45,7 @@ const CARDS = {
   ubersdr:   true,
   openwebrx: true,
   outlets:   true,   // 2026-11-17: Smarteefi shack outlets, on their own "Outlets" tab (not the main grid)
+  rxswitch:  true,   // 2026-11-23: RA0SMS 8:1 RX antenna switch (shack/rxswitch), port buttons + AUTO
 };
 
 // =====================================================================
@@ -3840,12 +3841,133 @@ const OutletsCard = {
   }
 };
 
+// === RX antenna switch (RA0SMS 8:1, firmware vu2cpl/vucg-antenna-switch) — 2026-11-23 ===
+// Data: uibuilder topic 'rxswitch' from the "RX Antenna Switch" flow tab =
+//   { state, ts, online, fw, ip }, state = the switch's retained shack/rxswitch/state
+//   (ant 0-based, port 1-based, antName, numAntennas, antennas[], auto, hb, freq, app,
+//   ptt, test, validAnts[], rssi, host); ts = when Node-RED got it (s); online from /status.
+// Commands: POST /rxswitch/set { port: 1..n } or { auto: bool }. No confirm: the switch is
+// receive-only. Port names come from the switch's own settings page.
+const RxSwitchCard = {
+  template: `
+    <div class="card" :style="{opacity: (stale || offline) ? 0.55 : 1}">
+      <div class="card__header" @click="expanded = !expanded">
+        <span class="chev">{{ expanded ? '▼' : '▶' }}</span>
+        <span>📡 RX Antenna</span>
+        <span class="summary">
+          <span v-if="!st" style="color:var(--muted)">no data</span>
+          <template v-else>
+            <span style="font-weight:700;color:var(--green)">{{ st.antName }}</span>
+            <span v-if="st.auto" style="color:var(--accent);font-weight:600">AUTO</span>
+            <span v-if="st.ptt" style="color:var(--red);font-weight:600">PTT</span>
+            <span v-if="offline" style="color:var(--red);font-weight:600">offline</span>
+            <span v-else-if="stale" style="color:var(--red);font-weight:600">stale</span>
+          </template>
+        </span>
+      </div>
+      <div class="card__body" :class="{ 'is-collapsed': !expanded }">
+        <div v-if="!st" class="empty-row">Waiting for shack/rxswitch/state</div>
+        <template v-else>
+          <div class="rxsw-row">
+            <button class="btn" :class="st.auto ? 'btn--green' : 'btn--ghost'" :disabled="!usable"
+                    :title="autoTip"
+                    @click.stop="setAuto">AUTO {{ st.auto ? 'ON' : 'OFF' }}</button>
+            <span class="rxsw-radio">{{ radio }}</span>
+          </div>
+          <div class="rxsw-grid">
+            <button v-for="(nm, i) in names" :key="i" class="plug"
+                    :class="[i === st.ant ? 'plug--on' : 'plug--off',
+                             pend === i + 1 && i !== st.ant ? 'plug--pend' : '',
+                             band.includes(i) && i !== st.ant ? 'plug--band' : '']"
+                    :disabled="!usable" :title="why || (band.includes(i) ? nm + ' — mapped to this band' : nm)"
+                    @click="setPort(i + 1)">
+              <span class="plug__dot"></span>
+              <span class="plug__lbl">{{ nm }}</span>
+              <span style="font-size:var(--fs-xs)">Port {{ i + 1 }}</span>
+            </button>
+          </div>
+          <div class="rxsw-ft">
+            updated {{ updated }} · {{ st.host }}<template v-if="fw"> · fw {{ fw }}</template>
+            <template v-if="st.ptt"> · <span style="color:var(--red)">PTT keyed, antenna locked</span></template>
+          </div>
+        </template>
+      </div>
+    </div>
+  `,
+  setup() {
+    const STALE = 180;   // the switch republishes every 60 s
+    const data = reactive({ state: null, ts: 0, online: null, fw: '' });
+    const now = ref(Date.now() / 1000);
+    const pend = ref(null);
+    let timer = null;
+    let init = true;
+    try { init = localStorage.getItem('rxswOpen') !== '0'; } catch (e) {}
+    const expanded = ref(init);
+    watch(expanded, v => { try { localStorage.setItem('rxswOpen', v ? '1' : '0'); } catch (e) {} });
+
+    const st = computed(() => data.state);
+    const stale = computed(() => !!data.state && (!data.ts || (now.value - data.ts) > STALE));
+    const offline = computed(() => data.online === false);
+    const names = computed(() => {
+      if (!data.state) return [];
+      const n = Number(data.state.numAntennas) || data.state.antennas.length;
+      return data.state.antennas.slice(0, n);
+    });
+    const band = computed(() => (data.state && data.state.hb && data.state.validAnts) || []);
+    const why = computed(() => {
+      const s = data.state;
+      if (!s) return 'No data';
+      if (offline.value) return 'The switch is offline';
+      if (stale.value) return 'No state from the switch for over 3 min';
+      if (s.ptt) return 'PTT is keyed: the switch keeps its antenna';
+      if (s.test !== -1) return 'Relay test running';
+      return '';
+    });
+    const usable = computed(() => !why.value);
+    const autoTip = computed(() => why.value || "AUTO picks the antenna for the radio's band. Picking an antenna not mapped to the band turns AUTO off.");
+    const radio = computed(() => {
+      const s = data.state;
+      if (!s) return '';
+      if (s.test !== -1) return 'relay test running';
+      return s.hb ? `${s.app} · ${Number(s.freq).toFixed(3)} MHz` : 'no radio data (AUTO waits for the radio)';
+    });
+    const updated = computed(() => data.ts ? new Date(data.ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—');
+    const fw = computed(() => data.fw);
+
+    function send(body) {
+      fetch('/rxswitch/set', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+        .then(r => { if (!r.ok) return r.json().then(j => { throw new Error(j.error || ('HTTP ' + r.status)); }); })
+        .catch(e => { pend.value = null; alert('RX antenna switch: ' + e.message); });
+    }
+    function setPort(p) {
+      if (!usable.value || data.state.port === p) return;
+      pend.value = p;   // amber until the switch publishes its new state (well under 1 s)
+      send({ port: p });
+    }
+    function setAuto() {
+      if (!usable.value) return;
+      send({ auto: !data.state.auto });
+    }
+    onMounted(() => {
+      uibuilder.onTopic('rxswitch', (msg) => {
+        const p = msg && msg.payload;
+        if (!p || !p.state || !Array.isArray(p.state.antennas)) return;
+        if (!data.state || p.state.ant !== data.state.ant || p.ts !== data.ts) pend.value = null;
+        data.state = p.state; data.ts = p.ts || 0; data.online = p.online; data.fw = p.fw || '';
+      });
+      timer = setInterval(() => { now.value = Date.now() / 1000; }, 5000);
+    });
+    onUnmounted(() => { if (timer) clearInterval(timer); });
+    return { expanded, st, stale, offline, names, band, why, usable, autoTip, radio, updated, fw, pend, setPort, setAuto };
+  }
+};
+
 // === Root app ===
 // Two views (2026-11-17): "Shack" (every card, the default on every load) and "Outlets"
 // (the Smarteefi outlets only). v-show, not v-if, so both stay mounted and keep their
 // uibuilder.onTopic handlers and state while hidden.
 const App = {
-  components: { TopBar, LightningCard, DXCCCard, DXCACard, NetworkCard, RPiCard, PowerCard, SolarCard, FlexCard, SPECard, LP700Card, RotatorCard, GpsNtpCard, RBNCard, UberSdrCard, OpenWebRxCard, WanUsageCard, OutletsCard },
+  components: { TopBar, LightningCard, DXCCCard, DXCACard, NetworkCard, RPiCard, PowerCard, SolarCard, FlexCard, SPECard, LP700Card, RotatorCard, GpsNtpCard, RBNCard, UberSdrCard, OpenWebRxCard, WanUsageCard, OutletsCard, RxSwitchCard },
   template: `
     <TopBar />
     <div v-if="CARDS.outlets" class="viewtabs">
@@ -3857,6 +3979,7 @@ const App = {
     </div>
     <div v-show="view === 'shack'" class="dash-grid">
       <FlexCard      v-if="CARDS.flex" />
+      <RxSwitchCard  v-if="CARDS.rxswitch" />
       <LP700Card     v-if="CARDS.lp700" />
       <SPECard       v-if="CARDS.spe" />
       <RotatorCard   v-if="CARDS.rotator" />
