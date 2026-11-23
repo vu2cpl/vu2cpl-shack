@@ -10,6 +10,42 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ## 2026-11-23
 
+### RX antenna switch on `/ui` and `/shack`, with port buttons and AUTO (Vue v60)
+
+Manoj asked for the RX antenna on both dashboards, with controls, and named the eight ports `RX ANT 1`–`RX ANT 8`
+on the switch's own settings page. The dashboards take the names from the switch, so a rename there shows up on
+both without a flow change.
+
+New flow tab **RX Antenna Switch** (`rxsw_tab`, 9 nodes, commit `4e17108`, revert tag `pre-rxswitch-20261123`):
+
+- `mqtt in shack/rxswitch/+` (state + status only; `+` keeps Node-RED's own `set/*` commands out) and a 10 s
+  tick feed **RX switch state** (`rxsw_state_fn`). It keeps the last state and status in flow context
+  (`rxsw_state`, `rxsw_state_ts` = when Node-RED got it, `rxsw_status`) and sends
+  `{state, ts, online, fw, ip}` to the D1 panel and, through the new link out `vue_lo_rxsw` into
+  `Builders → Shack Vue` (17th feeder), to the Vue card as topic `rxswitch`.
+- **D1:** `RX Antenna Panel` in the new group **RX Antenna Switch** (`rxsw_grp`) on the VU2CPL Shack tab,
+  order 5 (straight after the Flex), width 8. Current antenna large with its port, an AUTO ON/OFF button,
+  the radio's frequency or "no radio data", and 8 port buttons. The current port is green, a clicked one
+  amber until the switch confirms, and when the radio feeds the switch the ports mapped to the band have a
+  blue edge. A PTT chip appears in a slot that is always reserved, so nothing moves.
+- **Vue:** `RxSwitchCard` (`CARDS.rxswitch`, after the Flex card, collapsible, open state in
+  `localStorage` `rxswOpen`); header summary = current antenna, AUTO, PTT, offline or stale. Build v60,
+  `index.js?v=60`, `index.css?v=20` (new `.rxsw-*` rules; the port label is sized against the card with
+  `cqw` and ellipsizes a long custom name).
+- **Commands:** `POST /rxswitch/set` with `{port: 1..n}` or `{auto: true|false}` → `RX switch set HTTP` →
+  `mqtt out` to `shack/rxswitch/set/port` or `set/auto`, **not retained** (a retained command would replay at
+  every reconnect of the switch). 400 for a bad port or body, 409 while the switch is offline or its last state
+  is over 3 min old (it publishes every 60 s). No confirm dialog: the switch only receives. The buttons grey out
+  while PTT is keyed or a relay test runs, because the switch refuses a change then anyway. Picking an antenna
+  that is not mapped to the current band turns AUTO off (the switch's own rule).
+
+The `nodered` broker account already has `readwrite #`, so no ACL change. Checked before deploy: both functions
+and the panel script in Node with stubs (port 3 → `set/port 3`; 9, 0 and `{}` → 400; offline → 409; current
+port ignored; pending marking), and the Vue templates compiled with the bundled Vue. After the deploy, Node-RED
+started with no new errors. A `curl` to `/rxswitch/set` gets 401, like every `http in` endpoint here, because
+`httpNodeAuth` covers them; the dashboards send that login with each `fetch`. So the click path is tested from a
+signed-in dashboard, not from the shell.
+
 ### Broker: `iot` ACL grants for the RA0SMS RX antenna switch
 
 The RA0SMS 8:1 RX antenna switch (NodeMCU, `192.168.30.133`, IoT VLAN) runs VU2PTT's VUCG WiFi Antenna
@@ -38,7 +74,7 @@ re-locking, asks to confirm and shows a reboot countdown. On the broker: the `io
 `shack/rxswitch/state`, and `set/port 1` sent as `svc` made the switch republish `state`. The first OTA showed
 the old firmware reconnecting in the ~2 s before its restart, which the broker had to take over (`already
 connected, closing old connection`); cpl.2 keeps MQTT down after the goodbye, and a second OTA logged one clean
-disconnect and one new login. Nothing in Node-RED or HA uses the topics yet.
+disconnect and one new login. (Node-RED uses the topics since later the same evening: see the entry above.)
 
 `5.0.2-cpl.3` (21:28) keeps the last antenna and AUTO across reboots. VU2PTT's firmware came up on "ANT 1" with
 AUTO off and every relay off after any power cut. Tested with a reboot: back on antenna 6 with AUTO on.

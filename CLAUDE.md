@@ -119,7 +119,7 @@ git push
 
 ---
 
-## FLOW TABS (17 total)
+## FLOW TABS (19 total)
 
 | Tab Label | Tab ID | Nodes | Dashboard Group |
 |-----------|--------|-------|-----------------|
@@ -137,6 +137,7 @@ git push
 | DXCA | `dxca_status_tab` | 4 | — (no Dashboard 1 group). Added 2026-11-07: `mqtt in shack/dxca/spots/status/#` → `Build DXCA state for Vue` (flow ctx `dxca_server`/`dxca_user`; 10 s tick re-emits) → link out `vue_lo_dxca` → Vue topic `dxca` (`DXCACard`, `CARDS.dxca`). Read-only; DXCA itself (.109, ≥ v2.24.1) publishes the topics. |
 | UberSDR | `ubersdr_tab` | 13 | `ubersdr_grp` (on Shack Monitoring tools) |
 | Smarteefi Outlets | `smf_tab` | 10 | `smf_grp` (on its own D1 tab **Shack Outlets**). Added 2026-11-17: the 9 shack Smarteefi outlets, kept off the main pages so they are not switched by accident. `mqtt in shack/smarteefi/state` (retained, from HA automation `smarteefi_shack_mqtt_bridge`) → `Smarteefi state` (flow ctx `smf_state`) → `Shack Outlets Panel` + `Build Smarteefi state for Vue` (10 s re-send) → link out `vue_lo_smf` → Vue topic `smarteefi`. `POST /power/smarteefi-toggle` → `Smarteefi Toggle HTTP` (allow = ids in the last state, action on/off only) → `mqtt out shack/smarteefi/set`. See "Smarteefi shack outlets on the dashboards" under HOUSEHOLD HA INTEGRATIONS |
+| RX Antenna Switch | `rxsw_tab` | 9 | `rxsw_grp` (VU2CPL Shack tab, order 5, after the Flex). Added 2026-11-23: the RA0SMS 8:1 RX antenna switch (NodeMCU `192.168.30.133`, firmware `vu2cpl/vucg-antenna-switch`). `mqtt in shack/rxswitch/+` (retained state + status; `+` keeps `set/*` out) + 10 s tick → `RX switch state` (flow ctx `rxsw_state`, `rxsw_state_ts`, `rxsw_status`) → `RX Antenna Panel` + link out `vue_lo_rxsw` → Vue topic `rxswitch` (`RxSwitchCard`, `CARDS.rxswitch`). `POST /rxswitch/set` → `RX switch set HTTP` → `mqtt out` (topic per message, never retained). Port names come from the switch |
 | AetherSDR Display | `aetherdisp_tab_01` | 9 | — (no UI — humanizes shack MQTT topics onto `aether/*` for the external AetherSDR panadapter display; see `nodered/aether-display/README.md`) |
 
 > Node counts drift as flows evolve — treat as approximate; re-count against
@@ -408,6 +409,7 @@ Agent endpoints: `POST /reboot`, `POST /shutdown`
 | POST | `/dxcc/blacklist-add` | DXCC | Add callsign to blacklist |
 | POST | `/dxcc/blacklist-remove` | DXCC | Remove from blacklist |
 | POST | `/power/house-toggle` | All Power Strips | `{dev}` → toggle a house-load relay (FF_LOAD / GF_LOAD / GF_Dryer_Kit / GF_UTILITY only; 400 otherwise) |
+| POST | `/rxswitch/set` | RX Antenna Switch | `{port: 1..n}` → `shack/rxswitch/set/port`, `{auto: true\|false}` → `set/auto`; not retained. 400 for a bad port/body, 409 while the switch is offline (status) or its last state is over 3 min old. No confirm on either dashboard (receive-only switch) |
 | POST | `/power/smarteefi-toggle` | Smarteefi Outlets | `{entity, action:'on'\|'off'}` → `shack/smarteefi/set` → HA. Entity must be in HA's last published state (the 9 shack outlets); no `toggle` action, so a double tap can't flip twice; 400 otherwise |
 
 ---
@@ -1506,7 +1508,10 @@ builder/cmd-router nodes stay, just unrendered; flip back to restore).
 This is how a forker tailors the dashboard to their hardware.
 Since 2026-11-07 `CARDS.dxca` (true) shows the read-only `DXCACard` fed by
 DXCA's MQTT status; `CARDS.dxcc` (the Node-RED tracker's control card) stays
-`false`.
+`false`. Since 2026-11-23 `CARDS.rxswitch` (true) shows `RxSwitchCard` (RA0SMS RX
+antenna switch), placed after the Flex card. Stage 13's inventory still covers only
+the original 12 keys: `dxca`, `wan`, `ubersdr`, `openwebrx`, `outlets` and `rxswitch`
+stay at their defaults unless edited by hand.
 `rebuild_pi.sh` Stage 13 sets these from a "which subsystems do you
 have?" Y/n round, with dependency rules (Power forced on if any of
 Lightning/Rotator/Flex stay; warn if Flex dropped while Lightning

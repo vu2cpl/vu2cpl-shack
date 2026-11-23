@@ -36,7 +36,7 @@ dashboard. Hardware talks to Node-RED via:
 
 - **`/ui`** — Dashboard 1 (legacy Angular). Dark-themed
   (base `#097479`, bg `#111111`). Original, all features intact.
-- **`/shack`** — Vue 3 SPA served via uibuilder. 15 cards (the old DXCC Tracker card is hidden), all
+- **`/shack`** — Vue 3 SPA served via uibuilder. 16 cards (the old DXCC Tracker card is hidden), all
   collapsed by default with live summary headers, true responsive
   layout (CSS column masonry), PWA-installable on iPad / iPhone
   ("Add to Home Screen"). The primary dashboard going forward.
@@ -77,7 +77,7 @@ bridge, because the DXCC Tracker tab has been disabled since 2026-08-27.
 |------|--------|
 | Radio | FlexRadio FLEX-6600, RGO One, Icom IC-705 |
 | Amplifier | SPE Expert 1.5 KFA |
-| Antennas | Hex beam, 160 m inverted-L, 6 m LFA Yagi, Beverage / N6RK / K9AY receive |
+| Antennas | Hex beam, 160 m inverted-L, 6 m LFA Yagi, Beverage / N6RK / K9AY receive (through an RA0SMS 8:1 RX antenna switch) |
 | Power | 21 Tasmota-controlled outlets across 5 shack devices, plus 4 house-load Tasmota circuits (FF/GF load, dryer-kitchen, utility — HA's load-shedding relays — battery-SOC since 2026-05, and grid-loss overload shedding of utility + dryer-kitchen added 2026-10-19, all grid-loss shedding off since 2026-10-25 — toggleable from the Power card) |
 | Solar | Deye SG0*LP3 LV 3-phase hybrid inverter, read locally via its Solarman WiFi logger (no cloud, no Home Assistant in the path) |
 | Power meter | Telepost LP-700 (USB HID, owned by `lp700-server` on the Pi) |
@@ -188,6 +188,19 @@ in places but renders correctly because of the surrounding context.
 **Lesson:** if you add any "is the radio transmitting right now?" logic
 to a flow node or template, key it off `flexState.txstate`, not
 `slice.isTx`.
+
+### RX Antenna Switch
+
+The receive antennas go through an RA0SMS 8:1 RX antenna switch (NodeMCU, `192.168.30.133` on the IoT VLAN).
+It runs VU2PTT's VUCG WiFi Antenna Switch firmware with MQTT added (private repo
+`vu2cpl/vucg-antenna-switch`), and publishes retained `shack/rxswitch/state` and `shack/rxswitch/status`.
+The flow tab *RX Antenna Switch* shows it on both dashboards (D1 group **RX Antenna Switch** after the Flex,
+Vue card **📡 RX Antenna**): the current antenna, AUTO on/off, the radio's frequency when a radio feeds the
+switch, and one button per port. A click goes to `POST /rxswitch/set` and from there to
+`shack/rxswitch/set/port` or `set/auto`, never retained. The port names (`RX ANT 1`–`8`) come from the
+switch's own settings page. The buttons grey out while the radio's PTT is keyed, because the switch keeps
+its antenna then. Original firmware and web UI (VUCG WiFi Antenna Switch) by VU2PTT; the MQTT additions are
+by VU2CPL.
 
 ### Power Control (Tasmota fleet)
 
