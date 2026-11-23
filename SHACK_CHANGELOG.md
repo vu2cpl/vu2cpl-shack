@@ -8,6 +8,29 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-11-23
+
+### Broker: `iot` ACL grants for the RA0SMS RX antenna switch
+
+The RA0SMS 8:1 RX antenna switch (NodeMCU, `192.168.30.133`, IoT VLAN) runs VU2PTT's VUCG WiFi Antenna
+Switch firmware. VU2PTT sent the source on 2026-11-23, and MQTT (state out, commands in) and an editable host
+name were added to it in the new private repo `vu2cpl/vucg-antenna-switch`. Manoj chose the base topic
+`shack/rxswitch`.
+
+`/etc/mosquitto/aclfile` on noderedpi4 gained three lines under `user iot` (backup
+`aclfile.bak-20261123-210411`, applied with `systemctl reload mosquitto`, no errors in the log):
+
+```
+topic write shack/rxswitch/state
+topic write shack/rxswitch/status
+topic read shack/rxswitch/set/#
+```
+
+This is narrower than `readwrite shack/rxswitch/#`: the switch can publish its own state and receive
+commands, but another `iot` device cannot send it commands. `nodered`, `ha` and `svc` reach the tree through
+their existing grants. Not yet proven by a real login, because the switch is not flashed with the MQTT
+firmware yet. `MQTT_AUTH.md` lists the switch and the grants.
+
 ## 2026-11-22
 
 ### FlexRadio: connect to `192.168.1.148:4992` manually (the power cut broke automatic mode)
