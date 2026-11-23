@@ -1456,7 +1456,7 @@ html, body {
 .rxsw-knob2 { fill: var(--border-2); stroke: var(--border); }
 .rxsw-ptr { transform-origin: 150px 112px; transition: transform 0.5s ease; }
 .rxsw-ptr rect { fill: var(--green); }
-.rxsw-dial text.rxsw-knum { font-size: 13px; font-weight: 700; fill: var(--text); }
+.rxsw-dial text.rxsw-knum { font-size: 22px; font-weight: 700; fill: var(--text); }
 .rxsw-row { display: flex; align-items: center; gap: var(--sp-3); min-height: 32px; }
 .rxsw-row .btn { flex-shrink: 0; white-space: nowrap; }
 .rxsw-row .btn:disabled { opacity: 0.4; cursor: not-allowed; }

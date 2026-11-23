@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, watch, onMounted, onUnmounted } = Vu
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v61 · 2026-11-23 RX antenna rotary dial';
+window.__shackBuild = 'v62 · 2026-11-23 RX dial: bigger knob number';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -3882,7 +3882,7 @@ const RxSwitchCard = {
             <g class="rxsw-ptr" :style="{ transform: 'rotate(' + ptrAngle + 'deg)' }">
               <rect x="147" y="66" width="6" height="22" rx="3" />
             </g>
-            <text class="rxsw-knum" x="150" y="117" text-anchor="middle">{{ knum }}</text>
+            <text class="rxsw-knum" x="150" y="120" text-anchor="middle">{{ knum }}</text>
           </svg>
           <div class="rxsw-row">
             <button class="btn" :class="st.auto ? 'btn--green' : 'btn--ghost'" :disabled="!usable"
