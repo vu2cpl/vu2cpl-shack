@@ -2,7 +2,7 @@
 
 **Period:** 2026-05-01 → 2026-11-27
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
-**Last commit at handover:** **DXCA card: band in the collapsed line, alert source in the list (2026-11-27, Vue v63).** Manoj read the collapsed `EA9AR 13m` as a wrong band; 13m was the age. The header now reads `🔔 EA9AR 80M 13 min ago`. The LAST ALERTS rows gain a source column (cluster node or receiver; spotter on hover), filled once DXCA publishes `source`/`spotter` in `recent_alerts` (dxca 2.24.7, `statuspub.rs`, deployed to .109 only on 2026-11-27, unreleased). Details: SHACK_CHANGELOG 2026-11-27.
+**Last commit at handover:** **DXCA card: band in the collapsed line, alert source in the list (2026-11-27, Vue v63).** Manoj read the collapsed `EA9AR 13m` as a wrong band; 13m was the age. The header now reads `🔔 EA9AR 80M 13 min ago`. The LAST ALERTS rows gain a source column (cluster node or receiver; spotter on hover), filled once DXCA publishes `source`/`spotter` in `recent_alerts` (dxca 2.24.7, `statuspub.rs`, deployed to .109 only on 2026-11-27, unreleased; now live). Same night, from Manoj's screenshots: source in cluster-pill green, full calls (css v24), and a gap between band and age (v64, `11f2caf`). Checked by Manoj on screen. Details: SHACK_CHANGELOG 2026-11-27.
 
 Prior handover tip: **Plan for the RX switch's CAT input selector (2026-11-23, plan only):** [`RXSWITCH_CAT.md`](RXSWITCH_CAT.md), open item #60. Manoj: both radios feed from the switch; pick the CAT input on the dashboards (OFF · FLEX · RGO ONE · AETHER). Nothing built.
 
@@ -174,7 +174,7 @@ Prior handover tip: `98daacb` (Pi-committed) — VU2CPL cluster reverted to port
 
 | Day | Area | What changed |
 |-----|------|--------------|
-| 11-27 | **DXCA card: band in collapsed header, source column (v63)** | Manoj: "wrong band shown in collapsed view?" (13m was the age), then "show the band in collapsed view" and "add the source also in the list". Header `call band N min ago`; list source column, empty until DXCA sends `source`. |
+| 11-27 | **DXCA card: band in collapsed header, source column (v63–v64)** | Manoj: "wrong band shown in collapsed view?" (13m was the age), then "show the band in collapsed view" and "add the source also in the list". Header `call band N min ago`; list source column, empty until DXCA sends `source`. |
 | 11-23 | **RX switch: `set/freq` (firmware cpl.4) + bigger knob number (v62)** | Manoj: "go with the mqtt freq topic". The switch takes the radio's frequency on `shack/rxswitch/set/freq` (UDP was the only way in); tested; no sender yet. Vue knob number 22 px. `a71c849` (switch repo), `4012904`. |
 | 11-23 | **RX antenna: rotary dial (v61)** | Manoj: "the rotary dial is best suited". Buttons replaced on both dashboards by the switch page's Rotary view; pointer follows the switch's reported antenna; PTT chip no longer reserves a slot. `9d7e1f3`. |
 | 11-23 | **RX antenna switch on /ui and /shack (v60)** | Manoj: show the RA0SMS RX antenna with controls, ports named RX ANT 1–8 (on the switch). New tab `rxsw_tab`: state from `shack/rxswitch/+`, D1 group RX Antenna Switch (order 5) + Vue `RxSwitchCard`, `POST /rxswitch/set` {port}/{auto} → `set/port`/`set/auto` (not retained, 409 if offline/stale). `4e17108`, tag `pre-rxswitch-20261123`. |
