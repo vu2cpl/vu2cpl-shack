@@ -31,6 +31,9 @@ Follow-up the same night (`index.css?v=24`), from Manoj's screenshot: the
 source was the same grey as the entity, and the extra column cut long calls
 to `3B9/M...`. The source is now green like the cluster-node pills, and the
 call column sizes to the call while the entity name ellipsizes instead.
+Then v64: the collapsed header ran band and age together (`80M2 min ago`),
+because Vue's whitespace condensing drops a line break between elements.
+The band and the age now carry a fixed `margin-left: 0.4em`.
 
 ## 2026-11-23
 

@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, watch, onMounted, onUnmounted } = Vu
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v63 · 2026-11-27 DXCA: band in collapsed line, alert source';
+window.__shackBuild = 'v64 · 2026-11-27 DXCA: collapsed-line spacing';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -2848,9 +2848,7 @@ const DXCACard = {
           <span :style="{color: clusterColor, fontWeight:600}">{{ online ?? '—' }}/{{ total ?? '—' }} clusters</span>
           <template v-if="alerts.length">
             <span>·</span>
-            <span style="color:var(--text)">🔔 {{ alerts[0].callsign }}
-              <span v-if="alerts[0].band" style="color:var(--accent)">{{ alerts[0].band }}</span>
-              <span style="color:var(--muted)">{{ agoLong(alerts[0].time_unix) }}</span></span>
+            <span style="color:var(--text)">🔔 {{ alerts[0].callsign }}<span v-if="alerts[0].band" style="color:var(--accent); margin-left:0.4em">{{ alerts[0].band }}</span><span style="color:var(--muted); margin-left:0.4em">{{ agoLong(alerts[0].time_unix) }}</span></span>
           </template>
         </span>
       </div>
