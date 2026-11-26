@@ -2,7 +2,7 @@
 
 **Period:** 2026-05-01 → 2026-11-27
 **Operator:** Manoj VU2CPL · MK83TE · Bengaluru
-**Last commit at handover:** **DXCA card: band in the collapsed line, alert source in the list (2026-11-27, Vue v63).** Manoj read the collapsed `EA9AR 13m` as a wrong band; 13m was the age. The header now reads `🔔 EA9AR 80M 13 min ago`. The LAST ALERTS rows gain a source column (cluster node or receiver; spotter on hover), filled once DXCA publishes `source`/`spotter` in `recent_alerts` (dxca 2.24.7, `statuspub.rs`, deployed to .109 only on 2026-11-27, unreleased; now live). Same night, from Manoj's screenshots: source in cluster-pill green, full calls (css v24), and a gap between band and age (v64, `11f2caf`). Checked by Manoj on screen. Details: SHACK_CHANGELOG 2026-11-27.
+**Last commit at handover:** **DXCA card: band in the collapsed line, alert source in the list (2026-11-27, Vue v63).** Manoj read the collapsed `EA9AR 13m` as a wrong band; 13m was the age. The header now reads `🔔 EA9AR 80M 13 min ago`. The LAST ALERTS rows gain a source column (cluster node or receiver; spotter on hover), filled once DXCA publishes `source`/`spotter` in `recent_alerts` (dxca v2.24.7, `statuspub.rs`, released and on all five DXCA hosts 2026-11-27). Same night, from Manoj's screenshots: source in cluster-pill green, full calls (css v24), and a gap between band and age (v64, `11f2caf`). Checked by Manoj on screen. Details: SHACK_CHANGELOG 2026-11-27.
 
 Prior handover tip: **Plan for the RX switch's CAT input selector (2026-11-23, plan only):** [`RXSWITCH_CAT.md`](RXSWITCH_CAT.md), open item #60. Manoj: both radios feed from the switch; pick the CAT input on the dashboards (OFF · FLEX · RGO ONE · AETHER). Nothing built.
 

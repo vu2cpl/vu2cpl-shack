@@ -22,8 +22,8 @@ On "add the source also in the list", the LAST ALERTS rows gained a source
 column between the entity and the alert type: the cluster node or receiver
 the spot came in on, with the spotter in the hover title. DXCA's status
 topic did not carry these fields, so `alert_summary` in dxca's
-`statuspub.rs` now adds `source` and `spotter` (dxca 2.24.7, deployed to
-.109 only the same day, not released). The DXCA card's rows use their
+`statuspub.rs` now adds `source` and `spotter` (dxca v2.24.7, released
+the same night). The DXCA card's rows use their
 own grid (`.dxcc-alert--src`: narrower time/band/mode columns, the hidden
 Node-RED DXCC card's rows are unchanged). `index.js?v=63`, `index.css?v=23`.
 
