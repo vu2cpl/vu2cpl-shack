@@ -12,7 +12,7 @@ const { createApp, ref, reactive, computed, watch, onMounted, onUnmounted } = Vu
 // load" from "code loaded but signal broken" without DevTools).
 // Bump this on every deploy that touches connection logic.
 // =====================================================================
-window.__shackBuild = 'v62 · 2026-11-23 RX dial: bigger knob number';
+window.__shackBuild = 'v63 · 2026-11-27 DXCA: band in collapsed line, alert source';
 
 // =====================================================================
 // Station hardware config — which cards appear on the dashboard.
@@ -2848,7 +2848,9 @@ const DXCACard = {
           <span :style="{color: clusterColor, fontWeight:600}">{{ online ?? '—' }}/{{ total ?? '—' }} clusters</span>
           <template v-if="alerts.length">
             <span>·</span>
-            <span style="color:var(--text)">🔔 {{ alerts[0].callsign }} {{ ago(alerts[0].time_unix) }}</span>
+            <span style="color:var(--text)">🔔 {{ alerts[0].callsign }}
+              <span v-if="alerts[0].band" style="color:var(--accent)">{{ alerts[0].band }}</span>
+              <span style="color:var(--muted)">{{ agoLong(alerts[0].time_unix) }}</span></span>
           </template>
         </span>
       </div>
@@ -2874,12 +2876,13 @@ const DXCACard = {
           <div class="dxcc-alerts">
             <div class="dxcc-alerts__title">LAST ALERTS · {{ alerts.length }}</div>
             <div class="dxcc-alerts__list" v-if="alerts.length">
-              <div v-for="(a, i) in alerts" :key="i" class="dxcc-alert" :class="'dxcc-alert--' + sev(a.level)">
+              <div v-for="(a, i) in alerts" :key="i" class="dxcc-alert dxcc-alert--src" :class="'dxcc-alert--' + sev(a.level)">
                 <span class="dxcc-alert__time">{{ ago(a.time_unix) }}</span>
                 <span class="dxcc-alert__freq">{{ a.band || '—' }}</span>
                 <span class="dxcc-alert__mode">{{ a.mode || '—' }}</span>
                 <span class="dxcc-alert__call">{{ a.callsign || '?' }}</span>
                 <span class="dxcc-alert__entity">{{ a.dxcc_name || '' }}</span>
+                <span class="dxcc-alert__src" :title="a.spotter ? 'spotted by ' + a.spotter : ''">{{ a.source || '' }}</span>
                 <span class="dxcc-alert__type" :style="{color: levelColor(a.level)}">{{ levelLabel(a.level) }}</span>
               </div>
             </div>
@@ -2938,6 +2941,15 @@ const DXCACard = {
       if (s < 86400) return Math.floor(s / 3600) + 'h';
       return Math.floor(s / 86400) + 'd';
     }
+    // Collapsed header: '13 min ago', so the age can't be read as a band (13m).
+    function agoLong(t) {
+      if (!t) return '';
+      const s = Math.max(0, now.value - t);
+      if (s < 60) return 'now';
+      if (s < 3600) return Math.floor(s / 60) + ' min ago';
+      if (s < 86400) return Math.floor(s / 3600) + ' h ago';
+      return Math.floor(s / 86400) + ' d ago';
+    }
     const LABEL = { newDXCC: 'NEW!', newBand: 'NEW BAND', newMode: 'NEW MODE', newSlot: 'NEW SLOT',
                     newZone: 'NEW ZONE', newState: 'NEW STATE', newIOTA: 'NEW IOTA', newGrid: 'NEW GRID' };
     function levelLabel(l) { return LABEL[l] || l || ''; }
@@ -2957,7 +2969,7 @@ const DXCACard = {
     onUnmounted(() => { if (timer) clearInterval(timer); });
 
     return { expanded, srv, user, st, aw, alerts, online, total, nodeNames, clusterColor, stale,
-             ago, levelLabel, levelColor, sev, url: DXCA_URL };
+             ago, agoLong, levelLabel, levelColor, sev, url: DXCA_URL };
   }
 };
 

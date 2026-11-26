@@ -602,6 +602,9 @@ html, body {
 .dxcc-alert__call { color: var(--text); font-weight: 700; }
 .dxcc-alert__entity { color: var(--muted); text-align: right; font-size: 90%; }
 .dxcc-alert__type { font-weight: 700; padding-left: 6px; }
+/* DXCA card: a source column (cluster node / receiver) before the alert type. */
+.dxcc-alert--src { grid-template-columns: 34px 46px 36px 1fr auto auto auto; }
+.dxcc-alert__src { color: var(--muted); font-size: 90%; max-width: 9ch; }
 .dxcc-alert--red   { border-left: 3px solid var(--red);   }
 .dxcc-alert--blue  { border-left: 3px solid var(--accent);}
 .dxcc-alert--amber { border-left: 3px solid var(--amber); }

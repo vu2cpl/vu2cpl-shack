@@ -8,6 +8,25 @@ For the umbrella overview of every subsystem in this repo, see `README.md`.
 
 ---
 
+## 2026-11-27
+
+### DXCA card: band in the collapsed header, alert source in the list (Vue v63)
+
+Manoj asked whether the collapsed DXCA header showed the wrong band:
+`🔔 EA9AR 13m` while the alert was on 80M. The `13m` was the age (13
+minutes), which reads like a band. The header now shows the call, the band
+in the accent colour and a spelled-out age: `🔔 EA9AR 80M 13 min ago`
+(`agoLong()`; the expanded list keeps the short `13m`).
+
+On "add the source also in the list", the LAST ALERTS rows gained a source
+column between the entity and the alert type: the cluster node or receiver
+the spot came in on, with the spotter in the hover title. DXCA's status
+topic did not carry these fields, so `alert_summary` in dxca's
+`statuspub.rs` now adds `source` and `spotter`; the column stays empty
+until a DXCA with that change runs on .109. The DXCA card's rows use their
+own grid (`.dxcc-alert--src`: narrower time/band/mode columns, the hidden
+Node-RED DXCC card's rows are unchanged). `index.js?v=63`, `index.css?v=23`.
+
 ## 2026-11-23
 
 ### RX antenna switch: the radio's frequency over MQTT (firmware cpl.4), bigger knob number (Vue v62)

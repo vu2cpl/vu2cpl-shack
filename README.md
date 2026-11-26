@@ -322,8 +322,10 @@ frame.
 > **DXCA** card (Vue v52, flow tab "DXCA") and HA's Radio dashboard a DXCC
 > Tracker card, both from DXCA's retained MQTT status
 > (`shack/dxca/spots/status[/VU2CPL]`): entities and slots confirmed/worked,
-> WAS/WAZ/IOTA, cluster nodes, the last five alerts. Controls live in DXCA's
-> own web UI.
+> WAS/WAZ/IOTA, cluster nodes, the last five alerts (band, mode, call,
+> entity, the node it came in on). Collapsed, the card header shows the
+> latest alert as call, band and age (`EA9AR 80M 13 min ago`; Vue v63).
+> Controls live in DXCA's own web UI.
 
 DX cluster spot monitoring with real-time alerts for new entities,
 bands, and modes against Club Log worked/confirmed data. Subscribes
