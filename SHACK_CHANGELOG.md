@@ -27,6 +27,11 @@ topic did not carry these fields, so `alert_summary` in dxca's
 own grid (`.dxcc-alert--src`: narrower time/band/mode columns, the hidden
 Node-RED DXCC card's rows are unchanged). `index.js?v=63`, `index.css?v=23`.
 
+Follow-up the same night (`index.css?v=24`), from Manoj's screenshot: the
+source was the same grey as the entity, and the extra column cut long calls
+to `3B9/M...`. The source is now green like the cluster-node pills, and the
+call column sizes to the call while the entity name ellipsizes instead.
+
 ## 2026-11-23
 
 ### RX antenna switch: the radio's frequency over MQTT (firmware cpl.4), bigger knob number (Vue v62)
